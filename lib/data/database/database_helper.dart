@@ -13,7 +13,7 @@ import '../services/sync_manager.dart';
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
-  static const _databaseVersion = 10;
+  static const _databaseVersion = 11;
 
   static const _cashAccountCode = '101';
   static const _inventoryAccountCode = '102';
@@ -123,6 +123,10 @@ class DBHelper {
           await _upgradeToV10(db);
         }
 
+        if (oldVersion < 11) {
+          await _upgradeToV11(db);
+        }
+
         await _ensureDefaultAccounts(db);
         await _repairAccountNames(db);
       },
@@ -227,7 +231,8 @@ class DBHelper {
         currency_code TEXT,
         created_by TEXT,
         branch_id TEXT,
-        converted_invoice_id TEXT
+        converted_invoice_id TEXT,
+        pdf_path TEXT
       )
     ''');
 
@@ -587,6 +592,15 @@ class DBHelper {
     await _rebuildSalesRecordsForManualCurrency(db);
     await _rebuildQuotationsForManualCurrency(db);
     await _rebuildInvoicesForManualCurrency(db);
+  }
+
+  static Future<void> _upgradeToV11(Database db) async {
+    await _ensureColumn(
+      db,
+      table: 'quotations',
+      column: 'pdf_path',
+      definition: 'TEXT',
+    );
   }
 
   static Future<void> _ensureColumn(
