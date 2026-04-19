@@ -1,0 +1,21 @@
+{
+  "@@locale": "en",
+  "appTitle": "Hasoob App",
+  "settingsTitle": "Settings",
+  "appearanceSectionTitle": "Appearance",
+  "appearanceSectionDescription": "Choose the display mode that suits you. Your preference will be saved on this device.",
+  "themeSystemTitle": "System default",
+  "themeSystemSubtitle": "Follow the device settings automatically",
+  "themeLightTitle": "Light",
+  "themeLightSubtitle": "Clean and bright appearance",
+  "themeDarkTitle": "Dark",
+  "themeDarkSubtitle": "Rich and comfortable appearance",
+  "languageSectionTitle": "Language",
+  "languageSectionDescription": "Choose the app language. The change is applied immediately and saved on this device.",
+  "languageArabic": "Arabic",
+  "languageEnglish": "English",
+  "helpGuideTitle": "User guide",
+  "helpGuideSubtitle": "Quick guidance to understand the main sections and how to use them",
+  "aboutAppTitle": "About the app",
+  "aboutAppSubtitle": "Hasoob App\nArabic business management for inventory, sales, and documents"
+}

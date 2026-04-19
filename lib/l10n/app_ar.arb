@@ -1,0 +1,21 @@
+{
+  "@@locale": "ar",
+  "appTitle": "Hasoob App",
+  "settingsTitle": "الإعدادات",
+  "appearanceSectionTitle": "المظهر",
+  "appearanceSectionDescription": "اختر وضع العرض المناسب لك. سيتم حفظ اختيارك محلياً على هذا الجهاز.",
+  "themeSystemTitle": "افتراضي النظام",
+  "themeSystemSubtitle": "يتبع إعدادات الجهاز تلقائياً",
+  "themeLightTitle": "فاتح",
+  "themeLightSubtitle": "مظهر نظيف ومشرق",
+  "themeDarkTitle": "داكن",
+  "themeDarkSubtitle": "مظهر غني ومريح للعين",
+  "languageSectionTitle": "اللغة",
+  "languageSectionDescription": "اختر لغة التطبيق. يتم تطبيق التغيير فوراً وحفظه على هذا الجهاز.",
+  "languageArabic": "العربية",
+  "languageEnglish": "الإنجليزية",
+  "helpGuideTitle": "دليل الاستخدام",
+  "helpGuideSubtitle": "إرشادات سريعة لفهم الأقسام الأساسية واستخدامها",
+  "aboutAppTitle": "حول التطبيق",
+  "aboutAppSubtitle": "Hasoob App\nإدارة عربية للمخزون والمبيعات والوثائق"
+}

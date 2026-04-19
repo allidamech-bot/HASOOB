@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "532543856833",
+    "project_id": "hasoob-4a281",
+    "storage_bucket": "hasoob-4a281.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:532543856833:android:408a20524ce3f91c797440",
+        "android_client_info": {
+          "package_name": "com.example.hasoob_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB80de-oAKf3Fk1btamfKFRFlOaLexbSBw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
