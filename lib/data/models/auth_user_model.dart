@@ -2,15 +2,15 @@ class AuthUserModel {
   final String id;
   final String email;
   final String? displayName;
-  final String? businessId;
-  final String? role;
+  final String businessId;
+  final String role; // owner, manager, employee
 
   const AuthUserModel({
     required this.id,
     required this.email,
     this.displayName,
-    this.businessId,
-    this.role,
+    required this.businessId,
+    required this.role,
   });
 
   Map<String, dynamic> toMap() {
@@ -28,8 +28,8 @@ class AuthUserModel {
       id: map['id'] ?? '',
       email: map['email'] ?? '',
       displayName: map['displayName'],
-      businessId: map['businessId'],
-      role: map['role'],
+      businessId: map['businessId'] ?? '',
+      role: map['role'] ?? 'employee',
     );
   }
 

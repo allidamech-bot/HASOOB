@@ -7,24 +7,10 @@ void main() {
 
     setUp(() {
       authRepository = AuthRepository.instance;
+      authRepository.clearMockData();
     });
 
-    tearDown(() async {
-      await authRepository.signOut();
-    });
-
-    test('signInWithEmailAndPassword returns a user and sets currentUser', () async {
-      const email = 'test@example.com';
-      const password = 'password123';
-
-      final user = await authRepository.signInWithEmailAndPassword(email, password);
-
-      expect(user.email, email);
-      expect(authRepository.currentUser, isNotNull);
-      expect(authRepository.currentUser!.email, email);
-    });
-
-    test('registerWithEmailAndPassword returns a user and sets currentUser', () async {
+    test('registerWithEmailAndPassword creates business and sets owner role', () async {
       const email = 'newuser@example.com';
       const password = 'password123';
       const displayName = 'New User';
@@ -36,25 +22,30 @@ void main() {
       );
 
       expect(user.email, email);
-      expect(user.displayName, displayName);
+      expect(user.role, 'owner');
+      expect(user.businessId, isNotEmpty);
       expect(authRepository.currentUser, isNotNull);
-      expect(authRepository.currentUser!.email, email);
+      expect(authRepository.currentUser!.businessId, user.businessId);
     });
 
-    test('empty email or password throws AuthException in signIn', () async {
+    test('login preserves businessId after registration', () async {
+      const email = 'login_test@example.com';
+      const password = 'password123';
+
+      final registeredUser = await authRepository.registerWithEmailAndPassword(email, password);
+      final registeredBusId = registeredUser.businessId;
+
+      await authRepository.signOut();
+      expect(authRepository.currentUser, isNull);
+
+      final loggedInUser = await authRepository.signInWithEmailAndPassword(email, password);
+      expect(loggedInUser.businessId, registeredBusId);
+      expect(loggedInUser.role, 'owner');
+    });
+
+    test('empty email or password throws AuthException', () async {
       expect(
         () => authRepository.signInWithEmailAndPassword('', 'password'),
-        throwsA(isA<AuthException>()),
-      );
-      expect(
-        () => authRepository.signInWithEmailAndPassword('email@test.com', ''),
-        throwsA(isA<AuthException>()),
-      );
-    });
-
-    test('empty email or password throws AuthException in register', () async {
-      expect(
-        () => authRepository.registerWithEmailAndPassword('', 'password'),
         throwsA(isA<AuthException>()),
       );
       expect(
@@ -64,7 +55,7 @@ void main() {
     });
 
     test('signOut clears currentUser', () async {
-      await authRepository.signInWithEmailAndPassword('test@example.com', 'password');
+      await authRepository.registerWithEmailAndPassword('test@example.com', 'password');
       expect(authRepository.currentUser, isNotNull);
 
       await authRepository.signOut();

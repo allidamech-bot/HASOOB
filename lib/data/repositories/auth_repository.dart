@@ -1,10 +1,13 @@
 import '../models/auth_user_model.dart';
+import '../models/business_model.dart';
 
 class AuthRepository {
   AuthRepository._();
   static final AuthRepository instance = AuthRepository._();
 
   AuthUserModel? _currentUser;
+  final List<AuthUserModel> _users = [];
+  final List<BusinessModel> _businesses = [];
 
   AuthUserModel? get currentUser => _currentUser;
 
@@ -19,14 +22,17 @@ class AuthRepository {
     // Mock local delay
     await Future.delayed(const Duration(milliseconds: 500));
 
-    _currentUser = AuthUserModel(
-      id: 'mock_user_123',
-      email: email,
-      displayName: email.split('@').first,
-      businessId: 'mock_business_456',
-      role: 'admin',
+    // Check if user exists in mock storage
+    final existingUser = _users.firstWhere(
+      (u) => u.email == email,
+      orElse: () {
+        // For development convenience, if not found, we could throw or create
+        // Request says "Return user with stored businessId"
+        throw const AuthException('User not found.');
+      },
     );
 
+    _currentUser = existingUser;
     return _currentUser!;
   }
 
@@ -42,18 +48,40 @@ class AuthRepository {
     // Mock local delay
     await Future.delayed(const Duration(milliseconds: 500));
 
-    _currentUser = AuthUserModel(
-      id: 'mock_user_789',
+    final userId = 'user_${DateTime.now().millisecondsSinceEpoch}';
+    final businessId = 'bus_${DateTime.now().millisecondsSinceEpoch}';
+
+    // Create BusinessModel
+    final business = BusinessModel(
+      id: businessId,
+      name: displayName ?? email.split('@').first,
+      ownerId: userId,
+      createdAt: DateTime.now(),
+    );
+    _businesses.add(business);
+
+    // Create AuthUserModel
+    final newUser = AuthUserModel(
+      id: userId,
       email: email,
       displayName: displayName ?? email.split('@').first,
-      businessId: 'mock_business_000',
+      businessId: businessId,
       role: 'owner',
     );
+    _users.add(newUser);
 
+    _currentUser = newUser;
     return _currentUser!;
   }
 
   Future<void> signOut() async {
+    _currentUser = null;
+  }
+
+  // Helper for tests
+  void clearMockData() {
+    _users.clear();
+    _businesses.clear();
     _currentUser = null;
   }
 }
