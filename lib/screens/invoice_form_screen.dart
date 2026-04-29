@@ -574,7 +574,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
                   children: [
                     Expanded(
                       child: DropdownButtonFormField<String>(
-                        value: _selectedCustomerId,
+                        initialValue: _selectedCustomerId,
                         decoration: InputDecoration(
                           labelText: copy.t('customer'),
                         ),
@@ -704,7 +704,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
                 ],
                 if (_paymentMode != _InvoicePaymentMode.none) ...[
                   DropdownButtonFormField<String>(
-                    value: _paymentMethod,
+                    initialValue: _paymentMethod,
                     decoration: InputDecoration(
                       labelText: copy.t('paymentMethod'),
                     ),
@@ -824,7 +824,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
         children: [
           if (!_isFromQuotation) ...[
             DropdownButtonFormField<String>(
-              value: _selectedProductId,
+              initialValue: _selectedProductId,
               decoration: InputDecoration(
                 labelText: copy.t('product'),
               ),

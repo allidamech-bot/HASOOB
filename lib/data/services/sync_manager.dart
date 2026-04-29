@@ -293,16 +293,8 @@ class SyncManager {
 
   Future<bool> _isOnline() async {
     final result = await _connectivity.checkConnectivity();
-
-    if (result is List<ConnectivityResult>) {
-      return result.any((item) => item != ConnectivityResult.none);
-    }
-
-    if (result is ConnectivityResult) {
-      return result != ConnectivityResult.none;
-    }
-
-    return true;
+    // In connectivity_plus v6.0.0+, checkConnectivity returns List<ConnectivityResult>
+    return result.any((item) => item != ConnectivityResult.none);
   }
 
   Map<String, dynamic> _decodePayload(String text) {

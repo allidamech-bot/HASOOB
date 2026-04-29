@@ -8,7 +8,6 @@ import 'package:pdf/widgets.dart' as pw;
 
 import '../../core/app_formatters.dart';
 import '../models/product.dart';
-import 'reports/report_models.dart';
 import 'reports/report_service.dart';
 
 enum ExportReportType {
@@ -44,7 +43,6 @@ class ExportService {
   static const PdfColor _pdfWhite = PdfColors.white;
   static const PdfColor _pdfSuccess = PdfColor.fromInt(0xFF28C76F);
   static const PdfColor _pdfWarning = PdfColor.fromInt(0xFFFF9F43);
-  static const PdfColor _pdfDanger = PdfColor.fromInt(0xFFEA5455);
 
   String _profileText(Map<String, dynamic>? businessProfile, String key) {
     return _cleanText(businessProfile?[key]?.toString());
@@ -1181,9 +1179,9 @@ class ExportService {
     return pw.TableHelper.fromTextArray(
       headers: headers.map(_cleanText).toList(),
       data: safeRows,
-      headerDecoration: pw.BoxDecoration(
+      headerDecoration: const pw.BoxDecoration(
         color: _pdfAccent,
-        borderRadius: const pw.BorderRadius.only(
+        borderRadius: pw.BorderRadius.only(
           topLeft: pw.Radius.circular(10),
           topRight: pw.Radius.circular(10),
         ),

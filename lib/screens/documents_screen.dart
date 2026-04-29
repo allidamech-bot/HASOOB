@@ -194,7 +194,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: paymentMethod,
+                initialValue: paymentMethod,
                 decoration: InputDecoration(
                   labelText: copy.t('paymentMethod'),
                 ),

@@ -150,7 +150,7 @@ class _InventoryAdjustmentScreenState extends State<InventoryAdjustmentScreen> {
     if (text.isEmpty) return AppCopy.of(context).requiredField(fieldName);
     final number = integer ? int.tryParse(text) : double.tryParse(text);
     if (number == null) return AppCopy.of(context).t('fieldInvalid').replaceAll('{field}', fieldName);
-    if ((number as num) < 0) {
+    if (number < 0) {
       return AppCopy.of(context).isEnglish ? '$fieldName cannot be negative.' : '$fieldName لا يمكن أن يكون سالبًا.';
     }
     return null;

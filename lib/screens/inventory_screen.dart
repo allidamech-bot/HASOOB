@@ -63,6 +63,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       return;
     }
 
+    if (!mounted) return;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -178,7 +179,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     child: Column(
                       children: [
                         DropdownButtonFormField<InventoryFilter>(
-                          value: _selectedFilter,
+                          initialValue: _selectedFilter,
                           decoration: InputDecoration(labelText: copy.t('productFilter')),
                           items: InventoryFilter.values
                               .map(
@@ -195,7 +196,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<InventorySort>(
-                          value: _selectedSort,
+                          initialValue: _selectedSort,
                           decoration: InputDecoration(labelText: copy.t('sortBy')),
                           items: InventorySort.values
                               .map(

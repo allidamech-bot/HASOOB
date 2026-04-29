@@ -112,7 +112,7 @@ class AppCopy {
     final prefix = customerName.trim().isNotEmpty
         ? (isEnglish ? 'Customer $customerName - ' : 'العميل $customerName - ')
         : '';
-    return isEnglish ? '${prefix}Qty $qty - $date' : '${prefix}الكمية $qty - $date';
+    return isEnglish ? '$prefix Qty $qty - $date' : '$prefixالكمية $qty - $date';
   }
 
   String documentsAddPaymentTitle(String number) =>
@@ -140,7 +140,7 @@ class AppCopy {
     final prefix = customerName.trim().isNotEmpty
         ? (isEnglish ? 'Customer $customerName - ' : 'العميل $customerName - ')
         : '';
-    return isEnglish ? '${prefix}Qty $qty - $date' : '${prefix}الكمية $qty - $date';
+    return isEnglish ? '$prefix Qty $qty - $date' : '$prefixالكمية $qty - $date';
   }
 
   String reportsBestSellingSubtitle(int soldQuantity, String profit) =>

@@ -1003,7 +1003,7 @@ class DBHelper {
       final normalizedCustomerName = customerName?.trim();
       final normalizedSaleNote = saleNote?.trim();
       final normalizedCurrencyCode = AppCurrency.sanitizeLabel(currencyCode);
-      final saleDescription = _buildSaleDescription(
+      _buildSaleDescription(
         productName: productName,
         customerName: normalizedCustomerName,
         note: normalizedSaleNote,
@@ -1011,10 +1011,6 @@ class DBHelper {
 
       if (sellingPrice < 0) {
         throw Exception('سعر البيع المستخدم يجب أن يكون صفراً أو أكبر.');
-      }
-
-      if (sellingPrice < 0 && false) {
-        throw Exception('سعر الصرف يجب أن يكون أكبر من صفر.');
       }
 
       final cashAccountId = await _requireAccountId(txn, _cashAccountCode);
@@ -1427,7 +1423,6 @@ class DBHelper {
   static Future<String> saveCustomer(Map<String, dynamic> data) async {
     final db = await database();
     final now = DateTime.now().toIso8601String();
-    final hasExistingId = data['id']?.toString().trim().isNotEmpty == true;
     final id = data['id']?.toString().trim().isNotEmpty == true
         ? data['id'].toString()
         : _newTextId('CUS');

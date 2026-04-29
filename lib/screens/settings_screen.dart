@@ -220,9 +220,12 @@ class SettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
+            // ignore: deprecated_member_use
             Radio<ThemeMode>(
               value: mode,
+              // ignore: deprecated_member_use
               groupValue: controller.themeMode,
+              // ignore: deprecated_member_use
               onChanged: (value) {
                 if (value != null) {
                   controller.updateThemeMode(value);
@@ -287,9 +290,12 @@ class SettingsScreen extends StatelessWidget {
                     ),
               ),
             ),
+            // ignore: deprecated_member_use
             Radio<String>(
               value: localeCode,
+              // ignore: deprecated_member_use
               groupValue: currentLocaleCode,
+              // ignore: deprecated_member_use
               onChanged: (value) {
                 if (value != null) {
                   localeController.updateLocale(Locale(value));

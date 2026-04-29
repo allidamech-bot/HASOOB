@@ -193,7 +193,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<SalesPeriodFilter>(
-                          value: _periodFilter,
+                          initialValue: _periodFilter,
                           dropdownColor: AppTheme.surfaceFor(context),
                           style: TextStyle(
                             color: onSurface,

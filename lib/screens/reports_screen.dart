@@ -346,7 +346,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       child: Column(
         children: [
           DropdownButtonFormField<ReportPeriodFilter>(
-            value: _periodFilter,
+            initialValue: _periodFilter,
             dropdownColor: AppTheme.surfaceFor(context),
             style: TextStyle(color: _onSurface),
             decoration: _inputDecoration(copy.t('period')),
@@ -368,7 +368,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
           const SizedBox(height: 12),
           DropdownButtonFormField<String?>(
-            value: _selectedProductId,
+            initialValue: _selectedProductId,
             dropdownColor: AppTheme.surfaceFor(context),
             style: TextStyle(color: _onSurface),
             decoration: _inputDecoration(copy.t('filterByProduct')),

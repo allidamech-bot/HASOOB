@@ -79,7 +79,7 @@ class _SplashBackground extends StatelessWidget {
         child: Stack(
           fit: StackFit.expand,
           children: [
-            Positioned(
+            const Positioned(
               top: -140,
               left: -120,
               child: _GlowCircle(
@@ -88,7 +88,7 @@ class _SplashBackground extends StatelessWidget {
                 opacity: 0.10,
               ),
             ),
-            Positioned(
+            const Positioned(
               right: -120,
               bottom: -150,
               child: _GlowCircle(
