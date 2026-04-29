@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../../data/database/database_helper.dart';
-import '../../data/models/product.dart';
+import '../../data/models/product_model.dart';
+import '../data/repositories/business_profile_repository.dart';
 import '../core/app_copy.dart';
 import '../core/app_messages.dart';
 import '../data/repositories/product_repository.dart';
@@ -16,6 +17,7 @@ class AddProductScreen extends StatefulWidget {
 class _AddProductScreenState extends State<AddProductScreen> {
   final _formKey = GlobalKey<FormState>();
   final ProductRepository _productRepository = ProductRepository();
+  final BusinessProfileRepository _businessRepository = BusinessProfileRepository();
 
   final _nameController = TextEditingController();
   final _unitController = TextEditingController();
@@ -49,8 +51,12 @@ class _AddProductScreenState extends State<AddProductScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final product = Product(
+      final business = await _businessRepository.getBusinessProfile();
+      final businessId = business?.id ?? '1';
+
+      final product = ProductModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
+        businessId: businessId,
         name: _nameController.text.trim(),
         unit: _unitController.text.trim(),
         purchasePrice: _toDouble(_purchaseController.text),

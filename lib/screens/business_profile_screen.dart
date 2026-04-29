@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../data/models/business_model.dart';
 import '../../data/repositories/business_profile_repository.dart';
 import '../core/app_copy.dart';
 import '../core/app_messages.dart';
@@ -71,18 +72,18 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
     try {
       final data = await _repository.getBusinessProfile();
       if (data != null) {
-        _businessNameController.text = data['business_name'] ?? '';
-        _tradeNameController.text = data['trade_name'] ?? '';
-        _phoneController.text = data['phone'] ?? '';
-        _whatsAppController.text = data['whatsapp'] ?? '';
-        _emailController.text = data['email'] ?? '';
-        _addressController.text = data['address'] ?? '';
-        _taxNumberController.text = data['tax_number'] ?? '';
-        _registrationNumberController.text = data['registration_number'] ?? '';
-        _defaultInvoiceNotesController.text = data['default_invoice_notes'] ?? '';
-        _defaultQuotationNotesController.text = data['default_quotation_notes'] ?? '';
-        _paymentTermsController.text = data['payment_terms_footer'] ?? '';
-        _logoPath = data['logo_path']?.toString();
+        _businessNameController.text = data.name;
+        _tradeNameController.text = data.tradeName ?? '';
+        _phoneController.text = data.phone ?? '';
+        _whatsAppController.text = data.whatsapp ?? '';
+        _emailController.text = data.email ?? '';
+        _addressController.text = data.address ?? '';
+        _taxNumberController.text = data.taxNumber ?? '';
+        _registrationNumberController.text = data.registrationNumber ?? '';
+        _defaultInvoiceNotesController.text = data.defaultInvoiceNotes ?? '';
+        _defaultQuotationNotesController.text = data.defaultQuotationNotes ?? '';
+        _paymentTermsController.text = data.paymentTermsFooter ?? '';
+        _logoPath = data.logoPath;
 
         if (_logoPath != null && _logoPath!.isNotEmpty) {
           final file = File(_logoPath!);
@@ -106,20 +107,23 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
     setState(() => _saving = true);
 
     try {
-      await _repository.saveBusinessProfile({
-        'business_name': _businessNameController.text.trim(),
-        'trade_name': _tradeNameController.text.trim(),
-        'logo_path': _logoPath ?? '',
-        'phone': _phoneController.text.trim(),
-        'whatsapp': _whatsAppController.text.trim(),
-        'email': _emailController.text.trim(),
-        'address': _addressController.text.trim(),
-        'tax_number': _taxNumberController.text.trim(),
-        'registration_number': _registrationNumberController.text.trim(),
-        'default_invoice_notes': _defaultInvoiceNotesController.text.trim(),
-        'default_quotation_notes': _defaultQuotationNotesController.text.trim(),
-        'payment_terms_footer': _paymentTermsController.text.trim(),
-      });
+      await _repository.saveBusinessProfile(BusinessModel(
+        id: '', // Handled by DB for profile
+        name: _businessNameController.text.trim(),
+        tradeName: _tradeNameController.text.trim(),
+        logoPath: _logoPath ?? '',
+        phone: _phoneController.text.trim(),
+        whatsapp: _whatsAppController.text.trim(),
+        email: _emailController.text.trim(),
+        address: _addressController.text.trim(),
+        taxNumber: _taxNumberController.text.trim(),
+        registrationNumber: _registrationNumberController.text.trim(),
+        defaultInvoiceNotes: _defaultInvoiceNotesController.text.trim(),
+        defaultQuotationNotes: _defaultQuotationNotesController.text.trim(),
+        paymentTermsFooter: _paymentTermsController.text.trim(),
+        ownerId: '',
+        createdAt: DateTime.now(),
+      ));
 
       if (!mounted) return;
       AppMessages.success(context, AppCopy.of(context).t('businessProfileSaved'));

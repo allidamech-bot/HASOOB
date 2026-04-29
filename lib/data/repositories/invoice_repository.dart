@@ -1,47 +1,58 @@
+import '../models/business_model.dart';
 import '../database/database_helper.dart';
+import '../models/invoice_model.dart';
+import '../models/quotation_model.dart';
+import '../models/product_model.dart';
 import '../services/cloud_sync_service.dart';
 
 class InvoiceRepository {
-  Stream<List<Map<String, dynamic>>> watchInvoices() {
-    return CloudSyncService.instance
-        .watchInvoices()
-        .asyncMap((_) => DBHelper.getInvoices());
+  Stream<List<InvoiceModel>> watchInvoices() {
+    return CloudSyncService.instance.watchInvoices().asyncMap((_) async {
+      final data = await DBHelper.getInvoices();
+      return data.map((e) => InvoiceModel.fromMap(e)).toList();
+    });
   }
 
-  Stream<Map<String, dynamic>?> watchInvoiceById(String id) {
-    return CloudSyncService.instance
-        .watchInvoice(id)
-        .asyncMap((_) => DBHelper.getInvoiceById(id));
+  Stream<InvoiceModel?> watchInvoiceById(String id) {
+    return CloudSyncService.instance.watchInvoice(id).asyncMap((_) async {
+      final data = await DBHelper.getInvoiceById(id);
+      return data != null ? InvoiceModel.fromMap(data) : null;
+    });
   }
 
   Stream<List<Map<String, dynamic>>> watchInvoiceItems(String id) {
     return CloudSyncService.instance.watchInvoiceItems(id);
   }
 
-  Stream<List<Map<String, dynamic>>> watchQuotations() {
-    return CloudSyncService.instance
-        .watchQuotations()
-        .asyncMap((_) => DBHelper.getQuotations());
+  Stream<List<QuotationModel>> watchQuotations() {
+    return CloudSyncService.instance.watchQuotations().asyncMap((_) async {
+      final data = await DBHelper.getQuotations();
+      return data.map((e) => QuotationModel.fromMap(e)).toList();
+    });
   }
 
-  Future<List<Map<String, dynamic>>> getInvoices() {
-    return DBHelper.getInvoices();
+  Future<List<InvoiceModel>> getInvoices() async {
+    final data = await DBHelper.getInvoices();
+    return data.map((e) => InvoiceModel.fromMap(e)).toList();
   }
 
-  Future<List<Map<String, dynamic>>> getQuotations() {
-    return DBHelper.getQuotations();
+  Future<List<QuotationModel>> getQuotations() async {
+    final data = await DBHelper.getQuotations();
+    return data.map((e) => QuotationModel.fromMap(e)).toList();
   }
 
   Future<List<Map<String, dynamic>>> getCustomers() {
     return DBHelper.getCustomers();
   }
 
-  Future<List<Map<String, dynamic>>> getProducts() {
-    return DBHelper.getProducts();
+  Future<List<ProductModel>> getProducts() async {
+    final data = await DBHelper.getProducts();
+    return data.map((e) => ProductModel.fromMap(e)).toList();
   }
 
-  Future<Map<String, dynamic>?> getBusinessProfile() {
-    return DBHelper.getBusinessProfile();
+  Future<BusinessModel?> getBusinessProfile() async {
+    final data = await DBHelper.getBusinessProfile();
+    return data != null ? BusinessModel.fromMap(data) : null;
   }
 
   Future<String> createInvoice({
@@ -70,8 +81,9 @@ class InvoiceRepository {
     );
   }
 
-  Future<Map<String, dynamic>?> getInvoiceById(String id) {
-    return DBHelper.getInvoiceById(id);
+  Future<InvoiceModel?> getInvoiceById(String id) async {
+    final data = await DBHelper.getInvoiceById(id);
+    return data != null ? InvoiceModel.fromMap(data) : null;
   }
 
   Future<List<Map<String, dynamic>>> getInvoiceItems(String id) {
@@ -134,8 +146,9 @@ class InvoiceRepository {
     );
   }
 
-  Future<Map<String, dynamic>?> getQuotationById(String id) {
-    return DBHelper.getQuotationById(id);
+  Future<QuotationModel?> getQuotationById(String id) async {
+    final data = await DBHelper.getQuotationById(id);
+    return data != null ? QuotationModel.fromMap(data) : null;
   }
 
   Future<List<Map<String, dynamic>>> getQuotationItems(String id) {

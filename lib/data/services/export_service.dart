@@ -7,7 +7,10 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../core/app_formatters.dart';
-import '../models/product.dart';
+import '../models/product_model.dart';
+import '../models/invoice_model.dart';
+import '../models/quotation_model.dart';
+import '../models/business_model.dart';
 import 'reports/report_service.dart';
 
 enum ExportReportType {
@@ -44,18 +47,46 @@ class ExportService {
   static const PdfColor _pdfSuccess = PdfColor.fromInt(0xFF28C76F);
   static const PdfColor _pdfWarning = PdfColor.fromInt(0xFFFF9F43);
 
-  String _profileText(Map<String, dynamic>? businessProfile, String key) {
-    return _cleanText(businessProfile?[key]?.toString());
+  String _profileText(BusinessModel? businessProfile, String key) {
+    if (businessProfile == null) return '';
+    switch (key) {
+      case 'business_name':
+        return _cleanText(businessProfile.name);
+      case 'trade_name':
+        return _cleanText(businessProfile.tradeName);
+      case 'logo_path':
+        return _cleanText(businessProfile.logoPath);
+      case 'phone':
+        return _cleanText(businessProfile.phone);
+      case 'whatsapp':
+        return _cleanText(businessProfile.whatsapp);
+      case 'email':
+        return _cleanText(businessProfile.email);
+      case 'address':
+        return _cleanText(businessProfile.address);
+      case 'tax_number':
+        return _cleanText(businessProfile.taxNumber);
+      case 'registration_number':
+        return _cleanText(businessProfile.registrationNumber);
+      case 'default_invoice_notes':
+        return _cleanText(businessProfile.defaultInvoiceNotes);
+      case 'default_quotation_notes':
+        return _cleanText(businessProfile.defaultQuotationNotes);
+      case 'payment_terms_footer':
+        return _cleanText(businessProfile.paymentTermsFooter);
+      default:
+        return '';
+    }
   }
 
-  String _businessDisplayName(Map<String, dynamic>? businessProfile) {
+  String _businessDisplayName(BusinessModel? businessProfile) {
     final businessName = _profileText(businessProfile, 'business_name');
     if (businessName.isNotEmpty) return businessName;
     return _profileText(businessProfile, 'trade_name');
   }
 
   List<List<String>> _businessIdentityRows(
-      Map<String, dynamic>? businessProfile,
+      BusinessModel? businessProfile,
       ) {
     final rows = <List<String>>[];
 
@@ -424,46 +455,46 @@ class ExportService {
   }
 
   Future<String> generateInvoicePdf({
-    required Map<String, dynamic> invoice,
+    required InvoiceModel invoice,
     required List<Map<String, dynamic>> items,
-    required Map<String, dynamic>? businessProfile,
+    required BusinessModel? businessProfile,
   }) async {
     final fonts = await _loadPdfFonts();
     final document = pw.Document();
 
     final logo = await _loadBusinessLogo(
-      businessProfile?['logo_path']?.toString(),
+      businessProfile?.logoPath,
     );
 
     final businessName = _businessDisplayName(businessProfile);
     final businessIdentityRows = _businessIdentityRows(businessProfile);
-    final invoiceNumber = _cleanText(invoice['invoice_number']?.toString());
-    final customerName = _cleanText(invoice['customer_name']?.toString());
+    final invoiceNumber = _cleanText(invoice.invoiceNumber);
+    final customerName = _cleanText(invoice.customerName);
     final issueDate = _cleanText(
-      AppFormatters.dateTimeString(invoice['issue_date']?.toString()),
+      AppFormatters.dateTimeString(invoice.issueDate.toIso8601String()),
     );
     final dueDate = _cleanText(
-      AppFormatters.dateTimeString(invoice['due_date']?.toString()),
+      AppFormatters.dateTimeString(invoice.dueDate?.toIso8601String()),
     );
-    final notes = _cleanText(invoice['notes']?.toString());
+    final notes = _cleanText(invoice.notes);
     final paymentTermsFooter = _profileText(
       businessProfile,
       'payment_terms_footer',
     );
-    final currencyCode = invoice['currency_code']?.toString();
+    final currencyCode = invoice.currencyCode;
     final total = AppFormatters.currency(
-      _toDouble(invoice['total']),
+      invoice.total,
       currencyLabel: currencyCode,
     );
     final paid = AppFormatters.currency(
-      _toDouble(invoice['paid_amount']),
+      invoice.paidAmount,
       currencyLabel: currencyCode,
     );
     final remaining = AppFormatters.currency(
-      _toDouble(invoice['remaining_amount']),
+      invoice.remainingAmount,
       currencyLabel: currencyCode,
     );
-    final status = _invoiceStatusLabel(invoice['status']?.toString());
+    final status = _invoiceStatusLabel(invoice.status);
 
     document.addPage(
       pw.MultiPage(
@@ -496,7 +527,7 @@ class ExportService {
               _SummaryCardData(
                 label: 'المتبقي',
                 value: remaining,
-                color: _toDouble(invoice['remaining_amount']) > 0
+                color: invoice.remainingAmount > 0
                     ? _pdfWarning
                     : _pdfSuccess,
               ),
@@ -544,40 +575,40 @@ class ExportService {
   }
 
   Future<String> generateQuotationPdf({
-    required Map<String, dynamic> quotation,
+    required QuotationModel quotation,
     required List<Map<String, dynamic>> items,
-    required Map<String, dynamic>? businessProfile,
+    required BusinessModel? businessProfile,
   }) async {
     final fonts = await _loadPdfFonts();
     final document = pw.Document();
 
     final logo = await _loadBusinessLogo(
-      businessProfile?['logo_path']?.toString(),
+      businessProfile?.logoPath,
     );
 
     final businessName = _businessDisplayName(businessProfile);
     final businessIdentityRows = _businessIdentityRows(businessProfile);
     final quotationNumber = _cleanText(
-      quotation['quotation_number']?.toString(),
+      quotation.quotationNumber,
     );
-    final customerName = _cleanText(quotation['customer_name']?.toString());
+    final customerName = _cleanText(quotation.customerName);
     final issueDate = _cleanText(
-      AppFormatters.dateTimeString(quotation['issue_date']?.toString()),
+      AppFormatters.dateTimeString(quotation.issueDate.toIso8601String()),
     );
     final expiryDate = _cleanText(
-      AppFormatters.dateTimeString(quotation['expiry_date']?.toString()),
+      AppFormatters.dateTimeString(quotation.expiryDate?.toIso8601String()),
     );
-    final notes = _cleanText(quotation['notes']?.toString());
+    final notes = _cleanText(quotation.notes);
     final paymentTermsFooter = _profileText(
       businessProfile,
       'payment_terms_footer',
     );
-    final currencyCode = quotation['currency_code']?.toString();
+    final currencyCode = quotation.currencyCode;
     final total = AppFormatters.currency(
-      _toDouble(quotation['total']),
+      quotation.total,
       currencyLabel: currencyCode,
     );
-    final status = _quotationStatusLabel(quotation['status']?.toString());
+    final status = _quotationStatusLabel(quotation.status);
 
     document.addPage(
       pw.MultiPage(
@@ -1351,14 +1382,14 @@ class ExportService {
     }
   }
 
-  String _selectedProductLabel(List<Product> products, String? productId) {
+  String _selectedProductLabel(List<ProductModel> products, String? productId) {
     if (productId == null || productId.isEmpty) {
       return 'كل الأصناف';
     }
     return _productName(products, productId);
   }
 
-  String _productName(List<Product> products, String productId) {
+  String _productName(List<ProductModel> products, String productId) {
     for (final product in products) {
       if (product.id == productId) {
         return product.name;

@@ -3,14 +3,14 @@ import 'package:flutter/material.dart';
 import '../core/app_copy.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
-import '../data/models/product.dart';
+import '../data/models/product_model.dart';
 import '../data/repositories/product_repository.dart';
 
 enum _AdjustmentMode { stock, cost }
 
 class InventoryAdjustmentScreen extends StatefulWidget {
   const InventoryAdjustmentScreen({super.key, required this.product});
-  final Product product;
+  final ProductModel product;
   @override
   State<InventoryAdjustmentScreen> createState() => _InventoryAdjustmentScreenState();
 }

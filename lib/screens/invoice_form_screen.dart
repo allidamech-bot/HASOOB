@@ -11,7 +11,7 @@ import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../data/models/document_line_item.dart';
-import '../data/models/product.dart';
+import '../data/models/product_model.dart';
 import '../data/repositories/customer_repository.dart';
 import '../data/repositories/invoice_repository.dart';
 import '../data/services/export_service.dart';
@@ -45,7 +45,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
   final CustomerRepository _customerRepository = CustomerRepository();
 
   List<Map<String, dynamic>> _customers = const [];
-  List<Product> _products = const [];
+  List<ProductModel> _products = const [];
 
   String? _selectedCustomerId;
   String? _selectedProductId;
@@ -80,33 +80,30 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
   Future<void> _load() async {
     try {
       final customers = await _invoiceRepository.getCustomers();
-      final products =
-      (await _invoiceRepository.getProducts()).map(Product.fromMap).toList();
+      final products = await _invoiceRepository.getProducts();
       final profile = await _invoiceRepository.getBusinessProfile();
-      final defaultNotes =
-          profile?['default_invoice_notes']?.toString() ?? '';
+      final defaultNotes = profile?.defaultInvoiceNotes ?? '';
 
       final loadedItems = <DocumentLineItem>[];
       String? selectedCustomerId =
-      customers.isNotEmpty ? customers.first['id'].toString() : null;
+          customers.isNotEmpty ? customers.first['id'].toString() : null;
       var notesText = defaultNotes;
       String? currencyText;
 
       if (_isFromQuotation) {
         final quotation =
-        await _invoiceRepository.getQuotationById(widget.sourceQuotationId!);
+            await _invoiceRepository.getQuotationById(widget.sourceQuotationId!);
         final quotationItems =
-        await _invoiceRepository.getQuotationItems(widget.sourceQuotationId!);
+            await _invoiceRepository.getQuotationItems(widget.sourceQuotationId!);
 
         if (quotation != null) {
-          selectedCustomerId =
-              quotation['customer_id']?.toString() ?? selectedCustomerId;
-          notesText = quotation['notes']?.toString() ?? defaultNotes;
-          currencyText = quotation['currency_code']?.toString();
+          selectedCustomerId = quotation.customerName;
+          notesText = quotation.notes ?? '';
+          currencyText = quotation.currencyCode;
 
           loadedItems.addAll(
             quotationItems.map(
-                  (item) => DocumentLineItem(
+              (item) => DocumentLineItem(
                 productId: item['product_id']?.toString() ?? '',
                 productName: item['product_name']?.toString() ?? '',
                 quantity: _toInt(item['quantity']),
@@ -153,7 +150,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
   String? get _currencyCode =>
       AppCurrency.sanitizeLabel(_currencyController.text);
 
-  Product? _findProduct(String? productId) {
+  ProductModel? _findProduct(String? productId) {
     for (final product in _products) {
       if (product.id == productId) return product;
     }

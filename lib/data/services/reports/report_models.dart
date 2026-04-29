@@ -1,4 +1,4 @@
-import '../../models/product.dart';
+import '../../models/product_model.dart';
 
 class MetricPoint {
   const MetricPoint({
@@ -64,7 +64,7 @@ class ReportsSnapshot {
     required this.trialBalanceSummary,
   });
 
-  final List<Product> products;
+  final List<ProductModel> products;
   final List<Map<String, dynamic>> salesRecords;
   final List<Map<String, dynamic>> accounts;
   final List<Map<String, dynamic>> journalEntries;
@@ -74,7 +74,7 @@ class ReportsSnapshot {
   final double totalSales;
   final double netProfitEstimate;
   final double realizedProfit;
-  final List<Product> lowStockItems;
+  final List<ProductModel> lowStockItems;
   final List<ProductPerformance> bestSellingProducts;
   final List<Map<String, dynamic>> recentSales;
   final List<MetricPoint> salesTrend;

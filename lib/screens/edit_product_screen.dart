@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 
 import '../core/app_copy.dart';
 import '../core/app_messages.dart';
-import '../data/models/product.dart';
+import '../data/models/product_model.dart';
 import '../data/repositories/product_repository.dart';
 
 class EditProductScreen extends StatefulWidget {
   const EditProductScreen({super.key, required this.product});
-  final Product product;
+  final ProductModel product;
   @override
   State<EditProductScreen> createState() => _EditProductScreenState();
 }

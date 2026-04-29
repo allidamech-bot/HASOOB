@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_theme.dart';
+import '../data/models/invoice_model.dart';
 import '../data/repositories/invoice_repository.dart';
 
 class InvoiceDetailsScreen extends StatelessWidget {
@@ -20,7 +21,7 @@ class InvoiceDetailsScreen extends StatelessWidget {
 
     return Scaffold(
       appBar: AppBar(title: Text(copy.t('invoiceDetailsTitle'))),
-      body: StreamBuilder<Map<String, dynamic>?>(
+      body: StreamBuilder<InvoiceModel?>(
         stream: repository.watchInvoiceById(invoiceId),
         builder: (context, invoiceSnapshot) {
           if (invoiceSnapshot.connectionState == ConnectionState.waiting &&
@@ -33,7 +34,7 @@ class InvoiceDetailsScreen extends StatelessWidget {
             return Center(child: Text(copy.t('invoiceNotFound')));
           }
 
-          final currencyCode = invoice['currency_code']?.toString();
+          final currencyCode = invoice.currencyCode;
 
           return StreamBuilder<List<Map<String, dynamic>>>(
             stream: repository.watchInvoiceItems(invoiceId),
@@ -50,7 +51,7 @@ class InvoiceDetailsScreen extends StatelessWidget {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            invoice['invoice_number']?.toString() ?? '-',
+                            invoice.invoiceNumber,
                             style: Theme.of(context)
                                 .textTheme
                                 .titleLarge
@@ -60,37 +61,37 @@ class InvoiceDetailsScreen extends StatelessWidget {
                           _detailRow(
                             context,
                             copy.t('customer'),
-                            invoice['customer_name']?.toString().trim().isNotEmpty == true
-                                ? invoice['customer_name'].toString()
+                            invoice.customerName.trim().isNotEmpty == true
+                                ? invoice.customerName
                                 : copy.documentsCustomerFallback(),
                           ),
                           _detailRow(
                             context,
                             copy.t('status'),
-                            _statusLabel(invoice['status']?.toString() ?? '', copy),
+                            _statusLabel(invoice.status, copy),
                           ),
                           _detailRow(
                             context,
                             copy.t('invoiceDate'),
-                            AppFormatters.dateTimeString(invoice['issue_date']?.toString()),
+                            AppFormatters.dateTimeString(invoice.issueDate.toIso8601String()),
                           ),
                           _detailRow(
                             context,
                             copy.t('dueDate'),
-                            invoice['due_date']?.toString().trim().isNotEmpty == true
-                                ? AppFormatters.dateTimeString(invoice['due_date']?.toString())
+                            invoice.dueDate != null
+                                ? AppFormatters.dateTimeString(invoice.dueDate!.toIso8601String())
                                 : '-',
                           ),
                           _detailRow(
                             context,
                             copy.t('currency'),
-                            (currencyCode ?? '').trim().isEmpty ? '-' : currencyCode!,
+                            currencyCode?.trim().isEmpty ?? true ? '-' : currencyCode!,
                           ),
                           _detailRow(
                             context,
                             copy.t('notes'),
-                            invoice['notes']?.toString().trim().isNotEmpty == true
-                                ? invoice['notes'].toString()
+                            invoice.notes?.trim().isNotEmpty == true
+                                ? invoice.notes!
                                 : '-',
                           ),
                         ],
@@ -182,16 +183,16 @@ class InvoiceDetailsScreen extends StatelessWidget {
                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
-                          _summaryRow(context, copy.t('total'), _toDouble(invoice['total']),
+                          _summaryRow(context, copy.t('total'), invoice.total,
                               currencyCode: currencyCode),
                           const SizedBox(height: 8),
-                          _summaryRow(context, copy.t('paid'), _toDouble(invoice['paid_amount']),
+                          _summaryRow(context, copy.t('paid'), invoice.paidAmount,
                               currencyCode: currencyCode),
                           const SizedBox(height: 8),
                           _summaryRow(
                             context,
                             copy.t('remaining'),
-                            _toDouble(invoice['remaining_amount']),
+                            invoice.remainingAmount,
                             currencyCode: currencyCode,
                           ),
                         ],

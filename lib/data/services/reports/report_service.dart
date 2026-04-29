@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import '../../database/database_helper.dart';
-import '../../models/product.dart';
+import '../../models/product_model.dart';
 import 'report_models.dart';
 
 enum ReportPeriodFilter { all, last7Days, last30Days, today }
@@ -13,7 +13,7 @@ class ReportService {
     ReportPeriodFilter period = ReportPeriodFilter.all,
     String? productId,
   }) async {
-    final products = (await DBHelper.getProducts()).map(Product.fromMap).toList();
+    final products = (await DBHelper.getProducts()).map(ProductModel.fromMap).toList();
     final salesRecords = await DBHelper.getSalesRecords();
     final accounts = await DBHelper.getTrialBalance();
     final journalEntries = await DBHelper.getJournalEntries();
@@ -199,7 +199,7 @@ class ReportService {
         .toList();
   }
 
-  List<MetricPoint> _buildStockDistribution(List<Product> products) {
+  List<MetricPoint> _buildStockDistribution(List<ProductModel> products) {
     final inStock = products.where((item) => !item.isLowStock && !item.isOutOfStock).length;
     final low = products.where((item) => item.isLowStock && !item.isOutOfStock).length;
     final out = products.where((item) => item.isOutOfStock).length;

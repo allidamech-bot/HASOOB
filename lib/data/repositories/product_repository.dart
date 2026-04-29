@@ -1,5 +1,5 @@
 import '../../data/database/database_helper.dart';
-import '../../data/models/product.dart';
+import '../models/product_model.dart';
 import '../services/cloud_sync_service.dart';
 
 class DeleteProductCheckResult {
@@ -17,28 +17,28 @@ class DeleteProductCheckResult {
 }
 
 class ProductRepository {
-  Stream<List<Product>> watchProducts() {
+  Stream<List<ProductModel>> watchProducts() {
     return CloudSyncService.instance.watchProducts().map(
-          (rows) => rows.map(Product.fromMap).toList(),
+          (rows) => rows.map(ProductModel.fromMap).toList(),
         );
   }
 
-  Future<List<Product>> getAllProducts() async {
+  Future<List<ProductModel>> getAllProducts() async {
     final data = await DBHelper.getProducts();
-    return data.map((e) => Product.fromMap(e)).toList();
+    return data.map((e) => ProductModel.fromMap(e)).toList();
   }
 
-  Future<Product?> getProductById(String id) async {
+  Future<ProductModel?> getProductById(String id) async {
     final data = await DBHelper.getProductById(id);
     if (data == null) return null;
-    return Product.fromMap(data);
+    return ProductModel.fromMap(data);
   }
 
-  Future<void> addProduct(Product product) async {
+  Future<void> addProduct(ProductModel product) async {
     await DBHelper.insertProduct(product.toMap());
   }
 
-  Future<void> updateProduct(Product product) async {
+  Future<void> updateProduct(ProductModel product) async {
     await DBHelper.updateProduct(product.toMap());
   }
 
@@ -46,7 +46,7 @@ class ProductRepository {
     await DBHelper.deleteProduct(id);
   }
 
-  Future<DeleteProductCheckResult> canDeleteProduct(Product product) async {
+  Future<DeleteProductCheckResult> canDeleteProduct(ProductModel product) async {
     final salesCount = await DBHelper.getProductSalesCount(product.id);
     final hasStock = product.stockQty > 0;
     final hasSales = salesCount > 0;

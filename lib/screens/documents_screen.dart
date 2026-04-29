@@ -9,6 +9,8 @@ import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
+import '../data/models/invoice_model.dart';
+import '../data/models/quotation_model.dart';
 import '../data/repositories/business_profile_repository.dart';
 import '../data/repositories/invoice_repository.dart';
 import '../data/services/export_service.dart';
@@ -64,10 +66,10 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     setState(() => _refreshKey++);
   }
 
-  Future<String> _invoicePdf(Map<String, dynamic> invoice) async {
+  Future<String> _invoicePdf(InvoiceModel invoice) async {
     final copy = AppCopy.of(context);
-    final id = invoice['id']?.toString() ?? '';
-    final current = invoice['pdf_path']?.toString() ?? '';
+    final id = invoice.id;
+    final current = invoice.pdfPath ?? '';
 
     if (current.isNotEmpty && await File(current).exists()) {
       return current;
@@ -91,10 +93,10 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     return path;
   }
 
-  Future<String> _quotationPdf(Map<String, dynamic> quotation) async {
+  Future<String> _quotationPdf(QuotationModel quotation) async {
     final copy = AppCopy.of(context);
-    final id = quotation['id']?.toString() ?? '';
-    final current = quotation['pdf_path']?.toString() ?? '';
+    final id = quotation.id;
+    final current = quotation.pdfPath ?? '';
 
     if (current.isNotEmpty && await File(current).exists()) {
       return current;
@@ -168,7 +170,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     return double.tryParse(normalized) ?? 0;
   }
 
-  Future<void> _addPayment(Map<String, dynamic> invoice) async {
+  Future<void> _addPayment(InvoiceModel invoice) async {
     final copy = AppCopy.of(context);
     final controller = TextEditingController();
     String paymentMethod = 'cash';
@@ -179,7 +181,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         builder: (dialogContext, setDialogState) => AlertDialog(
           title: Text(
             copy.documentsAddPaymentTitle(
-              invoice['invoice_number']?.toString() ?? '',
+              invoice.invoiceNumber,
             ),
           ),
           content: Column(
@@ -231,7 +233,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 }
 
                 await _repo.addInvoicePayment(
-                  invoiceId: invoice['id'].toString(),
+                  invoiceId: invoice.id,
                   amount: amount,
                   paymentMethod: paymentMethod,
                 );
@@ -281,7 +283,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
-        child: StreamBuilder<List<Map<String, dynamic>>>(
+        child: StreamBuilder<List<Object>>(
           key: ValueKey('${_showInvoices}_$_refreshKey'),
           stream: stream,
           builder: (context, snapshot) {
@@ -304,7 +306,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
               );
             }
 
-            final rows = snapshot.data ?? const <Map<String, dynamic>>[];
+            final rows = snapshot.data ?? const <Object>[];
 
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
@@ -367,8 +369,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                         (row) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _showInvoices
-                          ? _invoiceCard(row, copy)
-                          : _quotationCard(row, copy),
+                          ? _invoiceCard(row as InvoiceModel, copy)
+                          : _quotationCard(row as QuotationModel, copy),
                     ),
                   ),
               ],
@@ -379,11 +381,11 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     );
   }
 
-  Widget _invoiceCard(Map<String, dynamic> invoice, AppCopy copy) {
-    final total = _toDouble(invoice['total']);
-    final paid = _toDouble(invoice['paid_amount']);
-    final remaining = _toDouble(invoice['remaining_amount']);
-    final currencyCode = invoice['currency_code']?.toString();
+  Widget _invoiceCard(InvoiceModel invoice, AppCopy copy) {
+    final total = invoice.total;
+    final paid = invoice.paidAmount;
+    final remaining = invoice.remainingAmount;
+    final currencyCode = invoice.currencyCode;
 
     return Card(
       child: Padding(
@@ -392,7 +394,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              invoice['invoice_number']?.toString() ?? '-',
+              invoice.invoiceNumber,
               style: const TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
@@ -400,8 +402,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              invoice['customer_name']?.toString().trim().isNotEmpty == true
-                  ? invoice['customer_name'].toString()
+              invoice.customerName.trim().isNotEmpty == true
+                  ? invoice.customerName
                   : copy.documentsCustomerFallback(),
               style: TextStyle(
                 color: AppTheme.textSecondaryFor(context),
@@ -437,7 +439,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => InvoiceDetailsScreen(
-                          invoiceId: invoice['id'].toString(),
+                          invoiceId: invoice.id,
                         ),
                       ),
                     );
@@ -471,7 +473,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                   child: Text(copy.t('pdfShare')),
                 ),
                 OutlinedButton(
-                  onPressed: () => _deleteInvoice(invoice['id'].toString()),
+                  onPressed: () => _deleteInvoice(invoice.id),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.danger,
                   ),
@@ -485,9 +487,9 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     );
   }
 
-  Widget _quotationCard(Map<String, dynamic> quotation, AppCopy copy) {
-    final total = _toDouble(quotation['total']);
-    final currencyCode = quotation['currency_code']?.toString();
+  Widget _quotationCard(QuotationModel quotation, AppCopy copy) {
+    final total = quotation.total;
+    final currencyCode = quotation.currencyCode;
 
     return Card(
       child: Padding(
@@ -496,7 +498,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              quotation['quotation_number']?.toString() ?? '-',
+              quotation.quotationNumber,
               style: const TextStyle(
                 fontWeight: FontWeight.w800,
                 fontSize: 16,
@@ -504,8 +506,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             ),
             const SizedBox(height: 6),
             Text(
-              quotation['customer_name']?.toString().trim().isNotEmpty == true
-                  ? quotation['customer_name'].toString()
+              quotation.customerName.trim().isNotEmpty == true
+                  ? quotation.customerName
                   : copy.documentsCustomerFallback(),
               style: TextStyle(
                 color: AppTheme.textSecondaryFor(context),
@@ -527,7 +529,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (_) => QuotationDetailsScreen(
-                          quotationId: quotation['id'].toString(),
+                          quotationId: quotation.id,
                         ),
                       ),
                     );
@@ -535,7 +537,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                   child: Text(copy.t('details')),
                 ),
                 OutlinedButton(
-                  onPressed: () => _convert(quotation),
+                  onPressed: () => _convert(quotation.toMap()),
                   child: Text(copy.t('convertToInvoice')),
                 ),
                 OutlinedButton(
@@ -561,7 +563,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                   child: Text(copy.t('pdfShare')),
                 ),
                 OutlinedButton(
-                  onPressed: () => _deleteQuotation(quotation['id'].toString()),
+                  onPressed: () => _deleteQuotation(quotation.id),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.danger,
                   ),
@@ -589,11 +591,6 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
         AppCopy.of(context).documentsChipLine(label, value),
       ),
     );
-  }
-
-  double _toDouble(dynamic value) {
-    if (value is num) return value.toDouble();
-    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 }
 

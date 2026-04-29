@@ -9,6 +9,7 @@ import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
+import '../data/models/quotation_model.dart';
 import '../data/repositories/business_profile_repository.dart';
 import '../data/repositories/invoice_repository.dart';
 import '../data/services/export_service.dart';
@@ -51,8 +52,8 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
     );
   }
 
-  Future<String> _getPdfPath(Map<String, dynamic> quotation) async {
-    final current = quotation['pdf_path']?.toString() ?? '';
+  Future<String> _getPdfPath(QuotationModel quotation) async {
+    final current = quotation.pdfPath ?? '';
     if (current.isNotEmpty && await File(current).exists()) {
       return current;
     }
@@ -77,7 +78,7 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
     return path;
   }
 
-  Future<void> _previewPdf(Map<String, dynamic> quotation) async {
+  Future<void> _previewPdf(QuotationModel quotation) async {
     if (_isPreviewingPdf) return;
 
     setState(() => _isPreviewingPdf = true);
@@ -107,7 +108,7 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
     }
   }
 
-  Future<void> _sharePdf(Map<String, dynamic> quotation) async {
+  Future<void> _sharePdf(QuotationModel quotation) async {
     if (_isSharingPdf) return;
 
     setState(() => _isSharingPdf = true);
@@ -131,8 +132,8 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
     return normalized != 'declined' && normalized != 'expired';
   }
 
-  Future<void> _openInvoiceFromQuotation(Map<String, dynamic> quotation) async {
-    final status = quotation['status']?.toString() ?? '';
+  Future<void> _openInvoiceFromQuotation(QuotationModel quotation) async {
+    final status = quotation.status;
     if (!_canConvertToInvoice(status)) {
       AppMessages.error(
         context,
@@ -145,7 +146,7 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
       context,
       MaterialPageRoute(
         builder: (_) => InvoiceFormScreen(
-          sourceQuotationId: quotation['id']?.toString(),
+          sourceQuotationId: quotation.id,
         ),
       ),
     );
@@ -183,8 +184,8 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
 
           final quotation = data.quotation;
           final items = data.items;
-          final currencyCode = quotation['currency_code']?.toString();
-          final status = quotation['status']?.toString() ?? '';
+          final currencyCode = quotation.currencyCode;
+          final status = quotation.status;
           final canConvert = _canConvertToInvoice(status);
 
           return ListView(
@@ -197,7 +198,7 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        quotation['quotation_number']?.toString() ?? '-',
+                        quotation.quotationNumber,
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w900,
                         ),
@@ -211,7 +212,7 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
                             label: _statusLabel(status, copy),
                             status: status,
                           ),
-                          if ((currencyCode ?? '').trim().isNotEmpty)
+                          if (currencyCode?.trim().isNotEmpty ?? false)
                             _MetaChip(
                               icon: Icons.payments_outlined,
                               label: currencyCode!,
@@ -222,31 +223,31 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
                       _detailRow(
                         context,
                         copy.t('customer'),
-                        quotation['customer_name']?.toString().trim().isNotEmpty == true
-                            ? quotation['customer_name'].toString()
+                        quotation.customerName.trim().isNotEmpty == true
+                            ? quotation.customerName
                             : copy.documentsCustomerFallback(),
                       ),
                       _detailRow(
                         context,
                         copy.t('issueDate'),
                         AppFormatters.dateTimeString(
-                          quotation['issue_date']?.toString(),
+                          quotation.issueDate.toIso8601String(),
                         ),
                       ),
                       _detailRow(
                         context,
                         copy.t('expiryDate'),
-                        quotation['expiry_date']?.toString().trim().isNotEmpty == true
+                        quotation.expiryDate != null
                             ? AppFormatters.dateTimeString(
-                          quotation['expiry_date']?.toString(),
+                          quotation.expiryDate!.toIso8601String(),
                         )
                             : '-',
                       ),
                       _detailRow(
                         context,
                         copy.t('notes'),
-                        quotation['notes']?.toString().trim().isNotEmpty == true
-                            ? quotation['notes'].toString()
+                        quotation.notes?.trim().isNotEmpty == true
+                            ? quotation.notes!
                             : '-',
                       ),
                     ],
@@ -340,7 +341,7 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
                   child: _summaryRow(
                     context,
                     copy.t('total'),
-                    _sanitizeMoney(quotation['total']),
+                    quotation.total,
                     currencyCode: currencyCode,
                   ),
                 ),
@@ -514,7 +515,7 @@ class _QuotationDetailsData {
     required this.items,
   });
 
-  final Map<String, dynamic> quotation;
+  final QuotationModel quotation;
   final List<Map<String, dynamic>> items;
 }
 

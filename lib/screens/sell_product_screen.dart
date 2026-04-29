@@ -5,13 +5,13 @@ import '../core/app_currency.dart';
 import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
-import '../data/models/product.dart';
+import '../data/models/product_model.dart';
 import '../data/repositories/product_repository.dart';
 
 class SellProductScreen extends StatefulWidget {
   const SellProductScreen({super.key, required this.product});
 
-  final Product product;
+  final ProductModel product;
 
   @override
   State<SellProductScreen> createState() => _SellProductScreenState();

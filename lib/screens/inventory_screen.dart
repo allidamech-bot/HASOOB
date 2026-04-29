@@ -4,7 +4,7 @@ import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
-import '../data/models/product.dart';
+import '../data/models/product_model.dart';
 import '../data/repositories/product_repository.dart';
 import 'edit_product_screen.dart';
 import 'product_details_screen.dart';
@@ -45,13 +45,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
     await _productRepository.getAllProducts();
   }
 
-  Future<void> _delete(Product product) async {
+  Future<void> _delete(ProductModel product) async {
     await _productRepository.deleteProduct(product.id);
     if (!mounted) return;
     AppMessages.success(context, AppCopy.of(context).t('productDeleted'));
   }
 
-  Future<void> _confirmDelete(Product product) async {
+  Future<void> _confirmDelete(ProductModel product) async {
     final copy = AppCopy.of(context);
     final result = await _productRepository.canDeleteProduct(product);
     if (!result.canDelete) {
@@ -87,7 +87,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     }
   }
 
-  List<Product> _filterProducts(List<Product> products) {
+  List<ProductModel> _filterProducts(List<ProductModel> products) {
     final query = _searchController.text.trim().toLowerCase();
     final result = products.where((product) {
       final barcode = (product.barcode ?? '').toLowerCase();
@@ -140,7 +140,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       appBar: AppBar(title: Text(copy.t('inventoryTitle'))),
       body: RefreshIndicator(
         onRefresh: _refresh,
-        child: StreamBuilder<List<Product>>(
+        child: StreamBuilder<List<ProductModel>>(
           stream: _productRepository.watchProducts(),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting &&
@@ -152,7 +152,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               return Center(child: Text('${snapshot.error}'));
             }
 
-            final products = snapshot.data ?? const <Product>[];
+            final products = snapshot.data ?? const <ProductModel>[];
             final filteredProducts = _filterProducts(products);
 
             return ListView(
@@ -253,7 +253,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  Widget _productCard(Product product, AppCopy copy) {
+  Widget _productCard(ProductModel product, AppCopy copy) {
     final badge = _statusBadge(product, copy);
     return Card(
       child: Padding(
@@ -377,7 +377,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  Widget _statusBadge(Product product, AppCopy copy) {
+  Widget _statusBadge(ProductModel product, AppCopy copy) {
     late final Color color;
     late final String text;
 

@@ -3,21 +3,21 @@ import 'package:flutter/material.dart';
 import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_theme.dart';
-import '../data/models/product.dart';
+import '../data/models/product_model.dart';
 import '../data/repositories/product_repository.dart';
 import '../widgets/app_section_header.dart';
 import 'inventory_adjustment_screen.dart';
 
 class ProductDetailsScreen extends StatefulWidget {
   const ProductDetailsScreen({super.key, required this.product});
-  final Product product;
+  final ProductModel product;
   @override
   State<ProductDetailsScreen> createState() => _ProductDetailsScreenState();
 }
 
 class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   final ProductRepository _productRepository = ProductRepository();
-  late Product _product; late Future<Map<String, dynamic>> _dataFuture;
+  late ProductModel _product; late Future<Map<String, dynamic>> _dataFuture;
   @override void initState(){super.initState(); _product=widget.product; _dataFuture=_loadData();}
   Future<Map<String,dynamic>> _loadData() async { final results=await Future.wait<dynamic>([_productRepository.getProductSalesCount(_product.id),_productRepository.getProductSoldQty(_product.id),_productRepository.getProductRealizedProfit(_product.id),_productRepository.getProductRealizedSales(_product.id),_productRepository.getProductSalesHistory(_product.id),_productRepository.getProductMovementHistory(_product.id)]); return {'salesCount':results[0] as int,'soldQty':results[1] as int,'realizedProfit':results[2] as double,'realizedSales':results[3] as double,'salesHistory':results[4] as List<Map<String,dynamic>>,'movementHistory':results[5] as List<Map<String,dynamic>>}; }
   Future<void> _refresh() async { final refreshed=await _productRepository.getProductById(_product.id); if(!mounted)return; setState((){ if(refreshed!=null)_product=refreshed; _dataFuture=_loadData();}); await _dataFuture; }
@@ -130,7 +130,7 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
     return Card(margin: const EdgeInsets.only(bottom: 10), child: ListTile(leading: CircleAvatar(backgroundColor: color.withValues(alpha: 0.14), child: Icon(icon, color: color)), title: Text(_movementTypeLabel(movementType, copy), style: const TextStyle(fontWeight: FontWeight.w700)), subtitle: Text([copy.productDetailsQuantityLine(quantity), copy.productDetailsMovementBalanceLine(balanceAfter), if (notes.isNotEmpty) notes, if (date.isNotEmpty) date].join('\n'))));
   }
 
-  Widget _statusBadge(Product product, AppCopy copy) {
+  Widget _statusBadge(ProductModel product, AppCopy copy) {
     late final Color color; late final String text;
     if (product.isOutOfStock) { color = AppTheme.danger; text = copy.t('outOfStock'); } else if (product.isLowStock) { color = AppTheme.warning; text = copy.t('lowStock'); } else { color = AppTheme.success; text = copy.t('stable'); }
     return Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6), decoration: BoxDecoration(color: color.withValues(alpha: 0.16), borderRadius: BorderRadius.circular(999), border: Border.all(color: color.withValues(alpha: 0.45), width: 1.2)), child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w800)));

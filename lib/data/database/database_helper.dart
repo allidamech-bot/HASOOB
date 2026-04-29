@@ -6,7 +6,7 @@ import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../core/app_currency.dart';
-import '../models/product.dart';
+import '../models/product_model.dart';
 import '../services/cloud_sync_service.dart';
 import '../services/sync_manager.dart';
 
@@ -3080,7 +3080,7 @@ class DBHelper {
     return int.tryParse(value.toString()) ?? 0;
   }
 
-  static Product productFromMap(Map<String, dynamic> map) => Product.fromMap(map);
+  static ProductModel productFromMap(Map<String, dynamic> map) => ProductModel.fromMap(map);
 
   static String _requireCurrentUserId() {
     final user = FirebaseAuth.instance.currentUser;
