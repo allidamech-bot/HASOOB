@@ -1,3 +1,5 @@
+import '../../core/permissions/permissions.dart';
+
 class AuthUserModel {
   final String id;
   final String email;
@@ -12,6 +14,17 @@ class AuthUserModel {
     required this.businessId,
     required this.role,
   });
+
+  UserRole get roleEnum {
+    switch (role) {
+      case "owner":
+        return UserRole.owner;
+      case "manager":
+        return UserRole.manager;
+      default:
+        return UserRole.employee;
+    }
+  }
 
   Map<String, dynamic> toMap() {
     return {

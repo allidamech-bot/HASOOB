@@ -4,6 +4,8 @@ import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
+import '../core/permissions/permissions.dart';
+import '../data/repositories/auth_repository.dart';
 import '../data/models/product_model.dart';
 import '../data/repositories/product_repository.dart';
 import 'edit_product_screen.dart';
@@ -340,18 +342,24 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   child: Text(copy.t('details')),
                 ),
                 OutlinedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => EditProductScreen(product: product),
-                      ),
-                    );
-                  },
+                  onPressed: !AppPermissions.canEditProducts(
+                          AuthRepository.instance.currentUser?.role ?? '')
+                      ? null
+                      : () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => EditProductScreen(product: product),
+                            ),
+                          );
+                        },
                   child: Text(copy.t('edit')),
                 ),
                 OutlinedButton(
-                  onPressed: () => _confirmDelete(product),
+                  onPressed: !AppPermissions.canDelete(
+                          AuthRepository.instance.currentUser?.role ?? '')
+                      ? null
+                      : () => _confirmDelete(product),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.danger,
                   ),
