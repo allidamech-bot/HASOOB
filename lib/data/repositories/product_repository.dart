@@ -17,37 +17,37 @@ class DeleteProductCheckResult {
 }
 
 class ProductRepository {
-  Stream<List<ProductModel>> watchProducts() {
-    return CloudSyncService.instance.watchProducts().map(
+  Stream<List<ProductModel>> watchProducts(String businessId) {
+    return CloudSyncService.instance.watchProducts(businessId).map(
           (rows) => rows.map(ProductModel.fromMap).toList(),
         );
   }
 
-  Future<List<ProductModel>> getAllProducts() async {
-    final data = await DBHelper.getProducts();
+  Future<List<ProductModel>> getAllProducts(String businessId) async {
+    final data = await DBHelper.getProducts(businessId);
     return data.map((e) => ProductModel.fromMap(e)).toList();
   }
 
-  Future<ProductModel?> getProductById(String id) async {
-    final data = await DBHelper.getProductById(id);
+  Future<ProductModel?> getProductById(String businessId, String id) async {
+    final data = await DBHelper.getProductById(businessId, id);
     if (data == null) return null;
     return ProductModel.fromMap(data);
   }
 
-  Future<void> addProduct(ProductModel product) async {
-    await DBHelper.insertProduct(product.toMap());
+  Future<void> addProduct(String businessId, ProductModel product) async {
+    await DBHelper.insertProduct(product.copyWith(businessId: businessId).toMap());
   }
 
-  Future<void> updateProduct(ProductModel product) async {
-    await DBHelper.updateProduct(product.toMap());
+  Future<void> updateProduct(String businessId, ProductModel product) async {
+    await DBHelper.updateProduct(product.copyWith(businessId: businessId).toMap());
   }
 
-  Future<void> deleteProduct(String id) async {
-    await DBHelper.deleteProduct(id);
+  Future<void> deleteProduct(String businessId, String id) async {
+    await DBHelper.deleteProduct(businessId, id);
   }
 
   Future<DeleteProductCheckResult> canDeleteProduct(ProductModel product) async {
-    final salesCount = await DBHelper.getProductSalesCount(product.id);
+    final salesCount = await DBHelper.getProductSalesCount(product.businessId, product.id);
     final hasStock = product.stockQty > 0;
     final hasSales = salesCount > 0;
 
@@ -80,6 +80,7 @@ class ProductRepository {
   }
 
   Future<void> sellProduct({
+    required String businessId,
     required String productId,
     required int qty,
     required double sellingPrice,
@@ -88,6 +89,7 @@ class ProductRepository {
     String? currencyCode,
   }) async {
     await DBHelper.sellProduct(
+      businessId: businessId,
       productId: productId,
       qty: qty,
       sellingPrice: sellingPrice,
@@ -98,6 +100,7 @@ class ProductRepository {
   }
 
   Future<void> applyInventoryAdjustment({
+    required String businessId,
     required String productId,
     int? newStockQty,
     double? newPurchasePrice,
@@ -105,6 +108,7 @@ class ProductRepository {
     required String reason,
   }) async {
     await DBHelper.applyInventoryAdjustment(
+      businessId: businessId,
       productId: productId,
       newStockQty: newStockQty,
       newPurchasePrice: newPurchasePrice,
@@ -113,37 +117,38 @@ class ProductRepository {
     );
   }
 
-  Future<int> getProductSalesCount(String productId) {
-    return DBHelper.getProductSalesCount(productId);
+  Future<int> getProductSalesCount(String businessId, String productId) {
+    return DBHelper.getProductSalesCount(businessId, productId);
   }
 
-  Future<int> getProductSoldQty(String productId) {
-    return DBHelper.getProductSoldQty(productId);
+  Future<int> getProductSoldQty(String businessId, String productId) {
+    return DBHelper.getProductSoldQty(businessId, productId);
   }
 
-  Future<double> getProductRealizedProfit(String productId) {
-    return DBHelper.getProductRealizedProfit(productId);
+  Future<double> getProductRealizedProfit(String businessId, String productId) {
+    return DBHelper.getProductRealizedProfit(businessId, productId);
   }
 
-  Future<double> getProductRealizedSales(String productId) {
-    return DBHelper.getProductRealizedSales(productId);
+  Future<double> getProductRealizedSales(String businessId, String productId) {
+    return DBHelper.getProductRealizedSales(businessId, productId);
   }
 
-  Future<List<Map<String, dynamic>>> getProductSalesHistory(String productId) {
-    return DBHelper.getProductSalesHistory(productId);
+  Future<List<Map<String, dynamic>>> getProductSalesHistory(String businessId, String productId) {
+    return DBHelper.getProductSalesHistory(businessId, productId);
   }
 
   Future<List<Map<String, dynamic>>> getProductMovementHistory(
+    String businessId,
     String productId,
   ) {
-    return DBHelper.getProductMovementHistory(productId);
+    return DBHelper.getProductMovementHistory(businessId, productId);
   }
 
-  Future<List<Map<String, dynamic>>> getSalesRecords() {
-    return DBHelper.getSalesRecords();
+  Future<List<Map<String, dynamic>>> getSalesRecords(String businessId) {
+    return DBHelper.getSalesRecords(businessId);
   }
 
-  Stream<List<Map<String, dynamic>>> watchSalesRecords() {
-    return CloudSyncService.instance.watchSalesRecords();
+  Stream<List<Map<String, dynamic>>> watchSalesRecords(String businessId) {
+    return CloudSyncService.instance.watchSalesRecords(businessId);
   }
 }

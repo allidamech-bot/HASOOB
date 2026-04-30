@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_theme.dart';
+import '../data/repositories/auth_repository.dart';
 import '../data/repositories/customer_repository.dart';
 
 class CustomerStatementScreen extends StatefulWidget {
@@ -23,19 +24,21 @@ class CustomerStatementScreen extends StatefulWidget {
 class _CustomerStatementScreenState extends State<CustomerStatementScreen> {
   final CustomerRepository _customerRepository = CustomerRepository();
 
+  String get _businessId => AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
+
   late Future<Map<String, dynamic>> _statementFuture;
 
   @override
   void initState() {
     super.initState();
     _statementFuture =
-        _customerRepository.getCustomerStatement(widget.customerId);
+        _customerRepository.getCustomerStatement(_businessId, widget.customerId);
   }
 
   Future<void> _refresh() async {
     setState(() {
       _statementFuture =
-          _customerRepository.getCustomerStatement(widget.customerId);
+          _customerRepository.getCustomerStatement(_businessId, widget.customerId);
     });
     await _statementFuture;
   }

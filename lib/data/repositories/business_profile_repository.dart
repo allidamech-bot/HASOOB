@@ -1,11 +1,14 @@
 import '../database/database_helper.dart';
 import '../models/business_model.dart';
+import 'auth_repository.dart';
 
 class BusinessProfileRepository {
   BusinessProfileRepository();
 
-  Future<BusinessModel?> getBusinessProfile() async {
-    final data = await DBHelper.getBusinessProfile();
+  String get _currentBusinessId => AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
+
+  Future<BusinessModel?> getBusinessProfile([String? businessId]) async {
+    final data = await DBHelper.getBusinessProfile(businessId ?? _currentBusinessId);
     return data != null ? BusinessModel.fromMap(data) : null;
   }
 

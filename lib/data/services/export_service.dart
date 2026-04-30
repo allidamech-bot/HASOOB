@@ -7,6 +7,7 @@ import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
 import '../../core/app_formatters.dart';
+import '../../core/business/business_context.dart';
 import '../models/product_model.dart';
 import '../models/invoice_model.dart';
 import '../models/quotation_model.dart';
@@ -123,8 +124,11 @@ class ExportService {
   Future<ExportResult> exportInventoryCsv({
     ReportPeriodFilter period = ReportPeriodFilter.all,
     String? productId,
+    required String businessId,
   }) async {
+    final bId = BusinessContext.resolveBusinessId(businessId);
     final snapshot = await _reportService.buildSnapshot(
+      businessId: bId,
       period: period,
       productId: productId,
     );
@@ -162,8 +166,11 @@ class ExportService {
   Future<ExportResult> exportSalesCsv({
     ReportPeriodFilter period = ReportPeriodFilter.all,
     String? productId,
+    required String businessId,
   }) async {
+    final bId = BusinessContext.resolveBusinessId(businessId);
     final snapshot = await _reportService.buildSnapshot(
+      businessId: bId,
       period: period,
       productId: productId,
     );
@@ -199,8 +206,11 @@ class ExportService {
   Future<ExportResult> exportSummaryCsv({
     ReportPeriodFilter period = ReportPeriodFilter.all,
     String? productId,
+    required String businessId,
   }) async {
+    final bId = BusinessContext.resolveBusinessId(businessId);
     final snapshot = await _reportService.buildSnapshot(
+      businessId: bId,
       period: period,
       productId: productId,
     );
@@ -233,8 +243,11 @@ class ExportService {
   Future<ExportResult> exportInventoryPdf({
     ReportPeriodFilter period = ReportPeriodFilter.all,
     String? productId,
+    required String businessId,
   }) async {
+    final bId = BusinessContext.resolveBusinessId(businessId);
     final snapshot = await _reportService.buildSnapshot(
+      businessId: bId,
       period: period,
       productId: productId,
     );
@@ -284,8 +297,11 @@ class ExportService {
   Future<ExportResult> exportSalesPdf({
     ReportPeriodFilter period = ReportPeriodFilter.all,
     String? productId,
+    required String businessId,
   }) async {
+    final bId = BusinessContext.resolveBusinessId(businessId);
     final snapshot = await _reportService.buildSnapshot(
+      businessId: bId,
       period: period,
       productId: productId,
     );
@@ -355,8 +371,11 @@ class ExportService {
   Future<ExportResult> exportSummaryPdf({
     ReportPeriodFilter period = ReportPeriodFilter.all,
     String? productId,
+    required String businessId,
   }) async {
+    final bId = BusinessContext.resolveBusinessId(businessId);
     final snapshot = await _reportService.buildSnapshot(
+      businessId: bId,
       period: period,
       productId: productId,
     );
@@ -405,8 +424,11 @@ class ExportService {
   Future<ExportResult> exportTrialBalancePdf({
     ReportPeriodFilter period = ReportPeriodFilter.all,
     String? productId,
+    required String businessId,
   }) async {
+    final bId = BusinessContext.resolveBusinessId(businessId);
     final snapshot = await _reportService.buildSnapshot(
+      businessId: bId,
       period: period,
       productId: productId,
     );

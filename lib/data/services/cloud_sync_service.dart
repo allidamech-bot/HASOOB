@@ -336,11 +336,11 @@ class CloudSyncService {
     await batch.commit();
   }
 
-  Future<List<Map<String, dynamic>>> fetchProducts() async {
+  Future<List<Map<String, dynamic>>> fetchProducts(String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _productsRef(uid).get();
+    final snapshot = await _productsRef(uid).where('businessId', isEqualTo: businessId).get();
 
     return snapshot.docs.map((doc) {
       final data = doc.data();
@@ -351,11 +351,11 @@ class CloudSyncService {
     }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchCustomers() async {
+  Future<List<Map<String, dynamic>>> fetchCustomers(String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _customersRef(uid).get();
+    final snapshot = await _customersRef(uid).where('businessId', isEqualTo: businessId).get();
 
     return snapshot.docs.map((doc) {
       final data = doc.data();
@@ -366,11 +366,11 @@ class CloudSyncService {
     }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchInvoices() async {
+  Future<List<Map<String, dynamic>>> fetchInvoices(String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _invoicesRef(uid).get();
+    final snapshot = await _invoicesRef(uid).where('businessId', isEqualTo: businessId).get();
 
     return snapshot.docs.map((doc) {
       final data = doc.data();
@@ -381,24 +381,25 @@ class CloudSyncService {
     }).toList();
   }
 
-  Future<Map<String, dynamic>?> fetchBusinessProfile() async {
+  Future<Map<String, dynamic>?> fetchBusinessProfile(String businessId) async {
     final uid = _uid;
     if (uid == null) return null;
 
     final snapshot = await _businessProfileRef(uid).get();
     if (!snapshot.exists) return null;
     final data = snapshot.data() ?? {};
+    if (data['businessId'] != businessId) return null;
     return {
       'id': 1,
       ...data,
     };
   }
 
-  Future<List<Map<String, dynamic>>> fetchQuotations() async {
+  Future<List<Map<String, dynamic>>> fetchQuotations(String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _quotationsRef(uid).get();
+    final snapshot = await _quotationsRef(uid).where('businessId', isEqualTo: businessId).get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {
@@ -408,11 +409,14 @@ class CloudSyncService {
     }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchQuotationItems() async {
+  Future<List<Map<String, dynamic>>> fetchQuotationItems(String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _quotationItemsRef(uid).orderBy('sort_order').get();
+    final snapshot = await _quotationItemsRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .orderBy('sort_order')
+        .get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {
@@ -422,11 +426,14 @@ class CloudSyncService {
     }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchInvoiceItems() async {
+  Future<List<Map<String, dynamic>>> fetchInvoiceItems(String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _invoiceItemsRef(uid).orderBy('sort_order').get();
+    final snapshot = await _invoiceItemsRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .orderBy('sort_order')
+        .get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {
@@ -436,11 +443,11 @@ class CloudSyncService {
     }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchPayments() async {
+  Future<List<Map<String, dynamic>>> fetchPayments(String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _paymentsRef(uid).get();
+    final snapshot = await _paymentsRef(uid).where('businessId', isEqualTo: businessId).get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {
@@ -450,11 +457,11 @@ class CloudSyncService {
     }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchProductMovements() async {
+  Future<List<Map<String, dynamic>>> fetchProductMovements(String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _productMovementsRef(uid).get();
+    final snapshot = await _productMovementsRef(uid).where('businessId', isEqualTo: businessId).get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {
@@ -464,40 +471,49 @@ class CloudSyncService {
     }).toList();
   }
 
-  Stream<List<Map<String, dynamic>>> watchProducts() {
+  Stream<List<Map<String, dynamic>>> watchProducts(String businessId) {
     final uid = _uid;
     if (uid == null) return Stream.value(const []);
 
-    return _productsRef(uid).snapshots().map((snapshot) {
+    return _productsRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .snapshots()
+        .map((snapshot) {
       final rows = snapshot.docs.map(_mapDoc).toList();
       rows.sort((a, b) => _compareText(a['name'], b['name']));
       return rows;
     });
   }
 
-  Stream<List<Map<String, dynamic>>> watchCustomers() {
+  Stream<List<Map<String, dynamic>>> watchCustomers(String businessId) {
     final uid = _uid;
     if (uid == null) return Stream.value(const []);
 
-    return _customersRef(uid).snapshots().map((snapshot) {
+    return _customersRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .snapshots()
+        .map((snapshot) {
       final rows = snapshot.docs.map(_mapDoc).toList();
       rows.sort((a, b) => _compareText(a['name'], b['name']));
       return rows;
     });
   }
 
-  Stream<List<Map<String, dynamic>>> watchInvoices() {
+  Stream<List<Map<String, dynamic>>> watchInvoices(String businessId) {
     final uid = _uid;
     if (uid == null) return Stream.value(const []);
 
-    return _invoicesRef(uid).snapshots().map((snapshot) {
+    return _invoicesRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .snapshots()
+        .map((snapshot) {
       final rows = snapshot.docs.map(_mapDoc).toList();
       rows.sort(_compareDocumentsByDateAndNumber);
       return rows;
     });
   }
 
-  Stream<Map<String, dynamic>?> watchInvoice(String invoiceId) {
+  Stream<Map<String, dynamic>?> watchInvoice(String invoiceId, String businessId) {
     final uid = _uid;
     if (uid == null || invoiceId.trim().isEmpty) {
       return Stream.value(null);
@@ -505,11 +521,13 @@ class CloudSyncService {
 
     return _invoicesRef(uid).doc(invoiceId).snapshots().map((snapshot) {
       if (!snapshot.exists) return null;
-      return _mapDoc(snapshot);
+      final data = _mapDoc(snapshot);
+      if (data['businessId'] != businessId) return null;
+      return data;
     });
   }
 
-  Stream<List<Map<String, dynamic>>> watchInvoiceItems(String invoiceId) {
+  Stream<List<Map<String, dynamic>>> watchInvoiceItems(String invoiceId, String businessId) {
     final uid = _uid;
     if (uid == null || invoiceId.trim().isEmpty) {
       return Stream.value(const []);
@@ -517,6 +535,7 @@ class CloudSyncService {
 
     return _invoiceItemsRef(uid)
         .where('invoice_id', isEqualTo: invoiceId)
+        .where('businessId', isEqualTo: businessId)
         .snapshots()
         .map((snapshot) {
       final rows = snapshot.docs.map(_mapDoc).toList();
@@ -529,22 +548,28 @@ class CloudSyncService {
     });
   }
 
-  Stream<List<Map<String, dynamic>>> watchQuotations() {
+  Stream<List<Map<String, dynamic>>> watchQuotations(String businessId) {
     final uid = _uid;
     if (uid == null) return Stream.value(const []);
 
-    return _quotationsRef(uid).snapshots().map((snapshot) {
+    return _quotationsRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .snapshots()
+        .map((snapshot) {
       final rows = snapshot.docs.map(_mapDoc).toList();
       rows.sort(_compareDocumentsByDateAndNumber);
       return rows;
     });
   }
 
-  Stream<List<Map<String, dynamic>>> watchSalesRecords() {
+  Stream<List<Map<String, dynamic>>> watchSalesRecords(String businessId) {
     final uid = _uid;
     if (uid == null) return Stream.value(const []);
 
-    return _salesRecordsRef(uid).snapshots().map((snapshot) {
+    return _salesRecordsRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .snapshots()
+        .map((snapshot) {
       final rows = snapshot.docs.map(_mapDoc).toList();
       rows.sort((a, b) => _compareDateDesc(a['date'], b['date']));
       return rows;
@@ -552,12 +577,16 @@ class CloudSyncService {
   }
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? listenToCustomers(
+    String businessId,
     void Function(DocumentChange<Map<String, dynamic>> change) onChange,
   ) {
     final uid = _uid;
     if (uid == null) return null;
 
-    return _customersRef(uid).snapshots().listen((snapshot) {
+    return _customersRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .snapshots()
+        .listen((snapshot) {
       for (final change in snapshot.docChanges) {
         if (change.doc.metadata.hasPendingWrites) continue;
         onChange(change);
@@ -566,12 +595,16 @@ class CloudSyncService {
   }
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? listenToProducts(
+    String businessId,
     void Function(DocumentChange<Map<String, dynamic>> change) onChange,
   ) {
     final uid = _uid;
     if (uid == null) return null;
 
-    return _productsRef(uid).snapshots().listen((snapshot) {
+    return _productsRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .snapshots()
+        .listen((snapshot) {
       for (final change in snapshot.docChanges) {
         if (change.doc.metadata.hasPendingWrites) continue;
         onChange(change);
@@ -580,12 +613,16 @@ class CloudSyncService {
   }
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? listenToInvoices(
+    String businessId,
     void Function(DocumentChange<Map<String, dynamic>> change) onChange,
   ) {
     final uid = _uid;
     if (uid == null) return null;
 
-    return _invoicesRef(uid).snapshots().listen((snapshot) {
+    return _invoicesRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .snapshots()
+        .listen((snapshot) {
       for (final change in snapshot.docChanges) {
         if (change.doc.metadata.hasPendingWrites) continue;
         onChange(change);
@@ -593,11 +630,11 @@ class CloudSyncService {
     });
   }
 
-  Future<List<Map<String, dynamic>>> fetchAccounts() async {
+  Future<List<Map<String, dynamic>>> fetchAccounts(String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _accountsRef(uid).get();
+    final snapshot = await _accountsRef(uid).where('businessId', isEqualTo: businessId).get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {
@@ -607,11 +644,11 @@ class CloudSyncService {
     }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchSalesRecords() async {
+  Future<List<Map<String, dynamic>>> fetchSalesRecords(String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _salesRecordsRef(uid).get();
+    final snapshot = await _salesRecordsRef(uid).where('businessId', isEqualTo: businessId).get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {
@@ -621,11 +658,11 @@ class CloudSyncService {
     }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchJournalEntries() async {
+  Future<List<Map<String, dynamic>>> fetchJournalEntries(String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _journalEntriesRef(uid).get();
+    final snapshot = await _journalEntriesRef(uid).where('businessId', isEqualTo: businessId).get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {

@@ -5,6 +5,7 @@ import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../data/database/database_helper.dart';
+import '../data/repositories/auth_repository.dart';
 import '../data/services/auth_service.dart';
 import '../data/services/cloud_sync_service.dart';
 import '../data/services/reports/report_models.dart';
@@ -33,13 +34,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    _snapshot = _reportService.buildSnapshot();
+    final businessId = AuthRepository.instance.currentUser?.businessId ??
+        AuthRepository.fallbackBusinessId;
+    _snapshot = _reportService.buildSnapshot(businessId: businessId);
     _restoreStatus = CloudSyncService.instance.getLocalRestoreStatus();
   }
 
   Future<void> _refresh() async {
+    final businessId = AuthRepository.instance.currentUser?.businessId ??
+        AuthRepository.fallbackBusinessId;
     setState(() {
-      _snapshot = _reportService.buildSnapshot();
+      _snapshot = _reportService.buildSnapshot(businessId: businessId);
       _restoreStatus = CloudSyncService.instance.getLocalRestoreStatus();
     });
     await _snapshot;
@@ -69,21 +74,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _isRestoring = true);
 
     try {
-      final isLocalEmpty = await DBHelper.isLocalBusinessDataEmpty();
+      final businessId = AuthRepository.instance.currentUser?.businessId ??
+          AuthRepository.fallbackBusinessId;
+      final isLocalEmpty = await DBHelper.isLocalBusinessDataEmpty(businessId);
       if (!isLocalEmpty) {
         throw Exception(copy.t('restoreOnlyWhenEmpty'));
       }
 
-      final products = await CloudSyncService.instance.fetchProducts();
+      final products = await CloudSyncService.instance.fetchProducts(businessId);
       if (products.isEmpty) {
         throw Exception(copy.t('cloudProductsMissing'));
       }
 
-      final accounts = await CloudSyncService.instance.fetchAccounts();
-      final salesRecords = await CloudSyncService.instance.fetchSalesRecords();
-      final journalEntries = await CloudSyncService.instance.fetchJournalEntries();
+      final accounts = await CloudSyncService.instance.fetchAccounts(businessId);
+      final salesRecords = await CloudSyncService.instance.fetchSalesRecords(businessId);
+      final journalEntries = await CloudSyncService.instance.fetchJournalEntries(businessId);
 
       final restoredCount = await DBHelper.restoreCloudSnapshotIfLocalEmpty(
+        businessId: businessId,
         products: products,
         accounts: accounts,
         salesRecords: salesRecords,

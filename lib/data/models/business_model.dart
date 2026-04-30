@@ -76,6 +76,7 @@ class BusinessModel {
   Map<String, dynamic> toMap() {
     return {
       'id': id,
+      'businessId': id, // Map business ID to businessId for consistency
       'business_name': name,
       'trade_name': tradeName,
       'logo_path': logoPath,
@@ -96,7 +97,7 @@ class BusinessModel {
 
   factory BusinessModel.fromMap(Map<String, dynamic> map) {
     return BusinessModel(
-      id: map['id']?.toString() ?? '',
+      id: map['businessId']?.toString() ?? map['id']?.toString() ?? '',
       name: map['business_name']?.toString() ?? map['name']?.toString() ?? '',
       tradeName: map['trade_name']?.toString(),
       logoPath: map['logo_path']?.toString(),

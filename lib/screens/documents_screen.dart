@@ -11,6 +11,7 @@ import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../data/models/invoice_model.dart';
 import '../data/models/quotation_model.dart';
+import '../data/repositories/auth_repository.dart';
 import '../data/repositories/business_profile_repository.dart';
 import '../data/repositories/invoice_repository.dart';
 import '../data/services/export_service.dart';
@@ -30,6 +31,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   final _repo = InvoiceRepository();
   final _profileRepo = BusinessProfileRepository();
   final _export = ExportService();
+
+  String get _businessId => AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
 
   bool _showInvoices = true;
   int _refreshKey = 0;
@@ -75,13 +78,13 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       return current;
     }
 
-    final fresh = await _repo.getInvoiceById(id);
+    final fresh = await _repo.getInvoiceById(id, _businessId);
     if (fresh == null) {
       throw Exception(copy.t('documentsErrorInvoiceNotFound'));
     }
 
-    final items = await _repo.getInvoiceItems(id);
-    final profile = await _profileRepo.getBusinessProfile();
+    final items = await _repo.getInvoiceItems(id, _businessId);
+    final profile = await _profileRepo.getBusinessProfile(_businessId);
 
     final path = await _export.generateInvoicePdf(
       invoice: fresh,
@@ -89,7 +92,11 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       businessProfile: profile,
     );
 
-    await _repo.updateInvoicePdfPath(invoiceId: id, pdfPath: path);
+    await _repo.updateInvoicePdfPath(
+      businessId: _businessId,
+      invoiceId: id,
+      pdfPath: path,
+    );
     return path;
   }
 
@@ -102,13 +109,13 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       return current;
     }
 
-    final fresh = await _repo.getQuotationById(id);
+    final fresh = await _repo.getQuotationById(id, _businessId);
     if (fresh == null) {
       throw Exception(copy.t('documentsErrorQuotationNotFound'));
     }
 
-    final items = await _repo.getQuotationItems(id);
-    final profile = await _profileRepo.getBusinessProfile();
+    final items = await _repo.getQuotationItems(id, _businessId);
+    final profile = await _profileRepo.getBusinessProfile(_businessId);
 
     final path = await _export.generateQuotationPdf(
       quotation: fresh,
@@ -116,7 +123,11 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       businessProfile: profile,
     );
 
-    await _repo.updateQuotationPdfPath(quotationId: id, pdfPath: path);
+    await _repo.updateQuotationPdfPath(
+      businessId: _businessId,
+      quotationId: id,
+      pdfPath: path,
+    );
     return path;
   }
 
@@ -142,7 +153,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   }
 
   Future<void> _deleteInvoice(String id) async {
-    await _repo.deleteInvoice(id);
+    await _repo.deleteInvoice(id, _businessId);
 
     if (!mounted) return;
 
@@ -154,7 +165,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   }
 
   Future<void> _deleteQuotation(String id) async {
-    await _repo.deleteQuotation(id);
+    await _repo.deleteQuotation(id, _businessId);
 
     if (!mounted) return;
 
@@ -233,6 +244,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 }
 
                 await _repo.addInvoicePayment(
+                  businessId: _businessId,
                   invoiceId: invoice.id,
                   amount: amount,
                   paymentMethod: paymentMethod,
@@ -260,7 +272,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   @override
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
-    final stream = _showInvoices ? _repo.watchInvoices() : _repo.watchQuotations();
+    final stream = _showInvoices ? _repo.watchInvoices(_businessId) : _repo.watchQuotations(_businessId);
 
     return Scaffold(
       appBar: AppBar(

@@ -40,6 +40,7 @@ class _InventoryAdjustmentScreenState extends State<InventoryAdjustmentScreen> {
     setState(() => _isSaving = true);
     try {
       await _productRepository.applyInventoryAdjustment(
+        businessId: widget.product.businessId,
         productId: widget.product.id,
         newStockQty: _mode == _AdjustmentMode.stock ? _toInt(_stockQtyController.text) : null,
         newPurchasePrice: _mode == _AdjustmentMode.cost ? _toDouble(_purchasePriceController.text) : null,

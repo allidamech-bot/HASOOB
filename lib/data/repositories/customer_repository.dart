@@ -2,21 +2,24 @@ import '../database/database_helper.dart';
 import '../services/cloud_sync_service.dart';
 
 class CustomerRepository {
-  Stream<List<Map<String, dynamic>>> watchCustomers() {
+  Stream<List<Map<String, dynamic>>> watchCustomers(String businessId) {
     return CloudSyncService.instance
-        .watchCustomers()
-        .asyncMap((_) => DBHelper.getCustomers());
+        .watchCustomers(businessId)
+        .asyncMap((_) => DBHelper.getCustomers(businessId));
   }
 
-  Future<List<Map<String, dynamic>>> getCustomers() {
-    return DBHelper.getCustomers();
+  Future<List<Map<String, dynamic>>> getCustomers(String businessId) {
+    return DBHelper.getCustomers(businessId);
   }
 
-  Future<void> saveCustomer(Map<String, dynamic> data) {
-    return DBHelper.saveCustomer(data);
+  Future<void> saveCustomer(String businessId, Map<String, dynamic> data) {
+    return DBHelper.saveCustomer({
+      ...data,
+      'businessId': businessId,
+    });
   }
 
-  Future<Map<String, dynamic>> getCustomerStatement(String customerId) {
-    return DBHelper.getCustomerStatement(customerId);
+  Future<Map<String, dynamic>> getCustomerStatement(String businessId, String customerId) {
+    return DBHelper.getCustomerStatement(customerId, businessId);
   }
 }

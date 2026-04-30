@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_theme.dart';
+import '../data/repositories/auth_repository.dart';
 import '../data/models/invoice_model.dart';
 import '../data/repositories/invoice_repository.dart';
 
@@ -18,11 +19,12 @@ class InvoiceDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final repository = InvoiceRepository();
     final copy = AppCopy.of(context);
+    final businessId = AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
 
     return Scaffold(
       appBar: AppBar(title: Text(copy.t('invoiceDetailsTitle'))),
       body: StreamBuilder<InvoiceModel?>(
-        stream: repository.watchInvoiceById(invoiceId),
+        stream: repository.watchInvoiceById(businessId, invoiceId),
         builder: (context, invoiceSnapshot) {
           if (invoiceSnapshot.connectionState == ConnectionState.waiting &&
               !invoiceSnapshot.hasData) {
@@ -37,7 +39,7 @@ class InvoiceDetailsScreen extends StatelessWidget {
           final currencyCode = invoice.currencyCode;
 
           return StreamBuilder<List<Map<String, dynamic>>>(
-            stream: repository.watchInvoiceItems(invoiceId),
+            stream: repository.watchInvoiceItems(businessId, invoiceId),
             builder: (context, itemsSnapshot) {
               final items = itemsSnapshot.data ?? const <Map<String, dynamic>>[];
 

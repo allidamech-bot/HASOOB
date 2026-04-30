@@ -10,6 +10,7 @@ import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../data/models/quotation_model.dart';
+import '../data/repositories/auth_repository.dart';
 import '../data/repositories/business_profile_repository.dart';
 import '../data/repositories/invoice_repository.dart';
 import '../data/services/export_service.dart';
@@ -41,11 +42,13 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
     _screenFuture = _loadScreenData();
   }
 
+  String get _businessId => AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
+
   Future<_QuotationDetailsData?> _loadScreenData() async {
-    final quotation = await _repository.getQuotationById(widget.quotationId);
+    final quotation = await _repository.getQuotationById(_businessId, widget.quotationId);
     if (quotation == null) return null;
 
-    final items = await _repository.getQuotationItems(widget.quotationId);
+    final items = await _repository.getQuotationItems(_businessId, widget.quotationId);
     return _QuotationDetailsData(
       quotation: quotation,
       items: items,
@@ -61,8 +64,8 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
     final profileRepo = BusinessProfileRepository();
     final export = ExportService();
 
-    final items = await _repository.getQuotationItems(widget.quotationId);
-    final profile = await profileRepo.getBusinessProfile();
+    final items = await _repository.getQuotationItems(_businessId, widget.quotationId);
+    final profile = await profileRepo.getBusinessProfile(_businessId);
 
     final path = await export.generateQuotationPdf(
       quotation: quotation,
@@ -71,6 +74,7 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
     );
 
     await _repository.updateQuotationPdfPath(
+      businessId: _businessId,
       quotationId: widget.quotationId,
       pdfPath: path,
     );

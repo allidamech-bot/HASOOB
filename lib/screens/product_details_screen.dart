@@ -19,8 +19,36 @@ class _ProductDetailsScreenState extends State<ProductDetailsScreen> {
   final ProductRepository _productRepository = ProductRepository();
   late ProductModel _product; late Future<Map<String, dynamic>> _dataFuture;
   @override void initState(){super.initState(); _product=widget.product; _dataFuture=_loadData();}
-  Future<Map<String,dynamic>> _loadData() async { final results=await Future.wait<dynamic>([_productRepository.getProductSalesCount(_product.id),_productRepository.getProductSoldQty(_product.id),_productRepository.getProductRealizedProfit(_product.id),_productRepository.getProductRealizedSales(_product.id),_productRepository.getProductSalesHistory(_product.id),_productRepository.getProductMovementHistory(_product.id)]); return {'salesCount':results[0] as int,'soldQty':results[1] as int,'realizedProfit':results[2] as double,'realizedSales':results[3] as double,'salesHistory':results[4] as List<Map<String,dynamic>>,'movementHistory':results[5] as List<Map<String,dynamic>>}; }
-  Future<void> _refresh() async { final refreshed=await _productRepository.getProductById(_product.id); if(!mounted)return; setState((){ if(refreshed!=null)_product=refreshed; _dataFuture=_loadData();}); await _dataFuture; }
+  Future<Map<String,dynamic>> _loadData() async {
+    final businessId = _product.businessId;
+    final results=await Future.wait<dynamic>([
+      _productRepository.getProductSalesCount(_product.id, businessId),
+      _productRepository.getProductSoldQty(_product.id, businessId),
+      _productRepository.getProductRealizedProfit(_product.id, businessId),
+      _productRepository.getProductRealizedSales(_product.id, businessId),
+      _productRepository.getProductSalesHistory(_product.id, businessId),
+      _productRepository.getProductMovementHistory(_product.id, businessId)
+    ]);
+    return {
+      'salesCount':results[0] as int,
+      'soldQty':results[1] as int,
+      'realizedProfit':results[2] as double,
+      'realizedSales':results[3] as double,
+      'salesHistory':results[4] as List<Map<String,dynamic>>,
+      'movementHistory':results[5] as List<Map<String,dynamic>>
+    };
+  }
+
+  Future<void> _refresh() async {
+    final businessId = _product.businessId;
+    final refreshed=await _productRepository.getProductById(_product.id, businessId);
+    if(!mounted)return;
+    setState((){
+      if(refreshed!=null)_product=refreshed;
+      _dataFuture=_loadData();
+    });
+    await _dataFuture;
+  }
   Future<void> _openAdjustment() async { final changed=await Navigator.push<bool>(context,MaterialPageRoute(builder:(_)=>InventoryAdjustmentScreen(product:_product))); if(changed==true) await _refresh(); }
 
   @override Widget build(BuildContext context) {

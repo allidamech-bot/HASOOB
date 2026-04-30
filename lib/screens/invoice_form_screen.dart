@@ -12,6 +12,7 @@ import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../data/models/document_line_item.dart';
 import '../data/models/product_model.dart';
+import '../data/repositories/auth_repository.dart';
 import '../data/repositories/customer_repository.dart';
 import '../data/repositories/invoice_repository.dart';
 import '../data/services/export_service.dart';
@@ -77,11 +78,15 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
     super.dispose();
   }
 
+  String get _businessId => AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
+
   Future<void> _load() async {
     try {
-      final customers = await _invoiceRepository.getCustomers();
-      final products = await _invoiceRepository.getProducts();
-      final profile = await _invoiceRepository.getBusinessProfile();
+      final businessId = AuthRepository.instance.currentUser?.businessId ??
+          AuthRepository.fallbackBusinessId;
+      final customers = await _invoiceRepository.getCustomers(businessId);
+      final products = await _invoiceRepository.getProducts(businessId);
+      final profile = await _invoiceRepository.getBusinessProfile(businessId);
       final defaultNotes = profile?.defaultInvoiceNotes ?? '';
 
       final loadedItems = <DocumentLineItem>[];
@@ -91,10 +96,14 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
       String? currencyText;
 
       if (_isFromQuotation) {
-        final quotation =
-            await _invoiceRepository.getQuotationById(widget.sourceQuotationId!);
-        final quotationItems =
-            await _invoiceRepository.getQuotationItems(widget.sourceQuotationId!);
+        final quotation = await _invoiceRepository.getQuotationById(
+          widget.sourceQuotationId!,
+          businessId,
+        );
+        final quotationItems = await _invoiceRepository.getQuotationItems(
+          widget.sourceQuotationId!,
+          businessId,
+        );
 
         if (quotation != null) {
           selectedCustomerId = quotation.customerName;
@@ -290,7 +299,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
                     throw Exception(copy.t('customerNameRequired'));
                   }
 
-                  await _customerRepository.saveCustomer({
+                  await _customerRepository.saveCustomer(_businessId, {
                     'name': nameController.text.trim(),
                     'phone': phoneController.text.trim(),
                     'notes': notesController.text.trim(),
@@ -319,7 +328,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
 
     if (created != true) return;
 
-    final refreshedCustomers = await _customerRepository.getCustomers();
+    final refreshedCustomers = await _customerRepository.getCustomers(_businessId);
     if (!mounted) return;
 
     String? selectedId;
@@ -371,7 +380,10 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
         throw Exception(copy.t('partialPaymentValid'));
       }
 
+      final businessId = AuthRepository.instance.currentUser?.businessId ??
+          AuthRepository.fallbackBusinessId;
       final invoiceId = await _invoiceRepository.createInvoice(
+        businessId: businessId,
         customerId: _selectedCustomerId!,
         quotationId: widget.sourceQuotationId,
         items: _items.map((item) => item.toMap()).toList(),
@@ -389,7 +401,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
       );
 
       if (status == 'issued') {
-        await _handleIssuedInvoice(invoiceId);
+        await _handleIssuedInvoice(invoiceId, businessId);
       } else if (mounted) {
         AppMessages.success(context, copy.t('invoiceDraftSaved'));
       }
@@ -407,12 +419,15 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
     }
   }
 
-  Future<void> _handleIssuedInvoice(String invoiceId) async {
+  Future<void> _handleIssuedInvoice(String invoiceId, String businessId) async {
     final copy = AppCopy.of(context);
 
-    final invoice = await _invoiceRepository.getInvoiceById(invoiceId);
-    final items = await _invoiceRepository.getInvoiceItems(invoiceId);
-    final businessProfile = await _invoiceRepository.getBusinessProfile();
+    final invoice =
+        await _invoiceRepository.getInvoiceById(invoiceId, businessId);
+    final items =
+        await _invoiceRepository.getInvoiceItems(invoiceId, businessId);
+    final businessProfile =
+        await _invoiceRepository.getBusinessProfile(businessId);
 
     if (invoice == null) {
       throw Exception(copy.t('invoiceSavedNotFound'));
@@ -425,6 +440,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
     );
 
     await _invoiceRepository.updateInvoicePdfPath(
+      businessId: businessId,
       invoiceId: invoiceId,
       pdfPath: pdfPath,
     );

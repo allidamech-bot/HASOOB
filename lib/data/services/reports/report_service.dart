@@ -10,13 +10,15 @@ class ReportService {
   const ReportService();
 
   Future<ReportsSnapshot> buildSnapshot({
+    required String businessId,
     ReportPeriodFilter period = ReportPeriodFilter.all,
     String? productId,
   }) async {
-    final products = (await DBHelper.getProducts()).map(ProductModel.fromMap).toList();
-    final salesRecords = await DBHelper.getSalesRecords();
-    final accounts = await DBHelper.getTrialBalance();
-    final journalEntries = await DBHelper.getJournalEntries();
+    final products =
+        (await DBHelper.getProducts(businessId)).map(ProductModel.fromMap).toList();
+    final salesRecords = await DBHelper.getSalesRecords(businessId);
+    final accounts = await DBHelper.getTrialBalance(businessId);
+    final journalEntries = await DBHelper.getJournalEntries(businessId);
     final filteredSales = _filterSalesRecords(
       salesRecords,
       period: period,

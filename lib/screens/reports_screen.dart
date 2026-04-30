@@ -10,6 +10,7 @@ import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
+import '../data/repositories/auth_repository.dart';
 import '../data/services/export_service.dart';
 import '../data/services/reports/report_models.dart';
 import '../data/services/reports/report_service.dart';
@@ -42,6 +43,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<ReportsSnapshot> _buildSnapshot() {
     return _reportService.buildSnapshot(
+      businessId: AuthRepository.instance.currentUser?.businessId ??
+          AuthRepository.fallbackBusinessId,
       period: _periodFilter,
       productId: _selectedProductId,
     );
@@ -429,6 +432,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+  String get _businessId => AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
+
   Widget _exports(AppCopy copy) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -441,24 +446,28 @@ class _ReportsScreenState extends State<ReportsScreen> {
           children: [
             _exportButton(copy.t('inventoryPdf'), Icons.picture_as_pdf_rounded, () {
               return _exportService.exportInventoryPdf(
+                businessId: _businessId,
                 period: _periodFilter,
                 productId: _selectedProductId,
               );
             }),
             _exportButton(copy.t('salesPdf'), Icons.picture_as_pdf_rounded, () {
               return _exportService.exportSalesPdf(
+                businessId: _businessId,
                 period: _periodFilter,
                 productId: _selectedProductId,
               );
             }),
             _exportButton(copy.t('inventoryCsv'), Icons.table_chart_rounded, () {
               return _exportService.exportInventoryCsv(
+                businessId: _businessId,
                 period: _periodFilter,
                 productId: _selectedProductId,
               );
             }),
             _exportButton(copy.t('salesCsv'), Icons.table_chart_rounded, () {
               return _exportService.exportSalesCsv(
+                businessId: _businessId,
                 period: _periodFilter,
                 productId: _selectedProductId,
               );

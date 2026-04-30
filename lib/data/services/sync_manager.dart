@@ -7,12 +7,15 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../database/database_helper.dart';
+import '../repositories/auth_repository.dart';
 import 'cloud_sync_service.dart';
 
 class SyncManager {
   SyncManager._();
 
   static final SyncManager instance = SyncManager._();
+
+  String get _currentBusinessId => AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
 
   bool _isProcessing = false;
   bool _isPulling = false;
@@ -58,7 +61,7 @@ class SyncManager {
   Future<void> onAuthenticated() async {
     await initialize();
     await stopRealtimeSync();
-    if (await DBHelper.isLocalBusinessDataEmpty()) {
+    if (await DBHelper.isLocalBusinessDataEmpty(_currentBusinessId)) {
       await replaceLocalCacheWithCloud();
     } else {
       await _processQueueNow();
@@ -90,14 +93,17 @@ class SyncManager {
     debugPrint('Realtime sync started');
 
     _productsSubscription = CloudSyncService.instance.listenToProducts(
+      _currentBusinessId,
       (change) => unawaited(_handleProductRealtimeChange(change)),
     );
 
     _customersSubscription = CloudSyncService.instance.listenToCustomers(
+      _currentBusinessId,
       (change) => unawaited(_handleCustomerRealtimeChange(change)),
     );
 
     _invoicesSubscription = CloudSyncService.instance.listenToInvoices(
+      _currentBusinessId,
       (change) => unawaited(_handleInvoiceRealtimeChange(change)),
     );
   }
@@ -202,9 +208,10 @@ class SyncManager {
     try {
       debugPrint('Pull sync started');
 
-      final products = await CloudSyncService.instance.fetchProducts();
-      final customers = await CloudSyncService.instance.fetchCustomers();
-      final invoices = await CloudSyncService.instance.fetchInvoices();
+      final businessId = _currentBusinessId;
+      final products = await CloudSyncService.instance.fetchProducts(businessId);
+      final customers = await CloudSyncService.instance.fetchCustomers(businessId);
+      final invoices = await CloudSyncService.instance.fetchInvoices(businessId);
       final db = await DBHelper.database();
 
       await db.transaction((txn) async {
@@ -261,21 +268,23 @@ class SyncManager {
   Future<void> replaceLocalCacheWithCloud() async {
     if (!await _isOnline()) return;
 
+    final businessId = _currentBusinessId;
     final service = CloudSyncService.instance;
-    final businessProfile = await service.fetchBusinessProfile();
-    final products = await service.fetchProducts();
-    final customers = await service.fetchCustomers();
-    final quotations = await service.fetchQuotations();
-    final quotationItems = await service.fetchQuotationItems();
-    final invoices = await service.fetchInvoices();
-    final invoiceItems = await service.fetchInvoiceItems();
-    final payments = await service.fetchPayments();
-    final accounts = await service.fetchAccounts();
-    final salesRecords = await service.fetchSalesRecords();
-    final journalEntries = await service.fetchJournalEntries();
-    final productMovements = await service.fetchProductMovements();
+    final businessProfile = await service.fetchBusinessProfile(businessId);
+    final products = await service.fetchProducts(businessId);
+    final customers = await service.fetchCustomers(businessId);
+    final quotations = await service.fetchQuotations(businessId);
+    final quotationItems = await service.fetchQuotationItems(businessId);
+    final invoices = await service.fetchInvoices(businessId);
+    final invoiceItems = await service.fetchInvoiceItems(businessId);
+    final payments = await service.fetchPayments(businessId);
+    final accounts = await service.fetchAccounts(businessId);
+    final salesRecords = await service.fetchSalesRecords(businessId);
+    final journalEntries = await service.fetchJournalEntries(businessId);
+    final productMovements = await service.fetchProductMovements(businessId);
 
     await DBHelper.replaceLocalBusinessCache(
+      businessId: businessId,
       businessProfile: businessProfile,
       products: products,
       customers: customers,

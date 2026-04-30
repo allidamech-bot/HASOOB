@@ -5,6 +5,8 @@ class AuthRepository {
   AuthRepository._();
   static final AuthRepository instance = AuthRepository._();
 
+  static const String fallbackBusinessId = 'local_business_123';
+
   AuthUserModel? _currentUser;
   final List<AuthUserModel> _users = [];
   final List<BusinessModel> _businesses = [];

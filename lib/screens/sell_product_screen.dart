@@ -99,6 +99,7 @@ class _SellProductScreenState extends State<SellProductScreen> {
 
     try {
       await _productRepository.sellProduct(
+        businessId: widget.product.businessId,
         productId: widget.product.id,
         qty: _qty,
         sellingPrice: _enteredUnitPrice,

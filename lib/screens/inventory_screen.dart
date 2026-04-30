@@ -44,11 +44,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Future<void> _refresh() async {
-    await _productRepository.getAllProducts();
+    final businessId = AuthRepository.instance.currentUser?.businessId ??
+        AuthRepository.fallbackBusinessId;
+    await _productRepository.getAllProducts(businessId);
   }
 
   Future<void> _delete(ProductModel product) async {
-    await _productRepository.deleteProduct(product.id);
+    await _productRepository.deleteProduct(product.id, product.businessId);
     if (!mounted) return;
     AppMessages.success(context, AppCopy.of(context).t('productDeleted'));
   }
@@ -143,7 +145,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: StreamBuilder<List<ProductModel>>(
-          stream: _productRepository.watchProducts(),
+          stream: _productRepository.watchProducts(
+            AuthRepository.instance.currentUser?.businessId ??
+                AuthRepository.fallbackBusinessId,
+          ),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting &&
                 !snapshot.hasData) {

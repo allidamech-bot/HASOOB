@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_copy.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
+import '../data/repositories/auth_repository.dart';
 import '../data/repositories/customer_repository.dart';
 import 'customer_statement_screen.dart';
 
@@ -16,8 +17,10 @@ class CustomersScreen extends StatefulWidget {
 class _CustomersScreenState extends State<CustomersScreen> {
   final CustomerRepository _customerRepository = CustomerRepository();
 
+  String get _businessId => AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
+
   Future<void> _refresh() async {
-    await _customerRepository.getCustomers();
+    await _customerRepository.getCustomers(_businessId);
   }
 
   Future<void> _openCustomerForm([Map<String, dynamic>? customer]) async {
@@ -68,7 +71,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
           FilledButton(
             onPressed: () async {
               try {
-                await _customerRepository.saveCustomer({
+                await _customerRepository.saveCustomer(_businessId, {
                   'id': customer?['id'],
                   'name': nameController.text,
                   'phone': phoneController.text,
@@ -122,7 +125,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: StreamBuilder<List<Map<String, dynamic>>>(
-          stream: _customerRepository.watchCustomers(),
+          stream: _customerRepository.watchCustomers(_businessId),
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting &&
                 !snapshot.hasData) {
