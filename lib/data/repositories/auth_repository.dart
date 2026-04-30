@@ -1,5 +1,6 @@
 import '../models/auth_user_model.dart';
 import '../models/business_model.dart';
+import '../../core/business/business_context.dart';
 
 class AuthRepository {
   AuthRepository._();
@@ -35,6 +36,11 @@ class AuthRepository {
     );
 
     _currentUser = existingUser;
+    BusinessContext.initialize(
+      businessId: _currentUser!.businessId,
+      userId: _currentUser!.id,
+      role: _currentUser!.role,
+    );
     return _currentUser!;
   }
 
@@ -73,6 +79,11 @@ class AuthRepository {
     _users.add(newUser);
 
     _currentUser = newUser;
+    BusinessContext.initialize(
+      businessId: _currentUser!.businessId,
+      userId: _currentUser!.id,
+      role: _currentUser!.role,
+    );
     return _currentUser!;
   }
 

@@ -6,7 +6,7 @@ import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
-import '../data/repositories/auth_repository.dart';
+import '../core/business/business_context.dart';
 import '../data/repositories/product_repository.dart';
 
 enum SalesPeriodFilter { all, today, last7Days, last30Days }
@@ -55,8 +55,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
 
   Future<void> _reloadSales({bool showError = false}) async {
     try {
-      final businessId = AuthRepository.instance.currentUser?.businessId ??
-          AuthRepository.fallbackBusinessId;
+      final businessId = BusinessContext.businessId;
       await _productRepository.getSalesRecords(businessId);
     } catch (error) {
       if (!mounted || !showError) return;
@@ -114,8 +113,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
       appBar: AppBar(title: Text(copy.t('salesHistoryTitle'))),
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: _productRepository.watchSalesRecords(
-          AuthRepository.instance.currentUser?.businessId ??
-              AuthRepository.fallbackBusinessId,
+          BusinessContext.businessId,
         ),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting &&

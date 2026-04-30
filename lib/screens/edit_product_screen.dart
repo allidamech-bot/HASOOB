@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 
 import '../core/app_copy.dart';
 import '../core/app_messages.dart';
+import '../core/business/business_context.dart';
 import '../data/models/product_model.dart';
-import '../data/repositories/auth_repository.dart';
 import '../data/repositories/product_repository.dart';
 
 class EditProductScreen extends StatefulWidget {
@@ -43,7 +43,7 @@ class _EditProductScreenState extends State<EditProductScreen> {
     if (hasAccountingSensitiveChange) { AppMessages.error(context, copy.t('editBlockedAccounting')); return; }
     setState(() => _isSaving = true);
     try {
-      final businessId = AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
+      final businessId = BusinessContext.businessId;
       final product = widget.product.copyWith(name: _nameController.text.trim(), unit: _unitController.text.trim(), purchasePrice: purchasePrice, extraCosts: extraCosts, sellingPrice: _toDouble(_sellingController.text), stockQty: stockQty, lowStockThreshold: _toInt(_thresholdController.text), barcode: _barcodeController.text.trim().isEmpty ? null : _barcodeController.text.trim());
       await _productRepository.updateProduct(businessId, product);
       if (!mounted) return;

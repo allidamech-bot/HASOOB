@@ -7,7 +7,7 @@ import 'package:flutter/foundation.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../database/database_helper.dart';
-import '../repositories/auth_repository.dart';
+import '../../core/business/business_context.dart';
 import 'cloud_sync_service.dart';
 
 class SyncManager {
@@ -15,7 +15,7 @@ class SyncManager {
 
   static final SyncManager instance = SyncManager._();
 
-  String get _currentBusinessId => AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
+  String get _currentBusinessId => BusinessContext.businessId;
 
   bool _isProcessing = false;
   bool _isPulling = false;

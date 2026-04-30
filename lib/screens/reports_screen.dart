@@ -10,7 +10,7 @@ import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
-import '../data/repositories/auth_repository.dart';
+import '../core/business/business_context.dart';
 import '../data/services/export_service.dart';
 import '../data/services/reports/report_models.dart';
 import '../data/services/reports/report_service.dart';
@@ -43,8 +43,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<ReportsSnapshot> _buildSnapshot() {
     return _reportService.buildSnapshot(
-      businessId: AuthRepository.instance.currentUser?.businessId ??
-          AuthRepository.fallbackBusinessId,
+      businessId: BusinessContext.businessId,
       period: _periodFilter,
       productId: _selectedProductId,
     );
@@ -432,7 +431,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  String get _businessId => AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
+  String get _businessId => BusinessContext.businessId;
 
   Widget _exports(AppCopy copy) {
     return Column(

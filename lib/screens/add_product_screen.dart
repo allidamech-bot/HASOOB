@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../data/database/database_helper.dart';
 import '../../data/models/product_model.dart';
-import '../../data/repositories/auth_repository.dart';
+import '../../core/business/business_context.dart';
 import '../core/app_copy.dart';
 import '../core/app_messages.dart';
 import '../data/repositories/product_repository.dart';
@@ -50,7 +50,7 @@ class _AddProductScreenState extends State<AddProductScreen> {
     setState(() => _isSaving = true);
 
     try {
-      final businessId = AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
+      final businessId = BusinessContext.businessId;
 
       final product = ProductModel(
         id: DateTime.now().millisecondsSinceEpoch.toString(),

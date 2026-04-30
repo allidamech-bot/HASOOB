@@ -4,8 +4,8 @@ import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
+import '../core/business/business_context.dart';
 import '../data/database/database_helper.dart';
-import '../data/repositories/auth_repository.dart';
 import '../data/services/auth_service.dart';
 import '../data/services/cloud_sync_service.dart';
 import '../data/services/reports/report_models.dart';
@@ -34,15 +34,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   void initState() {
     super.initState();
-    final businessId = AuthRepository.instance.currentUser?.businessId ??
-        AuthRepository.fallbackBusinessId;
+    final businessId = BusinessContext.businessId;
     _snapshot = _reportService.buildSnapshot(businessId: businessId);
     _restoreStatus = CloudSyncService.instance.getLocalRestoreStatus();
   }
 
   Future<void> _refresh() async {
-    final businessId = AuthRepository.instance.currentUser?.businessId ??
-        AuthRepository.fallbackBusinessId;
+    final businessId = BusinessContext.businessId;
     setState(() {
       _snapshot = _reportService.buildSnapshot(businessId: businessId);
       _restoreStatus = CloudSyncService.instance.getLocalRestoreStatus();
@@ -74,8 +72,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() => _isRestoring = true);
 
     try {
-      final businessId = AuthRepository.instance.currentUser?.businessId ??
-          AuthRepository.fallbackBusinessId;
+      final businessId = BusinessContext.businessId;
       final isLocalEmpty = await DBHelper.isLocalBusinessDataEmpty(businessId);
       if (!isLocalEmpty) {
         throw Exception(copy.t('restoreOnlyWhenEmpty'));

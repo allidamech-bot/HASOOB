@@ -10,9 +10,9 @@ import '../core/app_currency.dart';
 import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
+import '../core/business/business_context.dart';
 import '../data/models/document_line_item.dart';
 import '../data/models/product_model.dart';
-import '../data/repositories/auth_repository.dart';
 import '../data/repositories/customer_repository.dart';
 import '../data/repositories/invoice_repository.dart';
 import '../data/services/export_service.dart';
@@ -78,12 +78,11 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
     super.dispose();
   }
 
-  String get _businessId => AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
+  String get _businessId => BusinessContext.businessId;
 
   Future<void> _load() async {
     try {
-      final businessId = AuthRepository.instance.currentUser?.businessId ??
-          AuthRepository.fallbackBusinessId;
+      final businessId = BusinessContext.businessId;
       final customers = await _invoiceRepository.getCustomers(businessId);
       final products = await _invoiceRepository.getProducts(businessId);
       final profile = await _invoiceRepository.getBusinessProfile(businessId);
@@ -380,8 +379,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
         throw Exception(copy.t('partialPaymentValid'));
       }
 
-      final businessId = AuthRepository.instance.currentUser?.businessId ??
-          AuthRepository.fallbackBusinessId;
+      final businessId = BusinessContext.businessId;
       final invoiceId = await _invoiceRepository.createInvoice(
         businessId: businessId,
         customerId: _selectedCustomerId!,

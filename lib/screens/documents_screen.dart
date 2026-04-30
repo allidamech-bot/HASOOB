@@ -9,9 +9,9 @@ import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
+import '../core/business/business_context.dart';
 import '../data/models/invoice_model.dart';
 import '../data/models/quotation_model.dart';
-import '../data/repositories/auth_repository.dart';
 import '../data/repositories/business_profile_repository.dart';
 import '../data/repositories/invoice_repository.dart';
 import '../data/services/export_service.dart';
@@ -32,7 +32,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   final _profileRepo = BusinessProfileRepository();
   final _export = ExportService();
 
-  String get _businessId => AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
+  String get _businessId => BusinessContext.businessId;
 
   bool _showInvoices = true;
   int _refreshKey = 0;

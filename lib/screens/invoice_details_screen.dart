@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_theme.dart';
-import '../data/repositories/auth_repository.dart';
+import '../core/business/business_context.dart';
 import '../data/models/invoice_model.dart';
 import '../data/repositories/invoice_repository.dart';
 
@@ -19,7 +19,7 @@ class InvoiceDetailsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final repository = InvoiceRepository();
     final copy = AppCopy.of(context);
-    final businessId = AuthRepository.instance.currentUser?.businessId ?? AuthRepository.fallbackBusinessId;
+    final businessId = BusinessContext.businessId;
 
     return Scaffold(
       appBar: AppBar(title: Text(copy.t('invoiceDetailsTitle'))),
