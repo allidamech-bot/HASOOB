@@ -1,6 +1,8 @@
 import '../../data/database/database_helper.dart';
 import '../models/product_model.dart';
 import '../services/cloud_sync_service.dart';
+import '../services/sync_queue_service.dart';
+import '../models/sync_operation.dart';
 
 class DeleteProductCheckResult {
   final bool canDelete;
@@ -35,15 +37,44 @@ class ProductRepository {
   }
 
   Future<void> addProduct(String businessId, ProductModel product) async {
-    await DBHelper.insertProduct(product.copyWith(businessId: businessId).toMap());
+    final productWithBusiness = product.copyWith(businessId: businessId);
+    try {
+      await DBHelper.insertProduct(productWithBusiness.toMap());
+    } catch (_) {}
+    
+    await SyncQueueService.instance.enqueue(
+      entityName: 'products',
+      entityId: productWithBusiness.id,
+      type: SyncOperationType.create,
+      payload: productWithBusiness.toMap(),
+    );
   }
 
   Future<void> updateProduct(String businessId, ProductModel product) async {
-    await DBHelper.updateProduct(product.copyWith(businessId: businessId).toMap());
+    final productWithBusiness = product.copyWith(businessId: businessId);
+    try {
+      await DBHelper.updateProduct(productWithBusiness.toMap());
+    } catch (_) {}
+
+    await SyncQueueService.instance.enqueue(
+      entityName: 'products',
+      entityId: productWithBusiness.id,
+      type: SyncOperationType.update,
+      payload: productWithBusiness.toMap(),
+    );
   }
 
   Future<void> deleteProduct(String businessId, String id) async {
-    await DBHelper.deleteProduct(businessId, id);
+    try {
+      await DBHelper.deleteProduct(businessId, id);
+    } catch (_) {}
+
+    await SyncQueueService.instance.enqueue(
+      entityName: 'products',
+      entityId: id,
+      type: SyncOperationType.delete,
+      payload: {'id': id, 'businessId': businessId},
+    );
   }
 
   Future<DeleteProductCheckResult> canDeleteProduct(ProductModel product) async {
