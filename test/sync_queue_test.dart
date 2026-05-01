@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasoob_app/data/models/sync_operation.dart';
 import 'package:hasoob_app/data/repositories/sync_queue_repository.dart';
+import 'package:hasoob_app/data/database/database_helper.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 
@@ -8,15 +10,44 @@ void main() {
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
-  late SyncQueueRepository repository;
+  setUpAll(() async {
+    // Set a unique database path for this test file to prevent locks with other test files
+    final tempDir = await Directory.systemTemp.createTemp('sync_queue_test_');
+    await databaseFactory.setDatabasesPath(tempDir.path);
+  });
 
   setUp(() async {
-    repository = SyncQueueRepository();
+    // Ensure table exists in the test DB environment
+    final db = await DBHelper.database();
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ${SyncQueueRepository.tableName}(
+        id TEXT PRIMARY KEY,
+        entityName TEXT,
+        entityId TEXT,
+        type TEXT,
+        payload TEXT,
+        status TEXT,
+        createdAt TEXT,
+        updatedAt TEXT,
+        attemptCount INTEGER,
+        lastError TEXT
+      )
+    ''');
+
+    final repository = SyncQueueRepository();
     await repository.clearAll();
+  });
+
+  tearDown(() async {
+    // Close database to release file lock and add small delay
+    final db = await DBHelper.database();
+    await db.close();
+    await Future.delayed(const Duration(milliseconds: 50));
   });
 
   group('SyncQueueRepository Tests', () {
     test('Should enqueue and retrieve a sync operation', () async {
+      final repository = SyncQueueRepository();
       final operation = SyncOperation(
         id: '1',
         entityName: 'products',
@@ -37,6 +68,7 @@ void main() {
     });
 
     test('Should update operation status', () async {
+      final repository = SyncQueueRepository();
       final operation = SyncOperation(
         id: '2',
         entityName: 'customers',
@@ -61,6 +93,7 @@ void main() {
     });
 
     test('Should delete an operation', () async {
+      final repository = SyncQueueRepository();
       final operation = SyncOperation(
         id: '3',
         entityName: 'invoices',
@@ -77,7 +110,8 @@ void main() {
       final pending = await repository.getPendingOperations();
       expect(pending.isEmpty, true);
     });
-  group('SyncOperation Model Tests', () {
+    
+    group('SyncOperation Model Tests', () {
       test('toMap and fromMap should be consistent', () {
         final now = DateTime.now();
         final operation = SyncOperation(
