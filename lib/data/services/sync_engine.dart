@@ -2,8 +2,8 @@ import 'sync_queue_service.dart';
 import '../models/sync_operation.dart';
 
 class SyncEngine {
-  static final SyncEngine instance = SyncEngine._();
-  SyncEngine._();
+  static final SyncEngine instance = SyncEngine();
+  SyncEngine();
 
   final SyncQueueService _syncQueueService = SyncQueueService.instance;
   bool _isProcessing = false;
