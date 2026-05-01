@@ -2,7 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hasoob_app/data/models/sync_operation.dart';
 import 'package:hasoob_app/data/repositories/sync_queue_repository.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:hasoob_app/data/database/database_helper.dart';
+
 
 void main() {
   sqfliteFfiInit();
@@ -77,7 +77,7 @@ void main() {
       final pending = await repository.getPendingOperations();
       expect(pending.isEmpty, true);
     });
-  Group('SyncOperation Model Tests', () {
+  group('SyncOperation Model Tests', () {
       test('toMap and fromMap should be consistent', () {
         final now = DateTime.now();
         final operation = SyncOperation(

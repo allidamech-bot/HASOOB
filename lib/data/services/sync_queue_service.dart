@@ -1,4 +1,4 @@
-import 'package:uuid/uuid.dart';
+
 import '../models/sync_operation.dart';
 import '../repositories/sync_queue_repository.dart';
 
@@ -7,7 +7,6 @@ class SyncQueueService {
   SyncQueueService._();
 
   final SyncQueueRepository _repository = SyncQueueRepository();
-  final _uuid = const Uuid();
 
   Future<void> enqueue({
     required String entityName,
@@ -16,7 +15,7 @@ class SyncQueueService {
     required Map<String, dynamic> payload,
   }) async {
     final operation = SyncOperation(
-      id: _uuid.v4(),
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
       entityName: entityName,
       entityId: entityId,
       type: type,
