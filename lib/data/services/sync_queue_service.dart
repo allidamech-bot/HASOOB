@@ -1,6 +1,7 @@
 
 import '../models/sync_operation.dart';
 import '../repositories/sync_queue_repository.dart';
+import 'sync_manager.dart';
 
 class SyncQueueService {
   static final SyncQueueService instance = SyncQueueService._();
@@ -25,6 +26,9 @@ class SyncQueueService {
     );
 
     await _repository.enqueue(operation);
+    
+    // Request sync without starting it automatically
+    SyncManager.instance.requestSync();
   }
   
   Future<List<SyncOperation>> getPending() => _repository.getPendingOperations();
