@@ -1,5 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'sync_engine.dart';
+import 'sync_queue_service.dart';
+import 'analytics_service.dart';
+import '../repositories/sync_queue_repository.dart';
+import '../models/sync_operation.dart';
 
 class SyncManager extends ChangeNotifier {
   static final instance = SyncManager._();
@@ -14,6 +18,8 @@ class SyncManager extends ChangeNotifier {
   void setEngine(SyncEngine engine) {
     _engine = engine;
   }
+
+  SyncEngine get engine => _engine;
 
   bool get isRunning => _isRunning;
   bool get syncRequested => _syncRequested;
@@ -39,14 +45,38 @@ class SyncManager extends ChangeNotifier {
     }
   }
 
+  Future<bool> hasPendingOperations() async {
+    final operations = await SyncQueueService.instance.getPending();
+    return operations.isNotEmpty;
+  }
+
+  Future<bool> hasFailedOperations() async {
+    final all = await SyncQueueRepository().getAllOperations();
+    return all.any((op) => op.status == SyncStatus.failed);
+  }
+
+  Future<bool> isQueueEmpty() async {
+    final all = await SyncQueueRepository().getAllOperations();
+    return all.isEmpty;
+  }
+
   /// Runs sync only if it was previously requested.
   Future<void> runIfRequested() async {
     if (!_syncRequested) return;
     await runSync();
   }
 
+  /// Manually notify listeners (used by other services to trigger UI updates)
+  @override
+  void notifyListeners() {
+    super.notifyListeners();
+  }
+
   // Compatibility stubs for main.dart and DBHelper
-  Future<void> initialize() async {}
+  Future<void> initialize() async {
+    // In production, we wire up the real Firebase Analytics
+    _engine = SyncEngine(analytics: FirebaseAnalyticsService());
+  }
   Future<void> onAuthenticated() async {}
   Future<void> onAppResumed() async {}
   Future<void> stopRealtimeSync() async {}

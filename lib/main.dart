@@ -14,6 +14,7 @@ import 'core/app_theme_controller.dart';
 import 'data/services/auth_service.dart';
 import 'data/services/firebase_bootstrap.dart';
 import 'data/services/sync_manager.dart';
+import 'data/services/smart_sync_trigger_service.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/auth/auth_gate.dart';
 import 'screens/auth/firebase_setup_screen.dart';
@@ -66,15 +67,22 @@ class HasoobApp extends StatefulWidget {
 
 class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
   StreamSubscription<dynamic>? _authSubscription;
+  late final SmartSyncTriggerService _smartSyncTriggerService;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
+    SmartSyncTriggerService.init(SyncManager.instance);
+    _smartSyncTriggerService = SmartSyncTriggerService.instance;
+    _smartSyncTriggerService.initialize();
+    unawaited(_smartSyncTriggerService.onAppStarted());
+
     _authSubscription = AuthService.instance.authStateChanges().listen((user) {
       if (user != null) {
         unawaited(SyncManager.instance.onAuthenticated());
+        unawaited(_smartSyncTriggerService.onAppStarted());
       } else {
         unawaited(SyncManager.instance.stopRealtimeSync());
       }
@@ -83,6 +91,7 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
 
   @override
   void dispose() {
+    _smartSyncTriggerService.dispose();
     WidgetsBinding.instance.removeObserver(this);
     _authSubscription?.cancel();
     super.dispose();
@@ -92,6 +101,7 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(SyncManager.instance.onAppResumed());
+      unawaited(_smartSyncTriggerService.onAppStarted());
     }
   }
 

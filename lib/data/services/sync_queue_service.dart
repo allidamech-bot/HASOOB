@@ -27,11 +27,18 @@ class SyncQueueService {
 
     await _repository.enqueue(operation);
     
-    // Request sync without starting it automatically
+    // Request sync status update
     SyncManager.instance.requestSync();
   }
   
-  Future<List<SyncOperation>> getPending() => _repository.getPendingOperations();
+  Future<List<SyncOperation>> getPending() async {
+    return _repository.getOperationsByStatus([
+      SyncStatus.pending,
+      SyncStatus.failed,
+    ]);
+  }
+  
+  Future<List<SyncOperation>> getAll() => _repository.getAllOperations();
   
   Future<void> updateStatus(SyncOperation operation, SyncStatus status, {String? error}) async {
     await _repository.updateOperation(operation.copyWith(
@@ -43,4 +50,9 @@ class SyncQueueService {
   }
 
   Future<void> delete(String id) => _repository.deleteOperation(id);
+
+  Future<void> clearSynced() async {
+    await _repository.clearSynced();
+    SyncManager.instance.notifyListeners();
+  }
 }
