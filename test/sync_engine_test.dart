@@ -7,19 +7,24 @@ import 'package:hasoob_app/data/services/sync_engine.dart';
 import 'package:hasoob_app/data/services/sync_queue_service.dart';
 import 'package:hasoob_app/data/database/database_helper.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'fakes/fake_sync_service.dart';
 
 void main() {
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
+  late FakeSyncService fakeSyncService;
+  late SyncEngine syncEngine;
+
   setUpAll(() async {
-    // Set a unique database path for this test file to prevent locks with other test files
     final tempDir = await Directory.systemTemp.createTemp('sync_engine_test_');
     await databaseFactory.setDatabasesPath(tempDir.path);
   });
 
   setUp(() async {
-    // Ensure table exists in the test DB environment
+    fakeSyncService = FakeSyncService();
+    syncEngine = SyncEngine(syncService: fakeSyncService);
+    
     final db = await DBHelper.database();
     await db.execute('''
       CREATE TABLE IF NOT EXISTS ${SyncQueueRepository.tableName}(
@@ -37,12 +42,10 @@ void main() {
     ''');
     
     final repository = SyncQueueRepository();
-    // Clear sync_operations table before each test
     await repository.clearAll();
   });
 
   tearDown(() async {
-    // Close database to release file lock and add small delay
     final db = await DBHelper.database();
     await db.close();
     await Future.delayed(const Duration(milliseconds: 50));
@@ -57,12 +60,13 @@ void main() {
         payload: {'name': 'Product 1'},
       );
 
-      await SyncEngine.instance.processQueue();
+      await syncEngine.processQueue();
 
       final db = await DBHelper.database();
       final results = await db.query(SyncQueueRepository.tableName);
       expect(results.length, 1);
       expect(results.first['status'], SyncStatus.synced.name);
+      expect(fakeSyncService.callCount, 1);
     });
 
     test('simulated failed operation marks it failed and increments attempt count', () async {
@@ -70,10 +74,10 @@ void main() {
         entityName: 'products',
         entityId: 'p-fail',
         type: SyncOperationType.create,
-        payload: {'name': 'Product Fail'},
+        payload: {'id': 'p-fail', 'name': 'Product Fail'},
       );
 
-      await SyncEngine.instance.processQueue();
+      await syncEngine.processQueue();
 
       final db = await DBHelper.database();
       final results = await db.query(SyncQueueRepository.tableName);
@@ -88,19 +92,19 @@ void main() {
         entityName: 'products',
         entityId: entityId,
         type: SyncOperationType.create,
-        payload: {'name': 'Retry Test'},
+        payload: {'id': entityId, 'name': 'Retry Test'},
       );
 
       // Attempt 1 (fails, count -> 1)
-      await SyncEngine.instance.processQueue();
+      await syncEngine.processQueue();
       
       // Attempt 2 (fails, count -> 2)
       await _manualResetToPending(entityId);
-      await SyncEngine.instance.processQueue();
+      await syncEngine.processQueue();
       
       // Attempt 3 (fails, count -> 3)
       await _manualResetToPending(entityId);
-      await SyncEngine.instance.processQueue();
+      await syncEngine.processQueue();
 
       final db = await DBHelper.database();
       var results = await db.query(
@@ -113,21 +117,20 @@ void main() {
 
       // Attempt 4: Should be skipped because count == 3
       await _manualResetToPending(entityId);
-      await SyncEngine.instance.processQueue();
+      await syncEngine.processQueue();
 
       results = await db.query(
         SyncQueueRepository.tableName,
         where: 'entityId = ?',
         whereArgs: [entityId],
       );
-      expect(results.first['attemptCount'], 3); // Still 3
-      expect(results.first['status'], SyncStatus.pending.name); // Remained pending (skipped)
+      expect(results.first['attemptCount'], 3); 
+      expect(results.first['status'], SyncStatus.pending.name); 
     });
 
     test('double process call does not run concurrently', () async {
-      // Execute sequentially as per instructions to avoid parallel DB locks
-      await SyncEngine.instance.processQueue();
-      await SyncEngine.instance.processQueue();
+      await syncEngine.processQueue();
+      await syncEngine.processQueue();
     });
   });
 }

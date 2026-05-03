@@ -1,11 +1,18 @@
 import 'sync_queue_service.dart';
 import '../models/sync_operation.dart';
+import 'sync_service.dart';
+import 'cloud_sync_service.dart';
 
 class SyncEngine {
-  static final SyncEngine instance = SyncEngine();
-  SyncEngine();
+  final SyncQueueService _syncQueueService;
+  final SyncService _syncService;
+  
+  SyncEngine({
+    SyncQueueService? syncQueueService,
+    SyncService? syncService,
+  })  : _syncQueueService = syncQueueService ?? SyncQueueService.instance,
+        _syncService = syncService ?? CloudSyncService.instance;
 
-  final SyncQueueService _syncQueueService = SyncQueueService.instance;
   bool _isProcessing = false;
   static const int _maxRetries = 3;
 
@@ -30,19 +37,24 @@ class SyncEngine {
     }
   }
 
-  /// Internal method to process a single operation with simulation logic.
+  /// Internal method to process a single operation by calling the appropriate cloud service.
   Future<void> _processOperation(SyncOperation operation) async {
     // Mark as processing
     await _syncQueueService.updateStatus(operation, SyncStatus.processing);
 
     try {
-      // In-memory execution simulation:
-      // operation with entityId containing "fail" => mark failed
-      if (operation.entityId.contains('fail')) {
-        throw Exception('Simulated sync failure for ${operation.entityId}');
+      switch (operation.entityName) {
+        case 'products':
+          await _processProduct(operation);
+          break;
+        case 'customers':
+          await _processCustomer(operation);
+          break;
+        default:
+          throw UnimplementedError('Sync for entity ${operation.entityName} not implemented');
       }
 
-      // Valid operation => mark synced
+      // Mark as synced on success
       await _syncQueueService.updateStatus(operation, SyncStatus.synced);
     } catch (e) {
       // Mark as failed. SyncQueueService handles incrementing attemptCount.
@@ -51,6 +63,22 @@ class SyncEngine {
         SyncStatus.failed, 
         error: e.toString(),
       );
+    }
+  }
+
+  Future<void> _processProduct(SyncOperation operation) async {
+    if (operation.type == SyncOperationType.delete) {
+      await _syncService.deleteProduct(operation.entityId);
+    } else {
+      await _syncService.upsertProduct(operation.payload);
+    }
+  }
+
+  Future<void> _processCustomer(SyncOperation operation) async {
+    if (operation.type == SyncOperationType.delete) {
+      await _syncService.deleteCustomer(operation.entityId);
+    } else {
+      await _syncService.upsertCustomer(operation.payload);
     }
   }
 }

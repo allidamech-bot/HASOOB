@@ -27,6 +27,16 @@ class SyncQueueRepository {
     return maps.map((map) => _fromDbMap(map)).toList();
   }
 
+  Future<List<SyncOperation>> getAllOperations() async {
+    final db = await DBHelper.database();
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableName,
+      orderBy: 'createdAt ASC',
+    );
+
+    return maps.map((map) => _fromDbMap(map)).toList();
+  }
+
   Future<void> updateOperation(SyncOperation operation) async {
     final db = await DBHelper.database();
     await db.update(

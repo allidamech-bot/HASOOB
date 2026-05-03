@@ -8,6 +8,7 @@ import '../core/business/business_context.dart';
 import '../core/permissions/permissions.dart';
 import '../data/models/product_model.dart';
 import '../data/repositories/product_repository.dart';
+import '../widgets/sync_status_indicator.dart';
 import 'edit_product_screen.dart';
 import 'product_details_screen.dart';
 import 'sell_product_screen.dart';
@@ -140,7 +141,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final copy = AppCopy.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(copy.t('inventoryTitle'))),
+      appBar: AppBar(
+        title: Text(copy.t('inventoryTitle')),
+        actions: const [SyncStatusIndicator()],
+      ),
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: StreamBuilder<List<ProductModel>>(

@@ -16,6 +16,7 @@ import '../data/services/reports/report_models.dart';
 import '../data/services/reports/report_service.dart';
 import '../widgets/app_section_header.dart';
 import '../widgets/metric_card.dart';
+import '../widgets/sync_status_indicator.dart';
 import 'accounting/trial_balance_screen.dart';
 
 class ReportsScreen extends StatefulWidget {
@@ -164,6 +165,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           copy.t('reportsTitle'),
           style: const TextStyle(fontWeight: FontWeight.w800),
         ),
+        actions: const [SyncStatusIndicator()],
       ),
       body: RefreshIndicator(
         onRefresh: () => _reload(showError: true),

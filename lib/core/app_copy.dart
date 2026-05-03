@@ -526,6 +526,9 @@ class AppCopy {
       'saveAdjustment': 'حفظ التسوية',
       'checkProductQtyPrice': 'تحقق من الصنف والكمية والسعر قبل إضافة البند.',
       'signInFirst': 'يجب تسجيل الدخول أولًا.',
+      'syncNow': 'مزامنة الآن',
+      'syncPending': 'توجد بيانات بانتظار المزامنة',
+      'syncRunning': 'جارٍ المزامنة...',
     },
     'en': {
       'appTitle': 'Hasoob App',
@@ -893,6 +896,9 @@ class AppCopy {
       'saveAdjustment': 'Save Adjustment',
       'checkProductQtyPrice': 'Check the product, quantity, and price before adding the item.',
       'signInFirst': 'You must sign in first.',
+      'syncNow': 'Sync Now',
+      'syncPending': 'Data pending synchronization',
+      'syncRunning': 'Syncing...',
     },
   };
 }

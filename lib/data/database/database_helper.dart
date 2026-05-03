@@ -1,6 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
@@ -8,7 +6,7 @@ import 'package:sqflite/sqflite.dart';
 import '../../core/app_currency.dart';
 import '../models/product_model.dart';
 import '../services/cloud_sync_service.dart';
-import '../services/sync_manager.dart';
+
 
 
 class DBHelper {
@@ -352,14 +350,17 @@ class DBHelper {
     ''');
 
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS sync_queue(
+      CREATE TABLE IF NOT EXISTS sync_operations(
         id TEXT PRIMARY KEY,
-        entity_type TEXT,
-        entity_id TEXT,
-        action TEXT,
+        entityName TEXT,
+        entityId TEXT,
+        type TEXT,
         payload TEXT,
-        created_at TEXT,
-        retry_count INTEGER DEFAULT 0
+        status TEXT,
+        createdAt TEXT,
+        updatedAt TEXT,
+        attemptCount INTEGER,
+        lastError TEXT
       )
     ''');
 
@@ -603,14 +604,17 @@ class DBHelper {
 
   static Future<void> _upgradeToV9(Database db) async {
     await db.execute('''
-      CREATE TABLE IF NOT EXISTS sync_queue(
+      CREATE TABLE IF NOT EXISTS sync_operations(
         id TEXT PRIMARY KEY,
-        entity_type TEXT,
-        entity_id TEXT,
-        action TEXT,
+        entityName TEXT,
+        entityId TEXT,
+        type TEXT,
         payload TEXT,
-        created_at TEXT,
-        retry_count INTEGER DEFAULT 0
+        status TEXT,
+        createdAt TEXT,
+        updatedAt TEXT,
+        attemptCount INTEGER,
+        lastError TEXT
       )
     ''');
   }
@@ -1554,100 +1558,9 @@ class DBHelper {
     return id;
   }
 
-  static Future<void> enqueueSync({
-    required String entityType,
-    required String entityId,
-    required String action,
-    required Map<String, dynamic> payload,
-  }) async {
-    final db = await database();
-    final normalizedEntityId = entityId.toString();
-    final normalizedPayload = Map<String, dynamic>.from(payload)
-      ..['id'] = normalizedEntityId;
 
-    await db.delete(
-      'sync_queue',
-      where: 'entity_type = ? AND entity_id = ?',
-      whereArgs: [entityType, normalizedEntityId],
-    );
 
-    await db.insert(
-      'sync_queue',
-      {
-        'id': _newTextId('SYNC'),
-        'entity_type': entityType,
-        'entity_id': normalizedEntityId,
-        'action': action,
-        'payload': jsonEncode(normalizedPayload),
-        'created_at': DateTime.now().toIso8601String(),
-        'retry_count': 0,
-      },
-    );
 
-    unawaited(SyncManager.instance.processQueue());
-  }
-
-  static Future<void> enqueueCustomerUpsert({
-    required String customerId,
-    required Map<String, dynamic> payload,
-    required bool isUpdate,
-  }) async {
-    await enqueueSync(
-      entityType: 'customers',
-      entityId: customerId,
-      action: isUpdate ? 'update' : 'create',
-      payload: payload,
-    );
-  }
-
-  static Future<void> enqueueCustomerDelete({
-    required String customerId,
-  }) async {
-    await enqueueSync(
-      entityType: 'customers',
-      entityId: customerId,
-      action: 'delete',
-      payload: {'id': customerId},
-    );
-  }
-
-  static Future<void> enqueueInvoiceUpsert({
-    required String invoiceId,
-    required Map<String, dynamic> payload,
-    required bool isUpdate,
-  }) async {
-    await enqueueSync(
-      entityType: 'invoices',
-      entityId: invoiceId,
-      action: isUpdate ? 'update' : 'create',
-      payload: payload,
-    );
-  }
-
-  static Future<void> enqueueInvoiceDelete({
-    required String invoiceId,
-  }) async {
-    await enqueueSync(
-      entityType: 'invoices',
-      entityId: invoiceId,
-      action: 'delete',
-      payload: {'id': invoiceId},
-    );
-  }
-
-  static Future<void> addToSyncQueue({
-    required String entityType,
-    required String entityId,
-    required String action,
-    required Map<String, dynamic> payload,
-  }) async {
-    await enqueueSync(
-      entityType: entityType,
-      entityId: entityId,
-      action: action,
-      payload: payload,
-    );
-  }
 
   static Future<Map<String, dynamic>?> getBusinessProfile(String businessId) async {
     final db = await database();
@@ -2396,7 +2309,6 @@ class DBHelper {
     });
 
     if (deletedCount > 0) {
-      await enqueueInvoiceDelete(invoiceId: invoiceId);
       await CloudSyncService.instance.deleteInvoice(invoiceId);
     }
 

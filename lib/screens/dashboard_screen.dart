@@ -17,6 +17,7 @@ import 'business_profile_screen.dart';
 import 'customers_screen.dart';
 import 'documents_screen.dart';
 import 'settings_screen.dart';
+import '../data/services/sync_manager.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -144,6 +145,36 @@ class _DashboardScreenState extends State<DashboardScreen> {
             icon: const Icon(Icons.logout_rounded),
           ),
         ],
+      ),
+      floatingActionButton: ListenableBuilder(
+        listenable: SyncManager.instance,
+        builder: (context, _) {
+          final manager = SyncManager.instance;
+          if (!manager.syncRequested && !manager.isRunning) {
+            return const SizedBox.shrink();
+          }
+
+          return FloatingActionButton.extended(
+            onPressed: manager.isRunning ? null : () => manager.runSync(),
+            backgroundColor: manager.isRunning
+                ? AppTheme.textSecondaryFor(context)
+                : AppTheme.accent,
+            icon: manager.isRunning
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  )
+                : const Icon(Icons.sync_rounded),
+            label: Text(
+              manager.isRunning ? copy.t('syncRunning') : copy.t('syncNow'),
+              style: const TextStyle(color: Colors.white),
+            ),
+          );
+        },
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,

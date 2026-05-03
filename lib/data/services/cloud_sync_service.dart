@@ -8,15 +8,23 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
-class CloudSyncService {
+import 'sync_service.dart';
+
+class CloudSyncService implements SyncService {
   CloudSyncService._();
 
   static final CloudSyncService instance = CloudSyncService._();
 
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FirebaseAuth _auth = FirebaseAuth.instance;
+  FirebaseFirestore get _firestore => FirebaseFirestore.instance;
+  FirebaseAuth get _auth => FirebaseAuth.instance;
 
-  String? get _uid => _auth.currentUser?.uid;
+  String? get _uid {
+    try {
+      return _auth.currentUser?.uid;
+    } catch (_) {
+      return null;
+    }
+  }
 
   CollectionReference<Map<String, dynamic>> _productsRef(String uid) =>
       _firestore.collection('users').doc(uid).collection('products');
@@ -73,6 +81,7 @@ class CloudSyncService {
     return payload;
   }
 
+  @override
   Future<void> upsertProduct(Map<String, dynamic> data) async {
     final uid = _uid;
     if (uid == null) {
@@ -92,12 +101,14 @@ class CloudSyncService {
     );
   }
 
+  @override
   Future<void> deleteProduct(String id) async {
     final uid = _uid;
     if (uid == null || id.isEmpty) return;
     await _productsRef(uid).doc(id).delete();
   }
 
+  @override
   Future<void> upsertCustomer(Map<String, dynamic> data) async {
     final uid = _uid;
     if (uid == null) {
@@ -119,6 +130,7 @@ class CloudSyncService {
     );
   }
 
+  @override
   Future<void> deleteCustomer(String id) async {
     final uid = _uid;
     if (uid == null || id.isEmpty) return;

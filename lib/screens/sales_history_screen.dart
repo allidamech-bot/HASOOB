@@ -8,6 +8,7 @@ import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
 import '../data/repositories/product_repository.dart';
+import '../widgets/sync_status_indicator.dart';
 
 enum SalesPeriodFilter { all, today, last7Days, last30Days }
 
@@ -110,7 +111,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     final copy = AppCopy.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: Text(copy.t('salesHistoryTitle'))),
+      appBar: AppBar(
+        title: Text(copy.t('salesHistoryTitle')),
+        actions: const [SyncStatusIndicator()],
+      ),
       body: StreamBuilder<List<Map<String, dynamic>>>(
         stream: _productRepository.watchSalesRecords(
           BusinessContext.businessId,

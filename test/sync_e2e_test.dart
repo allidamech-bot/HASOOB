@@ -5,9 +5,11 @@ import 'package:hasoob_app/data/models/sync_operation.dart';
 import 'package:hasoob_app/data/repositories/product_repository.dart';
 import 'package:hasoob_app/data/repositories/sync_queue_repository.dart';
 import 'package:hasoob_app/data/services/sync_manager.dart';
+import 'package:hasoob_app/data/services/sync_engine.dart';
 import 'package:hasoob_app/data/services/sync_queue_service.dart';
 import 'package:hasoob_app/data/database/database_helper.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'fakes/fake_sync_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -18,6 +20,7 @@ void main() {
   late ProductRepository productRepository;
   late SyncQueueRepository syncQueueRepository;
   late SyncManager syncManager;
+  late FakeSyncService fakeSyncService;
 
   setUpAll(() async {
     final tempDir = await Directory.systemTemp.createTemp('sync_e2e_test_');
@@ -25,6 +28,10 @@ void main() {
   });
 
   setUp(() async {
+    fakeSyncService = FakeSyncService();
+    final engine = SyncEngine(syncService: fakeSyncService);
+    SyncManager.instance.setEngine(engine);
+
     productRepository = ProductRepository();
     syncQueueRepository = SyncQueueRepository();
     syncManager = SyncManager.instance;
@@ -32,28 +39,31 @@ void main() {
     final db = await DBHelper.database();
     
     // Setup tables
-    await db.execute('CREATE TABLE IF NOT EXISTS ${SyncQueueRepository.tableName}(id TEXT PRIMARY KEY, entityName TEXT, entityId TEXT, type TEXT, payload TEXT, status TEXT, createdAt TEXT, updatedAt TEXT, attemptCount INTEGER, lastError TEXT)');
-    await db.execute('CREATE TABLE IF NOT EXISTS products (id TEXT PRIMARY KEY, businessId TEXT, name TEXT, unit TEXT, purchase_price REAL, extra_costs REAL, selling_price REAL, stock_qty INTEGER, low_stock_threshold INTEGER, barcode TEXT)');
-    await db.execute('CREATE TABLE IF NOT EXISTS product_movements (id TEXT PRIMARY KEY, businessId TEXT, productId TEXT, movementType TEXT, quantity INTEGER, balanceAfter INTEGER, referenceType TEXT, referenceId TEXT, notes TEXT, date TEXT, createdAt TEXT)');
+    await db.execute('DROP TABLE IF EXISTS ${SyncQueueRepository.tableName}');
+    await db.execute('CREATE TABLE ${SyncQueueRepository.tableName}(id TEXT PRIMARY KEY, entityName TEXT, entityId TEXT, type TEXT, payload TEXT, status TEXT, createdAt TEXT, updatedAt TEXT, attemptCount INTEGER, lastError TEXT)');
+    
+    await db.execute('DROP TABLE IF EXISTS products');
+    await db.execute('CREATE TABLE products (id TEXT PRIMARY KEY, businessId TEXT, name TEXT, unit TEXT, purchase_price REAL, extra_costs REAL, selling_price REAL, stock_qty INTEGER, low_stock_threshold INTEGER, barcode TEXT)');
+    
+    await db.execute('DROP TABLE IF EXISTS product_movements');
+    await db.execute('CREATE TABLE product_movements (id TEXT PRIMARY KEY, businessId TEXT, productId TEXT, movementType TEXT, quantity INTEGER, balanceAfter INTEGER, referenceType TEXT, referenceId TEXT, notes TEXT, date TEXT, createdAt TEXT)');
 
     await syncQueueRepository.clearAll();
-    await db.delete('products');
     
     // Reset SyncManager state
     if (syncManager.isRunning) {
-        // Wait for it to finish if it was running
         await Future.delayed(const Duration(milliseconds: 100));
     }
-    // We can't easily reset private fields without reflection, 
-    // but we can ensure it's in a clean state for the test logic.
   });
 
   test('End-to-End Sync Flow: Data Entry -> Queue -> Manual Trigger -> Success', () async {
     // 1. Initial State: No sync requested
+    // Note: It might be true if setup enqueued something, but we want it false here
+    if (syncManager.syncRequested) await syncManager.runSync();
     expect(syncManager.syncRequested, isFalse, reason: 'Initially, no sync should be requested');
 
     // 2. Data Entry: Add a product
-    final product = ProductModel(
+    const product = ProductModel(
       id: 'e2e_p1',
       businessId: 'b1',
       name: 'E2E Product',
@@ -62,11 +72,8 @@ void main() {
       sellingPrice: 15.0,
     );
 
-    try {
-      await productRepository.addProduct('b1', product);
-    } catch (_) {
-      // Ignore legacy Firebase failures in local test
-    }
+    // Repositories now use SyncQueueService which sets syncRequested = true
+    await productRepository.addProduct('b1', product);
 
     // 3. Verify Sync Requested
     expect(syncManager.syncRequested, isTrue, reason: 'Sync should be requested after repository update');
@@ -94,5 +101,6 @@ void main() {
     // Verify status in DB is now 'synced'
     final allOps = await syncQueueRepository.getAllOperations();
     expect(allOps.first.status, SyncStatus.synced);
+    expect(fakeSyncService.callCount, 1);
   });
 }
