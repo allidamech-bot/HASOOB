@@ -17,6 +17,7 @@ import 'data/services/sync_manager.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/auth/auth_gate.dart';
 import 'screens/auth/firebase_setup_screen.dart';
+import 'screens/sync_dashboard_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -125,6 +126,9 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
                   theme: AppTheme.lightTheme(),
                   darkTheme: AppTheme.darkTheme(),
                   themeMode: widget.themeController.themeMode,
+                  routes: {
+                    '/sync': (context) => const SyncDashboardScreen(),
+                  },
                   home: widget.bootstrapResult.isConfigured
                       ? const AuthGate()
                       : FirebaseSetupScreen(

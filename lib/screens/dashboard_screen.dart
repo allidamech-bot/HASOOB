@@ -18,6 +18,7 @@ import 'customers_screen.dart';
 import 'documents_screen.dart';
 import 'settings_screen.dart';
 import '../data/services/sync_manager.dart';
+import '../widgets/sync_status_indicator.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -119,6 +120,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       appBar: AppBar(
         title: Text(copy.t('dashboardTitle')),
         actions: [
+          const SyncStatusIndicator(),
           IconButton(
             tooltip: copy.t('businessProfile'),
             onPressed: () {
