@@ -16,11 +16,18 @@ class SyncQueueRepository {
   }
 
   Future<List<SyncOperation>> getPendingOperations() async {
+    return getOperationsByStatus([SyncStatus.pending]);
+  }
+
+  Future<List<SyncOperation>> getOperationsByStatus(List<SyncStatus> statuses) async {
     final db = await DBHelper.database();
+    final statusNames = statuses.map((s) => s.name).toList();
+    final placeholders = List.filled(statusNames.length, '?').join(', ');
+    
     final List<Map<String, dynamic>> maps = await db.query(
       tableName,
-      where: 'status = ?',
-      whereArgs: [SyncStatus.pending.name],
+      where: 'status IN ($placeholders)',
+      whereArgs: statusNames,
       orderBy: 'createdAt ASC',
     );
 
@@ -59,6 +66,15 @@ class SyncQueueRepository {
   Future<void> clearAll() async {
     final db = await DBHelper.database();
     await db.delete(tableName);
+  }
+
+  Future<void> clearSynced() async {
+    final db = await DBHelper.database();
+    await db.delete(
+      tableName,
+      where: 'status = ?',
+      whereArgs: [SyncStatus.synced.name],
+    );
   }
 
   Map<String, dynamic> _toDbMap(SyncOperation operation) {

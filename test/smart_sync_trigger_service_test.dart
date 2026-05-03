@@ -30,7 +30,8 @@ void main() {
     fakeSyncService = FakeSyncService();
     final engine = SyncEngine(syncService: fakeSyncService);
     SyncManager.instance.setEngine(engine);
-    triggerService = SmartSyncTriggerService(SyncManager.instance);
+    SmartSyncTriggerService.init(SyncManager.instance);
+    triggerService = SmartSyncTriggerService.instance;
   });
 
   test('onAppStarted does not run when queue is empty', () async {

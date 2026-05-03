@@ -3,6 +3,18 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 import 'sync_manager.dart';
 
 class SmartSyncTriggerService {
+  static SmartSyncTriggerService? _instance;
+  static SmartSyncTriggerService get instance {
+    if (_instance == null) {
+      throw StateError('SmartSyncTriggerService must be initialized with a SyncManager first');
+    }
+    return _instance!;
+  }
+
+  static void init(SyncManager syncManager) {
+    _instance = SmartSyncTriggerService(syncManager);
+  }
+
   final SyncManager _syncManager;
   bool _isRunning = false;
   StreamSubscription? _connectivitySubscription;
