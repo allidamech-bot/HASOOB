@@ -11,7 +11,7 @@ import '../services/cloud_sync_service.dart';
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
-  static const _databaseVersion = 12;
+  static const _databaseVersion = 13;
 
   static const _cashAccountCode = '101';
   static const _inventoryAccountCode = '102';
@@ -126,6 +126,10 @@ class DBHelper {
 
         if (oldVersion < 12) {
           await _upgradeToV12(db);
+        }
+
+        if (oldVersion < 13) {
+          await _upgradeToV13(db);
         }
 
         await _repairAccountNamesForV12(db);
@@ -360,7 +364,9 @@ class DBHelper {
         createdAt TEXT,
         updatedAt TEXT,
         attemptCount INTEGER,
-        lastError TEXT
+        lastError TEXT,
+        priority INTEGER DEFAULT 2,
+        retryDelaySeconds INTEGER DEFAULT 0
       )
     ''');
 
@@ -654,6 +660,21 @@ class DBHelper {
         definition: 'TEXT',
       );
     }
+  }
+
+  static Future<void> _upgradeToV13(Database db) async {
+    await _ensureColumn(
+      db,
+      table: 'sync_operations',
+      column: 'priority',
+      definition: 'INTEGER DEFAULT 2',
+    );
+    await _ensureColumn(
+      db,
+      table: 'sync_operations',
+      column: 'retryDelaySeconds',
+      definition: 'INTEGER DEFAULT 0',
+    );
   }
 
   static Future<void> _ensureColumn(

@@ -22,7 +22,7 @@ void main() {
     await databaseFactory.setDatabasesPath(tempDir.path);
 
     final db = await DBHelper.database();
-    await db.execute('CREATE TABLE IF NOT EXISTS sync_operations(id TEXT PRIMARY KEY, entityName TEXT, entityId TEXT, type TEXT, payload TEXT, status TEXT, createdAt TEXT, updatedAt TEXT, attemptCount INTEGER, lastError TEXT)');
+    await db.execute('CREATE TABLE IF NOT EXISTS sync_operations(id TEXT PRIMARY KEY, entityName TEXT, entityId TEXT, type TEXT, payload TEXT, status TEXT, createdAt TEXT, updatedAt TEXT, attemptCount INTEGER, lastError TEXT, priority INTEGER DEFAULT 2, retryDelaySeconds INTEGER DEFAULT 0)');
     await db.delete('sync_operations');
 
     fakeSyncService = FakeSyncService();

@@ -40,7 +40,7 @@ void main() {
     
     // Setup tables
     await db.execute('DROP TABLE IF EXISTS ${SyncQueueRepository.tableName}');
-    await db.execute('CREATE TABLE ${SyncQueueRepository.tableName}(id TEXT PRIMARY KEY, entityName TEXT, entityId TEXT, type TEXT, payload TEXT, status TEXT, createdAt TEXT, updatedAt TEXT, attemptCount INTEGER, lastError TEXT)');
+    await db.execute('CREATE TABLE ${SyncQueueRepository.tableName}(id TEXT PRIMARY KEY, entityName TEXT, entityId TEXT, type TEXT, payload TEXT, status TEXT, createdAt TEXT, updatedAt TEXT, attemptCount INTEGER, lastError TEXT, priority INTEGER DEFAULT 2, retryDelaySeconds INTEGER DEFAULT 0)');
     
     await db.execute('DROP TABLE IF EXISTS products');
     await db.execute('CREATE TABLE products (id TEXT PRIMARY KEY, businessId TEXT, name TEXT, unit TEXT, purchase_price REAL, extra_costs REAL, selling_price REAL, stock_qty INTEGER, low_stock_threshold INTEGER, barcode TEXT)');

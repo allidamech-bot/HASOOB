@@ -13,6 +13,8 @@ class SyncOperation {
   final DateTime updatedAt;
   final int attemptCount;
   final String? lastError;
+  final int priority;
+  final int retryDelaySeconds;
 
   SyncOperation({
     required this.id,
@@ -25,6 +27,8 @@ class SyncOperation {
     required this.updatedAt,
     this.attemptCount = 0,
     this.lastError,
+    this.priority = 2,
+    this.retryDelaySeconds = 0,
   });
 
   SyncOperation copyWith({
@@ -33,18 +37,23 @@ class SyncOperation {
     int? attemptCount,
     String? lastError,
     Map<String, dynamic>? payload,
+    int? priority,
+    int? retryDelaySeconds,
+    SyncOperationType? type,
   }) {
     return SyncOperation(
       id: id,
       entityName: entityName,
       entityId: entityId,
-      type: type,
+      type: type ?? this.type,
       payload: payload ?? this.payload,
       status: status ?? this.status,
       createdAt: createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
       attemptCount: attemptCount ?? this.attemptCount,
       lastError: lastError ?? this.lastError,
+      priority: priority ?? this.priority,
+      retryDelaySeconds: retryDelaySeconds ?? this.retryDelaySeconds,
     );
   }
 
@@ -60,6 +69,8 @@ class SyncOperation {
       'updatedAt': updatedAt.toIso8601String(),
       'attemptCount': attemptCount,
       'lastError': lastError,
+      'priority': priority,
+      'retryDelaySeconds': retryDelaySeconds,
     };
   }
 
@@ -75,6 +86,8 @@ class SyncOperation {
       updatedAt: DateTime.parse(map['updatedAt']),
       attemptCount: map['attemptCount'] ?? 0,
       lastError: map['lastError'],
+      priority: map['priority'] ?? 2,
+      retryDelaySeconds: map['retryDelaySeconds'] ?? 0,
     );
   }
 }

@@ -28,17 +28,30 @@ class SyncQueueRepository {
       tableName,
       where: 'status IN ($placeholders)',
       whereArgs: statusNames,
-      orderBy: 'createdAt ASC',
+      orderBy: 'priority ASC, createdAt ASC',
     );
 
     return maps.map((map) => _fromDbMap(map)).toList();
+  }
+
+  Future<SyncOperation?> getPendingOperationByEntity(String entityName, String entityId) async {
+    final db = await DBHelper.database();
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableName,
+      where: 'entityName = ? AND entityId = ? AND status = ?',
+      whereArgs: [entityName, entityId, SyncStatus.pending.name],
+      limit: 1,
+    );
+
+    if (maps.isEmpty) return null;
+    return _fromDbMap(maps.first);
   }
 
   Future<List<SyncOperation>> getAllOperations() async {
     final db = await DBHelper.database();
     final List<Map<String, dynamic>> maps = await db.query(
       tableName,
-      orderBy: 'createdAt ASC',
+      orderBy: 'priority ASC, createdAt ASC',
     );
 
     return maps.map((map) => _fromDbMap(map)).toList();

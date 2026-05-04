@@ -32,6 +32,7 @@ void main() {
     syncEngine = SyncEngine(
       syncService: fakeSyncService,
       analytics: NoOpAnalyticsService(),
+      isTestMode: true,
     );
     SyncManager.instance.setEngine(syncEngine);
     
@@ -47,7 +48,9 @@ void main() {
         createdAt TEXT,
         updatedAt TEXT,
         attemptCount INTEGER,
-        lastError TEXT
+        lastError TEXT,
+        priority INTEGER DEFAULT 2,
+        retryDelaySeconds INTEGER DEFAULT 0
       )
     ''');
     

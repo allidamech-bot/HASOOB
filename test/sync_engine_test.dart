@@ -23,7 +23,7 @@ void main() {
 
   setUp(() async {
     fakeSyncService = FakeSyncService();
-    syncEngine = SyncEngine(syncService: fakeSyncService);
+    syncEngine = SyncEngine(syncService: fakeSyncService, isTestMode: true);
     
     final db = await DBHelper.database();
     await db.execute('''
@@ -37,7 +37,9 @@ void main() {
         createdAt TEXT,
         updatedAt TEXT,
         attemptCount INTEGER,
-        lastError TEXT
+        lastError TEXT,
+        priority INTEGER DEFAULT 2,
+        retryDelaySeconds INTEGER DEFAULT 0
       )
     ''');
     

@@ -82,6 +82,41 @@ class CloudSyncService implements SyncService {
   }
 
   @override
+  Future<void> upsert(String entityName, Map<String, dynamic> data) async {
+    switch (entityName) {
+      case 'products':
+        return upsertProduct(data);
+      case 'customers':
+        return upsertCustomer(data);
+      case 'invoices':
+        return upsertInvoice(data);
+      case 'business_profile':
+        return upsertBusinessProfile(data);
+      case 'quotations':
+        return upsertQuotation(data);
+      case 'payments':
+        return upsertPayment(data);
+      case 'product_movements':
+        return upsertProductMovement(data);
+      default:
+        throw UnimplementedError('Upsert for entity $entityName not implemented');
+    }
+  }
+
+  @override
+  Future<void> delete(String entityName, String id) async {
+    switch (entityName) {
+      case 'products':
+        return deleteProduct(id);
+      case 'customers':
+        return deleteCustomer(id);
+      case 'invoices':
+        return deleteInvoice(id);
+      default:
+        throw UnimplementedError('Delete for entity $entityName not implemented');
+    }
+  }
+
   Future<void> upsertProduct(Map<String, dynamic> data) async {
     final uid = _uid;
     if (uid == null) {
@@ -101,14 +136,12 @@ class CloudSyncService implements SyncService {
     );
   }
 
-  @override
   Future<void> deleteProduct(String id) async {
     final uid = _uid;
     if (uid == null || id.isEmpty) return;
     await _productsRef(uid).doc(id).delete();
   }
 
-  @override
   Future<void> upsertCustomer(Map<String, dynamic> data) async {
     final uid = _uid;
     if (uid == null) {
@@ -130,7 +163,6 @@ class CloudSyncService implements SyncService {
     );
   }
 
-  @override
   Future<void> deleteCustomer(String id) async {
     final uid = _uid;
     if (uid == null || id.isEmpty) return;

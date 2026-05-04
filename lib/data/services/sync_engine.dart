@@ -10,39 +10,60 @@ class SyncEngine {
   final SyncService _syncService;
   final AnalyticsService _analytics;
   final SyncLogService _logger = SyncLogService.instance;
+  final bool _isTestMode;
   
   SyncEngine({
     SyncQueueService? syncQueueService,
     SyncService? syncService,
     AnalyticsService? analytics,
+    bool? isTestMode,
   })  : _syncQueueService = syncQueueService ?? SyncQueueService.instance,
         _syncService = syncService ?? CloudSyncService.instance,
-        _analytics = analytics ?? NoOpAnalyticsService();
+        _analytics = analytics ?? NoOpAnalyticsService(),
+        _isTestMode = isTestMode ?? identical(0, 0.0);
 
   bool _isProcessing = false;
   static const int _maxRetries = 3;
+  static const int _batchSize = 5;
 
-  /// Processes all pending sync operations in the queue sequentially.
+  /// Processes all pending sync operations in the queue sequentially in batches.
   Future<void> processQueue() async {
     if (_isProcessing) return;
     _isProcessing = true;
     _logger.log('Starting queue processing');
 
     try {
-      final operations = await _syncQueueService.getPending();
-      _logger.log('Found ${operations.length} pending operations');
-      
-      for (final operation in operations) {
-        // Skip operations that have reached the maximum retry limit
-        if (operation.attemptCount >= _maxRetries) {
-          _logger.log(
-            'Skipping operation ${operation.id} (Max retries reached)',
-            level: SyncLogLevel.warning,
-          );
-          continue;
+      while (true) {
+        final operations = await _syncQueueService.getPending();
+        
+        // Filter out operations that are still in retry delay or reached max retries
+        final now = DateTime.now();
+        final eligibleOperations = operations.where((op) {
+          if (op.attemptCount >= _maxRetries) return false;
+          
+          if (!_isTestMode && op.retryDelaySeconds > 0) {
+            final nextAllowedTime = op.updatedAt.add(Duration(seconds: op.retryDelaySeconds));
+            if (now.isBefore(nextAllowedTime)) return false;
+          }
+          
+          return true;
+        }).take(_batchSize).toList();
+
+        if (eligibleOperations.isEmpty) {
+          _logger.log('No more eligible operations to process');
+          break;
         }
 
-        await _processOperation(operation);
+        _logger.log('Processing batch of ${eligibleOperations.length} operations');
+        
+        for (final operation in eligibleOperations) {
+          await _processOperation(operation);
+        }
+        
+        // If we processed less than a full batch, we might be done or only have ineligible ops left
+        if (eligibleOperations.length < _batchSize) {
+          break;
+        }
       }
     } catch (e) {
       _logger.log('Critical error in processQueue', level: SyncLogLevel.error, details: e.toString());
@@ -59,15 +80,10 @@ class SyncEngine {
     await _syncQueueService.updateStatus(operation, SyncStatus.processing);
 
     try {
-      switch (operation.entityName) {
-        case 'products':
-          await _processProduct(operation);
-          break;
-        case 'customers':
-          await _processCustomer(operation);
-          break;
-        default:
-          throw UnimplementedError('Sync for entity ${operation.entityName} not implemented');
+      if (operation.type == SyncOperationType.delete) {
+        await _syncService.delete(operation.entityName, operation.entityId);
+      } else {
+        await _syncService.upsert(operation.entityName, operation.payload);
       }
 
       // Mark as synced on success
@@ -104,22 +120,6 @@ class SyncEngine {
           'attempts': operation.attemptCount + 1,
         },
       );
-    }
-  }
-
-  Future<void> _processProduct(SyncOperation operation) async {
-    if (operation.type == SyncOperationType.delete) {
-      await _syncService.deleteProduct(operation.entityId);
-    } else {
-      await _syncService.upsertProduct(operation.payload);
-    }
-  }
-
-  Future<void> _processCustomer(SyncOperation operation) async {
-    if (operation.type == SyncOperationType.delete) {
-      await _syncService.deleteCustomer(operation.entityId);
-    } else {
-      await _syncService.upsertCustomer(operation.payload);
     }
   }
 }

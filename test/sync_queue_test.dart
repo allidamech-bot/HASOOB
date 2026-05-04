@@ -30,7 +30,9 @@ void main() {
         createdAt TEXT,
         updatedAt TEXT,
         attemptCount INTEGER,
-        lastError TEXT
+        lastError TEXT,
+        priority INTEGER DEFAULT 2,
+        retryDelaySeconds INTEGER DEFAULT 0
       )
     ''');
 
