@@ -16,6 +16,7 @@ class SyncDashboardScreen extends StatefulWidget {
 
 class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTickerProviderStateMixin {
   late TabController _tabController;
+  SyncStatus? _selectedFilter;
 
   @override
   void initState() {
@@ -42,6 +43,11 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh_rounded),
+            onPressed: () => setState(() {}),
+            tooltip: 'Refresh List',
+          ),
           PopupMenuButton<String>(
             onSelected: (value) async {
               final service = SyncQueueService.instance;
@@ -118,33 +124,81 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
               return const Center(child: CircularProgressIndicator());
             }
 
-            final operations = snapshot.data!;
-            if (operations.isEmpty) {
-              return Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(Icons.cloud_done_outlined, size: 64, color: Colors.grey[400]),
-                    const SizedBox(height: 16),
-                    const Text('Sync queue is empty', style: TextStyle(fontSize: 18, color: Colors.grey)),
-                  ],
-                ),
-              );
+            var operations = snapshot.data!;
+            if (_selectedFilter != null) {
+              operations = operations.where((op) => op.status == _selectedFilter).toList();
             }
 
-            // Grouping or stats could go here, but let's stick to a clean list first
-            return ListView.separated(
-              padding: const EdgeInsets.all(8),
-              itemCount: operations.length,
-              separatorBuilder: (context, index) => const SizedBox(height: 8),
-              itemBuilder: (context, index) {
-                final op = operations[index];
-                return _OperationCard(operation: op);
-              },
+            return Column(
+              children: [
+                _buildFilterBar(),
+                Expanded(
+                  child: operations.isEmpty
+                      ? _buildEmptyState()
+                      : ListView.separated(
+                          padding: const EdgeInsets.all(8),
+                          itemCount: operations.length,
+                          separatorBuilder: (context, index) => const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final op = operations[index];
+                            return _OperationCard(operation: op);
+                          },
+                        ),
+                ),
+              ],
             );
           },
         );
       },
+    );
+  }
+
+  Widget _buildFilterBar() {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(right: 8),
+            child: ChoiceChip(
+              label: const Text('All'),
+              selected: _selectedFilter == null,
+              onSelected: (selected) {
+                if (selected) setState(() => _selectedFilter = null);
+              },
+            ),
+          ),
+          ...SyncStatus.values.map((status) {
+            return Padding(
+              padding: const EdgeInsets.only(right: 8),
+              child: ChoiceChip(
+                label: Text(status.name[0].toUpperCase() + status.name.substring(1)),
+                selected: _selectedFilter == status,
+                onSelected: (selected) {
+                  setState(() => _selectedFilter = selected ? status : null);
+                },
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.cloud_done_outlined, size: 64, color: Colors.grey[400]),
+          const SizedBox(height: 16),
+          Text(
+            _selectedFilter == null ? 'Sync queue is empty' : 'No ${_selectedFilter!.name} operations',
+            style: const TextStyle(fontSize: 18, color: Colors.grey),
+          ),
+        ],
+      ),
     );
   }
 
@@ -240,7 +294,7 @@ class _OperationCard extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: colorScheme.errorContainer.withOpacity(0.5),
+                    color: colorScheme.errorContainer.withValues(alpha: 0.5),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Row(
@@ -318,9 +372,9 @@ class _OperationCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
+        color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withOpacity(0.5)),
+        border: Border.all(color: color.withValues(alpha: 0.5)),
       ),
       child: Text(
         label,
