@@ -38,8 +38,21 @@ class SyncQueueRepository {
     final db = await DBHelper.database();
     final List<Map<String, dynamic>> maps = await db.query(
       tableName,
-      where: 'entityName = ? AND entityId = ? AND status = ?',
-      whereArgs: [entityName, entityId, SyncStatus.pending.name],
+      where: 'entityName = ? AND entityId = ? AND (status = ? OR status = ?)',
+      whereArgs: [entityName, entityId, SyncStatus.pending.name, SyncStatus.failed.name],
+      limit: 1,
+    );
+
+    if (maps.isEmpty) return null;
+    return _fromDbMap(maps.first);
+  }
+
+  Future<SyncOperation?> getOperationByFingerprint(String fingerprint) async {
+    final db = await DBHelper.database();
+    final List<Map<String, dynamic>> maps = await db.query(
+      tableName,
+      where: 'fingerprint = ?',
+      whereArgs: [fingerprint],
       limit: 1,
     );
 

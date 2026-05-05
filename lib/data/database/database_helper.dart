@@ -11,7 +11,7 @@ import '../services/cloud_sync_service.dart';
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
-  static const _databaseVersion = 13;
+  static const _databaseVersion = 14;
 
   static const _cashAccountCode = '101';
   static const _inventoryAccountCode = '102';
@@ -129,7 +129,11 @@ class DBHelper {
         }
 
         if (oldVersion < 13) {
-          await _upgradeToV13(db);
+          // V13 placeholder or migration logic
+        }
+
+        if (oldVersion < 14) {
+          await _upgradeToV14(db);
         }
 
         await _repairAccountNamesForV12(db);
@@ -366,7 +370,10 @@ class DBHelper {
         attemptCount INTEGER,
         lastError TEXT,
         priority INTEGER DEFAULT 2,
-        retryDelaySeconds INTEGER DEFAULT 0
+        retryDelaySeconds INTEGER DEFAULT 0,
+        fingerprint TEXT,
+        conflictStrategy TEXT DEFAULT 'lastWriteWins',
+        remoteVersion INTEGER
       )
     ''');
 
@@ -662,7 +669,7 @@ class DBHelper {
     }
   }
 
-  static Future<void> _upgradeToV13(Database db) async {
+  static Future<void> _upgradeToV14(Database db) async {
     await _ensureColumn(
       db,
       table: 'sync_operations',
@@ -674,6 +681,24 @@ class DBHelper {
       table: 'sync_operations',
       column: 'retryDelaySeconds',
       definition: 'INTEGER DEFAULT 0',
+    );
+    await _ensureColumn(
+      db,
+      table: 'sync_operations',
+      column: 'fingerprint',
+      definition: 'TEXT',
+    );
+    await _ensureColumn(
+      db,
+      table: 'sync_operations',
+      column: 'conflictStrategy',
+      definition: "TEXT DEFAULT 'lastWriteWins'",
+    );
+    await _ensureColumn(
+      db,
+      table: 'sync_operations',
+      column: 'remoteVersion',
+      definition: 'INTEGER',
     );
   }
 

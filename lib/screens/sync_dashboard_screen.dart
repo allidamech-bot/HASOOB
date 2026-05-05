@@ -193,6 +193,10 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
         return const Icon(Icons.check_circle_rounded, color: Colors.green);
       case SyncStatus.failed:
         return const Icon(Icons.error_rounded, color: Colors.red);
+      case SyncStatus.rejected:
+        return const Icon(Icons.block_flipped, color: Colors.grey);
+      case SyncStatus.conflict:
+        return const Icon(Icons.compare_arrows_rounded, color: Colors.orange);
     }
   }
 }

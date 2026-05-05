@@ -40,6 +40,7 @@ class SyncEngine {
         final now = DateTime.now();
         final eligibleOperations = operations.where((op) {
           if (op.attemptCount >= _maxRetries) return false;
+          if (op.status == SyncStatus.rejected || op.status == SyncStatus.conflict) return false;
           
           if (!_isTestMode && op.retryDelaySeconds > 0) {
             final nextAllowedTime = op.updatedAt.add(Duration(seconds: op.retryDelaySeconds));
@@ -76,10 +77,31 @@ class SyncEngine {
   /// Internal method to process a single operation by calling the appropriate cloud service.
   Future<void> _processOperation(SyncOperation operation) async {
     _logger.log('Processing ${operation.entityName}:${operation.type.name} (${operation.id})');
+    
+    // Integrity validation
+    if (operation.entityId.isEmpty) {
+      await _syncQueueService.updateStatus(operation, SyncStatus.rejected, error: 'Missing entityId');
+      return;
+    }
+
     // Mark as processing
     await _syncQueueService.updateStatus(operation, SyncStatus.processing);
 
     try {
+      // Conflict Detection logic (Mocking remote check)
+      final remoteVersion = await _syncService.getRemoteVersion(operation.entityName, operation.entityId);
+      
+      if (remoteVersion != null && operation.remoteVersion != null && remoteVersion > operation.remoteVersion!) {
+        // Conflict detected
+        if (operation.conflictStrategy == SyncConflictStrategy.manualReview) {
+          await _syncQueueService.updateStatus(operation, SyncStatus.conflict, error: 'Manual review required');
+          return;
+        } else if (operation.conflictStrategy == SyncConflictStrategy.merge) {
+          // Merge logic would go here, for now fallback to lastWriteWins or fail
+          _logger.log('Merge strategy requested but not fully implemented. Falling back to lastWriteWins.');
+        }
+      }
+
       if (operation.type == SyncOperationType.delete) {
         await _syncService.delete(operation.entityName, operation.entityId);
       } else {

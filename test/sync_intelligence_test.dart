@@ -40,7 +40,10 @@ void main() {
         attemptCount INTEGER,
         lastError TEXT,
         priority INTEGER DEFAULT 2,
-        retryDelaySeconds INTEGER DEFAULT 0
+        retryDelaySeconds INTEGER DEFAULT 0,
+        fingerprint TEXT,
+        conflictStrategy TEXT DEFAULT 'lastWriteWins',
+        remoteVersion INTEGER
       )
     ''');
     
@@ -169,6 +172,102 @@ void main() {
       final opAfter = (await SyncQueueService.instance.getAll()).first;
       expect(opAfter.status, SyncStatus.pending); 
       expect(fakeSyncService.callCount, 1);
+    });
+
+    test('fingerprinting prevents duplicate enqueues', () async {
+      final payload = {'name': 'Duplicate'};
+      await SyncQueueService.instance.enqueue(
+        entityName: 'products',
+        entityId: 'p-dup',
+        type: SyncOperationType.create,
+        payload: payload,
+      );
+
+      await SyncQueueService.instance.enqueue(
+        entityName: 'products',
+        entityId: 'p-dup',
+        type: SyncOperationType.create,
+        payload: payload,
+      );
+
+      final all = await SyncQueueService.instance.getAll();
+      expect(all.length, 1);
+    });
+
+    test('create + delete collapse logic', () async {
+      await SyncQueueService.instance.enqueue(
+        entityName: 'products',
+        entityId: 'p-collapse',
+        type: SyncOperationType.create,
+        payload: {'name': 'To be deleted'},
+      );
+
+      await SyncQueueService.instance.enqueue(
+        entityName: 'products',
+        entityId: 'p-collapse',
+        type: SyncOperationType.delete,
+        payload: {},
+      );
+
+      final all = await SyncQueueService.instance.getAll();
+      expect(all.length, 1);
+      expect(all.first.type, SyncOperationType.delete);
+    });
+
+    test('sequential updates merge logic', () async {
+      await SyncQueueService.instance.enqueue(
+        entityName: 'products',
+        entityId: 'p-merge',
+        type: SyncOperationType.update,
+        payload: {'name': 'Version 1', 'price': 10},
+      );
+
+      await SyncQueueService.instance.enqueue(
+        entityName: 'products',
+        entityId: 'p-merge',
+        type: SyncOperationType.update,
+        payload: {'price': 20, 'category': 'A'},
+      );
+
+      final all = await SyncQueueService.instance.getAll();
+      expect(all.length, 1);
+      expect(all.first.payload['name'], 'Version 1');
+      expect(all.first.payload['price'], 20);
+      expect(all.first.payload['category'], 'A');
+    });
+
+    test('integrity validation rejects missing entityId', () async {
+      await SyncQueueService.instance.enqueue(
+        entityName: 'products',
+        entityId: '', // Invalid
+        type: SyncOperationType.create,
+        payload: {'name': 'Invalid'},
+      );
+
+      await syncEngine.processQueue();
+
+      final all = await SyncQueueService.instance.getAll();
+      expect(all.first.status, SyncStatus.rejected);
+      expect(all.first.lastError, contains('Missing entityId'));
+    });
+
+    test('conflict detection - manual review', () async {
+      fakeSyncService.remoteVersions['products:p-conflict'] = 5;
+
+      await SyncQueueService.instance.enqueue(
+        entityName: 'products',
+        entityId: 'p-conflict',
+        type: SyncOperationType.update,
+        payload: {'name': 'Conflicted'},
+        remoteVersion: 3, // Older than remote
+        conflictStrategy: SyncConflictStrategy.manualReview,
+      );
+
+      await syncEngine.processQueue();
+
+      final all = await SyncQueueService.instance.getAll();
+      expect(all.first.status, SyncStatus.conflict);
+      expect(all.first.lastError, contains('Manual review required'));
     });
   });
 }

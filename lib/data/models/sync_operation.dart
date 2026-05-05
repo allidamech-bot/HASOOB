@@ -1,6 +1,8 @@
 enum SyncOperationType { create, update, delete }
 
-enum SyncStatus { pending, processing, synced, failed }
+enum SyncStatus { pending, processing, synced, failed, rejected, conflict }
+
+enum SyncConflictStrategy { lastWriteWins, merge, manualReview }
 
 class SyncOperation {
   final String id;
@@ -15,6 +17,9 @@ class SyncOperation {
   final String? lastError;
   final int priority;
   final int retryDelaySeconds;
+  final String? fingerprint;
+  final SyncConflictStrategy conflictStrategy;
+  final int? remoteVersion;
 
   SyncOperation({
     required this.id,
@@ -29,6 +34,9 @@ class SyncOperation {
     this.lastError,
     this.priority = 2,
     this.retryDelaySeconds = 0,
+    this.fingerprint,
+    this.conflictStrategy = SyncConflictStrategy.lastWriteWins,
+    this.remoteVersion,
   });
 
   SyncOperation copyWith({
@@ -40,6 +48,9 @@ class SyncOperation {
     int? priority,
     int? retryDelaySeconds,
     SyncOperationType? type,
+    String? fingerprint,
+    SyncConflictStrategy? conflictStrategy,
+    int? remoteVersion,
   }) {
     return SyncOperation(
       id: id,
@@ -54,6 +65,9 @@ class SyncOperation {
       lastError: lastError ?? this.lastError,
       priority: priority ?? this.priority,
       retryDelaySeconds: retryDelaySeconds ?? this.retryDelaySeconds,
+      fingerprint: fingerprint ?? this.fingerprint,
+      conflictStrategy: conflictStrategy ?? this.conflictStrategy,
+      remoteVersion: remoteVersion ?? this.remoteVersion,
     );
   }
 
@@ -71,6 +85,9 @@ class SyncOperation {
       'lastError': lastError,
       'priority': priority,
       'retryDelaySeconds': retryDelaySeconds,
+      'fingerprint': fingerprint,
+      'conflictStrategy': conflictStrategy.name,
+      'remoteVersion': remoteVersion,
     };
   }
 
@@ -88,6 +105,11 @@ class SyncOperation {
       lastError: map['lastError'],
       priority: map['priority'] ?? 2,
       retryDelaySeconds: map['retryDelaySeconds'] ?? 0,
+      fingerprint: map['fingerprint'],
+      conflictStrategy: SyncConflictStrategy.values.byName(
+        map['conflictStrategy'] ?? SyncConflictStrategy.lastWriteWins.name,
+      ),
+      remoteVersion: map['remoteVersion'],
     );
   }
 }

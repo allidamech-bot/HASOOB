@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:hasoob_app/data/models/sync_operation.dart';
 import 'package:hasoob_app/data/services/sync_queue_service.dart';
 import 'package:hasoob_app/data/repositories/sync_queue_repository.dart';
-import 'package:hasoob_app/data/database/database_helper.dart';
 import 'package:hasoob_app/data/services/sync_engine.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'fakes/fake_sync_service.dart';

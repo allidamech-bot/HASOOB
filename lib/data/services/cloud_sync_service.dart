@@ -117,6 +117,35 @@ class CloudSyncService implements SyncService {
     }
   }
 
+  @override
+  Future<int?> getRemoteVersion(String entityName, String id) async {
+    final uid = _uid;
+    if (uid == null || id.isEmpty) return null;
+
+    try {
+      DocumentSnapshot<Map<String, dynamic>> doc;
+      switch (entityName) {
+        case 'products':
+          doc = await _productsRef(uid).doc(id).get();
+          break;
+        case 'customers':
+          doc = await _customersRef(uid).doc(id).get();
+          break;
+        case 'invoices':
+          doc = await _invoicesRef(uid).doc(id).get();
+          break;
+        default:
+          return null;
+      }
+
+      if (!doc.exists) return null;
+      return _toInt(doc.data()?['remoteVersion']);
+    } catch (e) {
+      debugPrint('Error getting remote version: $e');
+      return null;
+    }
+  }
+
   Future<void> upsertProduct(Map<String, dynamic> data) async {
     final uid = _uid;
     if (uid == null) {

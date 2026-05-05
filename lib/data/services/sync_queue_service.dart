@@ -1,5 +1,7 @@
 
+import 'dart:convert';
 import 'dart:math';
+import 'package:crypto/crypto.dart';
 import '../models/sync_operation.dart';
 import '../repositories/sync_queue_repository.dart';
 import 'sync_manager.dart';
@@ -11,41 +13,60 @@ class SyncQueueService {
   final SyncQueueRepository _repository = SyncQueueRepository();
   final Random _random = Random();
 
+  String _calculateFingerprint(String entityName, String entityId, SyncOperationType type, Map<String, dynamic> payload) {
+    final data = '$entityName|$entityId|${type.name}|${jsonEncode(payload)}';
+    return sha256.convert(utf8.encode(data)).toString();
+  }
+
   Future<void> enqueue({
     required String entityName,
     required String entityId,
     required SyncOperationType type,
     required Map<String, dynamic> payload,
     int priority = 2,
+    SyncConflictStrategy conflictStrategy = SyncConflictStrategy.lastWriteWins,
+    int? remoteVersion,
   }) async {
-    // Duplicate protection
+    final fingerprint = _calculateFingerprint(entityName, entityId, type, payload);
+
     final existing = await _repository.getPendingOperationByEntity(entityName, entityId);
     
     if (existing != null) {
-      // If we have a pending operation for the same entity
+      // Smart skip/collapse logic
       if (existing.type == type) {
         // Same type: Update existing operation with new payload and bump updatedAt
         final mergedPayload = {...existing.payload, ...payload};
+        final newFingerprint = _calculateFingerprint(entityName, entityId, type, mergedPayload);
+        
         await _repository.updateOperation(existing.copyWith(
           payload: mergedPayload,
           updatedAt: DateTime.now(),
           priority: priority < existing.priority ? priority : existing.priority,
+          fingerprint: newFingerprint,
+          conflictStrategy: conflictStrategy,
+          remoteVersion: remoteVersion,
         ));
         SyncManager.instance.requestSync();
         return;
       } else if (type == SyncOperationType.delete) {
-        // If new op is delete, it overrides any pending create/update
+        // If new op is delete, it overrides any pending update or create
         await _repository.updateOperation(existing.copyWith(
           type: SyncOperationType.delete,
           payload: {}, // No payload needed for delete usually
+          status: SyncStatus.pending, // Reset status to pending in case it was failed
           updatedAt: DateTime.now(),
           priority: 1, // Higher priority for deletes
+          fingerprint: _calculateFingerprint(entityName, entityId, SyncOperationType.delete, {}),
         ));
         SyncManager.instance.requestSync();
         return;
       }
-      // If existing was delete and new is update... that's weird but possible if recreated.
-      // For now, we'll just allow multiple if types differ and not covered by logic above.
+    }
+
+    // Duplicate identical operations protection
+    final duplicate = await _repository.getOperationByFingerprint(fingerprint);
+    if (duplicate != null && duplicate.status != SyncStatus.failed) {
+      return; // Skip if already pending or synced with same fingerprint
     }
 
     final operation = SyncOperation(
@@ -57,6 +78,9 @@ class SyncQueueService {
       createdAt: DateTime.now(),
       updatedAt: DateTime.now(),
       priority: priority,
+      fingerprint: fingerprint,
+      conflictStrategy: conflictStrategy,
+      remoteVersion: remoteVersion,
     );
 
     await _repository.enqueue(operation);
