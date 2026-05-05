@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../data/services/sync_manager.dart';
 import '../data/services/sync_queue_service.dart';
 import '../data/services/smart_sync_trigger_service.dart';
@@ -41,20 +42,30 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.delete_sweep_rounded),
-            onPressed: () async {
-              final scaffoldMessenger = ScaffoldMessenger.of(context);
-              if (_tabController.index == 0) {
-                await SyncQueueService.instance.clearSynced();
-              } else {
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              final service = SyncQueueService.instance;
+              final messenger = ScaffoldMessenger.of(context);
+              if (value == 'clear_synced') {
+                await service.clearSynced();
+                messenger.showSnackBar(const SnackBar(content: Text('Cleared synced operations')));
+              } else if (value == 'clear_rejected') {
+                await service.clearRejected();
+                messenger.showSnackBar(const SnackBar(content: Text('Cleared rejected operations')));
+              } else if (value == 'retry_all') {
+                await service.retryAllFailed();
+                messenger.showSnackBar(const SnackBar(content: Text('Retrying all failed operations')));
+              } else if (value == 'clear_logs') {
                 SyncLogService.instance.clear();
+                messenger.showSnackBar(const SnackBar(content: Text('Logs cleared')));
               }
-              scaffoldMessenger.showSnackBar(
-                const SnackBar(content: Text('Cleared')),
-              );
             },
-            tooltip: 'Clear',
+            itemBuilder: (context) => [
+              const PopupMenuItem(value: 'retry_all', child: Text('Retry All Failed')),
+              const PopupMenuItem(value: 'clear_synced', child: Text('Clear Synced')),
+              const PopupMenuItem(value: 'clear_rejected', child: Text('Clear Rejected')),
+              const PopupMenuItem(value: 'clear_logs', child: Text('Clear Logs')),
+            ],
           ),
         ],
       ),
@@ -65,27 +76,32 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
           _buildLogsTab(),
         ],
       ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: ListenableBuilder(
-          listenable: SyncManager.instance,
-          builder: (context, _) {
-            final isRunning = SyncManager.instance.isRunning;
-            return FilledButton.icon(
-              onPressed: isRunning
-                  ? null
-                  : () => SmartSyncTriggerService.instance.onUserRequestedSync(),
-              icon: isRunning
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                          strokeWidth: 2, color: Colors.white),
-                    )
-                  : const Icon(Icons.sync_rounded),
-              label: Text(isRunning ? 'Syncing...' : 'Run Sync'),
-            );
-          },
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: ListenableBuilder(
+            listenable: SyncManager.instance,
+            builder: (context, _) {
+              final isRunning = SyncManager.instance.isRunning;
+              return FilledButton.icon(
+                onPressed: isRunning
+                    ? null
+                    : () => SmartSyncTriggerService.instance.onUserRequestedSync(),
+                icon: isRunning
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.sync_rounded),
+                label: Text(isRunning ? 'Syncing...' : 'Run Sync Now'),
+                style: FilledButton.styleFrom(
+                  minimumSize: const Size.fromHeight(50),
+                ),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -104,33 +120,26 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
 
             final operations = snapshot.data!;
             if (operations.isEmpty) {
-              return const Center(child: Text('All operations synced'));
+              return Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.cloud_done_outlined, size: 64, color: Colors.grey[400]),
+                    const SizedBox(height: 16),
+                    const Text('Sync queue is empty', style: TextStyle(fontSize: 18, color: Colors.grey)),
+                  ],
+                ),
+              );
             }
 
-            return ListView.builder(
+            // Grouping or stats could go here, but let's stick to a clean list first
+            return ListView.separated(
+              padding: const EdgeInsets.all(8),
               itemCount: operations.length,
+              separatorBuilder: (context, index) => const SizedBox(height: 8),
               itemBuilder: (context, index) {
                 final op = operations[index];
-                return ListTile(
-                  leading: _getStatusIcon(op.status),
-                  title: Text('${op.entityName} - ${op.type.name}'),
-                  subtitle: Text(
-                    op.status == SyncStatus.failed
-                        ? 'Error: ${op.lastError ?? "Unknown"}'
-                        : 'Status: ${op.status.name}',
-                  ),
-                  trailing: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(AppFormatters.dateTimeString(
-                          op.updatedAt.toIso8601String())),
-                      if (op.attemptCount > 0)
-                        Text('Retries: ${op.attemptCount}',
-                            style: Theme.of(context).textTheme.bodySmall),
-                    ],
-                  ),
-                );
+                return _OperationCard(operation: op);
               },
             );
           },
@@ -145,7 +154,7 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
       builder: (context, _) {
         final logs = SyncLogService.instance.logs;
         if (logs.isEmpty) {
-          return const Center(child: Text('No logs yet'));
+          return const Center(child: Text('No logs available'));
         }
 
         return ListView.builder(
@@ -169,7 +178,7 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
               title: Text(log.message),
               subtitle: log.details != null ? Text(log.details!) : null,
               trailing: Text(
-                '${log.timestamp.hour}:${log.timestamp.minute.toString().padLeft(2, '0')}:${log.timestamp.second.toString().padLeft(2, '0')}',
+                DateFormat('HH:mm:ss').format(log.timestamp),
                 style: Theme.of(context).textTheme.bodySmall,
               ),
             );
@@ -178,11 +187,103 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
       },
     );
   }
+}
+
+class _OperationCard extends StatelessWidget {
+  final SyncOperation operation;
+
+  const _OperationCard({required this.operation});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Card(
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: colorScheme.outlineVariant),
+      ),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(12),
+        onTap: () => _showDetails(context),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  _getStatusIcon(operation.status),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          '${operation.entityName} ${operation.type.name.toUpperCase()}',
+                          style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
+                        ),
+                        Text(
+                          'ID: ${operation.entityId}',
+                          style: theme.textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  _getPriorityBadge(context, operation.priority),
+                ],
+              ),
+              if (operation.lastError != null) ...[
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: colorScheme.errorContainer.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.error_outline, size: 16, color: colorScheme.error),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          operation.lastError!,
+                          style: theme.textTheme.bodySmall?.copyWith(color: colorScheme.onErrorContainer),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Text(
+                    'Attempts: ${operation.attemptCount}',
+                    style: theme.textTheme.bodySmall,
+                  ),
+                  Text(
+                    AppFormatters.dateTimeString(operation.updatedAt.toIso8601String()),
+                    style: theme.textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Widget _getStatusIcon(SyncStatus status) {
     switch (status) {
       case SyncStatus.pending:
-        return const Icon(Icons.hourglass_empty_rounded, color: Colors.orange);
+        return const Icon(Icons.schedule_rounded, color: Colors.orange);
       case SyncStatus.processing:
         return const SizedBox(
           width: 24,
@@ -190,13 +291,176 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
           child: CircularProgressIndicator(strokeWidth: 2),
         );
       case SyncStatus.synced:
-        return const Icon(Icons.check_circle_rounded, color: Colors.green);
+        return const Icon(Icons.check_circle_outline_rounded, color: Colors.green);
       case SyncStatus.failed:
-        return const Icon(Icons.error_rounded, color: Colors.red);
+        return const Icon(Icons.error_outline_rounded, color: Colors.red);
       case SyncStatus.rejected:
-        return const Icon(Icons.block_flipped, color: Colors.grey);
+        return const Icon(Icons.block_rounded, color: Colors.grey);
       case SyncStatus.conflict:
-        return const Icon(Icons.compare_arrows_rounded, color: Colors.orange);
+        return const Icon(Icons.compare_arrows_rounded, color: Colors.deepOrange);
     }
   }
+
+  Widget _getPriorityBadge(BuildContext context, int priority) {
+    Color color;
+    String label;
+    if (priority <= 1) {
+      color = Colors.red;
+      label = 'High';
+    } else if (priority == 2) {
+      color = Colors.blue;
+      label = 'Normal';
+    } else {
+      color = Colors.grey;
+      label = 'Low';
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.5)),
+      ),
+      child: Text(
+        label,
+        style: TextStyle(color: color, fontSize: 10, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  void _showDetails(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _OperationDetailsSheet(operation: operation),
+    );
+  }
 }
+
+class _OperationDetailsSheet extends StatelessWidget {
+  final SyncOperation operation;
+
+  const _OperationDetailsSheet({required this.operation});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(20, 20, 20, MediaQuery.of(context).padding.bottom + 20),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text('Operation Details', style: theme.textTheme.headlineSmall),
+              IconButton(
+                icon: const Icon(Icons.close),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+          const Divider(),
+          _detailRow('Entity', '${operation.entityName} (${operation.entityId})'),
+          _detailRow('Action', operation.type.name.toUpperCase()),
+          _detailRow('Status', operation.status.name.toUpperCase()),
+          _detailRow('Priority', _getPriorityLabel(operation.priority)),
+          _detailRow('Created', AppFormatters.dateTimeString(operation.createdAt.toIso8601String())),
+          _detailRow('Last Update', AppFormatters.dateTimeString(operation.updatedAt.toIso8601String())),
+          _detailRow('Attempts', operation.attemptCount.toString()),
+          if (operation.retryDelaySeconds > 0)
+            _detailRow('Retry Delay', '${operation.retryDelaySeconds} seconds'),
+          if (operation.conflictStrategy != SyncConflictStrategy.lastWriteWins)
+            _detailRow('Conflict Strategy', operation.conflictStrategy.name),
+          if (operation.remoteVersion != null)
+            _detailRow('Remote Version', operation.remoteVersion.toString()),
+          if (operation.lastError != null) ...[
+            const SizedBox(height: 16),
+            Text('Error Message', style: theme.textTheme.titleSmall?.copyWith(color: colorScheme.error)),
+            const SizedBox(height: 4),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(operation.lastError!, style: TextStyle(color: colorScheme.onErrorContainer)),
+            ),
+          ],
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              if (operation.status == SyncStatus.failed || operation.status == SyncStatus.conflict)
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () async {
+                      await SyncQueueService.instance.retryOperation(operation.id);
+                      if (context.mounted) Navigator.pop(context);
+                    },
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Retry Now'),
+                  ),
+                ),
+              if (operation.status != SyncStatus.processing) ...[
+                if (operation.status == SyncStatus.failed || operation.status == SyncStatus.conflict)
+                  const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () async {
+                      final confirmed = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Delete Operation?'),
+                          content: const Text('This will remove the operation from the queue permanently.'),
+                          actions: [
+                            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                            TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+                          ],
+                        ),
+                      );
+                      if (confirmed == true) {
+                        await SyncQueueService.instance.delete(operation.id);
+                        if (context.mounted) Navigator.pop(context);
+                      }
+                    },
+                    icon: const Icon(Icons.delete_outline),
+                    label: const Text('Remove'),
+                    style: OutlinedButton.styleFrom(foregroundColor: colorScheme.error),
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _detailRow(String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(label, style: const TextStyle(color: Colors.grey, fontWeight: FontWeight.w500)),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+        ],
+      ),
+    );
+  }
+
+  String _getPriorityLabel(int priority) {
+    if (priority <= 1) return 'High';
+    if (priority == 2) return 'Normal';
+    return 'Low';
+  }
+}
+

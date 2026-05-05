@@ -124,8 +124,40 @@ class SyncQueueService {
 
   Future<void> delete(String id) => _repository.deleteOperation(id);
 
+  Future<void> retryOperation(String id) async {
+    final all = await _repository.getAllOperations();
+    final op = all.firstWhere((o) => o.id == id);
+    await _repository.updateOperation(op.copyWith(
+      status: SyncStatus.pending,
+      attemptCount: 0,
+      retryDelaySeconds: 0,
+    ));
+    SyncManager.instance.requestSync();
+  }
+
+  Future<void> retryAllFailed() async {
+    final failed = await _repository.getOperationsByStatus([SyncStatus.failed, SyncStatus.conflict]);
+    for (final op in failed) {
+      await _repository.updateOperation(op.copyWith(
+        status: SyncStatus.pending,
+        attemptCount: 0,
+        retryDelaySeconds: 0,
+      ));
+    }
+    SyncManager.instance.requestSync();
+  }
+
   Future<void> clearSynced() async {
     await _repository.clearSynced();
+    SyncManager.instance.notifyListeners();
+  }
+
+  Future<void> clearRejected() async {
+    await _repository.getOperationsByStatus([SyncStatus.rejected]).then((ops) async {
+      for (final op in ops) {
+        await _repository.deleteOperation(op.id);
+      }
+    });
     SyncManager.instance.notifyListeners();
   }
 }
