@@ -125,6 +125,20 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
             }
 
             var operations = snapshot.data!;
+            
+            // Sort by status priority: failed, pending, conflict, processing, synced, rejected
+            operations.sort((a, b) {
+              final priorityMap = {
+                SyncStatus.failed: 0,
+                SyncStatus.pending: 1,
+                SyncStatus.conflict: 2,
+                SyncStatus.processing: 3,
+                SyncStatus.synced: 4,
+                SyncStatus.rejected: 5,
+              };
+              return (priorityMap[a.status] ?? 99).compareTo(priorityMap[b.status] ?? 99);
+            });
+
             if (_selectedFilter != null) {
               operations = operations.where((op) => op.status == _selectedFilter).toList();
             }
@@ -132,6 +146,7 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
             return Column(
               children: [
                 _buildFilterBar(),
+                _buildBulkActions(),
                 Expanded(
                   child: operations.isEmpty
                       ? _buildEmptyState()
@@ -186,18 +201,77 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildBulkActions() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Row(
         children: [
-          Icon(Icons.cloud_done_outlined, size: 64, color: Colors.grey[400]),
-          const SizedBox(height: 16),
-          Text(
-            _selectedFilter == null ? 'Sync queue is empty' : 'No ${_selectedFilter!.name} operations',
-            style: const TextStyle(fontSize: 18, color: Colors.grey),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                await SyncQueueService.instance.retryAllFailed();
+                setState(() {});
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Retrying all failed operations')),
+                  );
+                }
+              },
+              icon: const Icon(Icons.refresh_rounded, size: 18),
+              label: const Text('Retry Failed'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: OutlinedButton.icon(
+              onPressed: () async {
+                await SmartSyncTriggerService.instance.onUserRequestedSync();
+                setState(() {});
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Manual sync triggered')),
+                  );
+                }
+              },
+              icon: const Icon(Icons.sync_rounded, size: 18),
+              label: const Text('Sync Now'),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 8),
+              ),
+            ),
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.cloud_done_outlined, size: 64, color: Colors.grey[400]),
+            const SizedBox(height: 16),
+            Text(
+              _selectedFilter == null ? 'No sync activity yet' : 'No ${_selectedFilter!.name} operations',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.grey),
+              textAlign: TextAlign.center,
+            ),
+            if (_selectedFilter == null) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Start using the app to generate sync operations',
+                style: TextStyle(color: Colors.grey[500]),
+                textAlign: TextAlign.center,
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -257,7 +331,10 @@ class _OperationCard extends StatelessWidget {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(12),
-        side: BorderSide(color: colorScheme.outlineVariant),
+        side: BorderSide(
+          color: _getBorderColor(operation.status, colorScheme),
+          width: operation.status == SyncStatus.failed || operation.status == SyncStatus.conflict ? 1.5 : 1,
+        ),
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
@@ -352,6 +429,23 @@ class _OperationCard extends StatelessWidget {
         return const Icon(Icons.block_rounded, color: Colors.grey);
       case SyncStatus.conflict:
         return const Icon(Icons.compare_arrows_rounded, color: Colors.deepOrange);
+    }
+  }
+
+  Color _getBorderColor(SyncStatus status, ColorScheme scheme) {
+    switch (status) {
+      case SyncStatus.failed:
+        return scheme.error;
+      case SyncStatus.conflict:
+        return Colors.orange;
+      case SyncStatus.pending:
+        return Colors.blue;
+      case SyncStatus.processing:
+        return scheme.primary;
+      case SyncStatus.synced:
+        return Colors.green.withValues(alpha: 0.5);
+      case SyncStatus.rejected:
+        return scheme.outlineVariant;
     }
   }
 
