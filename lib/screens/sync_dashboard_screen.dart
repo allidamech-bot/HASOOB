@@ -575,6 +575,21 @@ class _OperationDetailsSheet extends StatelessWidget {
           _detailRow('Entity', '${operation.entityName} (${operation.entityId})'),
           _detailRow('Action', operation.type.name.toUpperCase()),
           _detailRow('Status', operation.status.name.toUpperCase()),
+          if (operation.conflictReason != null) ...[
+            const SizedBox(height: 8),
+            Text('Conflict Reason', style: theme.textTheme.titleSmall?.copyWith(color: Colors.orange[800])),
+            const SizedBox(height: 4),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.orange[50],
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: Colors.orange[200]!),
+              ),
+              child: Text(operation.conflictReason!, style: TextStyle(color: Colors.orange[900])),
+            ),
+          ],
           _detailRow('Priority', _getPriorityLabel(operation.priority)),
           _detailRow('Created', AppFormatters.dateTimeString(operation.createdAt.toIso8601String())),
           _detailRow('Last Update', AppFormatters.dateTimeString(operation.updatedAt.toIso8601String())),
@@ -583,6 +598,8 @@ class _OperationDetailsSheet extends StatelessWidget {
             _detailRow('Retry Delay', '${operation.retryDelaySeconds} seconds'),
           if (operation.conflictStrategy != SyncConflictStrategy.lastWriteWins)
             _detailRow('Conflict Strategy', operation.conflictStrategy.name),
+          if (operation.localVersion != null)
+            _detailRow('Local Version', operation.localVersion.toString()),
           if (operation.remoteVersion != null)
             _detailRow('Remote Version', operation.remoteVersion.toString()),
           if (operation.lastError != null) ...[
@@ -600,6 +617,48 @@ class _OperationDetailsSheet extends StatelessWidget {
             ),
           ],
           const SizedBox(height: 24),
+          if (operation.status == SyncStatus.conflict) ...[
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () async {
+                      await SyncQueueService.instance.resolveConflictUseLocal(operation.id);
+                      onActionCompleted();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Resolved using local version')),
+                        );
+                        Navigator.pop(context);
+                      }
+                    },
+                    icon: const Icon(Icons.upload_rounded),
+                    label: const Text('Use Local'),
+                    style: FilledButton.styleFrom(backgroundColor: Colors.blue),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () async {
+                      await SyncQueueService.instance.resolveConflictUseRemote(operation.id);
+                      onActionCompleted();
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Resolved using remote version')),
+                        );
+                        Navigator.pop(context);
+                      }
+                    },
+                    icon: const Icon(Icons.download_rounded),
+                    label: const Text('Use Remote'),
+                    style: FilledButton.styleFrom(backgroundColor: Colors.green),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
           Row(
             children: [
               if (operation.status == SyncStatus.failed || operation.status == SyncStatus.conflict)
@@ -608,7 +667,12 @@ class _OperationDetailsSheet extends StatelessWidget {
                     onPressed: () async {
                       await SyncQueueService.instance.retryOperation(operation.id);
                       onActionCompleted();
-                      if (context.mounted) Navigator.pop(context);
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Retrying operation')),
+                        );
+                        Navigator.pop(context);
+                      }
                     },
                     icon: const Icon(Icons.refresh),
                     label: const Text('Retry Now'),

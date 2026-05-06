@@ -109,7 +109,7 @@ void main() {
       var allOps = await SyncQueueService.instance.getAll();
       expect(allOps.length, 1);
 
-      await SyncQueueService.instance.resolveConflict(allOps.first.id, useRemote: true);
+      await SyncQueueService.instance.resolveConflictUseRemote(allOps.first.id);
       
       allOps = await SyncQueueService.instance.getAll();
       expect(allOps.isEmpty, true);
@@ -134,7 +134,7 @@ void main() {
       expect(op.remoteVersion, 10);
 
       // 2. Resolve by choosing local (force)
-      await SyncQueueService.instance.resolveConflict(op.id, useRemote: false);
+      await SyncQueueService.instance.resolveConflictUseLocal(op.id);
       
       allOps = await SyncQueueService.instance.getAll();
       op = allOps.first;

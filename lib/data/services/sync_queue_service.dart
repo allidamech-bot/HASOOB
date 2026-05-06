@@ -135,6 +135,11 @@ class SyncQueueService {
   Future<void> retryOperation(String id) async {
     final all = await _repository.getAllOperations();
     final op = all.firstWhere((o) => o.id == id);
+    
+    if (op.status != SyncStatus.failed && op.status != SyncStatus.conflict) {
+      return;
+    }
+
     await _repository.updateOperation(op.copyWith(
       status: SyncStatus.pending,
       attemptCount: 0,
@@ -160,22 +165,28 @@ class SyncQueueService {
     SyncManager.instance.notifyListeners();
   }
 
-  Future<void> resolveConflict(String id, {bool useRemote = false}) async {
+  Future<void> resolveConflictUseLocal(String id) async {
     final all = await _repository.getAllOperations();
     final op = all.firstWhere((o) => o.id == id);
     
-    if (useRemote) {
-      // If we choose remote, we effectively discard our local changes
-      await _repository.deleteOperation(id);
-    } else {
-      // If we choose local, we force our update by updating the base version to match remote
-      await _repository.updateOperation(op.copyWith(
-        status: SyncStatus.pending,
-        remoteVersion: op.remoteVersion,
-        attemptCount: 0,
-        retryDelaySeconds: 0,
-      ));
-    }
+    if (op.status != SyncStatus.conflict) return;
+
+    await _repository.updateOperation(op.copyWith(
+      status: SyncStatus.pending,
+      remoteVersion: op.remoteVersion,
+      attemptCount: 0,
+      retryDelaySeconds: 0,
+    ));
+    SyncManager.instance.requestSync();
+  }
+
+  Future<void> resolveConflictUseRemote(String id) async {
+    final all = await _repository.getAllOperations();
+    final op = all.firstWhere((o) => o.id == id);
+    
+    if (op.status != SyncStatus.conflict) return;
+
+    await _repository.deleteOperation(id);
     SyncManager.instance.requestSync();
   }
 
