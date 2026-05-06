@@ -54,15 +54,19 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
               final messenger = ScaffoldMessenger.of(context);
               if (value == 'clear_synced') {
                 await service.clearSynced();
+                setState(() {});
                 messenger.showSnackBar(const SnackBar(content: Text('Cleared synced operations')));
               } else if (value == 'clear_rejected') {
                 await service.clearRejected();
+                setState(() {});
                 messenger.showSnackBar(const SnackBar(content: Text('Cleared rejected operations')));
               } else if (value == 'retry_all') {
                 await service.retryAllFailed();
+                setState(() {});
                 messenger.showSnackBar(const SnackBar(content: Text('Retrying all failed operations')));
               } else if (value == 'clear_logs') {
                 SyncLogService.instance.clear();
+                setState(() {});
                 messenger.showSnackBar(const SnackBar(content: Text('Logs cleared')));
               }
             },
@@ -146,7 +150,8 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
             return Column(
               children: [
                 _buildFilterBar(),
-                _buildBulkActions(),
+                _buildBulkActions(operations),
+                _buildSyncIndicator(),
                 Expanded(
                   child: operations.isEmpty
                       ? _buildEmptyState()
@@ -156,7 +161,10 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
                           separatorBuilder: (context, index) => const SizedBox(height: 8),
                           itemBuilder: (context, index) {
                             final op = operations[index];
-                            return _OperationCard(operation: op);
+                            return _OperationCard(
+                              operation: op,
+                              onRefresh: () => setState(() {}),
+                            );
                           },
                         ),
                 ),
@@ -201,22 +209,27 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
     );
   }
 
-  Widget _buildBulkActions() {
+  Widget _buildBulkActions(List<SyncOperation> operations) {
+    final hasFailed = operations.any((op) => op.status == SyncStatus.failed || op.status == SyncStatus.conflict);
+    final isRunning = SyncManager.instance.isRunning;
+
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Row(
         children: [
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () async {
-                await SyncQueueService.instance.retryAllFailed();
-                setState(() {});
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Retrying all failed operations')),
-                  );
-                }
-              },
+              onPressed: !hasFailed
+                  ? null
+                  : () async {
+                      await SyncQueueService.instance.retryAllFailed();
+                      setState(() {});
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Retrying all failed operations')),
+                        );
+                      }
+                    },
               icon: const Icon(Icons.refresh_rounded, size: 18),
               label: const Text('Retry Failed'),
               style: OutlinedButton.styleFrom(
@@ -227,20 +240,52 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
           const SizedBox(width: 12),
           Expanded(
             child: OutlinedButton.icon(
-              onPressed: () async {
-                await SmartSyncTriggerService.instance.onUserRequestedSync();
-                setState(() {});
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Manual sync triggered')),
-                  );
-                }
-              },
+              onPressed: isRunning
+                  ? null
+                  : () async {
+                      await SmartSyncTriggerService.instance.onUserRequestedSync();
+                      setState(() {});
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Manual sync triggered')),
+                        );
+                      }
+                    },
               icon: const Icon(Icons.sync_rounded, size: 18),
               label: const Text('Sync Now'),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 8),
               ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSyncIndicator() {
+    final isRunning = SyncManager.instance.isRunning;
+    final theme = Theme.of(context);
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      child: Row(
+        children: [
+          if (isRunning) ...[
+            const SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(strokeWidth: 2),
+            ),
+            const SizedBox(width: 12),
+          ] else
+            Icon(Icons.cloud_done_rounded, size: 16, color: theme.colorScheme.primary),
+          const SizedBox(width: 8),
+          Text(
+            isRunning ? 'Syncing...' : 'Idle - Up to date',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: isRunning ? theme.colorScheme.primary : theme.colorScheme.outline,
+              fontWeight: isRunning ? FontWeight.bold : FontWeight.normal,
             ),
           ),
         ],
@@ -319,8 +364,12 @@ class _SyncDashboardScreenState extends State<SyncDashboardScreen> with SingleTi
 
 class _OperationCard extends StatelessWidget {
   final SyncOperation operation;
+  final VoidCallback onRefresh;
 
-  const _OperationCard({required this.operation});
+  const _OperationCard({
+    required this.operation,
+    required this.onRefresh,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -338,7 +387,7 @@ class _OperationCard extends StatelessWidget {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
-        onTap: () => _showDetails(context),
+        onTap: () => _showDetails(context, onRefresh),
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Column(
@@ -477,22 +526,29 @@ class _OperationCard extends StatelessWidget {
     );
   }
 
-  void _showDetails(BuildContext context) {
+  void _showDetails(BuildContext context, VoidCallback onRefresh) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => _OperationDetailsSheet(operation: operation),
+      builder: (context) => _OperationDetailsSheet(
+        operation: operation,
+        onActionCompleted: onRefresh,
+      ),
     );
   }
 }
 
 class _OperationDetailsSheet extends StatelessWidget {
   final SyncOperation operation;
+  final VoidCallback onActionCompleted;
 
-  const _OperationDetailsSheet({required this.operation});
+  const _OperationDetailsSheet({
+    required this.operation,
+    required this.onActionCompleted,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -551,6 +607,7 @@ class _OperationDetailsSheet extends StatelessWidget {
                   child: FilledButton.icon(
                     onPressed: () async {
                       await SyncQueueService.instance.retryOperation(operation.id);
+                      onActionCompleted();
                       if (context.mounted) Navigator.pop(context);
                     },
                     icon: const Icon(Icons.refresh),
@@ -576,6 +633,7 @@ class _OperationDetailsSheet extends StatelessWidget {
                       );
                       if (confirmed == true) {
                         await SyncQueueService.instance.delete(operation.id);
+                        onActionCompleted();
                         if (context.mounted) Navigator.pop(context);
                       }
                     },
