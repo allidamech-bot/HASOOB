@@ -11,7 +11,7 @@ import '../services/cloud_sync_service.dart';
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
-  static const _databaseVersion = 14;
+  static const _databaseVersion = 16;
 
   static const _cashAccountCode = '101';
   static const _inventoryAccountCode = '102';
@@ -134,6 +134,14 @@ class DBHelper {
 
         if (oldVersion < 14) {
           await _upgradeToV14(db);
+        }
+
+        if (oldVersion < 15) {
+          await _upgradeToV15(db);
+        }
+
+        if (oldVersion < 16) {
+          await _upgradeToV16(db);
         }
 
         await _repairAccountNamesForV12(db);
@@ -373,7 +381,9 @@ class DBHelper {
         retryDelaySeconds INTEGER DEFAULT 0,
         fingerprint TEXT,
         conflictStrategy TEXT DEFAULT 'lastWriteWins',
-        remoteVersion INTEGER
+        remoteVersion INTEGER DEFAULT 0,
+        localVersion INTEGER DEFAULT 0,
+        conflictReason TEXT
       )
     ''');
 
@@ -699,6 +709,43 @@ class DBHelper {
       table: 'sync_operations',
       column: 'remoteVersion',
       definition: 'INTEGER',
+    );
+  }
+
+  static Future<void> _upgradeToV15(Database db) async {
+    await _ensureColumn(
+      db,
+      table: 'sync_operations',
+      column: 'localVersion',
+      definition: 'INTEGER',
+    );
+    await _ensureColumn(
+      db,
+      table: 'sync_operations',
+      column: 'conflictReason',
+      definition: 'TEXT',
+    );
+  }
+
+  static Future<void> _upgradeToV16(Database db) async {
+    // Ensure all Phase 22 columns exist with correct defaults
+    await _ensureColumn(
+      db,
+      table: 'sync_operations',
+      column: 'localVersion',
+      definition: 'INTEGER DEFAULT 0',
+    );
+    await _ensureColumn(
+      db,
+      table: 'sync_operations',
+      column: 'remoteVersion',
+      definition: 'INTEGER DEFAULT 0',
+    );
+    await _ensureColumn(
+      db,
+      table: 'sync_operations',
+      column: 'conflictReason',
+      definition: 'TEXT',
     );
   }
 

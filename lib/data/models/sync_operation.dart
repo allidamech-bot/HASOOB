@@ -20,6 +20,8 @@ class SyncOperation {
   final String? fingerprint;
   final SyncConflictStrategy conflictStrategy;
   final int? remoteVersion;
+  final int? localVersion;
+  final String? conflictReason;
 
   SyncOperation({
     required this.id,
@@ -37,6 +39,8 @@ class SyncOperation {
     this.fingerprint,
     this.conflictStrategy = SyncConflictStrategy.lastWriteWins,
     this.remoteVersion,
+    this.localVersion,
+    this.conflictReason,
   });
 
   SyncOperation copyWith({
@@ -51,6 +55,8 @@ class SyncOperation {
     String? fingerprint,
     SyncConflictStrategy? conflictStrategy,
     int? remoteVersion,
+    int? localVersion,
+    String? conflictReason,
   }) {
     return SyncOperation(
       id: id,
@@ -68,6 +74,8 @@ class SyncOperation {
       fingerprint: fingerprint ?? this.fingerprint,
       conflictStrategy: conflictStrategy ?? this.conflictStrategy,
       remoteVersion: remoteVersion ?? this.remoteVersion,
+      localVersion: localVersion ?? this.localVersion,
+      conflictReason: conflictReason ?? this.conflictReason,
     );
   }
 
@@ -88,6 +96,8 @@ class SyncOperation {
       'fingerprint': fingerprint,
       'conflictStrategy': conflictStrategy.name,
       'remoteVersion': remoteVersion,
+      'localVersion': localVersion,
+      'conflictReason': conflictReason,
     };
   }
 
@@ -109,7 +119,9 @@ class SyncOperation {
       conflictStrategy: SyncConflictStrategy.values.byName(
         map['conflictStrategy'] ?? SyncConflictStrategy.lastWriteWins.name,
       ),
-      remoteVersion: map['remoteVersion'],
+      remoteVersion: map['remoteVersion'] ?? 0,
+      localVersion: map['localVersion'] ?? 0,
+      conflictReason: map['conflictReason'],
     );
   }
 }

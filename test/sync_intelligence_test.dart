@@ -43,7 +43,9 @@ void main() {
         retryDelaySeconds INTEGER DEFAULT 0,
         fingerprint TEXT,
         conflictStrategy TEXT DEFAULT 'lastWriteWins',
-        remoteVersion INTEGER
+        remoteVersion INTEGER DEFAULT 0,
+        localVersion INTEGER DEFAULT 0,
+        conflictReason TEXT
       )
     ''');
     
@@ -267,7 +269,7 @@ void main() {
 
       final all = await SyncQueueService.instance.getAll();
       expect(all.first.status, SyncStatus.conflict);
-      expect(all.first.lastError, contains('Manual review required'));
+      expect(all.first.conflictReason, contains('Remote version (5) is newer than local base (3)'));
     });
   });
 }

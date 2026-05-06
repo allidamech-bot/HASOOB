@@ -14,6 +14,13 @@ class FakeSyncService implements SyncService {
   }
 
   @override
+  Future<Map<String, dynamic>?> getRemoteData(String entityName, String id) async {
+    final version = remoteVersions['$entityName:$id'];
+    if (version == null) return null;
+    return {'id': id, 'version': version};
+  }
+
+  @override
   Future<void> upsert(String entityName, Map<String, dynamic> data) async {
     callCount++;
     upsertCounts[entityName] = (upsertCounts[entityName] ?? 0) + 1;

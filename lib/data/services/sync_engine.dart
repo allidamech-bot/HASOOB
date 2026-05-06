@@ -88,17 +88,30 @@ class SyncEngine {
     await _syncQueueService.updateStatus(operation, SyncStatus.processing);
 
     try {
-      // Conflict Detection logic (Mocking remote check)
-      final remoteVersion = await _syncService.getRemoteVersion(operation.entityName, operation.entityId);
+      // Conflict Detection logic
+      final remoteData = await _syncService.getRemoteData(operation.entityName, operation.entityId);
+      final remoteVersion = _toInt(remoteData?['remoteVersion'] ?? remoteData?['version']);
       
-      if (remoteVersion != null && operation.remoteVersion != null && remoteVersion > operation.remoteVersion!) {
-        // Conflict detected
-        if (operation.conflictStrategy == SyncConflictStrategy.manualReview) {
-          await _syncQueueService.updateStatus(operation, SyncStatus.conflict, error: 'Manual review required');
-          return;
-        } else if (operation.conflictStrategy == SyncConflictStrategy.merge) {
-          // Merge logic would go here, for now fallback to lastWriteWins or fail
-          _logger.log('Merge strategy requested but not fully implemented. Falling back to lastWriteWins.');
+      if (remoteVersion > 0) {
+        final localVersion = operation.remoteVersion ?? 0;
+        
+        if (remoteVersion > localVersion) {
+          // Remote is newer than what we base our update on.
+          _logger.log('Conflict detected for ${operation.entityId}: Remote version $remoteVersion > Local base version $localVersion');
+          
+          if (operation.conflictStrategy == SyncConflictStrategy.manualReview) {
+            await _syncQueueService.updateStatus(
+              operation, 
+              SyncStatus.conflict, 
+              conflictReason: 'Remote version ($remoteVersion) is newer than local base ($localVersion).',
+              remoteVersion: remoteVersion,
+            );
+            return;
+          } else if (operation.conflictStrategy == SyncConflictStrategy.merge) {
+            // Merge logic would go here, for now fallback to lastWriteWins or fail
+            _logger.log('Merge strategy requested but not fully implemented. Falling back to lastWriteWins.');
+          }
+          // Default: lastWriteWins (proceed with upsert)
         }
       }
 
@@ -143,5 +156,11 @@ class SyncEngine {
         },
       );
     }
+  }
+
+  int _toInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
   }
 }

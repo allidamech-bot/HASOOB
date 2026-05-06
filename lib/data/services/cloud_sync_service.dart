@@ -146,6 +146,40 @@ class CloudSyncService implements SyncService {
     }
   }
 
+  @override
+  Future<Map<String, dynamic>?> getRemoteData(String entityName, String id) async {
+    final uid = _uid;
+    if (uid == null || id.isEmpty) return null;
+
+    try {
+      DocumentSnapshot<Map<String, dynamic>> doc;
+      switch (entityName) {
+        case 'products':
+          doc = await _productsRef(uid).doc(id).get();
+          break;
+        case 'customers':
+          doc = await _customersRef(uid).doc(id).get();
+          break;
+        case 'invoices':
+          doc = await _invoicesRef(uid).doc(id).get();
+          break;
+        case 'quotations':
+          doc = await _quotationsRef(uid).doc(id).get();
+          break;
+        case 'payments':
+          doc = await _paymentsRef(uid).doc(id).get();
+          break;
+        default:
+          return null;
+      }
+
+      return doc.data();
+    } catch (e) {
+      debugPrint('Error getting remote data: $e');
+      return null;
+    }
+  }
+
   Future<void> upsertProduct(Map<String, dynamic> data) async {
     final uid = _uid;
     if (uid == null) {
