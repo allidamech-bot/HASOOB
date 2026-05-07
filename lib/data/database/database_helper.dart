@@ -1,16 +1,18 @@
 import 'dart:async';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:path/path.dart';
 import 'package:sqflite/sqflite.dart';
 
 import '../../core/app_currency.dart';
 import '../models/product_model.dart';
+import '../../core/services/branch_context.dart';
+import '../../core/services/audit_service.dart';
+import 'dart:convert';
 
 
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
-  static const _databaseVersion = 17;
+  static const _databaseVersion = 18;
 
   static const _cashAccountCode = '101';
   static const _inventoryAccountCode = '102';
@@ -147,6 +149,10 @@ class DBHelper {
           await _upgradeToV17(db);
         }
 
+        if (oldVersion < 18) {
+          await _upgradeToV18(db);
+        }
+
         await _repairAccountNamesForV12(db);
       },
       onOpen: (db) async {
@@ -170,9 +176,25 @@ class DBHelper {
 
   static Future<void> _createSchema(Database db) async {
     await db.execute('''
+      CREATE TABLE branches(
+        id TEXT PRIMARY KEY,
+        businessId TEXT,
+        name TEXT,
+        code TEXT,
+        address TEXT,
+        phone TEXT,
+        is_main_branch INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    await db.execute('''
       CREATE TABLE accounts(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         businessId TEXT,
+        branch_id TEXT,
         name TEXT,
         code TEXT,
         balance REAL DEFAULT 0.0,
@@ -184,6 +206,8 @@ class DBHelper {
     await db.execute('''
       CREATE TABLE journal_entries(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
+        businessId TEXT,
+        branch_id TEXT,
         debit_account_id INTEGER,
         credit_account_id INTEGER,
         amount REAL,
@@ -196,6 +220,7 @@ class DBHelper {
       CREATE TABLE products(
         id TEXT PRIMARY KEY,
         businessId TEXT,
+        branch_id TEXT,
         name TEXT,
         unit TEXT,
         purchase_price REAL,
@@ -211,6 +236,7 @@ class DBHelper {
       CREATE TABLE sales_records(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         businessId TEXT,
+        branch_id TEXT,
         product_id TEXT,
         product_name TEXT,
         qty INTEGER,
@@ -229,6 +255,7 @@ class DBHelper {
       CREATE TABLE product_movements(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         businessId TEXT,
+        branch_id TEXT,
         product_id TEXT,
         movement_type TEXT,
         quantity INTEGER,
@@ -244,10 +271,10 @@ class DBHelper {
       CREATE TABLE customers(
         id TEXT PRIMARY KEY,
         businessId TEXT,
+        branch_id TEXT,
         name TEXT,
         phone TEXT,
         notes TEXT,
-        branch_id TEXT,
         created_by TEXT,
         created_at TEXT
       )
@@ -257,6 +284,7 @@ class DBHelper {
       CREATE TABLE quotations(
         id TEXT PRIMARY KEY,
         businessId TEXT,
+        branch_id TEXT,
         quotation_number TEXT UNIQUE,
         customer_id TEXT,
         status TEXT,
@@ -267,7 +295,6 @@ class DBHelper {
         notes TEXT,
         currency_code TEXT,
         created_by TEXT,
-        branch_id TEXT,
         converted_invoice_id TEXT,
         pdf_path TEXT
       )
@@ -297,6 +324,7 @@ class DBHelper {
       CREATE TABLE invoices(
         id TEXT PRIMARY KEY,
         businessId TEXT,
+        branch_id TEXT,
         invoice_number TEXT UNIQUE,
         customer_id TEXT,
         quotation_id TEXT,
@@ -310,7 +338,6 @@ class DBHelper {
         notes TEXT,
         currency_code TEXT,
         created_by TEXT,
-        branch_id TEXT,
         payment_method TEXT,
         accounting_posted INTEGER DEFAULT 0,
         pdf_path TEXT,
@@ -337,14 +364,14 @@ class DBHelper {
       CREATE TABLE payments(
         id TEXT PRIMARY KEY,
         businessId TEXT,
+        branch_id TEXT,
         invoice_id TEXT,
         customer_id TEXT,
         amount REAL,
         payment_method TEXT,
         payment_date TEXT,
         note TEXT,
-        created_by TEXT,
-        branch_id TEXT
+        created_by TEXT
       )
     ''');
 
@@ -363,8 +390,7 @@ class DBHelper {
         registration_number TEXT,
         default_invoice_notes TEXT,
         default_quotation_notes TEXT,
-        payment_terms_footer TEXT,
-        branch_id TEXT
+        payment_terms_footer TEXT
       )
     ''');
 
@@ -386,7 +412,23 @@ class DBHelper {
         conflictStrategy TEXT DEFAULT 'lastWriteWins',
         remoteVersion INTEGER DEFAULT 0,
         localVersion INTEGER DEFAULT 0,
-        conflictReason TEXT
+        conflictReason TEXT,
+        branch_id TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS audit_logs(
+        id TEXT PRIMARY KEY,
+        businessId TEXT,
+        branch_id TEXT,
+        actorUserId TEXT,
+        entityType TEXT,
+        entityId TEXT,
+        action TEXT,
+        oldValue TEXT,
+        newValue TEXT,
+        timestamp TEXT
       )
     ''');
 
@@ -625,6 +667,21 @@ class DBHelper {
       definition: 'REAL DEFAULT 0',
     );
 
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS audit_logs(
+        id TEXT PRIMARY KEY,
+        businessId TEXT,
+        branch_id TEXT,
+        actorUserId TEXT,
+        entityType TEXT,
+        entityId TEXT,
+        action TEXT,
+        oldValue TEXT,
+        newValue TEXT,
+        timestamp TEXT
+      )
+    ''');
+
     await _createPerformanceIndexes(db);
   }
 
@@ -654,6 +711,21 @@ class DBHelper {
   static Future<void> _upgradeToV11(Database db) async {
     // V11 was a placeholder for transition or specific fixes.
     // Ensure all tables have necessary indexes if not already created.
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS audit_logs(
+        id TEXT PRIMARY KEY,
+        businessId TEXT,
+        branch_id TEXT,
+        actorUserId TEXT,
+        entityType TEXT,
+        entityId TEXT,
+        action TEXT,
+        oldValue TEXT,
+        newValue TEXT,
+        timestamp TEXT
+      )
+    ''');
+
     await _createPerformanceIndexes(db);
   }
 
@@ -759,6 +831,98 @@ class DBHelper {
       column: 'product_id',
       definition: 'TEXT',
     );
+  }
+
+  static Future<void> _upgradeToV18(Database db) async {
+    // 1. Create branches table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS branches(
+        id TEXT PRIMARY KEY,
+        businessId TEXT,
+        name TEXT,
+        code TEXT,
+        address TEXT,
+        phone TEXT,
+        is_main_branch INTEGER DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at TEXT,
+        updated_at TEXT
+      )
+    ''');
+
+    // 2. Add branch_id to all relevant tables
+    final tables = [
+      'accounts',
+      'journal_entries',
+      'products',
+      'sales_records',
+      'product_movements',
+      'customers',
+      'quotations',
+      'invoices',
+      'payments',
+      'sync_operations',
+    ];
+
+    for (final table in tables) {
+      await _ensureColumn(
+        db,
+        table: table,
+        column: 'branch_id',
+        definition: 'TEXT',
+      );
+    }
+
+    // 2.5 Create audit_logs table
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS audit_logs(
+        id TEXT PRIMARY KEY,
+        businessId TEXT,
+        branch_id TEXT,
+        actorUserId TEXT,
+        entityType TEXT,
+        entityId TEXT,
+        action TEXT,
+        oldValue TEXT,
+        newValue TEXT,
+        timestamp TEXT
+      )
+    ''');
+
+    // 3. For each unique businessId, ensure a main branch exists and link existing data
+    final businesses = await db.rawQuery('SELECT DISTINCT businessId FROM products WHERE businessId IS NOT NULL');
+    for (final row in businesses) {
+      final bId = row['businessId']?.toString();
+      if (bId != null && bId.isNotEmpty) {
+        final mainBranchId = 'BR-$bId-MAIN';
+        
+        // Create main branch if not exists
+        await db.insert(
+          'branches',
+          {
+            'id': mainBranchId,
+            'businessId': bId,
+            'name': 'الفرع الرئيسي',
+            'code': 'MAIN',
+            'is_main_branch': 1,
+            'is_active': 1,
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+
+        // Update all existing records for this business to point to the main branch if they are null
+        for (final table in tables) {
+          await db.update(
+            table,
+            {'branch_id': mainBranchId},
+            where: 'businessId = ? AND (branch_id IS NULL OR branch_id = \'\')',
+            whereArgs: [bId],
+          );
+        }
+      }
+    }
   }
 
   static Future<void> _ensureColumn(
@@ -999,8 +1163,10 @@ class DBHelper {
 
   static Future<String> insertProduct(Map<String, dynamic> data) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
     final payload = Map<String, dynamic>.from(data)
-      ..putIfAbsent('low_stock_threshold', () => 5);
+      ..putIfAbsent('low_stock_threshold', () => 5)
+      ..putIfAbsent('branch_id', () => branchId);
     final businessId = payload['businessId']?.toString() ?? '';
 
     await db.insert(
@@ -1021,25 +1187,37 @@ class DBHelper {
       notes: 'إضافة رصيد افتتاحي للصنف ${payload['name']}',
     );
 
+    await AuditService().log(
+      businessId: businessId,
+      entityType: 'product',
+      entityId: payload['id'].toString(),
+      action: 'create',
+      newValue: jsonEncode(payload),
+    );
+
     return payload['id'].toString();
   }
 
   static Future<List<Map<String, dynamic>>> getProducts(String businessId) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
+    
     return db.query(
       'products',
-      where: 'businessId = ?',
-      whereArgs: [businessId],
+      where: 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      whereArgs: [businessId, branchId],
       orderBy: 'name COLLATE NOCASE ASC',
     );
   }
 
   static Future<Map<String, dynamic>?> getProductById(String businessId, String id) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
+    
     final result = await db.query(
       'products',
-      where: 'id = ? AND businessId = ?',
-      whereArgs: [id, businessId],
+      where: 'id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      whereArgs: [id, businessId, branchId],
     );
     return result.isEmpty ? null : result.first;
   }
@@ -1047,7 +1225,7 @@ class DBHelper {
   static Future<int> updateProduct(Map<String, dynamic> data) async {
     final db = await database();
     final businessId = data['businessId']?.toString() ?? '';
-    final previous = await getProductById(data['id'].toString(), businessId);
+    final previous = await getProductById(businessId, data['id'].toString());
     final payload = Map<String, dynamic>.from(data)
       ..putIfAbsent('low_stock_threshold', () => 5);
 
@@ -1059,6 +1237,15 @@ class DBHelper {
     );
 
     if (result > 0 && previous != null) {
+      await AuditService().log(
+        businessId: businessId,
+        entityType: 'product',
+        entityId: data['id'].toString(),
+        action: 'update',
+        oldValue: jsonEncode(previous),
+        newValue: jsonEncode(payload),
+      );
+
       final previousQty = _toInt(previous['stock_qty']);
       final nextQty = _toInt(payload['stock_qty']);
       if (previousQty != nextQty) {
@@ -1081,11 +1268,23 @@ class DBHelper {
 
   static Future<int> deleteProduct(String businessId, String id) async {
     final db = await database();
+    final previous = await getProductById(businessId, id);
+    
     final result = await db.delete(
       'products',
       where: 'id = ? AND businessId = ?',
       whereArgs: [id, businessId],
     );
+
+    if (result > 0 && previous != null) {
+      await AuditService().log(
+        businessId: businessId,
+        entityType: 'product',
+        entityId: id,
+        action: 'delete',
+        oldValue: jsonEncode(previous),
+      );
+    }
 
     return result;
   }
@@ -1099,10 +1298,9 @@ class DBHelper {
   }) async {
     final db = await database();
     final entryDate = DateTime.now().toIso8601String();
-    int? journalEntryId;
 
     await db.transaction((txn) async {
-      journalEntryId = await _postJournalEntry(
+      await _postJournalEntry(
         txn,
         businessId: businessId,
         debitAccountId: debitId,
@@ -1124,10 +1322,6 @@ class DBHelper {
     String? currencyCode,
   }) async {
     final db = await database();
-    Map<String, dynamic>? updatedProductData;
-    Map<String, dynamic>? saleRecordData;
-    List<Map<String, dynamic>> journalEntriesData = const [];
-    List<int> touchedAccountIds = const [];
 
     await db.transaction((txn) async {
       await _ensureDefaultAccounts(txn, businessId);
@@ -1263,35 +1457,6 @@ class DBHelper {
         'notes': 'بيع $qty من $productName',
         'date': transactionDate,
       });
-
-      updatedProductData = {
-        ...Map<String, dynamic>.from(productRow),
-        'stock_qty': updatedQty,
-      };
-      journalEntriesData = journalEntries;
-      touchedAccountIds = [
-        cashAccountId,
-        inventoryAccountId,
-        salesAccountId,
-        cogsAccountId,
-      ];
-      saleRecordData = {
-        'id': saleRecordId,
-        'product_id': productId,
-        'product_name': productName,
-        'qty': qty,
-        'customer_name': normalizedCustomerName?.isEmpty ?? true
-            ? null
-            : normalizedCustomerName,
-        'sale_note':
-            normalizedSaleNote?.isEmpty ?? true ? null : normalizedSaleNote,
-        'currency_code': normalizedCurrencyCode,
-        'selling_price': sellingPrice,
-        'landed_cost': landedCost,
-        'total_sale': totalSale,
-        'total_profit': totalProfit,
-        'date': transactionDate,
-      };
     });
   }
 
@@ -1306,8 +1471,10 @@ class DBHelper {
     required String referenceId,
     required String notes,
   }) async {
+    final branchId = BranchContext().currentBranchId;
     final payload = {
       'businessId': businessId,
+      'branch_id': branchId,
       'product_id': productId,
       'movement_type': movementType,
       'quantity': quantity,
@@ -1334,9 +1501,6 @@ class DBHelper {
     }
 
     final db = await database();
-    Map<String, dynamic>? updatedProductData;
-    List<Map<String, dynamic>> journalEntriesData = const [];
-    List<int> touchedAccountIds = const [];
 
     await db.transaction((txn) async {
       await _ensureDefaultAccounts(txn, businessId);
@@ -1520,44 +1684,32 @@ class DBHelper {
           });
         }
       }
-
-      final refreshedRows = await txn.query(
-        'products',
-        where: 'id = ? AND businessId = ?',
-        whereArgs: [productId, businessId],
-        limit: 1,
-      );
-      if (refreshedRows.isNotEmpty) {
-        updatedProductData = Map<String, dynamic>.from(refreshedRows.first);
-      }
-      journalEntriesData = journalEntries;
-      touchedAccountIds = [
-        inventoryAccountId,
-        payablesAccountId,
-        cogsAccountId,
-      ];
     });
   }
 
   static Future<List<Map<String, dynamic>>> getCustomers(String businessId) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
+    
     return db.rawQuery('''
       SELECT c.*,
              COALESCE((
                SELECT SUM(remaining_amount)
                FROM invoices i
                WHERE i.customer_id = c.id AND i.businessId = c.businessId
+                 AND (i.branch_id = ? OR i.branch_id IS NULL)
                  AND COALESCE(i.status, '') NOT IN ('draft', 'cancelled')
              ), 0) AS outstanding_balance
       FROM customers c
-      WHERE c.businessId = ?
+      WHERE c.businessId = ? AND (c.branch_id = ? OR c.branch_id IS NULL)
       ORDER BY c.name COLLATE NOCASE ASC
-    ''', [businessId]);
+    ''', [branchId, businessId, branchId]);
   }
 
   static Future<String> saveCustomer(Map<String, dynamic> data) async {
     final db = await database();
     final now = DateTime.now().toIso8601String();
+    final branchId = BranchContext().currentBranchId;
     final id = data['id']?.toString().trim().isNotEmpty == true
         ? data['id'].toString()
         : _newTextId('CUS');
@@ -1567,7 +1719,7 @@ class DBHelper {
       'name': data['name']?.toString().trim() ?? '',
       'phone': data['phone']?.toString().trim(),
       'notes': data['notes']?.toString().trim(),
-      'branch_id': data['branch_id']?.toString().trim(),
+      'branch_id': data['branch_id']?.toString().trim() ?? branchId,
       'created_by': data['created_by']?.toString().trim(),
       'created_at': data['created_at']?.toString().trim().isNotEmpty == true
           ? data['created_at'].toString()
@@ -1583,6 +1735,15 @@ class DBHelper {
       payload,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    
+    await AuditService().log(
+      businessId: payload['businessId'] as String,
+      entityType: 'customer',
+      entityId: id,
+      action: data['id']?.toString().trim().isNotEmpty == true ? 'update' : 'create',
+      newValue: jsonEncode(payload),
+    );
+
     return id;
   }
 
@@ -1650,13 +1811,15 @@ class DBHelper {
 
   static Future<List<Map<String, dynamic>>> getQuotations(String businessId) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
+    
     return db.rawQuery('''
       SELECT q.*, c.name AS customer_name
       FROM quotations q
       LEFT JOIN customers c ON q.customer_id = c.id
-      WHERE q.businessId = ?
+      WHERE q.businessId = ? AND (q.branch_id = ? OR q.branch_id IS NULL)
       ORDER BY q.issue_date DESC, q.quotation_number DESC
-    ''', [businessId]);
+    ''', [businessId, branchId]);
   }
 
   static Future<List<Map<String, dynamic>>> getQuotationItems(
@@ -1717,9 +1880,12 @@ class DBHelper {
     );
 
     final normalizedCurrencyCode = AppCurrency.sanitizeLabel(currencyCode);
+    final currentBranchId = BranchContext().currentBranchId;
 
     await db.transaction((txn) async {
       quotationNumber = await _nextDocumentNumber(txn, prefix: 'QT');
+      final finalBranchId = branchId ?? currentBranchId;
+      
       await txn.insert('quotations', {
         'id': quotationId,
         'businessId': businessId,
@@ -1733,7 +1899,7 @@ class DBHelper {
         'notes': notes?.trim(),
         'currency_code': normalizedCurrencyCode,
         'created_by': createdBy,
-        'branch_id': branchId,
+        'branch_id': finalBranchId,
         'converted_invoice_id': null,
       });
 
@@ -1748,6 +1914,14 @@ class DBHelper {
           'line_total': item['line_total'],
         });
       }
+      
+      await AuditService().log(
+        businessId: businessId,
+        entityType: 'quotation',
+        entityId: quotationId,
+        action: 'create',
+        newValue: 'Quotation #$quotationNumber created for branch $finalBranchId',
+      );
     });
 
     return quotationId;
@@ -1755,13 +1929,15 @@ class DBHelper {
 
   static Future<List<Map<String, dynamic>>> getInvoices(String businessId) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
+    
     return db.rawQuery('''
       SELECT i.*, c.name AS customer_name
       FROM invoices i
       LEFT JOIN customers c ON i.customer_id = c.id
-      WHERE i.businessId = ?
+      WHERE i.businessId = ? AND (i.branch_id = ? OR i.branch_id IS NULL)
       ORDER BY i.issue_date DESC, i.invoice_number DESC
-    ''', [businessId]);
+    ''', [businessId, branchId]);
   }
 
   static Future<List<Map<String, dynamic>>> getInvoiceItems(
@@ -1870,6 +2046,7 @@ class DBHelper {
     final normalizedPaidAmount = paidAmount.clamp(0, total).toDouble();
     final remainingAmount = (total - normalizedPaidAmount).toDouble();
     final normalizedCurrencyCode = AppCurrency.sanitizeLabel(currencyCode);
+    final currentBranchId = BranchContext().currentBranchId;
     final shouldPostAccounting = status != 'draft';
     final resolvedStatus = shouldPostAccounting
         ? _resolveInvoiceStatus(
@@ -1881,6 +2058,8 @@ class DBHelper {
 
     await db.transaction((txn) async {
       invoiceNumber = await _nextDocumentNumber(txn, prefix: 'INV');
+      final finalBranchId = branchId ?? currentBranchId;
+      
       await _ensureDefaultAccounts(txn, businessId);
       await _repairAccountNames(txn, businessId);
 
@@ -1990,7 +2169,7 @@ class DBHelper {
         'notes': notes?.trim(),
         'currency_code': normalizedCurrencyCode,
         'created_by': createdBy,
-        'branch_id': branchId,
+        'branch_id': finalBranchId,
         'payment_method': paymentMethod,
         'accounting_posted': shouldPostAccounting ? 1 : 0,
       });
@@ -2057,10 +2236,18 @@ class DBHelper {
             'payment_date': invoiceDate,
             'note': 'دفعة أولية مع الفاتورة',
             'created_by': createdBy,
-            'branch_id': branchId,
+            'branch_id': finalBranchId,
           });
         }
       }
+      
+      await AuditService().log(
+        businessId: businessId,
+        entityType: 'invoice',
+        entityId: invoiceId,
+        action: 'create',
+        newValue: 'Invoice #$invoiceNumber created for branch $finalBranchId',
+      );
     });
 
     return invoiceId;
@@ -2083,11 +2270,13 @@ class DBHelper {
     final db = await database();
     final paymentId = _newTextId('PAY');
     final normalizedDate = paymentDate ?? DateTime.now().toIso8601String();
+    final currentBranchId = BranchContext().currentBranchId;
     late double newPaid;
     late double newRemaining;
     late String updatedStatus;
 
     await db.transaction((txn) async {
+      final finalBranchId = branchId ?? currentBranchId;
       await _ensureDefaultAccounts(txn, businessId);
       await _repairAccountNames(txn, businessId);
 
@@ -2136,7 +2325,7 @@ class DBHelper {
         'payment_date': normalizedDate,
         'note': note?.trim(),
         'created_by': createdBy,
-        'branch_id': branchId,
+        'branch_id': finalBranchId,
       });
 
       newPaid = currentPaid + amount;
@@ -2165,6 +2354,14 @@ class DBHelper {
         amount: amount,
         description: 'سداد على الفاتورة ${invoice['invoice_number']}',
         date: normalizedDate,
+      );
+      
+      await AuditService().log(
+        businessId: businessId,
+        entityType: 'payment',
+        entityId: paymentId,
+        action: 'create',
+        newValue: 'Payment of $amount for invoice ${invoice['invoice_number']} in branch $finalBranchId',
       );
     });
 
@@ -2788,16 +2985,20 @@ class DBHelper {
 
   static Future<List<Map<String, dynamic>>> getTrialBalance(String businessId) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
+    
     return db.query(
       'accounts',
-      where: 'businessId = ?',
-      whereArgs: [businessId],
+      where: 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      whereArgs: [businessId, branchId],
       orderBy: 'code ASC',
     );
   }
 
   static Future<List<Map<String, dynamic>>> getJournalEntries(String businessId) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
+    
     return db.rawQuery('''
       SELECT j.*, 
              a1.name AS debit_account, 
@@ -2805,113 +3006,138 @@ class DBHelper {
       FROM journal_entries j
       JOIN accounts a1 ON j.debit_account_id = a1.id
       JOIN accounts a2 ON j.credit_account_id = a2.id
-      WHERE j.businessId = ?
+      WHERE j.businessId = ? AND (j.branch_id = ? OR j.branch_id IS NULL)
       ORDER BY j.date DESC
-    ''', [businessId]);
+    ''', [businessId, branchId]);
   }
 
   static Future<List<Map<String, dynamic>>> getSalesRecords(String businessId) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
+    
     return db.query(
       'sales_records',
-      where: 'businessId = ?',
-      whereArgs: [businessId],
+      where: 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      whereArgs: [businessId, branchId],
       orderBy: 'date DESC',
     );
   }
 
-  static Future<double> getTotalRealizedProfit(String businessId) async =>
-      _singleDouble(
-        'SELECT SUM(total_profit) AS total FROM sales_records WHERE businessId = ?',
-        whereArgs: [businessId],
-      );
+  static Future<double> getTotalRealizedProfit(String businessId) async {
+    final branchId = BranchContext().currentBranchId;
+    return _singleDouble(
+      'SELECT SUM(total_profit) AS total FROM sales_records WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      whereArgs: [businessId, branchId],
+    );
+  }
 
-  static Future<double> getTotalRealizedSales(String businessId) async =>
-      _singleDouble(
-        'SELECT SUM(total_sale) AS total FROM sales_records WHERE businessId = ?',
-        whereArgs: [businessId],
-      );
+  static Future<double> getTotalRealizedSales(String businessId) async {
+    final branchId = BranchContext().currentBranchId;
+    return _singleDouble(
+      'SELECT SUM(total_sale) AS total FROM sales_records WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      whereArgs: [businessId, branchId],
+    );
+  }
 
-  static Future<int> getSalesCount(String businessId) async => _singleInt(
-        'SELECT COUNT(*) AS count FROM sales_records WHERE businessId = ?',
-        whereArgs: [businessId],
-      );
+  static Future<int> getSalesCount(String businessId) async {
+    final branchId = BranchContext().currentBranchId;
+    return _singleInt(
+      'SELECT COUNT(*) AS count FROM sales_records WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      whereArgs: [businessId, branchId],
+    );
+  }
 
-  static Future<double> getTotalInventoryValue(String businessId) async =>
-      _singleDouble(
-        '''
+  static Future<double> getTotalInventoryValue(String businessId) async {
+    final branchId = BranchContext().currentBranchId;
+    return _singleDouble(
+      '''
       SELECT SUM((purchase_price + extra_costs) * stock_qty) AS total
       FROM products
-      WHERE businessId = ?
+      WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)
     ''',
-        whereArgs: [businessId],
-      );
+      whereArgs: [businessId, branchId],
+    );
+  }
 
-  static Future<double> getTotalExpectedRevenue(String businessId) async =>
-      _singleDouble(
-        '''
+  static Future<double> getTotalExpectedRevenue(String businessId) async {
+    final branchId = BranchContext().currentBranchId;
+    return _singleDouble(
+      '''
       SELECT SUM(selling_price * stock_qty) AS total
       FROM products
-      WHERE businessId = ?
+      WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)
     ''',
-        whereArgs: [businessId],
-      );
+      whereArgs: [businessId, branchId],
+    );
+  }
 
-  static Future<double> getTotalExpectedProfit(String businessId) async =>
-      _singleDouble(
-        '''
+  static Future<double> getTotalExpectedProfit(String businessId) async {
+    final branchId = BranchContext().currentBranchId;
+    return _singleDouble(
+      '''
       SELECT SUM((selling_price - purchase_price - extra_costs) * stock_qty) AS total
       FROM products
-      WHERE businessId = ?
+      WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)
     ''',
-        whereArgs: [businessId],
-      );
+      whereArgs: [businessId, branchId],
+    );
+  }
 
-  static Future<int> getProductsCount(String businessId) async => _singleInt(
-        'SELECT COUNT(*) AS count FROM products WHERE businessId = ?',
-        whereArgs: [businessId],
-      );
+  static Future<int> getProductsCount(String businessId) async {
+    final branchId = BranchContext().currentBranchId;
+    return _singleInt(
+      'SELECT COUNT(*) AS count FROM products WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      whereArgs: [businessId, branchId],
+    );
+  }
 
-  static Future<int> getTotalStockQty(String businessId) async => _singleInt(
-        'SELECT SUM(stock_qty) AS total FROM products WHERE businessId = ?',
-        key: 'total',
-        whereArgs: [businessId],
-      );
+  static Future<int> getTotalStockQty(String businessId) async {
+    final branchId = BranchContext().currentBranchId;
+    return _singleInt(
+      'SELECT SUM(stock_qty) AS total FROM products WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      key: 'total',
+      whereArgs: [businessId, branchId],
+    );
+  }
 
   static Future<List<Map<String, dynamic>>> getLowStockProducts(String businessId) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
     return db.rawQuery('''
       SELECT *
       FROM products
-      WHERE businessId = ? AND stock_qty <= COALESCE(low_stock_threshold, 5)
+      WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL) AND stock_qty <= COALESCE(low_stock_threshold, 5)
       ORDER BY stock_qty ASC, name COLLATE NOCASE ASC
-    ''', [businessId]);
+    ''', [businessId, branchId]);
   }
 
   static Future<int> getLowStockCount(String businessId) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
     final result = await db.rawQuery('''
       SELECT COUNT(*) AS count
       FROM products
-      WHERE businessId = ? AND stock_qty <= COALESCE(low_stock_threshold, 5)
-    ''', [businessId]);
+      WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL) AND stock_qty <= COALESCE(low_stock_threshold, 5)
+    ''', [businessId, branchId]);
     return _toInt(result.first['count']);
   }
 
   static Future<int> getProductSalesCount(String businessId, String productId) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
     final result = await db.rawQuery(
-      'SELECT COUNT(*) AS count FROM sales_records WHERE product_id = ? AND businessId = ?',
-      [productId, businessId],
+      'SELECT COUNT(*) AS count FROM sales_records WHERE product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      [productId, businessId, branchId],
     );
     return _toInt(result.first['count']);
   }
 
   static Future<int> getProductSoldQty(String businessId, String productId) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
     final result = await db.rawQuery(
-      'SELECT SUM(qty) AS total FROM sales_records WHERE product_id = ? AND businessId = ?',
-      [productId, businessId],
+      'SELECT SUM(qty) AS total FROM sales_records WHERE product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      [productId, businessId, branchId],
     );
     return _toInt(result.first['total']);
   }
@@ -2921,9 +3147,10 @@ class DBHelper {
     String productId,
   ) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
     final result = await db.rawQuery(
-      'SELECT SUM(total_profit) AS total FROM sales_records WHERE product_id = ? AND businessId = ?',
-      [productId, businessId],
+      'SELECT SUM(total_profit) AS total FROM sales_records WHERE product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      [productId, businessId, branchId],
     );
     return _toDouble(result.first['total']);
   }
@@ -2933,9 +3160,10 @@ class DBHelper {
     String productId,
   ) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
     final result = await db.rawQuery(
-      'SELECT SUM(total_sale) AS total FROM sales_records WHERE product_id = ? AND businessId = ?',
-      [productId, businessId],
+      'SELECT SUM(total_sale) AS total FROM sales_records WHERE product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      [productId, businessId, branchId],
     );
     return _toDouble(result.first['total']);
   }
@@ -2945,10 +3173,11 @@ class DBHelper {
     String productId,
   ) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
     return db.query(
       'sales_records',
-      where: 'product_id = ? AND businessId = ?',
-      whereArgs: [productId, businessId],
+      where: 'product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      whereArgs: [productId, businessId, branchId],
       orderBy: 'date DESC',
     );
   }
@@ -2958,15 +3187,16 @@ class DBHelper {
     int limit = 5,
   }) async {
     final db = await database();
+    final branchId = BranchContext().currentBranchId;
     return db.rawQuery('''
       SELECT product_id, product_name, SUM(qty) AS sold_qty,
              SUM(total_sale) AS total_sale, SUM(total_profit) AS total_profit
       FROM sales_records
-      WHERE businessId = ?
+      WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)
       GROUP BY product_id, product_name
       ORDER BY sold_qty DESC, total_sale DESC
       LIMIT ?
-    ''', [businessId, limit]);
+    ''', [businessId, branchId, limit]);
   }
 
   static List<Map<String, dynamic>> _normalizeDocumentItems(
@@ -3131,8 +3361,10 @@ class DBHelper {
     required String description,
     required String date,
   }) async {
+    final branchId = BranchContext().currentBranchId;
     final journalEntryId = await db.insert('journal_entries', {
       'businessId': businessId,
+      'branch_id': branchId,
       'debit_account_id': debitAccountId,
       'credit_account_id': creditAccountId,
       'amount': amount,

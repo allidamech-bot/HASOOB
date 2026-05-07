@@ -63,10 +63,10 @@ void main() {
     ''');
     
     await db.execute('DROP TABLE IF EXISTS products');
-    await db.execute('CREATE TABLE products (id TEXT PRIMARY KEY, businessId TEXT, name TEXT, unit TEXT, purchase_price REAL, extra_costs REAL, selling_price REAL, stock_qty INTEGER, low_stock_threshold INTEGER, barcode TEXT)');
+    await db.execute('CREATE TABLE products (id TEXT PRIMARY KEY, businessId TEXT, branch_id TEXT, name TEXT, unit TEXT, purchase_price REAL, extra_costs REAL, selling_price REAL, stock_qty INTEGER, low_stock_threshold INTEGER, barcode TEXT)');
     
     await db.execute('DROP TABLE IF EXISTS product_movements');
-    await db.execute('CREATE TABLE product_movements (id INTEGER PRIMARY KEY AUTOINCREMENT, businessId TEXT, product_id TEXT, movement_type TEXT, quantity INTEGER, balance_after INTEGER, reference_type TEXT, reference_id TEXT, notes TEXT, date TEXT)');
+    await db.execute('CREATE TABLE product_movements (id INTEGER PRIMARY KEY AUTOINCREMENT, businessId TEXT, branch_id TEXT, product_id TEXT, movement_type TEXT, quantity INTEGER, balance_after INTEGER, reference_type TEXT, reference_id TEXT, notes TEXT, date TEXT)');
 
     await syncQueueRepository.clearAll();
     
