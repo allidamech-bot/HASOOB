@@ -30,11 +30,7 @@ class CustomerRepository {
       'businessId': businessId,
     };
 
-    try {
-      await DBHelper.saveCustomer(payload);
-    } catch (_) {
-      // Expected potential legacy Firebase sync failure; proceed to Sync Queue
-    }
+    await DBHelper.saveCustomer(payload);
 
     await SyncQueueService.instance.enqueue(
       entityName: 'customers',

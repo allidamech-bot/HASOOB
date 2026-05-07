@@ -38,9 +38,7 @@ class ProductRepository {
 
   Future<void> addProduct(String businessId, ProductModel product) async {
     final productWithBusiness = product.copyWith(businessId: businessId);
-    try {
-      await DBHelper.insertProduct(productWithBusiness.toMap());
-    } catch (_) {}
+    await DBHelper.insertProduct(productWithBusiness.toMap());
     
     await SyncQueueService.instance.enqueue(
       entityName: 'products',
@@ -52,9 +50,7 @@ class ProductRepository {
 
   Future<void> updateProduct(String businessId, ProductModel product) async {
     final productWithBusiness = product.copyWith(businessId: businessId);
-    try {
-      await DBHelper.updateProduct(productWithBusiness.toMap());
-    } catch (_) {}
+    await DBHelper.updateProduct(productWithBusiness.toMap());
 
     await SyncQueueService.instance.enqueue(
       entityName: 'products',
@@ -65,9 +61,7 @@ class ProductRepository {
   }
 
   Future<void> deleteProduct(String businessId, String id) async {
-    try {
-      await DBHelper.deleteProduct(businessId, id);
-    } catch (_) {}
+    await DBHelper.deleteProduct(businessId, id);
 
     await SyncQueueService.instance.enqueue(
       entityName: 'products',

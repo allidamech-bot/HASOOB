@@ -13,11 +13,26 @@ class BusinessContext {
     _role = role;
   }
 
-  static String get businessId => _businessId ?? 'demo-business';
+  static String get businessId {
+    if (_businessId == null) {
+      throw StateError('BusinessContext not initialized. Accessing businessId before authentication.');
+    }
+    return _businessId!;
+  }
 
-  static String get userId => _userId ?? 'demo-user';
+  static String get userId {
+    if (_userId == null) {
+      throw StateError('BusinessContext not initialized. Accessing userId before authentication.');
+    }
+    return _userId!;
+  }
 
-  static String get role => _role ?? 'employee';
+  static String get role {
+    if (_role == null) {
+      return 'employee';
+    }
+    return _role!;
+  }
 
   static String resolveBusinessId([String? businessId]) {
     if (businessId != null && businessId.trim().isNotEmpty) {

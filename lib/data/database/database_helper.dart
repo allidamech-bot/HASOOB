@@ -5,13 +5,12 @@ import 'package:sqflite/sqflite.dart';
 
 import '../../core/app_currency.dart';
 import '../models/product_model.dart';
-import '../services/cloud_sync_service.dart';
 
 
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
-  static const _databaseVersion = 16;
+  static const _databaseVersion = 17;
 
   static const _cashAccountCode = '101';
   static const _inventoryAccountCode = '102';
@@ -142,6 +141,10 @@ class DBHelper {
 
         if (oldVersion < 16) {
           await _upgradeToV16(db);
+        }
+
+        if (oldVersion < 17) {
+          await _upgradeToV17(db);
         }
 
         await _repairAccountNamesForV12(db);
@@ -749,6 +752,15 @@ class DBHelper {
     );
   }
 
+  static Future<void> _upgradeToV17(Database db) async {
+    await _ensureColumn(
+      db,
+      table: 'product_movements',
+      column: 'product_id',
+      definition: 'TEXT',
+    );
+  }
+
   static Future<void> _ensureColumn(
     Database db, {
     required String table,
@@ -1009,8 +1021,6 @@ class DBHelper {
       notes: 'إضافة رصيد افتتاحي للصنف ${payload['name']}',
     );
 
-    await CloudSyncService.instance.upsertProduct(_withOwner(payload));
-
     return payload['id'].toString();
   }
 
@@ -1064,8 +1074,6 @@ class DBHelper {
           notes: 'تعديل رصيد الصنف ${payload['name']}',
         );
       }
-
-      await CloudSyncService.instance.upsertProduct(_withOwner(payload));
     }
 
     return result;
@@ -1078,10 +1086,6 @@ class DBHelper {
       where: 'id = ? AND businessId = ?',
       whereArgs: [id, businessId],
     );
-
-    if (result > 0) {
-      await CloudSyncService.instance.deleteProduct(id);
-    }
 
     return result;
   }
@@ -1108,24 +1112,6 @@ class DBHelper {
         date: entryDate,
       );
     });
-
-    final accounts = await db.query(
-      'accounts',
-      where: 'id IN (?, ?) AND businessId = ?',
-      whereArgs: [debitId, creditId, businessId],
-    );
-
-    await CloudSyncService.instance.addJournalEntry(_withOwner({
-      'id': journalEntryId,
-      'businessId': businessId,
-      'debit_account_id': debitId,
-      'credit_account_id': creditId,
-      'amount': amount,
-      'description': desc,
-      'date': entryDate,
-    }));
-
-    await CloudSyncService.instance.syncAccounts(_withOwnerList(accounts));
   }
 
   static Future<void> sellProduct({
@@ -1307,33 +1293,6 @@ class DBHelper {
         'date': transactionDate,
       };
     });
-
-    final accounts = touchedAccountIds.isEmpty
-        ? const <Map<String, dynamic>>[]
-        : await db.query(
-            'accounts',
-            where:
-                'id IN (${List.filled(touchedAccountIds.length, '?').join(', ')}) AND businessId = ?',
-            whereArgs: [...touchedAccountIds, businessId],
-          );
-
-    if (updatedProductData != null) {
-      await CloudSyncService.instance.upsertProduct(
-        _withOwner(updatedProductData!),
-      );
-    }
-
-    if (saleRecordData != null) {
-      await CloudSyncService.instance.addSaleRecord(_withOwner(saleRecordData!));
-    }
-
-    for (final journalEntryData in journalEntriesData) {
-      await CloudSyncService.instance.addJournalEntry(_withOwner(journalEntryData));
-    }
-
-    if (accounts.isNotEmpty) {
-      await CloudSyncService.instance.syncAccounts(_withOwnerList(accounts));
-    }
   }
 
   static Future<void> _recordProductMovement(
@@ -1358,11 +1317,7 @@ class DBHelper {
       'notes': notes,
       'date': DateTime.now().toIso8601String(),
     };
-    final movementId = await db.insert('product_movements', payload);
-    await CloudSyncService.instance.upsertProductMovement(_withOwner({
-      'id': movementId,
-      ...payload,
-    }));
+    await db.insert('product_movements', payload);
   }
 
   static Future<void> applyInventoryAdjustment({
@@ -1582,25 +1537,6 @@ class DBHelper {
         cogsAccountId,
       ];
     });
-
-    if (updatedProductData != null) {
-      await CloudSyncService.instance.upsertProduct(
-        _withOwner(updatedProductData!),
-      );
-    }
-
-    for (final journalEntryData in journalEntriesData) {
-      await CloudSyncService.instance.addJournalEntry(_withOwner(journalEntryData));
-    }
-
-    if (touchedAccountIds.isNotEmpty) {
-      final accounts = await db.query(
-        'accounts',
-        where: 'id IN (${List.filled(touchedAccountIds.length, '?').join(', ')}) AND businessId = ?',
-        whereArgs: [...touchedAccountIds, businessId],
-      );
-      await CloudSyncService.instance.syncAccounts(_withOwnerList(accounts));
-    }
   }
 
   static Future<List<Map<String, dynamic>>> getCustomers(String businessId) async {
@@ -1647,7 +1583,6 @@ class DBHelper {
       payload,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    await CloudSyncService.instance.upsertCustomer(_withOwner(payload));
     return id;
   }
 
@@ -1711,7 +1646,6 @@ class DBHelper {
       payload,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    await CloudSyncService.instance.upsertBusinessProfile(_withOwner(payload));
   }
 
   static Future<List<Map<String, dynamic>>> getQuotations(String businessId) async {
@@ -1816,28 +1750,6 @@ class DBHelper {
       }
     });
 
-    final quotationPayload = {
-      'id': quotationId,
-      'quotation_number': quotationNumber,
-      'customer_id': customerId,
-      'status': status,
-      'issue_date': createdAt,
-      'expiry_date': expiryDate,
-      'subtotal': subtotal,
-      'total': subtotal,
-      'notes': notes?.trim(),
-      'currency_code': normalizedCurrencyCode,
-      'created_by': createdBy,
-      'branch_id': branchId,
-      'converted_invoice_id': null,
-      'items': normalizedItems,
-    };
-
-    await CloudSyncService.instance.upsertQuotation(
-      _withOwner(quotationPayload),
-      items: _withOwnerList(normalizedItems),
-    );
-
     return quotationId;
   }
 
@@ -1890,13 +1802,6 @@ class DBHelper {
       where: 'id = ? AND businessId = ?',
       whereArgs: [invoiceId, businessId],
     );
-    if (result > 0) {
-      await CloudSyncService.instance.upsertInvoice(_withOwner({
-        'id': invoiceId,
-        'businessId': businessId,
-        'pdf_path': pdfPath,
-      }));
-    }
     return result;
   }
 
@@ -1912,13 +1817,6 @@ class DBHelper {
       where: 'id = ? AND businessId = ?',
       whereArgs: [quotationId, businessId],
     );
-    if (result > 0) {
-      await CloudSyncService.instance.upsertQuotation(_withOwner({
-        'id': quotationId,
-        'businessId': businessId,
-        'pdf_path': pdfPath,
-      }));
-    }
     return result;
   }
 
@@ -2165,55 +2063,6 @@ class DBHelper {
       }
     });
 
-    final invoiceItems = await getInvoiceItems(invoiceId, businessId);
-    final initialPayments = await getInvoicePayments(invoiceId, businessId);
-    Map<String, dynamic>? quotationSnapshot;
-    List<Map<String, dynamic>> quotationItems = const [];
-    if (quotationId != null && quotationId.isNotEmpty) {
-      quotationSnapshot = await getQuotationById(quotationId, businessId);
-      quotationItems = await getQuotationItems(quotationId, businessId);
-    }
-
-    final invoicePayload = {
-      'id': invoiceId,
-      'businessId': businessId,
-      'invoice_number': invoiceNumber,
-      'customer_id': customerId,
-      'quotation_id': quotationId,
-      'status': resolvedStatus,
-      'issue_date': invoiceDate,
-      'due_date': dueDate,
-      'subtotal': subtotal,
-      'total': total,
-      'paid_amount': normalizedPaidAmount,
-      'remaining_amount': remainingAmount,
-      'notes': notes?.trim(),
-      'currency_code': normalizedCurrencyCode,
-      'created_by': createdBy,
-      'branch_id': branchId,
-      'payment_method': paymentMethod,
-      'accounting_posted': shouldPostAccounting ? 1 : 0,
-      'items': invoiceItems,
-      'payments': initialPayments,
-      if (quotationSnapshot != null) 'quotation': quotationSnapshot,
-      if (quotationItems.isNotEmpty) 'quotation_items': quotationItems,
-    };
-
-    await CloudSyncService.instance.upsertInvoice(_withOwner(invoicePayload));
-    await CloudSyncService.instance.upsertInvoiceItems(
-      invoiceId,
-      _withOwnerList(invoiceItems),
-    );
-    if (quotationSnapshot != null) {
-      await CloudSyncService.instance.upsertQuotation(
-        _withOwner(quotationSnapshot),
-        items: _withOwnerList(quotationItems),
-      );
-    }
-    for (final payment in initialPayments) {
-      await CloudSyncService.instance.upsertPayment(_withOwner(payment));
-    }
-
     return invoiceId;
   }
 
@@ -2319,27 +2168,6 @@ class DBHelper {
       );
     });
 
-    final paymentRows = await getInvoicePayments(invoiceId, businessId);
-    final paymentPayloads = paymentRows
-        .where((row) => row['id']?.toString() == paymentId)
-        .map((row) => Map<String, dynamic>.from(row))
-        .toList();
-    final invoiceUpdatePayload = {
-      'id': invoiceId,
-      'businessId': businessId,
-      'paid_amount': newPaid,
-      'remaining_amount': newRemaining,
-      'status': updatedStatus,
-      'payments': paymentPayloads,
-    };
-
-    await CloudSyncService.instance.upsertInvoice(
-      _withOwner(invoiceUpdatePayload),
-    );
-    for (final payment in paymentPayloads) {
-      await CloudSyncService.instance.upsertPayment(_withOwner(payment));
-    }
-
     return paymentId;
   }
 
@@ -2401,10 +2229,6 @@ class DBHelper {
       }
     });
 
-    if (deletedCount > 0) {
-      await CloudSyncService.instance.deleteInvoice(invoiceId);
-    }
-
     return deletedCount;
   }
 
@@ -2455,9 +2279,6 @@ class DBHelper {
         whereArgs: [quotationId, businessId],
       );
     });
-
-    if (deletedCount > 0) {
-    }
 
     return deletedCount;
   }
@@ -3359,28 +3180,4 @@ class DBHelper {
   }
 
   static ProductModel productFromMap(Map<String, dynamic> map) => ProductModel.fromMap(map);
-
-  static String _requireCurrentUserId() {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user == null) {
-      throw Exception('يجب تسجيل الدخول أولاً قبل مزامنة البيانات.');
-    }
-    return user.uid;
-  }
-
-  static Map<String, dynamic> _withOwner(Map<String, dynamic> payload) {
-    final userId = _requireCurrentUserId();
-    return {
-      ...Map<String, dynamic>.from(payload),
-      'ownerId': userId,
-      'owner_id': userId,
-      'user_id': userId,
-    };
-  }
-
-  static List<Map<String, dynamic>> _withOwnerList(
-    List<Map<String, dynamic>> payloads,
-  ) {
-    return payloads.map(_withOwner).toList();
-  }
 }

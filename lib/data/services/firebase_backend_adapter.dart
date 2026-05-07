@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'backend_adapter.dart';
 import '../models/sync_operation.dart';
 import 'cloud_sync_service.dart';
@@ -5,8 +6,8 @@ import '../../core/business/business_context.dart';
 
 class FirebaseBackendAdapter implements BackendAdapter {
   late final CloudSyncService _cloudSyncService = CloudSyncService.instance;
-  // Use a getter to avoid early Firebase initialization in tests
-  String? get _uid => null; // To be implemented with real auth
+  
+  String? get _uid => FirebaseAuth.instance.currentUser?.uid;
 
   @override
   Future<BackendResult> send(SyncOperation operation) async {
@@ -24,9 +25,6 @@ class FirebaseBackendAdapter implements BackendAdapter {
         await _cloudSyncService.upsert(operation.entityName, payload);
       }
 
-      // After successful upsert/delete, we might want to know the new remote version
-      // but CloudSyncService doesn't return it currently. 
-      // For now, we return success.
       return BackendResult.success();
     } catch (e) {
       return BackendResult.failure(e.toString());

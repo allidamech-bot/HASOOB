@@ -1,4 +1,6 @@
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../../core/business/business_context.dart';
 import 'sync_engine.dart';
 import 'sync_queue_service.dart';
 import 'analytics_service.dart';
@@ -81,8 +83,36 @@ class SyncManager extends ChangeNotifier {
       backendAdapter: FirebaseBackendAdapter(),
     );
   }
-  Future<void> onAuthenticated() async {}
-  Future<void> onAppResumed() async {}
-  Future<void> stopRealtimeSync() async {}
+
+  Future<void> onAuthenticated() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      BusinessContext.initialize(
+        businessId: user.uid, // Using UID as businessId for now as a stable ID
+        userId: user.uid,
+        role: 'owner',
+      );
+      
+      // Process pending queue after authentication
+      await runSync();
+    }
+  }
+
+  Future<void> onAppResumed() async {
+    // Only run sync if there are pending operations
+    if (await hasPendingOperations()) {
+      await runSync();
+    }
+  }
+
+  Future<void> stopRealtimeSync() async {
+    // Safely stop/reset realtime listeners if any exist.
+    // Currently CloudSyncService handles streams directly in UI, 
+    // but if we had background listeners, we'd cancel them here.
+    _isRunning = false;
+    _syncRequested = false;
+    notifyListeners();
+  }
+
   Future<void> processQueue() async => await runSync();
 }

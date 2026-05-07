@@ -4,6 +4,8 @@ import '../models/invoice_model.dart';
 import '../models/quotation_model.dart';
 import '../models/product_model.dart';
 import '../services/cloud_sync_service.dart';
+import '../services/sync_queue_service.dart';
+import '../models/sync_operation.dart';
 
 class InvoiceRepository {
   Stream<List<InvoiceModel>> watchInvoices(String businessId) {
@@ -67,8 +69,8 @@ class InvoiceRepository {
     required double paidAmount,
     required String paymentMethod,
     String? currencyCode,
-  }) {
-    return DBHelper.createInvoice(
+  }) async {
+    final invoiceId = await DBHelper.createInvoice(
       businessId: businessId,
       customerId: customerId,
       quotationId: quotationId,
@@ -81,6 +83,30 @@ class InvoiceRepository {
       paymentMethod: paymentMethod,
       currencyCode: currencyCode,
     );
+
+    final invoiceData = await DBHelper.getInvoiceById(businessId, invoiceId);
+    if (invoiceData != null) {
+      await SyncQueueService.instance.enqueue(
+        entityName: 'invoices',
+        entityId: invoiceId,
+        type: SyncOperationType.create,
+        payload: invoiceData,
+      );
+
+      final invoiceItems = await DBHelper.getInvoiceItems(businessId, invoiceId);
+      await SyncQueueService.instance.enqueue(
+        entityName: 'invoice_items',
+        entityId: invoiceId,
+        type: SyncOperationType.create,
+        payload: {
+          'invoice_id': invoiceId,
+          'businessId': businessId,
+          'items': invoiceItems,
+        },
+      );
+    }
+
+    return invoiceId;
   }
 
   Future<InvoiceModel?> getInvoiceById(String businessId, String id) async {
@@ -100,24 +126,48 @@ class InvoiceRepository {
     required String businessId,
     required String invoiceId,
     required String pdfPath,
-  }) {
-    return DBHelper.updateInvoicePdfPath(
+  }) async {
+    final result = await DBHelper.updateInvoicePdfPath(
       businessId: businessId,
       invoiceId: invoiceId,
       pdfPath: pdfPath,
     );
+
+    final invoiceData = await DBHelper.getInvoiceById(businessId, invoiceId);
+    if (invoiceData != null) {
+      await SyncQueueService.instance.enqueue(
+        entityName: 'invoices',
+        entityId: invoiceId,
+        type: SyncOperationType.update,
+        payload: invoiceData,
+      );
+    }
+
+    return result;
   }
 
   Future<int> updateQuotationPdfPath({
     required String businessId,
     required String quotationId,
     required String pdfPath,
-  }) {
-    return DBHelper.updateQuotationPdfPath(
+  }) async {
+    final result = await DBHelper.updateQuotationPdfPath(
       businessId: businessId,
       quotationId: quotationId,
       pdfPath: pdfPath,
     );
+
+    final quotationData = await DBHelper.getQuotationById(businessId, quotationId);
+    if (quotationData != null) {
+      await SyncQueueService.instance.enqueue(
+        entityName: 'quotations',
+        entityId: quotationId,
+        type: SyncOperationType.update,
+        payload: quotationData,
+      );
+    }
+
+    return result;
   }
 
   Future<void> addInvoicePayment({
@@ -125,13 +175,33 @@ class InvoiceRepository {
     required String invoiceId,
     required double amount,
     required String paymentMethod,
-  }) {
-    return DBHelper.addInvoicePayment(
+  }) async {
+    final paymentId = await DBHelper.addInvoicePayment(
       businessId: businessId,
       invoiceId: invoiceId,
       amount: amount,
       paymentMethod: paymentMethod,
     );
+
+    final payments = await DBHelper.getInvoicePayments(businessId, invoiceId);
+    final paymentData = payments.firstWhere((p) => p['id'] == paymentId);
+
+    await SyncQueueService.instance.enqueue(
+      entityName: 'payments',
+      entityId: paymentId,
+      type: SyncOperationType.create,
+      payload: paymentData,
+    );
+
+    final invoiceData = await DBHelper.getInvoiceById(businessId, invoiceId);
+    if (invoiceData != null) {
+      await SyncQueueService.instance.enqueue(
+        entityName: 'invoices',
+        entityId: invoiceId,
+        type: SyncOperationType.update,
+        payload: invoiceData,
+      );
+    }
   }
 
   Future<String> createQuotation({
@@ -143,8 +213,8 @@ class InvoiceRepository {
     String? expiryDate,
     String? notes,
     String? currencyCode,
-  }) {
-    return DBHelper.createQuotation(
+  }) async {
+    final quotationId = await DBHelper.createQuotation(
       businessId: businessId,
       customerId: customerId,
       items: items,
@@ -154,6 +224,22 @@ class InvoiceRepository {
       notes: notes,
       currencyCode: currencyCode,
     );
+
+    final quotationData = await DBHelper.getQuotationById(businessId, quotationId);
+    if (quotationData != null) {
+      final quotationItems = await DBHelper.getQuotationItems(businessId, quotationId);
+      await SyncQueueService.instance.enqueue(
+        entityName: 'quotations',
+        entityId: quotationId,
+        type: SyncOperationType.create,
+        payload: {
+          ...quotationData,
+          'items': quotationItems,
+        },
+      );
+    }
+
+    return quotationId;
   }
 
   Future<QuotationModel?> getQuotationById(String businessId, String id) async {
@@ -165,11 +251,25 @@ class InvoiceRepository {
     return DBHelper.getQuotationItems(businessId, id);
   }
 
-  Future<void> deleteInvoice(String businessId, String id) {
-    return DBHelper.deleteInvoice(businessId, id);
+  Future<void> deleteInvoice(String businessId, String id) async {
+    await DBHelper.deleteInvoice(businessId, id);
+
+    await SyncQueueService.instance.enqueue(
+      entityName: 'invoices',
+      entityId: id,
+      type: SyncOperationType.delete,
+      payload: {'id': id, 'businessId': businessId},
+    );
   }
 
-  Future<void> deleteQuotation(String businessId, String id) {
-    return DBHelper.deleteQuotation(businessId, id);
+  Future<void> deleteQuotation(String businessId, String id) async {
+    await DBHelper.deleteQuotation(businessId, id);
+
+    await SyncQueueService.instance.enqueue(
+      entityName: 'quotations',
+      entityId: id,
+      type: SyncOperationType.delete,
+      payload: {'id': id, 'businessId': businessId},
+    );
   }
 }
