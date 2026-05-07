@@ -1,24 +1,27 @@
 import 'sync_queue_service.dart';
 import '../models/sync_operation.dart';
-import 'sync_service.dart';
-import 'cloud_sync_service.dart';
+import 'backend_adapter.dart';
 import 'sync_log_service.dart';
 import 'analytics_service.dart';
+import 'sync_service.dart';
+import 'legacy_sync_adapter.dart';
 
 class SyncEngine {
   final SyncQueueService _syncQueueService;
-  final SyncService _syncService;
+  final BackendAdapter _backendAdapter;
   final AnalyticsService _analytics;
   final SyncLogService _logger = SyncLogService.instance;
   final bool _isTestMode;
   
   SyncEngine({
     SyncQueueService? syncQueueService,
+    BackendAdapter? backendAdapter,
     SyncService? syncService,
     AnalyticsService? analytics,
     bool? isTestMode,
   })  : _syncQueueService = syncQueueService ?? SyncQueueService.instance,
-        _syncService = syncService ?? CloudSyncService.instance,
+        _backendAdapter = backendAdapter ?? 
+            (syncService != null ? LegacySyncAdapter(syncService) : NoOpBackendAdapter()),
         _analytics = analytics ?? NoOpAnalyticsService(),
         _isTestMode = isTestMode ?? identical(0, 0.0);
 
@@ -89,7 +92,7 @@ class SyncEngine {
 
     try {
       // Conflict Detection logic
-      final remoteData = await _syncService.getRemoteData(operation.entityName, operation.entityId);
+      final remoteData = await _backendAdapter.fetchRemoteData(operation.entityName, operation.entityId);
       final remoteVersion = _toInt(remoteData?['remoteVersion'] ?? remoteData?['version']);
       
       if (remoteVersion > 0) {
@@ -115,24 +118,24 @@ class SyncEngine {
         }
       }
 
-      if (operation.type == SyncOperationType.delete) {
-        await _syncService.delete(operation.entityName, operation.entityId);
-      } else {
-        await _syncService.upsert(operation.entityName, operation.payload);
-      }
+      final result = await _backendAdapter.send(operation);
 
-      // Mark as synced on success
-      await _syncQueueService.updateStatus(operation, SyncStatus.synced);
-      _logger.log('Successfully synced ${operation.id}');
-      
-      _analytics.logEvent(
-        name: 'sync_success',
-        parameters: {
-          'entity': operation.entityName,
-          'type': operation.type.name,
-          'attempts': operation.attemptCount + 1,
-        },
-      );
+      if (result.success) {
+        // Mark as synced on success
+        await _syncQueueService.updateStatus(operation, SyncStatus.synced);
+        _logger.log('Successfully synced ${operation.id}');
+        
+        _analytics.logEvent(
+          name: 'sync_success',
+          parameters: {
+            'entity': operation.entityName,
+            'type': operation.type.name,
+            'attempts': operation.attemptCount + 1,
+          },
+        );
+      } else {
+        throw Exception(result.error ?? 'Unknown backend error');
+      }
     } catch (e) {
       _logger.log(
         'Failed to sync ${operation.id}',

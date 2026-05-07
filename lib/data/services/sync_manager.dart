@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'sync_engine.dart';
 import 'sync_queue_service.dart';
 import 'analytics_service.dart';
+import 'firebase_backend_adapter.dart';
 import '../repositories/sync_queue_repository.dart';
 import '../models/sync_operation.dart';
 
@@ -74,8 +75,11 @@ class SyncManager extends ChangeNotifier {
 
   // Compatibility stubs for main.dart and DBHelper
   Future<void> initialize() async {
-    // In production, we wire up the real Firebase Analytics
-    _engine = SyncEngine(analytics: FirebaseAnalyticsService());
+    // In production, we wire up the real Firebase Analytics and Backend Adapter
+    _engine = SyncEngine(
+      analytics: FirebaseAnalyticsService(),
+      backendAdapter: FirebaseBackendAdapter(),
+    );
   }
   Future<void> onAuthenticated() async {}
   Future<void> onAppResumed() async {}
