@@ -11,7 +11,7 @@ import 'package:flutter/foundation.dart';
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
-  static const _databaseVersion = 18;
+  static const _databaseVersion = 19;
 
   static const _cashAccountCode = '101';
   static const _inventoryAccountCode = '102';
@@ -156,6 +156,10 @@ class DBHelper {
 
         if (oldVersion < 18) {
           await _upgradeToV18(db);
+        }
+
+        if (oldVersion < 19) {
+          await _upgradeToV19(db);
         }
 
         await _repairAccountNamesForV12(db);
@@ -384,6 +388,7 @@ class DBHelper {
       CREATE TABLE business_profile(
         id TEXT PRIMARY KEY,
         businessId TEXT,
+        branch_id TEXT,
         business_name TEXT,
         trade_name TEXT,
         logo_path TEXT,
@@ -930,16 +935,104 @@ class DBHelper {
     }
   }
 
+  static Future<void> _upgradeToV19(Database db) async {
+    debugPrint('Executing Migration: V19 (Schema Integrity Fix)');
+
+    // 1. Ensure branch_id exists in all required tables, specifically business_profile
+    final tablesWithBranchId = [
+      'accounts',
+      'journal_entries',
+      'products',
+      'sales_records',
+      'product_movements',
+      'customers',
+      'quotations',
+      'invoices',
+      'payments',
+      'sync_operations',
+      'business_profile', // This was missing in V18 migration
+    ];
+
+    for (final table in tablesWithBranchId) {
+      await _ensureColumn(
+        db,
+        table: table,
+        column: 'branch_id',
+        definition: 'TEXT',
+      );
+    }
+
+    // 2. Ensure RBAC created_by exists (specifically for customers and payments which might have been missed)
+    final tablesWithCreatedBy = [
+      'customers',
+      'quotations',
+      'invoices',
+      'payments',
+    ];
+
+    for (final table in tablesWithCreatedBy) {
+      await _ensureColumn(
+        db,
+        table: table,
+        column: 'created_by',
+        definition: 'TEXT',
+      );
+    }
+
+    // 3. Link records to main branch if null
+    final businesses = await db.rawQuery('SELECT DISTINCT businessId FROM products WHERE businessId IS NOT NULL');
+    for (final row in businesses) {
+      final bId = row['businessId']?.toString();
+      if (bId != null && bId.isNotEmpty) {
+        final mainBranchId = 'BR-$bId-MAIN';
+        
+        // Ensure main branch exists (redundant but safe)
+        await db.insert(
+          'branches',
+          {
+            'id': mainBranchId,
+            'businessId': bId,
+            'name': 'الفرع الرئيسي',
+            'code': 'MAIN',
+            'is_main_branch': 1,
+            'is_active': 1,
+            'created_at': DateTime.now().toIso8601String(),
+            'updated_at': DateTime.now().toIso8601String(),
+          },
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+
+        for (final table in tablesWithBranchId) {
+          try {
+            await db.update(
+              table,
+              {'branch_id': mainBranchId},
+              where: 'businessId = ? AND (branch_id IS NULL OR branch_id = \'\')',
+              whereArgs: [bId],
+            );
+          } catch (e) {
+             debugPrint('Warning: Could not update branch_id for $table ($bId): $e');
+          }
+        }
+      }
+    }
+  }
+
   static Future<void> _ensureColumn(
     Database db, {
     required String table,
     required String column,
     required String definition,
   }) async {
-    final columns = await db.rawQuery('PRAGMA table_info($table)');
-    final exists = columns.any((row) => row['name'] == column);
-    if (!exists) {
-      await db.execute('ALTER TABLE $table ADD COLUMN $column $definition');
+    try {
+      final columns = await db.rawQuery('PRAGMA table_info($table)');
+      final exists = columns.any((row) => row['name'] == column);
+      if (!exists) {
+        debugPrint('Migration: Adding column $column to table $table');
+        await db.execute('ALTER TABLE $table ADD COLUMN $column $definition');
+      }
+    } catch (e) {
+      debugPrint('Migration Error: Failed to ensure column $column in $table: $e');
     }
   }
 

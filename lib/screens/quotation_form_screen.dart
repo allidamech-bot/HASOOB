@@ -1,4 +1,4 @@
-import 'dart:io' as io; import 'dart:typed_data'; import 'package:flutter/foundation.dart'; import 'package:flutter/material.dart'; import 'package:path/path.dart' as p; import 'package:printing/printing.dart';
+import 'dart:io' as io; import 'package:flutter/foundation.dart'; import 'package:flutter/material.dart'; import 'package:path/path.dart' as p; import 'package:printing/printing.dart';
 import '../core/app_copy.dart'; import '../core/app_currency.dart'; import '../core/app_formatters.dart'; import '../core/app_messages.dart'; import '../core/app_theme.dart'; import '../core/app_web_utils.dart'; import '../core/business/business_context.dart'; import '../data/models/document_line_item.dart'; import '../data/models/product_model.dart'; import '../data/repositories/invoice_repository.dart';
 import '../data/services/export_service.dart';
 class QuotationFormScreen extends StatefulWidget { const QuotationFormScreen({super.key}); @override State<QuotationFormScreen> createState()=>_QuotationFormScreenState(); }
