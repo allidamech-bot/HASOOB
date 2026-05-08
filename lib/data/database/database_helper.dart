@@ -1217,7 +1217,7 @@ class DBHelper {
     final result = await db.query(
       'products',
       where: 'id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
-      whereArgs: [id, businessId, branchId],
+      whereArgs: [id, businessId, branchId ?? ''],
     );
     return result.isEmpty ? null : result.first;
   }

@@ -18,7 +18,8 @@ import 'data/services/smart_sync_trigger_service.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/auth/auth_gate.dart';
 import 'screens/auth/firebase_setup_screen.dart';
-import 'screens/sync_dashboard_screen.dart';
+import 'screens/sync_center_screen.dart';
+import 'core/services/connectivity_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +30,7 @@ Future<void> main() async {
     databaseFactory = databaseFactoryFfi;
   }
 
+  await ConnectivityService.instance.initialize();
   final bootstrapResult = await FirebaseBootstrap.initialize();
   final themeController = await AppThemeController.load();
   final localeController = await AppLocaleController.load();
@@ -137,7 +139,7 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
                   darkTheme: AppTheme.darkTheme(),
                   themeMode: widget.themeController.themeMode,
                   routes: {
-                    '/sync': (context) => const SyncDashboardScreen(),
+                    '/sync': (context) => const SyncCenterScreen(),
                   },
                   home: widget.bootstrapResult.isConfigured
                       ? const AuthGate()

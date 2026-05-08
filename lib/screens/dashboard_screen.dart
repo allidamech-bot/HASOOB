@@ -19,6 +19,7 @@ import 'documents_screen.dart';
 import 'settings_screen.dart';
 import '../data/services/sync_manager.dart';
 import '../widgets/sync_status_indicator.dart';
+import '../widgets/sync_health_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -204,6 +205,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
                 children: [
                   _heroCard(context, copy),
+                  const SizedBox(height: 24),
+                  const SyncHealthCard(),
                   const SizedBox(height: 24),
                   AppSectionHeader(
                     title: copy.t('overview'),

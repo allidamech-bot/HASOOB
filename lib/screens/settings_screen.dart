@@ -4,6 +4,7 @@ import '../core/app_locale_controller.dart';
 import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../l10n/app_localizations.dart';
+import '../core/app_copy.dart';
 import 'help_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -111,6 +112,26 @@ class SettingsScreen extends StatelessWidget {
                   ),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.sync_rounded),
+                  title: Text(
+                    AppCopy.of(context).t('syncCenter'),
+                    style: const TextStyle(fontWeight: FontWeight.w800),
+                  ),
+                  subtitle: Text(
+                    AppCopy.of(context).t('syncCenterSubtitle'),
+                    style: TextStyle(color: AppTheme.textSecondaryFor(context)),
+                  ),
+                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
+                  onTap: () => Navigator.pushNamed(context, '/sync'),
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 16),

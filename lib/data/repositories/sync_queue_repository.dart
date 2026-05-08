@@ -103,6 +103,44 @@ class SyncQueueRepository {
     );
   }
 
+  Future<Map<String, dynamic>> getSyncStats() async {
+    final db = await DBHelper.database();
+    
+    final List<Map<String, dynamic>> pendingCount = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM $tableName WHERE status = ?',
+      [SyncStatus.pending.name],
+    );
+    
+    final List<Map<String, dynamic>> failedCount = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM $tableName WHERE status = ? OR status = ?',
+      [SyncStatus.failed.name, SyncStatus.conflict.name],
+    );
+    
+    final List<Map<String, dynamic>> conflictCount = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM $tableName WHERE status = ?',
+      [SyncStatus.conflict.name],
+    );
+
+    final today = DateTime.now().toIso8601String().substring(0, 10);
+    final List<Map<String, dynamic>> syncedTodayCount = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM $tableName WHERE status = ? AND updatedAt LIKE ?',
+      [SyncStatus.synced.name, '$today%'],
+    );
+
+    final List<Map<String, dynamic>> lastSync = await db.rawQuery(
+      'SELECT updatedAt FROM $tableName WHERE status = ? ORDER BY updatedAt DESC LIMIT 1',
+      [SyncStatus.synced.name],
+    );
+
+    return {
+      'pending': pendingCount.first['count'] as int? ?? 0,
+      'failed': failedCount.first['count'] as int? ?? 0,
+      'conflicts': conflictCount.first['count'] as int? ?? 0,
+      'syncedToday': syncedTodayCount.first['count'] as int? ?? 0,
+      'lastSyncTime': lastSync.isNotEmpty ? lastSync.first['updatedAt'] as String : null,
+    };
+  }
+
   Map<String, dynamic> _toDbMap(SyncOperation operation) {
     final map = operation.toMap();
     // Encode payload as JSON string for SQLite
