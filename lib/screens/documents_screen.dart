@@ -1,5 +1,4 @@
-import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
@@ -19,6 +18,9 @@ import 'invoice_details_screen.dart';
 import 'invoice_form_screen.dart';
 import 'quotation_details_screen.dart';
 import 'quotation_form_screen.dart';
+
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:io' as io;
 
 class DocumentsScreen extends StatefulWidget {
   const DocumentsScreen({super.key});
@@ -69,13 +71,17 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     setState(() => _refreshKey++);
   }
 
-  Future<String> _invoicePdf(InvoiceModel invoice) async {
+  Future<ExportResult> _invoicePdf(InvoiceModel invoice) async {
     final copy = AppCopy.of(context);
     final id = invoice.id;
     final current = invoice.pdfPath ?? '';
 
-    if (current.isNotEmpty && await File(current).exists()) {
-      return current;
+    if (!kIsWeb && current.isNotEmpty && await io.File(current).exists()) {
+      return ExportResult(
+        file: io.File(current),
+        fileName: p.basename(current),
+        message: 'تم تحميل الفاتورة المحفوظة.',
+      );
     }
 
     final fresh = await _repo.getInvoiceById(id, _businessId);
@@ -86,27 +92,33 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     final items = await _repo.getInvoiceItems(id, _businessId);
     final profile = await _profileRepo.getBusinessProfile(_businessId);
 
-    final path = await _export.generateInvoicePdf(
+    final result = await _export.generateInvoicePdf(
       invoice: fresh,
       items: items,
       businessProfile: profile,
     );
 
-    await _repo.updateInvoicePdfPath(
-      businessId: _businessId,
-      invoiceId: id,
-      pdfPath: path,
-    );
-    return path;
+    if (!kIsWeb && result.file != null) {
+      await _repo.updateInvoicePdfPath(
+        businessId: _businessId,
+        invoiceId: id,
+        pdfPath: result.file!.path,
+      );
+    }
+    return result;
   }
 
-  Future<String> _quotationPdf(QuotationModel quotation) async {
+  Future<ExportResult> _quotationPdf(QuotationModel quotation) async {
     final copy = AppCopy.of(context);
     final id = quotation.id;
     final current = quotation.pdfPath ?? '';
 
-    if (current.isNotEmpty && await File(current).exists()) {
-      return current;
+    if (!kIsWeb && current.isNotEmpty && await io.File(current).exists()) {
+      return ExportResult(
+        file: io.File(current),
+        fileName: p.basename(current),
+        message: 'تم تحميل عرض السعر المحفوظ.',
+      );
     }
 
     final fresh = await _repo.getQuotationById(id, _businessId);
@@ -117,39 +129,53 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     final items = await _repo.getQuotationItems(id, _businessId);
     final profile = await _profileRepo.getBusinessProfile(_businessId);
 
-    final path = await _export.generateQuotationPdf(
+    final result = await _export.generateQuotationPdf(
       quotation: fresh,
       items: items,
       businessProfile: profile,
     );
 
-    await _repo.updateQuotationPdfPath(
-      businessId: _businessId,
-      quotationId: id,
-      pdfPath: path,
-    );
-    return path;
+    if (!kIsWeb && result.file != null) {
+      await _repo.updateQuotationPdfPath(
+        businessId: _businessId,
+        quotationId: id,
+        pdfPath: result.file!.path,
+      );
+    }
+    return result;
   }
 
-  Future<void> _preview(String path) async {
-    final bytes = await File(path).readAsBytes();
+  Future<void> _preview(ExportResult result) async {
+    Uint8List? bytes;
+    if (kIsWeb) {
+      bytes = result.bytes;
+    } else if (result.file != null) {
+      bytes = await result.file!.readAsBytes();
+    }
 
+    if (bytes == null) return;
     if (!mounted) return;
 
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => _PdfPreviewScreen(
-          title: p.basename(path),
-          bytes: bytes,
+          title: result.fileName,
+          bytes: bytes!,
         ),
       ),
     );
   }
 
-  Future<void> _share(String path) async {
-    final bytes = await File(path).readAsBytes();
-    await Printing.sharePdf(bytes: bytes, filename: p.basename(path));
+  Future<void> _share(ExportResult result) async {
+    Uint8List? bytes;
+    if (kIsWeb) {
+      bytes = result.bytes;
+    } else if (result.file != null) {
+      bytes = await result.file!.readAsBytes();
+    }
+    if (bytes == null) return;
+    await Printing.sharePdf(bytes: bytes, filename: result.fileName);
   }
 
   Future<void> _deleteInvoice(String id) async {
@@ -465,7 +491,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 OutlinedButton(
                   onPressed: () async {
                     try {
-                      await _preview(await _invoicePdf(invoice));
+                      final result = await _invoicePdf(invoice);
+                      await _preview(result);
                     } catch (error) {
                       if (!mounted) return;
                       AppMessages.error(context, '$error');
@@ -476,7 +503,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 OutlinedButton(
                   onPressed: () async {
                     try {
-                      await _share(await _invoicePdf(invoice));
+                      final result = await _invoicePdf(invoice);
+                      await _share(result);
                     } catch (error) {
                       if (!mounted) return;
                       AppMessages.error(context, '$error');
@@ -555,7 +583,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 OutlinedButton(
                   onPressed: () async {
                     try {
-                      await _preview(await _quotationPdf(quotation));
+                      final result = await _quotationPdf(quotation);
+                      await _preview(result);
                     } catch (error) {
                       if (!mounted) return;
                       AppMessages.error(context, '$error');
@@ -566,7 +595,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 OutlinedButton(
                   onPressed: () async {
                     try {
-                      await _share(await _quotationPdf(quotation));
+                      final result = await _quotationPdf(quotation);
+                      await _share(result);
                     } catch (error) {
                       if (!mounted) return;
                       AppMessages.error(context, '$error');

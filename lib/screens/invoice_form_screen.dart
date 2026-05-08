@@ -1,15 +1,16 @@
-import 'dart:io';
-import 'dart:typed_data';
+import 'dart:io' as io;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:path/path.dart' as p;
 import 'package:printing/printing.dart';
+import 'package:path/path.dart' as p;
 
 import '../core/app_copy.dart';
 import '../core/app_currency.dart';
 import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
+import '../core/app_web_utils.dart';
 import '../core/business/business_context.dart';
 import '../data/models/document_line_item.dart';
 import '../data/models/product_model.dart';
@@ -431,21 +432,31 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
       throw Exception(copy.t('invoiceSavedNotFound'));
     }
 
-    final pdfPath = await _exportService.generateInvoicePdf(
+    final result = await _exportService.generateInvoicePdf(
       invoice: invoice,
       items: items,
       businessProfile: businessProfile,
     );
 
-    await _invoiceRepository.updateInvoicePdfPath(
-      businessId: businessId,
-      invoiceId: invoiceId,
-      pdfPath: pdfPath,
-    );
+    if (!kIsWeb && result.file != null) {
+      await _invoiceRepository.updateInvoicePdfPath(
+        businessId: businessId,
+        invoiceId: invoiceId,
+        pdfPath: result.file!.path,
+      );
+    }
 
     if (!mounted) return;
 
-    AppMessages.success(context, '${copy.t('invoiceSavedPdf')}\n$pdfPath');
+    final displayPath = kIsWeb ? result.fileName : (result.file?.path ?? result.fileName);
+    AppMessages.success(context, '${copy.t('invoiceSavedPdf')}\n$displayPath');
+
+    if (kIsWeb) {
+      if (result.bytes != null) {
+        AppWebUtils.downloadBytes(result.bytes!, result.fileName);
+      }
+      return;
+    }
 
     final action = await showDialog<_InvoicePdfAction>(
       context: context,
@@ -475,14 +486,14 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
     );
 
     if (action == _InvoicePdfAction.preview) {
-      await _previewInvoicePdf(pdfPath);
+      await _previewInvoicePdf(result.file!.path);
     } else if (action == _InvoicePdfAction.share) {
-      await _shareInvoicePdf(pdfPath);
+      await _shareInvoicePdf(result.file!.path);
     }
   }
 
   Future<void> _previewInvoicePdf(String pdfPath) async {
-    final file = File(pdfPath);
+    final file = io.File(pdfPath);
 
     if (!await file.exists()) {
       if (!mounted) return;
@@ -506,7 +517,7 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
   }
 
   Future<void> _shareInvoicePdf(String pdfPath) async {
-    final file = File(pdfPath);
+    final file = io.File(pdfPath);
 
     if (!await file.exists()) {
       if (!mounted) return;

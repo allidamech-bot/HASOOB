@@ -1,12 +1,8 @@
 import 'dart:async';
-import 'dart:convert';
-import 'dart:io';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
-import 'package:path/path.dart' as p;
-import 'package:path_provider/path_provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'sync_service.dart';
 
@@ -780,43 +776,20 @@ class CloudSyncService implements SyncService {
   }
 
   Future<Map<String, dynamic>> getLocalRestoreStatus() async {
-    final file = await _restoreStatusFile();
-    if (!await file.exists()) {
-      return {
-        'has_restored': false,
-        'last_restore_at': null,
-      };
-    }
+    final prefs = await SharedPreferences.getInstance();
+    final hasRestored = prefs.getBool('has_restored') ?? false;
+    final lastRestoreAt = prefs.getString('last_restore_at');
 
-    try {
-      final json = jsonDecode(await file.readAsString()) as Map<String, dynamic>;
-      return {
-        'has_restored': json['has_restored'] == true,
-        'last_restore_at': json['last_restore_at']?.toString(),
-      };
-    } catch (_) {
-      return {
-        'has_restored': false,
-        'last_restore_at': null,
-      };
-    }
+    return {
+      'has_restored': hasRestored,
+      'last_restore_at': lastRestoreAt,
+    };
   }
 
   Future<void> markLocalRestoreUsed() async {
-    final file = await _restoreStatusFile();
-    await file.parent.create(recursive: true);
-    await file.writeAsString(
-      jsonEncode({
-        'has_restored': true,
-        'last_restore_at': DateTime.now().toIso8601String(),
-      }),
-      flush: true,
-    );
-  }
-
-  Future<File> _restoreStatusFile() async {
-    final dir = await getApplicationDocumentsDirectory();
-    return File(p.join(dir.path, 'Hasoob', 'restore_status.json'));
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool('has_restored', true);
+    await prefs.setString('last_restore_at', DateTime.now().toIso8601String());
   }
 
   Map<String, dynamic> _mapDoc(DocumentSnapshot<Map<String, dynamic>> doc) {

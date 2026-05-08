@@ -7,8 +7,7 @@ import '../models/product_model.dart';
 import '../../core/services/branch_context.dart';
 import '../../core/services/audit_service.dart';
 import 'dart:convert';
-
-
+import 'package:flutter/foundation.dart';
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
@@ -61,10 +60,16 @@ class DBHelper {
   ];
 
   static Future<Database> database() async {
-    final dbPath = await getDatabasesPath();
+    String path;
+    if (kIsWeb) {
+      path = _databaseName;
+    } else {
+      final dbPath = await getDatabasesPath();
+      path = join(dbPath, _databaseName);
+    }
 
     return openDatabase(
-      join(dbPath, _databaseName),
+      path,
       version: _databaseVersion,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON;');

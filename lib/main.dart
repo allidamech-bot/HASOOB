@@ -7,6 +7,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 import 'core/app_locale_controller.dart';
 import 'core/app_theme.dart';
@@ -28,6 +29,8 @@ Future<void> main() async {
   if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
+  } else if (kIsWeb) {
+    databaseFactory = databaseFactoryFfiWeb;
   }
 
   await ConnectivityService.instance.initialize();

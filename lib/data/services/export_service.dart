@@ -1,10 +1,13 @@
-import 'dart:io';
-
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
+
+// Use a conditional import or just avoid dart:io for web
+import 'dart:io' as io;
 
 import '../../core/app_formatters.dart';
 import '../../core/business/business_context.dart';
@@ -23,11 +26,15 @@ enum ExportReportType {
 
 class ExportResult {
   const ExportResult({
-    required this.file,
+    this.file,
+    this.bytes,
+    required this.fileName,
     required this.message,
   });
 
-  final File file;
+  final io.File? file;
+  final Uint8List? bytes;
+  final String fileName;
   final String message;
 }
 
@@ -476,7 +483,7 @@ class ExportService {
     );
   }
 
-  Future<String> generateInvoicePdf({
+  Future<ExportResult> generateInvoicePdf({
     required InvoiceModel invoice,
     required List<Map<String, dynamic>> items,
     required BusinessModel? businessProfile,
@@ -588,15 +595,11 @@ class ExportService {
       ),
     );
 
-    final file = await _createFile(
-      'invoice_${invoiceNumber.isEmpty ? 'document' : invoiceNumber}',
-      'pdf',
-    );
-    await file.writeAsBytes(await document.save(), flush: true);
-    return file.path;
+    final fileName = 'invoice_${invoiceNumber.isEmpty ? 'document' : invoiceNumber}';
+    return _saveDocument(document, fileName, 'pdf', 'تم إنشاء الفاتورة بنجاح.');
   }
 
-  Future<String> generateQuotationPdf({
+  Future<ExportResult> generateQuotationPdf({
     required QuotationModel quotation,
     required List<Map<String, dynamic>> items,
     required BusinessModel? businessProfile,
@@ -690,12 +693,8 @@ class ExportService {
       ),
     );
 
-    final file = await _createFile(
-      'quotation_${quotationNumber.isEmpty ? 'document' : quotationNumber}',
-      'pdf',
-    );
-    await file.writeAsBytes(await document.save(), flush: true);
-    return file.path;
+    final fileName = 'quotation_${quotationNumber.isEmpty ? 'document' : quotationNumber}';
+    return _saveDocument(document, fileName, 'pdf', 'تم إنشاء عرض السعر بنجاح.');
   }
 
   Future<ExportResult> _writeTextFile({
@@ -704,9 +703,20 @@ class ExportService {
     required String content,
     required String successMessage,
   }) async {
-    final file = await _createFile(prefix, extension);
-    await file.writeAsString(content, flush: true);
-    return ExportResult(file: file, message: successMessage);
+    final fileName = _generateFileName(prefix, extension);
+    final bytes = Uint8List.fromList(utf8.encode(content));
+
+    if (kIsWeb) {
+      return ExportResult(
+        bytes: bytes,
+        fileName: fileName,
+        message: successMessage,
+      );
+    } else {
+      final file = await _createFileInStorage(fileName);
+      await file.writeAsString(content, flush: true);
+      return ExportResult(file: file, fileName: fileName, message: successMessage);
+    }
   }
 
   Future<ExportResult> _writePdfFile({
@@ -739,9 +749,43 @@ class ExportService {
       ),
     );
 
-    final file = await _createFile(prefix, 'pdf');
-    await file.writeAsBytes(await document.save(), flush: true);
-    return ExportResult(file: file, message: successMessage);
+    final fileName = _generateFileName(prefix, 'pdf');
+    return _saveDocument(document, fileName, 'pdf', successMessage);
+  }
+
+  Future<ExportResult> _saveDocument(pw.Document document, String fileName, String extension, String successMessage) async {
+    final bytes = await document.save();
+    if (kIsWeb) {
+      return ExportResult(
+        bytes: bytes,
+        fileName: fileName,
+        message: successMessage,
+      );
+    } else {
+      final file = await _createFileInStorage(fileName);
+      await file.writeAsBytes(bytes, flush: true);
+      return ExportResult(file: file, fileName: fileName, message: successMessage);
+    }
+  }
+
+  String _generateFileName(String prefix, String extension) {
+    final timestamp = DateTime.now()
+        .toIso8601String()
+        .replaceAll(':', '-')
+        .replaceAll('.', '-');
+    final safePrefix = prefix.replaceAll(RegExp(r'[^\w\-]+'), '_');
+    return '${safePrefix}_$timestamp.$extension';
+  }
+
+  Future<io.File> _createFileInStorage(String fileName) async {
+    final directory = await getApplicationDocumentsDirectory();
+    final exportsDirectory = io.Directory(p.join(directory.path, 'exports'));
+
+    if (!await exportsDirectory.exists()) {
+      await exportsDirectory.create(recursive: true);
+    }
+
+    return io.File(p.join(exportsDirectory.path, fileName));
   }
 
   pw.Widget _reportShell({
@@ -1357,7 +1401,12 @@ class ExportService {
     if (normalizedPath.isEmpty) return null;
 
     try {
-      final file = File(normalizedPath);
+      if (kIsWeb) {
+        // On web we likely can't access local files by path if they were picked from image_picker
+        // but if it's a URL we could try network. For now, assume memory or skip if path is just a string.
+        return null; 
+      }
+      final file = io.File(normalizedPath);
       if (!await file.exists()) return null;
 
       final bytes = await file.readAsBytes();
@@ -1367,28 +1416,6 @@ class ExportService {
     } catch (_) {
       return null;
     }
-  }
-
-  Future<File> _createFile(String prefix, String extension) async {
-    final directory = await getApplicationDocumentsDirectory();
-    final exportsDirectory = Directory(p.join(directory.path, 'exports'));
-
-    if (!await exportsDirectory.exists()) {
-      await exportsDirectory.create(recursive: true);
-    }
-
-    final timestamp = DateTime.now()
-        .toIso8601String()
-        .replaceAll(':', '-')
-        .replaceAll('.', '-');
-    final safePrefix = prefix.replaceAll(RegExp(r'[^\w\-]+'), '_');
-
-    return File(
-      p.join(
-        exportsDirectory.path,
-        '${safePrefix}_$timestamp.$extension',
-      ),
-    );
   }
 
   String _periodLabel(ReportPeriodFilter filter) {

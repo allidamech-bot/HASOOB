@@ -1,6 +1,6 @@
-import 'dart:io';
-import 'dart:typed_data';
+import 'dart:io' as io;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as p;
 import 'package:printing/printing.dart';
@@ -55,10 +55,14 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
     );
   }
 
-  Future<String> _getPdfPath(QuotationModel quotation) async {
+  Future<ExportResult> _getPdfResult(QuotationModel quotation) async {
     final current = quotation.pdfPath ?? '';
-    if (current.isNotEmpty && await File(current).exists()) {
-      return current;
+    if (!kIsWeb && current.isNotEmpty && await io.File(current).exists()) {
+      return ExportResult(
+        file: io.File(current),
+        fileName: p.basename(current),
+        message: 'تم تحميل عرض السعر المحفوظ.',
+      );
     }
 
     final profileRepo = BusinessProfileRepository();
@@ -67,19 +71,21 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
     final items = await _repository.getQuotationItems(_businessId, widget.quotationId);
     final profile = await profileRepo.getBusinessProfile(_businessId);
 
-    final path = await export.generateQuotationPdf(
+    final result = await export.generateQuotationPdf(
       quotation: quotation,
       items: items,
       businessProfile: profile,
     );
 
-    await _repository.updateQuotationPdfPath(
-      businessId: _businessId,
-      quotationId: widget.quotationId,
-      pdfPath: path,
-    );
+    if (!kIsWeb && result.file != null) {
+      await _repository.updateQuotationPdfPath(
+        businessId: _businessId,
+        quotationId: widget.quotationId,
+        pdfPath: result.file!.path,
+      );
+    }
 
-    return path;
+    return result;
   }
 
   Future<void> _previewPdf(QuotationModel quotation) async {
@@ -88,17 +94,23 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
     setState(() => _isPreviewingPdf = true);
 
     try {
-      final path = await _getPdfPath(quotation);
-      final bytes = await File(path).readAsBytes();
+      final result = await _getPdfResult(quotation);
+      Uint8List? bytes;
+      if (kIsWeb) {
+        bytes = result.bytes;
+      } else if (result.file != null) {
+        bytes = await result.file!.readAsBytes();
+      }
 
+      if (bytes == null) return;
       if (!mounted) return;
 
       await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (_) => _PdfPreviewScreen(
-            title: p.basename(path),
-            bytes: bytes,
+            title: result.fileName,
+            bytes: bytes!,
           ),
         ),
       );
@@ -118,9 +130,15 @@ class _QuotationDetailsScreenState extends State<QuotationDetailsScreen> {
     setState(() => _isSharingPdf = true);
 
     try {
-      final path = await _getPdfPath(quotation);
-      final bytes = await File(path).readAsBytes();
-      await Printing.sharePdf(bytes: bytes, filename: p.basename(path));
+      final result = await _getPdfResult(quotation);
+      Uint8List? bytes;
+      if (kIsWeb) {
+        bytes = result.bytes;
+      } else if (result.file != null) {
+        bytes = await result.file!.readAsBytes();
+      }
+      if (bytes == null) return;
+      await Printing.sharePdf(bytes: bytes, filename: result.fileName);
     } catch (e) {
       if (!mounted) return;
       AppMessages.error(context, e.toString());

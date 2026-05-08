@@ -1,5 +1,4 @@
-import 'dart:io';
-import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +10,7 @@ import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
+import '../core/app_web_utils.dart';
 import '../data/services/export_service.dart';
 import '../data/services/reports/report_models.dart';
 import '../data/services/reports/report_service.dart';
@@ -18,6 +18,9 @@ import '../widgets/app_section_header.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/sync_status_indicator.dart';
 import 'accounting/trial_balance_screen.dart';
+
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:io' as io;
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -68,9 +71,21 @@ class _ReportsScreenState extends State<ReportsScreen> {
     try {
       final result = await action();
       if (!mounted) return;
-      AppMessages.success(context, '${result.message}\n${result.file.path}');
 
-      final isPdf = p.extension(result.file.path).toLowerCase() == '.pdf';
+      if (kIsWeb) {
+        if (result.bytes != null) {
+          AppWebUtils.downloadBytes(result.bytes!, result.fileName);
+          AppMessages.success(context, result.message);
+        }
+        return;
+      }
+
+      final file = result.file;
+      if (file == null) return;
+      
+      AppMessages.success(context, '${result.message}\n${file.path}');
+
+      final isPdf = p.extension(file.path).toLowerCase() == '.pdf';
       if (!isPdf) return;
 
       final exportAction = await showDialog<_ReportPdfAction>(
@@ -97,9 +112,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       if (!mounted) return;
       if (exportAction == _ReportPdfAction.preview) {
-        await _previewPdf(result.file.path);
+        await _previewPdf(file.path);
       } else if (exportAction == _ReportPdfAction.share) {
-        await _sharePdf(result.file.path);
+        await _sharePdf(file.path);
       }
     } catch (error) {
       if (!mounted) return;
@@ -108,7 +123,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Future<void> _previewPdf(String pdfPath) async {
-    final file = File(pdfPath);
+    if (kIsWeb) return; // Handled by printing differently if needed, but we used download on web
+    
+    final file = io.File(pdfPath);
     if (!await file.exists()) {
       if (!mounted) return;
       AppMessages.error(context, AppCopy.of(context).t('pdfNotFound'));
@@ -129,7 +146,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Future<void> _sharePdf(String pdfPath) async {
-    final file = File(pdfPath);
+    if (kIsWeb) return;
+    
+    final file = io.File(pdfPath);
     if (!await file.exists()) {
       if (!mounted) return;
       AppMessages.error(context, AppCopy.of(context).t('pdfNotFound'));

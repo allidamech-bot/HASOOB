@@ -1,5 +1,4 @@
-import 'dart:io';
-
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
@@ -8,6 +7,9 @@ import '../../data/repositories/business_profile_repository.dart';
 import '../core/app_copy.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
+
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:io' as io;
 
 class BusinessProfileScreen extends StatefulWidget {
   const BusinessProfileScreen({super.key});
@@ -30,7 +32,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
   final _defaultQuotationNotesController = TextEditingController();
   final _paymentTermsController = TextEditingController();
 
-  File? _logoFile;
+  Uint8List? _logoBytes;
   String? _logoPath;
   bool _loading = true;
   bool _saving = false;
@@ -61,8 +63,9 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
     final picker = ImagePicker();
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
+      final bytes = await picked.readAsBytes();
       setState(() {
-        _logoFile = File(picked.path);
+        _logoBytes = bytes;
         _logoPath = picked.path;
       });
     }
@@ -85,10 +88,10 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
         _paymentTermsController.text = data.paymentTermsFooter ?? '';
         _logoPath = data.logoPath;
 
-        if (_logoPath != null && _logoPath!.isNotEmpty) {
-          final file = File(_logoPath!);
+        if (_logoPath != null && _logoPath!.isNotEmpty && !kIsWeb) {
+          final file = io.File(_logoPath!);
           if (await file.exists()) {
-            _logoFile = file;
+            _logoBytes = await file.readAsBytes();
           }
         }
       }
@@ -249,7 +252,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                     borderRadius: BorderRadius.circular(18),
                     border: Border.all(color: AppTheme.borderFor(context)),
                   ),
-                  child: _logoFile == null
+                  child: _logoBytes == null
                       ? Icon(
                           Icons.image_outlined,
                           size: 34,
@@ -257,8 +260,8 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                         )
                       : ClipRRect(
                           borderRadius: BorderRadius.circular(12),
-                          child: Image.file(
-                            _logoFile!,
+                          child: Image.memory(
+                            _logoBytes!,
                             fit: BoxFit.contain,
                             errorBuilder: (_, __, ___) => Icon(
                               Icons.broken_image_outlined,
@@ -295,7 +298,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                         child: FilledButton.icon(
                           onPressed: _pickLogo,
                           icon: const Icon(Icons.upload_rounded),
-                          label: Text(copy.businessLogoAction(_logoFile != null)),
+                          label: Text(copy.businessLogoAction(_logoBytes != null)),
                         ),
                       ),
                     ],
