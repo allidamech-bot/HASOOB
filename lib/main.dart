@@ -137,10 +137,13 @@ Future<void> main() async {
           return createDatabaseFactoryFfiWeb(
             options: SqfliteFfiWebOptions(
               sqlite3WasmUri: Uri.parse('sqlite3.wasm'),
+              // On iOS Safari, SharedWorkers can be unreliable or blocked in some contexts.
+              // Forcing a basic worker improves compatibility on mobile Safari.
+              forceAsBasicWorker: defaultTargetPlatform == TargetPlatform.iOS,
             ),
           );
-        }).timeout(const Duration(seconds: 10), onTimeout: () {
-          throw TimeoutException('SQLite WASM initialization timed out after 10s');
+        }).timeout(const Duration(seconds: 20), onTimeout: () {
+          throw TimeoutException('SQLite WASM initialization timed out after 20s');
         });
         debugPrint('[Startup] Web Database Factory set.');
       }
