@@ -103,7 +103,11 @@ Future<void> main() async {
     StartupDiagnostic.instance.logStage(StartupStage.dateInit);
     await initializeDateFormatting().timeout(const Duration(seconds: 5));
 
-    debugPrint('[Startup] Platform: kIsWeb=$kIsWeb');
+    debugPrint('[Startup] Environment: kIsWeb=$kIsWeb, Platform=${defaultTargetPlatform.name}');
+    if (kIsWeb) {
+      // Use platform dispatcher or similar if window is restricted
+      debugPrint('[Startup] Web Detection: mobile=${defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS}');
+    }
 
     try {
       if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
@@ -112,7 +116,6 @@ Future<void> main() async {
         databaseFactory = databaseFactoryFfi;
       } else if (kIsWeb) {
         StartupDiagnostic.instance.logStage(StartupStage.sqfliteWebInit);
-        // Timeout added for Web WASM init
         databaseFactory = await Future.sync(() {
           return createDatabaseFactoryFfiWeb(
             options: SqfliteFfiWebOptions(
@@ -132,38 +135,43 @@ Future<void> main() async {
     StartupDiagnostic.instance.logStage(StartupStage.connectivityInit);
     try {
       await ConnectivityService.instance.initialize().timeout(const Duration(seconds: 5));
+      debugPrint('[Startup] ConnectivityService initialized.');
     } catch (e) {
-      debugPrint('Non-critical Connectivity error: $e');
+      debugPrint('[Startup] Non-critical Connectivity error: $e');
     }
 
     StartupDiagnostic.instance.logStage(StartupStage.firebaseInit);
     final bootstrapResult = await FirebaseBootstrap.initialize().timeout(const Duration(seconds: 10), onTimeout: () {
       throw TimeoutException('Firebase initialization timed out after 10s');
     });
+    debugPrint('[Startup] Firebase initialized: success=${bootstrapResult.isConfigured}');
 
     StartupDiagnostic.instance.logStage(StartupStage.controllersInit);
-    final results = await Future.wait([
-      AppThemeController.load(),
-      AppLocaleController.load(),
-    ]).timeout(const Duration(seconds: 5));
-    
-    final themeController = results[0] as AppThemeController;
-    final localeController = results[1] as AppLocaleController;
+    final themeController = await AppThemeController.load().timeout(const Duration(seconds: 5));
+    final localeController = await AppLocaleController.load().timeout(const Duration(seconds: 5));
+    debugPrint('[Startup] Controllers loaded.');
 
     if (bootstrapResult.isConfigured) {
       StartupDiagnostic.instance.logStage(StartupStage.analyticsInit);
       try {
         await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true).timeout(const Duration(seconds: 3));
         await FirebaseAnalytics.instance.logEvent(name: 'app_open_custom').timeout(const Duration(seconds: 3));
+        debugPrint('[Startup] Analytics setup done.');
       } catch (e) {
-        debugPrint('Non-critical Analytics error: $e');
+        debugPrint('[Startup] Non-critical Analytics error: $e');
       }
     }
 
     StartupDiagnostic.instance.logStage(StartupStage.syncInit);
-    // SyncManager initialization shouldn't block the main UI if possible, 
-    // but we await it here as per existing logic.
-    await SyncManager.instance.initialize().timeout(const Duration(seconds: 5));
+    try {
+      // DEFENSIVE: Wrap sync initialization to prevent app hang
+      await SyncManager.instance.initialize().timeout(const Duration(seconds: 5));
+      debugPrint('[Startup] SyncManager initialized.');
+    } catch (e, st) {
+      debugPrint('[Startup] Non-critical SyncManager initialization failure: $e');
+      debugPrint(st.toString());
+      // Continue startup, app will work in offline mode
+    }
 
     StartupDiagnostic.instance.logStage(StartupStage.running);
     StartupDiagnostic.instance.stopTimer();
@@ -176,6 +184,8 @@ Future<void> main() async {
       ),
     );
   } catch (e, st) {
+    debugPrint('[Startup] CRITICAL STARTUP ERROR: $e');
+    debugPrint(st.toString());
     StartupDiagnostic.instance.fail(e, st);
   }
 }

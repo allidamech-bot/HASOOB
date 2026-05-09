@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'sync_manager.dart';
 
 class SmartSyncTriggerService {
@@ -22,11 +23,24 @@ class SmartSyncTriggerService {
   SmartSyncTriggerService(this._syncManager);
 
   void initialize() {
-    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((List<ConnectivityResult> results) {
-      if (results.isNotEmpty && results.any((result) => result != ConnectivityResult.none)) {
-        onConnectivityRestored();
-      }
-    });
+    try {
+      _connectivitySubscription = Connectivity().onConnectivityChanged.listen((dynamic data) {
+        List<ConnectivityResult> results = [];
+        if (data is List<ConnectivityResult>) {
+          results = data;
+        } else if (data is List) {
+          results = data.whereType<ConnectivityResult>().toList();
+        } else if (data is ConnectivityResult) {
+          results = [data];
+        }
+
+        if (results.isNotEmpty && results.any((result) => result != ConnectivityResult.none)) {
+          onConnectivityRestored();
+        }
+      });
+    } catch (e) {
+      debugPrint('[SmartSync] Connectivity subscription error: $e');
+    }
   }
 
   void dispose() {
