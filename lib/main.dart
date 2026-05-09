@@ -50,7 +50,10 @@ class StartupDiagnostic {
   final ValueNotifier<StartupStage> stage = ValueNotifier(StartupStage.appStart);
   final ValueNotifier<String?> error = ValueNotifier(null);
   final ValueNotifier<int> elapsedSeconds = ValueNotifier(0);
+  final ValueNotifier<bool> degradedSync = ValueNotifier(false);
+  final ValueNotifier<String?> lastLog = ValueNotifier('App started');
   Timer? _timer;
+  Timer? _watchdog;
   String? lastTrace;
 
   void startTimer() {
@@ -58,14 +61,28 @@ class StartupDiagnostic {
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       elapsedSeconds.value = timer.tick;
     });
+
+    _watchdog?.cancel();
+    _watchdog = Timer(const Duration(seconds: 12), () {
+      if (stage.value != StartupStage.running && error.value == null) {
+        fail(
+          'Startup Watchdog Triggered: App hung for >12s at stage ${stage.value.name}. '
+          'Last log: ${lastLog.value}',
+          StackTrace.current,
+        );
+      }
+    });
   }
 
   void stopTimer() {
     _timer?.cancel();
+    _watchdog?.cancel();
   }
 
   void logStage(StartupStage newStage) {
-    debugPrint('[Startup] [${elapsedSeconds.value}s] === STAGE: ${newStage.name} ===');
+    final msg = '[Startup] [${elapsedSeconds.value}s] === STAGE: ${newStage.name} ===';
+    debugPrint(msg);
+    lastLog.value = msg;
     stage.value = newStage;
   }
 
@@ -163,14 +180,24 @@ Future<void> main() async {
     }
 
     StartupDiagnostic.instance.logStage(StartupStage.syncInit);
-    try {
-      // DEFENSIVE: Wrap sync initialization to prevent app hang
-      await SyncManager.instance.initialize().timeout(const Duration(seconds: 5));
-      debugPrint('[Startup] SyncManager initialized.');
-    } catch (e, st) {
-      debugPrint('[Startup] Non-critical SyncManager initialization failure: $e');
-      debugPrint(st.toString());
-      // Continue startup, app will work in offline mode
+    // NON-BLOCKING on web/mobile to prevent splash hang
+    if (kIsWeb || defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
+      unawaited(
+        SyncManager.instance.initialize().then((_) {
+          debugPrint('[Startup] SyncManager initialized (background).');
+        }).catchError((e, st) {
+          debugPrint('[Startup] SyncManager background initialization failure: $e');
+          StartupDiagnostic.instance.degradedSync.value = true;
+        })
+      );
+    } else {
+      try {
+        await SyncManager.instance.initialize().timeout(const Duration(seconds: 5));
+        debugPrint('[Startup] SyncManager initialized.');
+      } catch (e) {
+        debugPrint('[Startup] Non-critical SyncManager initialization failure: $e');
+        StartupDiagnostic.instance.degradedSync.value = true;
+      }
     }
 
     StartupDiagnostic.instance.logStage(StartupStage.running);
@@ -310,11 +337,13 @@ class _StartupDiagnosticApp extends StatelessWidget {
               StartupDiagnostic.instance.stage,
               StartupDiagnostic.instance.error,
               StartupDiagnostic.instance.elapsedSeconds,
+              StartupDiagnostic.instance.degradedSync,
             ]),
             builder: (context, _) {
               final error = StartupDiagnostic.instance.error.value;
               final stage = StartupDiagnostic.instance.stage.value;
               final seconds = StartupDiagnostic.instance.elapsedSeconds.value;
+              final degraded = StartupDiagnostic.instance.degradedSync.value;
 
               if (error != null) {
                 return _StartupErrorUI(error: error);
@@ -334,9 +363,16 @@ class _StartupDiagnosticApp extends StatelessWidget {
                     'Stage: ${stage.name} (${seconds}s)',
                     style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
                   ),
+                  if (degraded) ...[
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Degraded Sync Mode Active',
+                      style: TextStyle(color: Colors.orangeAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                    ),
+                  ],
                   const SizedBox(height: 48),
                   const Text(
-                    'Startup diagnostics v1',
+                    'Startup diagnostics v2',
                     style: TextStyle(color: Colors.white24, fontSize: 10),
                   ),
                 ],
@@ -355,6 +391,7 @@ class _StartupErrorUI extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final diag = StartupDiagnostic.instance;
     return Padding(
       padding: const EdgeInsets.all(32),
       child: Center(
@@ -368,18 +405,35 @@ class _StartupErrorUI extends StatelessWidget {
                 'Startup Failure',
                 style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
               ),
+              const SizedBox(height: 8),
+              Text(
+                'Stage: ${diag.stage.value.name} | Elapsed: ${diag.elapsedSeconds.value}s',
+                style: const TextStyle(color: Colors.white70, fontSize: 12),
+              ),
               const SizedBox(height: 16),
               Container(
+                width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   color: Colors.black.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
                 ),
-                child: Text(
-                  error,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.redAccent, fontSize: 14, fontFamily: 'monospace'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      error,
+                      style: const TextStyle(color: Colors.redAccent, fontSize: 14, fontFamily: 'monospace'),
+                    ),
+                    if (diag.lastLog.value != null) ...[
+                      const Divider(color: Colors.white10, height: 20),
+                      Text(
+                        'Last log: ${diag.lastLog.value}',
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11, fontFamily: 'monospace'),
+                      ),
+                    ],
+                  ],
                 ),
               ),
               const SizedBox(height: 24),
@@ -404,7 +458,7 @@ class _StartupErrorUI extends StatelessWidget {
                 ),
               const SizedBox(height: 24),
               const Text(
-                'Startup diagnostics v1',
+                'Startup diagnostics v2',
                 style: TextStyle(color: Colors.white24, fontSize: 10),
               ),
             ],
