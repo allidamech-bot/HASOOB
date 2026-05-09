@@ -29,11 +29,13 @@ import 'dart:io' as io;
 enum StartupStage {
   appStart('Starting...'),
   bindingInit('Binding Flutter...'),
-  sqfliteWebInit('Initializing Web Database...'),
+  dateInit('Initializing Date Format...'),
+  sqfliteWebInit('Initializing Web Database (WASM)...'),
   databaseInit('Connecting to Database...'),
   connectivityInit('Checking Network...'),
   firebaseInit('Initializing Firebase...'),
   controllersInit('Loading Theme/Locale...'),
+  analyticsInit('Setting up Analytics...'),
   syncInit('Starting Sync Engine...'),
   running('Running');
 
@@ -47,14 +49,28 @@ class StartupDiagnostic {
 
   final ValueNotifier<StartupStage> stage = ValueNotifier(StartupStage.appStart);
   final ValueNotifier<String?> error = ValueNotifier(null);
+  final ValueNotifier<int> elapsedSeconds = ValueNotifier(0);
+  Timer? _timer;
   String? lastTrace;
 
+  void startTimer() {
+    _timer?.cancel();
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      elapsedSeconds.value = timer.tick;
+    });
+  }
+
+  void stopTimer() {
+    _timer?.cancel();
+  }
+
   void logStage(StartupStage newStage) {
-    debugPrint('[Startup] === STAGE: ${newStage.name} ===');
+    debugPrint('[Startup] [${elapsedSeconds.value}s] === STAGE: ${newStage.name} ===');
     stage.value = newStage;
   }
 
   void fail(dynamic e, StackTrace stack) {
+    stopTimer();
     final errorMsg = e.toString();
     debugPrint('[Startup] !!! FAILED at stage ${stage.value.name}: $errorMsg');
     debugPrint(stack.toString());
@@ -64,6 +80,8 @@ class StartupDiagnostic {
 }
 
 Future<void> main() async {
+  StartupDiagnostic.instance.startTimer();
+
   // Global error catching for async errors
   PlatformDispatcher.instance.onError = (error, stack) {
     StartupDiagnostic.instance.fail(error, stack);
@@ -81,7 +99,9 @@ Future<void> main() async {
   try {
     StartupDiagnostic.instance.logStage(StartupStage.bindingInit);
     WidgetsFlutterBinding.ensureInitialized();
-    await initializeDateFormatting();
+
+    StartupDiagnostic.instance.logStage(StartupStage.dateInit);
+    await initializeDateFormatting().timeout(const Duration(seconds: 5));
 
     debugPrint('[Startup] Platform: kIsWeb=$kIsWeb');
 
@@ -92,11 +112,16 @@ Future<void> main() async {
         databaseFactory = databaseFactoryFfi;
       } else if (kIsWeb) {
         StartupDiagnostic.instance.logStage(StartupStage.sqfliteWebInit);
-        databaseFactory = createDatabaseFactoryFfiWeb(
-          options: SqfliteFfiWebOptions(
-            sqlite3WasmUri: Uri.parse('sqlite3.wasm'),
-          ),
-        );
+        // Timeout added for Web WASM init
+        databaseFactory = await Future.sync(() {
+          return createDatabaseFactoryFfiWeb(
+            options: SqfliteFfiWebOptions(
+              sqlite3WasmUri: Uri.parse('sqlite3.wasm'),
+            ),
+          );
+        }).timeout(const Duration(seconds: 10), onTimeout: () {
+          throw TimeoutException('SQLite WASM initialization timed out after 10s');
+        });
         debugPrint('[Startup] Web Database Factory set.');
       }
     } catch (e, st) {
@@ -106,31 +131,43 @@ Future<void> main() async {
 
     StartupDiagnostic.instance.logStage(StartupStage.connectivityInit);
     try {
-      await ConnectivityService.instance.initialize();
+      await ConnectivityService.instance.initialize().timeout(const Duration(seconds: 5));
     } catch (e) {
       debugPrint('Non-critical Connectivity error: $e');
     }
 
     StartupDiagnostic.instance.logStage(StartupStage.firebaseInit);
-    final bootstrapResult = await FirebaseBootstrap.initialize();
+    final bootstrapResult = await FirebaseBootstrap.initialize().timeout(const Duration(seconds: 10), onTimeout: () {
+      throw TimeoutException('Firebase initialization timed out after 10s');
+    });
 
     StartupDiagnostic.instance.logStage(StartupStage.controllersInit);
-    final themeController = await AppThemeController.load();
-    final localeController = await AppLocaleController.load();
+    final results = await Future.wait([
+      AppThemeController.load(),
+      AppLocaleController.load(),
+    ]).timeout(const Duration(seconds: 5));
+    
+    final themeController = results[0] as AppThemeController;
+    final localeController = results[1] as AppLocaleController;
 
     if (bootstrapResult.isConfigured) {
+      StartupDiagnostic.instance.logStage(StartupStage.analyticsInit);
       try {
-        await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true);
-        await FirebaseAnalytics.instance.logEvent(name: 'app_open_custom');
+        await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true).timeout(const Duration(seconds: 3));
+        await FirebaseAnalytics.instance.logEvent(name: 'app_open_custom').timeout(const Duration(seconds: 3));
       } catch (e) {
-        debugPrint('Firebase Analytics error: $e');
+        debugPrint('Non-critical Analytics error: $e');
       }
     }
 
     StartupDiagnostic.instance.logStage(StartupStage.syncInit);
-    unawaited(SyncManager.instance.initialize());
+    // SyncManager initialization shouldn't block the main UI if possible, 
+    // but we await it here as per existing logic.
+    await SyncManager.instance.initialize().timeout(const Duration(seconds: 5));
 
     StartupDiagnostic.instance.logStage(StartupStage.running);
+    StartupDiagnostic.instance.stopTimer();
+
     runApp(
       HasoobApp(
         bootstrapResult: bootstrapResult,
@@ -262,10 +299,12 @@ class _StartupDiagnosticApp extends StatelessWidget {
             listenable: Listenable.merge([
               StartupDiagnostic.instance.stage,
               StartupDiagnostic.instance.error,
+              StartupDiagnostic.instance.elapsedSeconds,
             ]),
             builder: (context, _) {
               final error = StartupDiagnostic.instance.error.value;
               final stage = StartupDiagnostic.instance.stage.value;
+              final seconds = StartupDiagnostic.instance.elapsedSeconds.value;
 
               if (error != null) {
                 return _StartupErrorUI(error: error);
@@ -282,8 +321,13 @@ class _StartupDiagnosticApp extends StatelessWidget {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Stage: ${stage.name}',
+                    'Stage: ${stage.name} (${seconds}s)',
                     style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+                  ),
+                  const SizedBox(height: 48),
+                  const Text(
+                    'Startup diagnostics v1',
+                    style: TextStyle(color: Colors.white24, fontSize: 10),
                   ),
                 ],
               );
@@ -303,50 +347,59 @@ class _StartupErrorUI extends StatelessWidget {
   Widget build(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          const Icon(Icons.error_outline_rounded, color: Colors.red, size: 64),
-          const SizedBox(height: 24),
-          const Text(
-            'Startup Failure',
-            style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+      child: Center(
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline_rounded, color: Colors.red, size: 64),
+              const SizedBox(height: 24),
+              const Text(
+                'Startup Failure',
+                style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
+                ),
+                child: Text(
+                  error,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.redAccent, fontSize: 14, fontFamily: 'monospace'),
+                ),
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Please refresh the page or try a different browser.\nIf on mobile, ensure your browser supports WebAssembly.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 32),
+              if (!kIsWeb)
+                ElevatedButton(
+                  onPressed: () => io.exit(1),
+                  child: const Text('Close App'),
+                ),
+              if (kIsWeb)
+                TextButton.icon(
+                  onPressed: () => StartupDiagnostic.instance.lastTrace != null 
+                    ? debugPrint(StartupDiagnostic.instance.lastTrace) 
+                    : null,
+                  icon: const Icon(Icons.bug_report_outlined),
+                  label: const Text('Print Trace to Console'),
+                ),
+              const SizedBox(height: 24),
+              const Text(
+                'Startup diagnostics v1',
+                style: TextStyle(color: Colors.white24, fontSize: 10),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.black.withValues(alpha: 0.3),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.red.withValues(alpha: 0.5)),
-            ),
-            child: Text(
-              error,
-              textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.redAccent, fontSize: 14, fontFamily: 'monospace'),
-            ),
-          ),
-          const SizedBox(height: 24),
-          const Text(
-            'Please refresh the page or try a different browser.\nIf on mobile, ensure your browser supports WebAssembly.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white70, fontSize: 13),
-          ),
-          const SizedBox(height: 32),
-          if (!kIsWeb)
-            ElevatedButton(
-              onPressed: () => io.exit(1),
-              child: const Text('Close App'),
-            ),
-          if (kIsWeb)
-            TextButton.icon(
-              onPressed: () => StartupDiagnostic.instance.lastTrace != null 
-                ? debugPrint(StartupDiagnostic.instance.lastTrace) 
-                : null,
-              icon: const Icon(Icons.bug_report_outlined),
-              label: const Text('Print Trace to Console'),
-            ),
-        ],
+        ),
       ),
     );
   }
