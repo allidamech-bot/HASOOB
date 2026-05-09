@@ -60,114 +60,120 @@ class DBHelper {
   ];
 
   static Future<Database> database() async {
-    String path;
-    if (kIsWeb) {
-      path = _databaseName;
-    } else {
-      final dbPath = await getDatabasesPath();
-      path = join(dbPath, _databaseName);
+    try {
+      String path;
+      if (kIsWeb) {
+        path = _databaseName;
+      } else {
+        final dbPath = await getDatabasesPath();
+        path = join(dbPath, _databaseName);
+      }
+
+      return await openDatabase(
+        path,
+        version: _databaseVersion,
+        onConfigure: (db) async {
+          await db.execute('PRAGMA foreign_keys = ON;');
+        },
+        onCreate: (db, version) async {
+          await _createSchema(db);
+        },
+        onUpgrade: (db, oldVersion, newVersion) async {
+          debugPrint('Upgrading database from $oldVersion to $newVersion');
+          if (oldVersion < 2) {
+            await db.execute('''
+              CREATE TABLE IF NOT EXISTS sales_records(
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                product_id TEXT,
+                product_name TEXT,
+                qty INTEGER,
+                selling_price REAL,
+                landed_cost REAL,
+                total_sale REAL,
+                total_profit REAL,
+                date TEXT
+              )
+            ''');
+          }
+
+          if (oldVersion < 3) {
+            await _upgradeToV3(db);
+          }
+
+          if (oldVersion < 4) {
+            await _upgradeToV4(db);
+          }
+
+          if (oldVersion < 5) {
+            await _upgradeToV5(db);
+          }
+
+          if (oldVersion < 6) {
+            await _upgradeToV6(db);
+          }
+
+          if (oldVersion < 7) {
+            await _upgradeToV7(db);
+          }
+
+          if (oldVersion < 8) {
+            await _upgradeToV8(db);
+          }
+
+          if (oldVersion < 9) {
+            await _upgradeToV9(db);
+          }
+
+          if (oldVersion < 10) {
+            await _upgradeToV10(db);
+          }
+
+          if (oldVersion < 11) {
+            await _upgradeToV11(db);
+          }
+
+          if (oldVersion < 12) {
+            await _upgradeToV12(db);
+          }
+
+          if (oldVersion < 13) {
+            // V13 placeholder
+          }
+
+          if (oldVersion < 14) {
+            await _upgradeToV14(db);
+          }
+
+          if (oldVersion < 15) {
+            await _upgradeToV15(db);
+          }
+
+          if (oldVersion < 16) {
+            await _upgradeToV16(db);
+          }
+
+          if (oldVersion < 17) {
+            await _upgradeToV17(db);
+          }
+
+          if (oldVersion < 18) {
+            await _upgradeToV18(db);
+          }
+
+          if (oldVersion < 19) {
+            await _upgradeToV19(db);
+          }
+
+          await _repairAccountNamesForV12(db);
+        },
+        onOpen: (db) async {
+          await _createPerformanceIndexes(db);
+        },
+      );
+    } catch (e) {
+      debugPrint('Database error: $e');
+      rethrow;
     }
-
-    return openDatabase(
-      path,
-      version: _databaseVersion,
-      onConfigure: (db) async {
-        await db.execute('PRAGMA foreign_keys = ON;');
-      },
-      onCreate: (db, version) async {
-        await _createSchema(db);
-      },
-      onUpgrade: (db, oldVersion, newVersion) async {
-        if (oldVersion < 2) {
-          await db.execute('''
-            CREATE TABLE IF NOT EXISTS sales_records(
-              id INTEGER PRIMARY KEY AUTOINCREMENT,
-              product_id TEXT,
-              product_name TEXT,
-              qty INTEGER,
-              selling_price REAL,
-              landed_cost REAL,
-              total_sale REAL,
-              total_profit REAL,
-              date TEXT
-            )
-          ''');
-        }
-
-        if (oldVersion < 3) {
-          await _upgradeToV3(db);
-        }
-
-        if (oldVersion < 4) {
-          await _upgradeToV4(db);
-        }
-
-        if (oldVersion < 5) {
-          await _upgradeToV5(db);
-        }
-
-        if (oldVersion < 6) {
-          await _upgradeToV6(db);
-        }
-
-        if (oldVersion < 7) {
-          await _upgradeToV7(db);
-        }
-
-        if (oldVersion < 8) {
-          await _upgradeToV8(db);
-        }
-
-        if (oldVersion < 9) {
-          await _upgradeToV9(db);
-        }
-
-        if (oldVersion < 10) {
-          await _upgradeToV10(db);
-        }
-
-        if (oldVersion < 11) {
-          await _upgradeToV11(db);
-        }
-
-        if (oldVersion < 12) {
-          await _upgradeToV12(db);
-        }
-
-        if (oldVersion < 13) {
-          // V13 placeholder or migration logic
-        }
-
-        if (oldVersion < 14) {
-          await _upgradeToV14(db);
-        }
-
-        if (oldVersion < 15) {
-          await _upgradeToV15(db);
-        }
-
-        if (oldVersion < 16) {
-          await _upgradeToV16(db);
-        }
-
-        if (oldVersion < 17) {
-          await _upgradeToV17(db);
-        }
-
-        if (oldVersion < 18) {
-          await _upgradeToV18(db);
-        }
-
-        if (oldVersion < 19) {
-          await _upgradeToV19(db);
-        }
-
-        await _repairAccountNamesForV12(db);
-      },
-      onOpen: (db) async {
-        await _createPerformanceIndexes(db);
-      },
-    );
   }
 
   static Future<void> _repairAccountNamesForV12(Database db) async {
