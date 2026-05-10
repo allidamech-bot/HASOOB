@@ -5,7 +5,7 @@ if (typeof logDiagnostic === 'function') {
   logDiagnostic("flutter.js loaded");
 }
 
-// Strictly force HTML renderer for iOS Safari before any loading
+// Exactly once at top-level
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);

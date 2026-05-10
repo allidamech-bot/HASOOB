@@ -195,9 +195,9 @@
     }
 
     // Forced fallback for iOS Safari
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
                   (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (isIOS) {
+    if (isIOSDevice) {
       logDiagnostic("iOS detected - arming 8s splash fallback");
       setTimeout(() => {
         if (document.getElementById("splash")) {
