@@ -5,18 +5,23 @@ if (typeof logDiagnostic === 'function') {
   logDiagnostic("flutter.js loaded");
 }
 
+// Strictly force HTML renderer for iOS Safari before any loading
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+              (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+
+if (isIOS && isSafari) {
+    window.flutterWebRenderer = "html";
+}
+
 (function() {
   try {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
     let swSettings = {
       serviceWorkerVersion: {{flutter_service_worker_version}},
     };
 
     if (isIOS && isSafari) {
-      if (typeof logDiagnostic === 'function') logDiagnostic("iOS Safari: Disabling SW & forcing HTML");
+      if (typeof logDiagnostic === 'function') logDiagnostic("iOS Safari detected: strictly forcing HTML mode");
       swSettings = null; // Disable service worker registration on iOS Safari
     }
 
@@ -34,15 +39,10 @@ if (typeof logDiagnostic === 'function') {
           renderer: (isIOS && isSafari) ? "html" : "auto",
         };
 
-        // Aggressively disable CanvasKit/Skwasm for iOS Safari
-        if (isIOS && isSafari) {
-          window.flutterWebRenderer = "html";
-        }
-
         try {
           const appRunner = await engineInitializer.initializeEngine(config);
 
-          if (typeof logDiagnostic === 'function') logDiagnostic("engine initialized");
+          if (typeof logDiagnostic === 'function') logDiagnostic("engine initialized (renderer=" + config.renderer + ")");
           if (typeof inspectDOM === 'function') inspectDOM();
 
           await appRunner.runApp();
@@ -60,6 +60,20 @@ if (typeof logDiagnostic === 'function') {
                       fv.style.setProperty('z-index', '0', 'important');
                       logDiagnostic("Applied post-runApp style patch");
                   }
+
+                  // Patch flt elements
+                  const fltTags = ['flt-glass-pane', 'flt-scene-host', 'flt-platform-view'];
+                  fltTags.forEach(tag => {
+                      const el = document.querySelector(tag);
+                      if (el) {
+                          el.style.setProperty('display', 'block', 'important');
+                          el.style.setProperty('width', '100%', 'important');
+                          el.style.setProperty('height', '100%', 'important');
+                          el.style.setProperty('visibility', 'visible', 'important');
+                          el.style.setProperty('opacity', '1', 'important');
+                      }
+                  });
+
                   if (typeof inspectDOM === 'function') inspectDOM();
               }, 500);
 

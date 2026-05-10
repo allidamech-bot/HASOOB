@@ -43,21 +43,22 @@
       min-height: -webkit-fill-available;
     }
 
-    flutter-view {
+    flutter-view, flt-glass-pane, flt-scene-host, flt-platform-view {
       display: block !important;
       width: 100% !important;
       height: 100% !important;
       position: absolute !important;
       inset: 0 !important;
-      background: #1a1a1a !important; /* Debug background */
       visibility: visible !important;
       opacity: 1 !important;
     }
 
+    flutter-view {
+      background: #1a1a1a !important; /* Debug background */
+    }
+
     flt-glass-pane {
-        display: block !important;
-        width: 100% !important;
-        height: 100% !important;
+        background: rgba(255, 0, 0, 0.1) !important; /* Red debug tint */
     }
 
     #diagnostics {
@@ -130,6 +131,8 @@
     }
   </style>
   <script id="splash-screen-script">
+    window.flutterWebRenderer = "html"; // Early force HTML
+
     function logDiagnostic(msg) {
       console.log("[Diagnostic] " + msg);
       var diag = document.getElementById('diagnostics');
@@ -146,24 +149,23 @@
       const canvas = document.querySelector('canvas');
       const bodyChildren = document.body.children.length;
 
+      // Find all flt-* elements
+      const allElements = document.querySelectorAll('*');
+      const fltElements = Array.from(allElements)
+        .filter(el => el.tagName.toLowerCase().startsWith('flt-'))
+        .map(el => el.tagName.toLowerCase());
+
       let viewInfo = "none";
       if (flutterView) {
         const rect = flutterView.getBoundingClientRect();
         const style = window.getComputedStyle(flutterView);
-        viewInfo = `${rect.width}x${rect.height}, v=${style.visibility}, d=${style.display}, z=${style.zIndex}, op=${style.opacity}`;
-
-        // Force styles if missing
-        if (rect.height === 0 || style.display === 'none') {
-            flutterView.style.setProperty('display', 'block', 'important');
-            flutterView.style.setProperty('width', '100%', 'important');
-            flutterView.style.setProperty('height', '100%', 'important');
-            logDiagnostic("Forced flutter-view styles");
-        }
+        viewInfo = `${rect.width}x${rect.height}, v=${style.visibility}, d=${style.display}`;
       }
 
       const bodyRect = document.body.getBoundingClientRect();
       logDiagnostic(`Body: ${bodyRect.width}x${bodyRect.height}`);
       logDiagnostic(`f-view: ${viewInfo}`);
+      logDiagnostic(`FLT nodes (${fltElements.length}): ${fltElements.join(',') || 'none'}`);
       logDiagnostic(`DOM: canvas=${!!canvas}, children=${bodyChildren}`);
     }
 
