@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:ui';
+// ignore: avoid_web_libraries_in_flutter
+import 'dart:js' as js;
 
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
@@ -244,6 +246,17 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
+
+    if (kIsWeb) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        try {
+          js.context.callMethod('logDiagnostic', ['first Flutter frame rendered']);
+          js.context.callMethod('removeSplashFromWeb');
+        } catch (e) {
+          debugPrint('Failed to call JS diagnostics: $e');
+        }
+      });
+    }
 
     SmartSyncTriggerService.init(SyncManager.instance);
     _smartSyncTriggerService = SmartSyncTriggerService.instance;

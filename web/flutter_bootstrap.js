@@ -20,7 +20,10 @@ if (typeof logDiagnostic === 'function') {
       swSettings = null; // Disable service worker registration on iOS Safari
     }
 
-    if (typeof logDiagnostic === 'function') logDiagnostic("loader started");
+    if (typeof logDiagnostic === 'function') {
+        logDiagnostic("loader started");
+        if (typeof inspectDOM === 'function') inspectDOM();
+    }
 
     _flutter.loader.load({
       serviceWorkerSettings: swSettings,
@@ -40,15 +43,20 @@ if (typeof logDiagnostic === 'function') {
           const appRunner = await engineInitializer.initializeEngine(config);
 
           if (typeof logDiagnostic === 'function') logDiagnostic("engine initialized");
+          if (typeof inspectDOM === 'function') inspectDOM();
 
           await appRunner.runApp();
 
-          if (typeof logDiagnostic === 'function') logDiagnostic("runApp called");
+          if (typeof logDiagnostic === 'function') {
+              logDiagnostic("runApp called");
+              setTimeout(() => {
+                  if (typeof inspectDOM === 'function') inspectDOM();
+              }, 1000);
+          }
         } catch (e) {
           if (typeof logDiagnostic === 'function') logDiagnostic("Engine init error: " + e);
           console.error("Flutter initialization failed:", e);
 
-          // Fallback mechanism if initialization failed even with current settings
           if (config.renderer !== "html") {
             if (typeof logDiagnostic === 'function') logDiagnostic("Attempting fallback to HTML...");
             try {
