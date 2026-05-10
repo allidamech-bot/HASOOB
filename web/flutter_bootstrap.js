@@ -50,8 +50,22 @@ if (typeof logDiagnostic === 'function') {
           if (typeof logDiagnostic === 'function') {
               logDiagnostic("runApp called");
               setTimeout(() => {
+                  const fv = document.querySelector('flutter-view');
+                  if (fv) {
+                      fv.style.setProperty('display', 'block', 'important');
+                      fv.style.setProperty('width', '100vw', 'important');
+                      fv.style.setProperty('height', '100vh', 'important');
+                      fv.style.setProperty('position', 'fixed', 'important');
+                      fv.style.setProperty('inset', '0', 'important');
+                      fv.style.setProperty('z-index', '0', 'important');
+                      logDiagnostic("Applied post-runApp style patch");
+                  }
                   if (typeof inspectDOM === 'function') inspectDOM();
-              }, 1000);
+              }, 500);
+
+              setTimeout(() => {
+                  if (typeof inspectDOM === 'function') inspectDOM();
+              }, 2000);
           }
         } catch (e) {
           if (typeof logDiagnostic === 'function') logDiagnostic("Engine init error: " + e);

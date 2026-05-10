@@ -30,15 +30,34 @@
   <title>hasoob_app</title>
   <link rel="manifest" href="manifest.json">
   <style id="splash-screen-style">
-    html {
-      height: 100%
+    html, body {
+      height: 100%;
+      width: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+      background-color: #0B1020;
+      position: fixed;
+      inset: 0;
+      /* Safari specific */
+      min-height: -webkit-fill-available;
     }
 
-    body {
-      margin: 0;
-      min-height: 100%;
-      background-color: #0B1020;
-          background-size: 100% 100%;
+    flutter-view {
+      display: block !important;
+      width: 100% !important;
+      height: 100% !important;
+      position: absolute !important;
+      inset: 0 !important;
+      background: #1a1a1a !important; /* Debug background */
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    flt-glass-pane {
+        display: block !important;
+        width: 100% !important;
+        height: 100% !important;
     }
 
     #diagnostics {
@@ -126,7 +145,26 @@
       const flutterView = document.querySelector('flutter-view');
       const canvas = document.querySelector('canvas');
       const bodyChildren = document.body.children.length;
-      logDiagnostic(`DOM: f-view=${!!flutterView}, canvas=${!!canvas}, children=${bodyChildren}`);
+
+      let viewInfo = "none";
+      if (flutterView) {
+        const rect = flutterView.getBoundingClientRect();
+        const style = window.getComputedStyle(flutterView);
+        viewInfo = `${rect.width}x${rect.height}, v=${style.visibility}, d=${style.display}, z=${style.zIndex}, op=${style.opacity}`;
+
+        // Force styles if missing
+        if (rect.height === 0 || style.display === 'none') {
+            flutterView.style.setProperty('display', 'block', 'important');
+            flutterView.style.setProperty('width', '100%', 'important');
+            flutterView.style.setProperty('height', '100%', 'important');
+            logDiagnostic("Forced flutter-view styles");
+        }
+      }
+
+      const bodyRect = document.body.getBoundingClientRect();
+      logDiagnostic(`Body: ${bodyRect.width}x${bodyRect.height}`);
+      logDiagnostic(`f-view: ${viewInfo}`);
+      logDiagnostic(`DOM: canvas=${!!canvas}, children=${bodyChildren}`);
     }
 
     window.onerror = function(message, source, lineno, colno, error) {
