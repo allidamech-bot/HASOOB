@@ -7,7 +7,6 @@ if (typeof logDiagnostic === 'function') {
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const preferredRenderer = isIOS ? "canvaskit" : "auto";
 
 (function() {
   try {
@@ -29,10 +28,23 @@ const preferredRenderer = isIOS ? "canvaskit" : "auto";
       onEntrypointLoaded: async function(engineInitializer) {
         if (typeof logDiagnostic === 'function') logDiagnostic("engine initializer received");
 
-        const renderersToTry = preferredRenderer === "canvaskit"
-          ? ["canvaskit", "auto", "html"]
-          : ["auto", "canvaskit", "html"];
+        if (!isIOS) {
+          try {
+            if (typeof logDiagnostic === 'function') logDiagnostic("initializeEngine(renderer=auto)");
+            const appRunner = await engineInitializer.initializeEngine({ renderer: "auto" });
+            if (typeof logDiagnostic === 'function') logDiagnostic("engine initialized (renderer=auto)");
+            await appRunner.runApp();
+            if (typeof logDiagnostic === 'function') logDiagnostic("runApp called");
+            return;
+          } catch (e) {
+            if (typeof logDiagnostic === 'function') logDiagnostic("Engine init error (renderer=auto): " + e);
+            console.error("Flutter initialization failed (renderer=auto):", e);
+            showFatalError(e);
+            return;
+          }
+        }
 
+        const renderersToTry = ["canvaskit", "auto", "html"];
         let lastError = null;
         for (const renderer of renderersToTry) {
           try {
