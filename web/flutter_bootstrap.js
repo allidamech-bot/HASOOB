@@ -16,7 +16,6 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
 
     if (isIOS) {
       if (typeof logDiagnostic === 'function') logDiagnostic("iOS detected: preferring CanvasKit renderer");
-      swSettings = null; // Disable service worker registration on iOS Safari
     }
 
     if (typeof logDiagnostic === 'function') {
