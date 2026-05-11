@@ -37,28 +37,6 @@
       padding: 0;
       overflow: hidden;
       background-color: #0B1020;
-      position: fixed;
-      inset: 0;
-      /* Safari specific */
-      min-height: -webkit-fill-available;
-    }
-
-    flutter-view, flt-glass-pane, flt-scene-host, flt-platform-view {
-      display: block !important;
-      width: 100% !important;
-      height: 100% !important;
-      position: absolute !important;
-      inset: 0 !important;
-      visibility: visible !important;
-      opacity: 1 !important;
-    }
-
-    flutter-view {
-      background: #1a1a1a !important; /* Debug background */
-    }
-
-    flt-glass-pane {
-        background: rgba(255, 0, 0, 0.1) !important; /* Red debug tint */
     }
 
     #diagnostics {
@@ -131,8 +109,6 @@
     }
   </style>
   <script id="splash-screen-script">
-    window.flutterWebRenderer = "html"; // Early force HTML
-
     function logDiagnostic(msg) {
       console.log("[Diagnostic] " + msg);
       var diag = document.getElementById('diagnostics');
@@ -142,31 +118,6 @@
         diag.appendChild(line);
         diag.scrollTop = diag.scrollHeight;
       }
-    }
-
-    function inspectDOM() {
-      const flutterView = document.querySelector('flutter-view');
-      const canvas = document.querySelector('canvas');
-      const bodyChildren = document.body.children.length;
-
-      // Find all flt-* elements
-      const allElements = document.querySelectorAll('*');
-      const fltElements = Array.from(allElements)
-        .filter(el => el.tagName.toLowerCase().startsWith('flt-'))
-        .map(el => el.tagName.toLowerCase());
-
-      let viewInfo = "none";
-      if (flutterView) {
-        const rect = flutterView.getBoundingClientRect();
-        const style = window.getComputedStyle(flutterView);
-        viewInfo = `${rect.width}x${rect.height}, v=${style.visibility}, d=${style.display}`;
-      }
-
-      const bodyRect = document.body.getBoundingClientRect();
-      logDiagnostic(`Body: ${bodyRect.width}x${bodyRect.height}`);
-      logDiagnostic(`f-view: ${viewInfo}`);
-      logDiagnostic(`FLT nodes (${fltElements.length}): ${fltElements.join(',') || 'none'}`);
-      logDiagnostic(`DOM: canvas=${!!canvas}, children=${bodyChildren}`);
     }
 
     window.onerror = function(message, source, lineno, colno, error) {
@@ -191,20 +142,6 @@
         branding.remove();
       }
       document.body.style.background = "transparent";
-      inspectDOM();
-    }
-
-    // Forced fallback for iOS Safari
-    const isIOSDevice = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
-                  (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-    if (isIOSDevice) {
-      logDiagnostic("iOS detected - arming 8s splash fallback");
-      setTimeout(() => {
-        if (document.getElementById("splash")) {
-          logDiagnostic("Fallback: 8s elapsed, forcing splash removal");
-          removeSplashFromWeb();
-        }
-      }, 8000);
     }
 
     logDiagnostic("index loaded");
@@ -226,7 +163,7 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" async=""></script>
+  <script src="flutter_bootstrap.js" defer=""></script>
 
 
 </body></html>

@@ -3,6 +3,17 @@
   "installCommand": "git clone https://github.com/flutter/flutter.git -b stable --depth 1 .vercel/flutter && ./.vercel/flutter/bin/flutter config --enable-web && ./.vercel/flutter/bin/flutter pub get",
   "buildCommand": "./.vercel/flutter/bin/flutter build web --release",
   "outputDirectory": "build/web",
+  "headers": [
+    {
+      "source": "/(.*)\\.wasm",
+      "headers": [
+        {
+          "key": "Content-Type",
+          "value": "application/wasm"
+        }
+      ]
+    }
+  ],
   "rewrites": [
     {
       "source": "/(.*)",
