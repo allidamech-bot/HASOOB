@@ -5,14 +5,9 @@ if (typeof logDiagnostic === 'function') {
   logDiagnostic("flutter.js loaded");
 }
 
-// Exactly once at top-level
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
               (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
-const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-
-if (isIOS && isSafari) {
-    window.flutterWebRenderer = "html";
-}
+const preferredRenderer = isIOS ? "canvaskit" : "auto";
 
 (function() {
   try {
@@ -20,14 +15,13 @@ if (isIOS && isSafari) {
       serviceWorkerVersion: {{flutter_service_worker_version}},
     };
 
-    if (isIOS && isSafari) {
-      if (typeof logDiagnostic === 'function') logDiagnostic("iOS Safari detected: strictly forcing HTML mode");
+    if (isIOS) {
+      if (typeof logDiagnostic === 'function') logDiagnostic("iOS detected: preferring CanvasKit renderer");
       swSettings = null; // Disable service worker registration on iOS Safari
     }
 
     if (typeof logDiagnostic === 'function') {
         logDiagnostic("loader started");
-        if (typeof inspectDOM === 'function') inspectDOM();
     }
 
     _flutter.loader.load({
@@ -35,70 +29,27 @@ if (isIOS && isSafari) {
       onEntrypointLoaded: async function(engineInitializer) {
         if (typeof logDiagnostic === 'function') logDiagnostic("engine initializer received");
 
-        let config = {
-          renderer: (isIOS && isSafari) ? "html" : "auto",
-        };
+        const renderersToTry = preferredRenderer === "canvaskit"
+          ? ["canvaskit", "auto", "html"]
+          : ["auto", "canvaskit", "html"];
 
-        try {
-          const appRunner = await engineInitializer.initializeEngine(config);
-
-          if (typeof logDiagnostic === 'function') logDiagnostic("engine initialized (renderer=" + config.renderer + ")");
-          if (typeof inspectDOM === 'function') inspectDOM();
-
-          await appRunner.runApp();
-
-          if (typeof logDiagnostic === 'function') {
-              logDiagnostic("runApp called");
-              setTimeout(() => {
-                  const fv = document.querySelector('flutter-view');
-                  if (fv) {
-                      fv.style.setProperty('display', 'block', 'important');
-                      fv.style.setProperty('width', '100vw', 'important');
-                      fv.style.setProperty('height', '100vh', 'important');
-                      fv.style.setProperty('position', 'fixed', 'important');
-                      fv.style.setProperty('inset', '0', 'important');
-                      fv.style.setProperty('z-index', '0', 'important');
-                      logDiagnostic("Applied post-runApp style patch");
-                  }
-
-                  // Patch flt elements
-                  const fltTags = ['flt-glass-pane', 'flt-scene-host', 'flt-platform-view'];
-                  fltTags.forEach(tag => {
-                      const el = document.querySelector(tag);
-                      if (el) {
-                          el.style.setProperty('display', 'block', 'important');
-                          el.style.setProperty('width', '100%', 'important');
-                          el.style.setProperty('height', '100%', 'important');
-                          el.style.setProperty('visibility', 'visible', 'important');
-                          el.style.setProperty('opacity', '1', 'important');
-                      }
-                  });
-
-                  if (typeof inspectDOM === 'function') inspectDOM();
-              }, 500);
-
-              setTimeout(() => {
-                  if (typeof inspectDOM === 'function') inspectDOM();
-              }, 2000);
-          }
-        } catch (e) {
-          if (typeof logDiagnostic === 'function') logDiagnostic("Engine init error: " + e);
-          console.error("Flutter initialization failed:", e);
-
-          if (config.renderer !== "html") {
-            if (typeof logDiagnostic === 'function') logDiagnostic("Attempting fallback to HTML...");
-            try {
-              const appRunner = await engineInitializer.initializeEngine({
-                renderer: "html",
-              });
-              await appRunner.runApp();
-            } catch (retryError) {
-              showFatalError(retryError);
-            }
-          } else {
-            showFatalError(e);
+        let lastError = null;
+        for (const renderer of renderersToTry) {
+          try {
+            if (typeof logDiagnostic === 'function') logDiagnostic("initializeEngine(renderer=" + renderer + ")");
+            const appRunner = await engineInitializer.initializeEngine({ renderer });
+            if (typeof logDiagnostic === 'function') logDiagnostic("engine initialized (renderer=" + renderer + ")");
+            await appRunner.runApp();
+            if (typeof logDiagnostic === 'function') logDiagnostic("runApp called");
+            return;
+          } catch (e) {
+            lastError = e;
+            if (typeof logDiagnostic === 'function') logDiagnostic("Engine init error (renderer=" + renderer + "): " + e);
+            console.error("Flutter initialization failed (renderer=" + renderer + "):", e);
           }
         }
+
+        showFatalError(lastError);
       }
     });
   } catch (err) {
