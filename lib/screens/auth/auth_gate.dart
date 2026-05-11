@@ -2,6 +2,7 @@ import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/business/business_context.dart';
 import '../../core/app_theme.dart';
 import '../../data/services/auth_service.dart';
 import '../main_navigation_screen.dart';
@@ -31,6 +32,20 @@ class _AuthGateState extends State<AuthGate> {
         }
 
         if (snapshot.data != null) {
+          final user = snapshot.data!;
+          var isBusinessReady = true;
+          try {
+            BusinessContext.businessId;
+          } catch (_) {
+            isBusinessReady = false;
+          }
+          if (!isBusinessReady) {
+            BusinessContext.initialize(
+              businessId: user.uid,
+              userId: user.uid,
+              role: 'owner',
+            );
+          }
           return const MainNavigationScreen();
         }
 
