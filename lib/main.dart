@@ -1,8 +1,7 @@
 // ignore_for_file: deprecated_member_use
 import 'dart:async';
 import 'dart:ui';
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:js' as js;
+import 'dart:io' as io;
 
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
@@ -21,13 +20,9 @@ import 'data/services/firebase_bootstrap.dart';
 import 'data/services/sync_manager.dart';
 import 'data/services/smart_sync_trigger_service.dart';
 import 'l10n/app_localizations.dart';
-// import 'screens/auth/auth_gate.dart';
-// import 'screens/auth/firebase_setup_screen.dart';
 import 'screens/sync_center_screen.dart';
 import 'core/services/connectivity_service.dart';
-
-// ignore: avoid_web_libraries_in_flutter
-import 'dart:io' as io;
+import 'core/utils/web_utils.dart';
 
 enum StartupStage {
   appStart('Starting...'),
@@ -66,10 +61,10 @@ class StartupDiagnostic {
     });
 
     _watchdog?.cancel();
-    _watchdog = Timer(const Duration(seconds: 12), () {
+    _watchdog = Timer(const Duration(seconds: 15), () {
       if (stage.value != StartupStage.running && error.value == null) {
         fail(
-          'Startup Watchdog Triggered: App hung for >12s at stage ${stage.value.name}. '
+          'Startup Watchdog Triggered: App hung for >15s at stage ${stage.value.name}. '
           'Last log: ${lastLog.value}',
           StackTrace.current,
         );
@@ -114,8 +109,6 @@ Future<void> main() async {
     StartupDiagnostic.instance.fail(details.exception, details.stack ?? StackTrace.current);
   };
 
-  runApp(const _StartupDiagnosticApp());
-
   try {
     StartupDiagnostic.instance.logStage(StartupStage.bindingInit);
     WidgetsFlutterBinding.ensureInitialized();
@@ -124,91 +117,20 @@ Future<void> main() async {
     await initializeDateFormatting().timeout(const Duration(seconds: 5));
 
     debugPrint('[Startup] Environment: kIsWeb=$kIsWeb, Platform=${defaultTargetPlatform.name}');
-    if (kIsWeb) {
-      // Use platform dispatcher or similar if window is restricted
-      debugPrint('[Startup] Web Detection: mobile=${defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS}');
-    }
 
-    try {
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
-        StartupDiagnostic.instance.logStage(StartupStage.databaseInit);
-        sqfliteFfiInit();
-        databaseFactory = databaseFactoryFfi;
-      } else if (kIsWeb) {
-        StartupDiagnostic.instance.logStage(StartupStage.sqfliteWebInit);
-        databaseFactory = await Future.sync(() {
-          return createDatabaseFactoryFfiWeb(
-            options: SqfliteFfiWebOptions(
-              sqlite3WasmUri: Uri.parse('sqlite3.wasm'),
-              // On iOS Safari, SharedWorkers can be unreliable or blocked in some contexts.
-              // Forcing a basic worker improves compatibility on mobile Safari.
-              // ignore: invalid_use_of_visible_for_testing_member
-              forceAsBasicWorker: defaultTargetPlatform == TargetPlatform.iOS,
-            ),
-          );
-        }).timeout(const Duration(seconds: 20), onTimeout: () {
-          throw TimeoutException('SQLite WASM initialization timed out after 20s');
-        });
-        debugPrint('[Startup] Web Database Factory set.');
-      }
-    } catch (e, st) {
-      StartupDiagnostic.instance.fail('DB Factory Init: $e', st);
-      return;
-    }
-
-    StartupDiagnostic.instance.logStage(StartupStage.connectivityInit);
-    try {
-      await ConnectivityService.instance.initialize().timeout(const Duration(seconds: 5));
-      debugPrint('[Startup] ConnectivityService initialized.');
-    } catch (e) {
-      debugPrint('[Startup] Non-critical Connectivity error: $e');
+    // Minimal critical DB setup (Windows only, Web is delayed)
+    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
+      StartupDiagnostic.instance.logStage(StartupStage.databaseInit);
+      sqfliteFfiInit();
+      databaseFactory = databaseFactoryFfi;
     }
 
     StartupDiagnostic.instance.logStage(StartupStage.firebaseInit);
-    final bootstrapResult = await FirebaseBootstrap.initialize().timeout(const Duration(seconds: 10), onTimeout: () {
-      throw TimeoutException('Firebase initialization timed out after 10s');
-    });
-    debugPrint('[Startup] Firebase initialized: success=${bootstrapResult.isConfigured}');
+    final bootstrapResult = await FirebaseBootstrap.initialize().timeout(const Duration(seconds: 10));
 
     StartupDiagnostic.instance.logStage(StartupStage.controllersInit);
     final themeController = await AppThemeController.load().timeout(const Duration(seconds: 5));
     final localeController = await AppLocaleController.load().timeout(const Duration(seconds: 5));
-    debugPrint('[Startup] Controllers loaded.');
-
-    if (bootstrapResult.isConfigured) {
-      StartupDiagnostic.instance.logStage(StartupStage.analyticsInit);
-      try {
-        await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true).timeout(const Duration(seconds: 3));
-        await FirebaseAnalytics.instance.logEvent(name: 'app_open_custom').timeout(const Duration(seconds: 3));
-        debugPrint('[Startup] Analytics setup done.');
-      } catch (e) {
-        debugPrint('[Startup] Non-critical Analytics error: $e');
-      }
-    }
-
-    StartupDiagnostic.instance.logStage(StartupStage.syncInit);
-    // NON-BLOCKING on web/mobile to prevent splash hang
-    if (kIsWeb || defaultTargetPlatform == TargetPlatform.android || defaultTargetPlatform == TargetPlatform.iOS) {
-      unawaited(
-        SyncManager.instance.initialize().then((_) {
-          debugPrint('[Startup] SyncManager initialized (background).');
-        }).catchError((e, st) {
-          debugPrint('[Startup] SyncManager background initialization failure: $e');
-          StartupDiagnostic.instance.degradedSync.value = true;
-        })
-      );
-    } else {
-      try {
-        await SyncManager.instance.initialize().timeout(const Duration(seconds: 5));
-        debugPrint('[Startup] SyncManager initialized.');
-      } catch (e) {
-        debugPrint('[Startup] Non-critical SyncManager initialization failure: $e');
-        StartupDiagnostic.instance.degradedSync.value = true;
-      }
-    }
-
-    StartupDiagnostic.instance.logStage(StartupStage.running);
-    StartupDiagnostic.instance.stopTimer();
 
     runApp(
       HasoobApp(
@@ -219,8 +141,10 @@ Future<void> main() async {
     );
   } catch (e, st) {
     debugPrint('[Startup] CRITICAL STARTUP ERROR: $e');
-    debugPrint(st.toString());
     StartupDiagnostic.instance.fail(e, st);
+    
+    // Fallback to error app if main bootstrap fails
+    runApp(_StartupErrorApp(error: e.toString()));
   }
 }
 
@@ -242,42 +166,108 @@ class HasoobApp extends StatefulWidget {
 
 class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
   StreamSubscription<dynamic>? _authSubscription;
-  late final SmartSyncTriggerService _smartSyncTriggerService;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
 
+    // Start post-frame initialization
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _completeStartup();
+    });
+  }
+
+  Future<void> _completeStartup() async {
+    // 1. Signal first frame to JS and remove native splash
+    WebUtils.logDiagnostic('first Flutter frame rendered');
+    WebUtils.removeSplash();
+
+    // 2. Web Database (WASM) - Heavy initialization delayed until after first frame
     if (kIsWeb) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        try {
-          js.context.callMethod('logDiagnostic', ['first Flutter frame rendered']);
-          js.context.callMethod('removeSplashFromWeb');
-        } catch (e) {
-          debugPrint('Failed to call JS diagnostics: $e');
-        }
-      });
+      try {
+        StartupDiagnostic.instance.logStage(StartupStage.sqfliteWebInit);
+        databaseFactory = await Future.sync(() {
+          return createDatabaseFactoryFfiWeb(
+            options: SqfliteFfiWebOptions(
+              sqlite3WasmUri: Uri.parse('sqlite3.wasm'),
+              // ignore: invalid_use_of_visible_for_testing_member
+              forceAsBasicWorker: defaultTargetPlatform == TargetPlatform.iOS,
+            ),
+          );
+        }).timeout(const Duration(seconds: 20), onTimeout: () {
+          throw TimeoutException('SQLite WASM initialization timed out after 20s');
+        });
+        debugPrint('[Startup] Web Database Factory set.');
+      } catch (e, st) {
+        StartupDiagnostic.instance.fail('Web DB Init: $e', st);
+        return;
+      }
     }
 
-    SmartSyncTriggerService.init(SyncManager.instance);
-    _smartSyncTriggerService = SmartSyncTriggerService.instance;
-    _smartSyncTriggerService.initialize();
-    unawaited(_smartSyncTriggerService.onAppStarted());
+    // 3. Connectivity Service
+    StartupDiagnostic.instance.logStage(StartupStage.connectivityInit);
+    try {
+      await ConnectivityService.instance.initialize().timeout(const Duration(seconds: 5));
+    } catch (e) {
+      debugPrint('[Startup] Non-critical Connectivity error: $e');
+    }
 
-    _authSubscription = AuthService.instance.authStateChanges().listen((user) {
-      if (user != null) {
-        unawaited(SyncManager.instance.onAuthenticated());
-        unawaited(_smartSyncTriggerService.onAppStarted());
-      } else {
-        unawaited(SyncManager.instance.stopRealtimeSync());
+    // 4. Firebase Analytics
+    if (widget.bootstrapResult.isConfigured) {
+      StartupDiagnostic.instance.logStage(StartupStage.analyticsInit);
+      try {
+        await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true).timeout(const Duration(seconds: 3));
+        await FirebaseAnalytics.instance.logEvent(name: 'app_open_custom').timeout(const Duration(seconds: 3));
+      } catch (e) {
+        debugPrint('[Startup] Non-critical Analytics error: $e');
       }
-    });
+    }
+
+    // 5. Sync & Services
+    StartupDiagnostic.instance.logStage(StartupStage.syncInit);
+    try {
+      // Initialize SyncManager
+      await SyncManager.instance.initialize().timeout(const Duration(seconds: 10));
+      
+      // Initialize SmartSync
+      SmartSyncTriggerService.init(SyncManager.instance);
+      SmartSyncTriggerService.instance.initialize();
+      unawaited(SmartSyncTriggerService.instance.onAppStarted());
+
+      // Setup Auth listener
+      _authSubscription = AuthService.instance.authStateChanges().listen((user) {
+        if (user != null) {
+          unawaited(SyncManager.instance.onAuthenticated());
+          unawaited(SmartSyncTriggerService.instance.onAppStarted());
+        } else {
+          unawaited(SyncManager.instance.stopRealtimeSync());
+        }
+      });
+    } catch (e) {
+      debugPrint('[Startup] Sync initialization error: $e');
+      StartupDiagnostic.instance.degradedSync.value = true;
+    }
+
+    // 6. Complete
+    StartupDiagnostic.instance.logStage(StartupStage.running);
+    StartupDiagnostic.instance.stopTimer();
+
+    if (mounted) {
+      setState(() {
+        _isInitialized = true;
+      });
+    }
   }
 
   @override
   void dispose() {
-    _smartSyncTriggerService.dispose();
+    if (_isInitialized) {
+      try {
+        SmartSyncTriggerService.instance.dispose();
+      } catch (_) {}
+    }
     WidgetsBinding.instance.removeObserver(this);
     _authSubscription?.cancel();
     super.dispose();
@@ -285,9 +275,9 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
+    if (state == AppLifecycleState.resumed && _isInitialized) {
       unawaited(SyncManager.instance.onAppResumed());
-      unawaited(_smartSyncTriggerService.onAppStarted());
+      unawaited(SmartSyncTriggerService.instance.onAppStarted());
     }
   }
 
@@ -298,48 +288,45 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
       child: AppLocaleControllerScope(
         controller: widget.localeController,
         child: AnimatedBuilder(
-          animation: widget.themeController,
+          animation: Listenable.merge([widget.themeController, widget.localeController]),
           builder: (context, _) {
-            return AnimatedBuilder(
-              animation: widget.localeController,
-              builder: (context, __) {
-                final locale = widget.localeController.locale;
-                Intl.defaultLocale = (locale ?? const Locale('ar')).languageCode;
+            final locale = widget.localeController.locale;
+            Intl.defaultLocale = (locale ?? const Locale('ar')).languageCode;
 
-                return MaterialApp(
-                  key: ValueKey(locale?.languageCode ?? 'ar'),
-                  debugShowCheckedModeBanner: false,
-                  onGenerateTitle: (context) =>
-                      AppLocalizations.of(context)!.appTitle,
-                  locale: locale,
-                  supportedLocales: AppLocalizations.supportedLocales,
-                  localizationsDelegates: const [
-                    AppLocalizations.delegate,
-                    GlobalMaterialLocalizations.delegate,
-                    GlobalWidgetsLocalizations.delegate,
-                    GlobalCupertinoLocalizations.delegate,
-                  ],
-                  theme: AppTheme.lightTheme(),
-                  darkTheme: AppTheme.darkTheme(),
-                  themeMode: widget.themeController.themeMode,
-                  routes: {
-                    '/sync': (context) => const SyncCenterScreen(),
-                  },
-                  home: const Scaffold(
-                    backgroundColor: Colors.red,
-                    body: Center(
-                      child: Text(
-                        'HASOOB TEST SCREEN',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
+            return MaterialApp(
+              key: ValueKey(locale?.languageCode ?? 'ar'),
+              debugShowCheckedModeBanner: false,
+              onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+              locale: locale,
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              theme: AppTheme.lightTheme(),
+              darkTheme: AppTheme.darkTheme(),
+              themeMode: widget.themeController.themeMode,
+              routes: {
+                '/sync': (context) => const SyncCenterScreen(),
+              },
+              home: StartupShell(
+                isInitialized: _isInitialized,
+                child: const Scaffold(
+                  backgroundColor: Colors.red,
+                  body: Center(
+                    child: Text(
+                      'HASOOB TEST SCREEN',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
-                );
-              },
+                ),
+              ),
             );
           },
         ),
@@ -348,8 +335,92 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
   }
 }
 
-class _StartupDiagnosticApp extends StatelessWidget {
-  const _StartupDiagnosticApp();
+class StartupShell extends StatelessWidget {
+  final bool isInitialized;
+  final Widget child;
+
+  const StartupShell({
+    super.key,
+    required this.isInitialized,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListenableBuilder(
+      listenable: Listenable.merge([
+        StartupDiagnostic.instance.stage,
+        StartupDiagnostic.instance.error,
+        StartupDiagnostic.instance.elapsedSeconds,
+        StartupDiagnostic.instance.degradedSync,
+      ]),
+      builder: (context, _) {
+        final error = StartupDiagnostic.instance.error.value;
+        final stage = StartupDiagnostic.instance.stage.value;
+
+        if (error != null) {
+          return _StartupErrorUI(error: error);
+        }
+
+        if (isInitialized && stage == StartupStage.running) {
+          return child;
+        }
+
+        return const _StartupLoadingUI();
+      },
+    );
+  }
+}
+
+class _StartupLoadingUI extends StatelessWidget {
+  const _StartupLoadingUI();
+
+  @override
+  Widget build(BuildContext context) {
+    final diag = StartupDiagnostic.instance;
+    final stage = diag.stage.value;
+    final seconds = diag.elapsedSeconds.value;
+    final degraded = diag.degradedSync.value;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFF0B1020),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const CircularProgressIndicator(color: Color(0xFF2F80ED)),
+            const SizedBox(height: 24),
+            Text(
+              stage.label,
+              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Stage: ${stage.name} (${seconds}s)',
+              style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+            ),
+            if (degraded) ...[
+              const SizedBox(height: 8),
+              const Text(
+                'Degraded Sync Mode Active',
+                style: TextStyle(color: Colors.orangeAccent, fontSize: 12, fontWeight: FontWeight.bold),
+              ),
+            ],
+            const SizedBox(height: 48),
+            const Text(
+              'Startup diagnostics v3',
+              style: TextStyle(color: Colors.white24, fontSize: 10),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StartupErrorApp extends StatelessWidget {
+  final String error;
+  const _StartupErrorApp({required this.error});
 
   @override
   Widget build(BuildContext context) {
@@ -357,55 +428,7 @@ class _StartupDiagnosticApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       home: Scaffold(
         backgroundColor: const Color(0xFF0B1020),
-        body: Center(
-          child: ListenableBuilder(
-            listenable: Listenable.merge([
-              StartupDiagnostic.instance.stage,
-              StartupDiagnostic.instance.error,
-              StartupDiagnostic.instance.elapsedSeconds,
-              StartupDiagnostic.instance.degradedSync,
-            ]),
-            builder: (context, _) {
-              final error = StartupDiagnostic.instance.error.value;
-              final stage = StartupDiagnostic.instance.stage.value;
-              final seconds = StartupDiagnostic.instance.elapsedSeconds.value;
-              final degraded = StartupDiagnostic.instance.degradedSync.value;
-
-              if (error != null) {
-                return _StartupErrorUI(error: error);
-              }
-
-              return Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const CircularProgressIndicator(color: Color(0xFF2F80ED)),
-                  const SizedBox(height: 24),
-                  Text(
-                    stage.label,
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Stage: ${stage.name} (${seconds}s)',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
-                  ),
-                  if (degraded) ...[
-                    const SizedBox(height: 8),
-                    const Text(
-                      'Degraded Sync Mode Active',
-                      style: TextStyle(color: Colors.orangeAccent, fontSize: 12, fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                  const SizedBox(height: 48),
-                  const Text(
-                    'Startup diagnostics v2',
-                    style: TextStyle(color: Colors.white24, fontSize: 10),
-                  ),
-                ],
-              );
-            },
-          ),
-        ),
+        body: _StartupErrorUI(error: error),
       ),
     );
   }
@@ -484,7 +507,7 @@ class _StartupErrorUI extends StatelessWidget {
                 ),
               const SizedBox(height: 24),
               const Text(
-                'Startup diagnostics v2',
+                'Startup diagnostics v3',
                 style: TextStyle(color: Colors.white24, fontSize: 10),
               ),
             ],
