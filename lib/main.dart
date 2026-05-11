@@ -1,3 +1,4 @@
+// ignore_for_file: deprecated_member_use
 import 'dart:async';
 import 'dart:ui';
 // ignore: avoid_web_libraries_in_flutter
@@ -20,8 +21,8 @@ import 'data/services/firebase_bootstrap.dart';
 import 'data/services/sync_manager.dart';
 import 'data/services/smart_sync_trigger_service.dart';
 import 'l10n/app_localizations.dart';
-import 'screens/auth/auth_gate.dart';
-import 'screens/auth/firebase_setup_screen.dart';
+// import 'screens/auth/auth_gate.dart';
+// import 'screens/auth/firebase_setup_screen.dart';
 import 'screens/sync_center_screen.dart';
 import 'core/services/connectivity_service.dart';
 
@@ -141,6 +142,7 @@ Future<void> main() async {
               sqlite3WasmUri: Uri.parse('sqlite3.wasm'),
               // On iOS Safari, SharedWorkers can be unreliable or blocked in some contexts.
               // Forcing a basic worker improves compatibility on mobile Safari.
+              // ignore: invalid_use_of_visible_for_testing_member
               forceAsBasicWorker: defaultTargetPlatform == TargetPlatform.iOS,
             ),
           );
@@ -323,11 +325,19 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
                   routes: {
                     '/sync': (context) => const SyncCenterScreen(),
                   },
-                  home: widget.bootstrapResult.isConfigured
-                      ? const AuthGate()
-                      : FirebaseSetupScreen(
-                          message: widget.bootstrapResult.message,
+                  home: const Scaffold(
+                    backgroundColor: Colors.red,
+                    body: Center(
+                      child: Text(
+                        'HASOOB TEST SCREEN',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 28,
+                          fontWeight: FontWeight.bold,
                         ),
+                      ),
+                    ),
+                  ),
                 );
               },
             );
