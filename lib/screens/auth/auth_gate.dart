@@ -8,6 +8,9 @@ import '../../data/services/auth_service.dart';
 import '../main_navigation_screen.dart';
 import 'auth_shell.dart';
 
+const bool _disableAnalyticsBootstrap =
+    bool.fromEnvironment('disableAnalyticsBootstrap');
+
 class AuthGate extends StatefulWidget {
   const AuthGate({super.key});
 
@@ -19,7 +22,11 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
-    FirebaseAnalytics.instance.logEvent(name: 'app_open_custom');
+    if (!_disableAnalyticsBootstrap) {
+      FirebaseAnalytics.instance.logEvent(name: 'app_open_custom').catchError((Object error) {
+        debugPrint('[Startup] AuthGate analytics ignored: $error');
+      });
+    }
   }
 
   @override

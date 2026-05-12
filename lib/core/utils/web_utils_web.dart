@@ -17,4 +17,31 @@ class WebUtils {
       // ignore
     }
   }
+
+  static String browserHint() {
+    try {
+      final navigator = js.context['navigator'];
+      final userAgent = navigator == null
+          ? ''
+          : js.JsObject.fromBrowserObject(navigator)['userAgent']?.toString() ?? '';
+      final isIos = RegExp(r'iPad|iPhone|iPod').hasMatch(userAgent) ||
+          userAgent.contains('Macintosh') && userAgent.contains('Mobile');
+      final isSafari = userAgent.contains('Safari') &&
+          !userAgent.contains('CriOS') &&
+          !userAgent.contains('FxiOS') &&
+          !userAgent.contains('EdgiOS');
+      if (isIos && isSafari) {
+        return 'Platform: Web / iOS Safari';
+      }
+      if (isIos) {
+        return 'Platform: Web / iOS browser';
+      }
+      if (isSafari) {
+        return 'Platform: Web / Safari';
+      }
+      return 'Platform: Web';
+    } catch (_) {
+      return 'Platform: Web';
+    }
+  }
 }

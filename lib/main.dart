@@ -1,7 +1,6 @@
 // ignore_for_file: deprecated_member_use
 import 'dart:async';
 import 'dart:ui';
-import 'dart:io' as io;
 
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:flutter/foundation.dart';
@@ -20,9 +19,19 @@ import 'data/services/firebase_bootstrap.dart';
 import 'data/services/sync_manager.dart';
 import 'data/services/smart_sync_trigger_service.dart';
 import 'l10n/app_localizations.dart';
+import 'screens/auth/auth_gate.dart';
+import 'screens/auth/firebase_setup_screen.dart';
 import 'screens/sync_center_screen.dart';
 import 'core/services/connectivity_service.dart';
 import 'core/utils/web_utils.dart';
+
+const bool disableWebDatabaseBootstrap =
+    bool.fromEnvironment('disableWebDatabaseBootstrap');
+const bool disableFirebaseBootstrap =
+    bool.fromEnvironment('disableFirebaseBootstrap');
+const bool disableAnalyticsBootstrap =
+    bool.fromEnvironment('disableAnalyticsBootstrap');
+const bool disableSyncBootstrap = bool.fromEnvironment('disableSyncBootstrap');
 
 enum StartupStage {
   appStart('Starting...'),
@@ -47,17 +56,24 @@ class StartupDiagnostic {
 
   final ValueNotifier<StartupStage> stage = ValueNotifier(StartupStage.appStart);
   final ValueNotifier<String?> error = ValueNotifier(null);
-  final ValueNotifier<int> elapsedSeconds = ValueNotifier(0);
+  final ValueNotifier<int> elapsedMilliseconds = ValueNotifier(0);
   final ValueNotifier<bool> degradedSync = ValueNotifier(false);
+  final ValueNotifier<bool> degradedDatabase = ValueNotifier(false);
+  final ValueNotifier<bool> degradedAnalytics = ValueNotifier(false);
+  final ValueNotifier<bool> degradedFirebase = ValueNotifier(false);
   final ValueNotifier<String?> lastLog = ValueNotifier('App started');
+  final ValueNotifier<StackTrace?> stackTrace = ValueNotifier(null);
+  final Stopwatch _stopwatch = Stopwatch();
   Timer? _timer;
   Timer? _watchdog;
-  String? lastTrace;
 
   void startTimer() {
+    _stopwatch
+      ..reset()
+      ..start();
     _timer?.cancel();
-    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      elapsedSeconds.value = timer.tick;
+    _timer = Timer.periodic(const Duration(milliseconds: 250), (_) {
+      elapsedMilliseconds.value = _stopwatch.elapsedMilliseconds;
     });
 
     _watchdog?.cancel();
@@ -75,13 +91,21 @@ class StartupDiagnostic {
   void stopTimer() {
     _timer?.cancel();
     _watchdog?.cancel();
+    _stopwatch.stop();
+    elapsedMilliseconds.value = _stopwatch.elapsedMilliseconds;
   }
 
   void logStage(StartupStage newStage) {
-    final msg = '[Startup] [${elapsedSeconds.value}s] === STAGE: ${newStage.name} ===';
+    final msg = '[Startup] [${_formatElapsed()}] === STAGE: ${newStage.name} ===';
     debugPrint(msg);
     lastLog.value = msg;
     stage.value = newStage;
+  }
+
+  void logMessage(String message) {
+    final msg = '[Startup] [${_formatElapsed()}] $message';
+    debugPrint(msg);
+    lastLog.value = msg;
   }
 
   void fail(dynamic e, StackTrace stack) {
@@ -89,9 +113,12 @@ class StartupDiagnostic {
     final errorMsg = e.toString();
     debugPrint('[Startup] !!! FAILED at stage ${stage.value.name}: $errorMsg');
     debugPrint(stack.toString());
-    lastTrace = stack.toString();
+    stackTrace.value = stack;
     error.value = 'Failed at ${stage.value.name}: $errorMsg';
   }
+
+  String _formatElapsed() =>
+      '${_stopwatch.elapsedMilliseconds}ms/${(_stopwatch.elapsedMilliseconds / 1000).toStringAsFixed(1)}s';
 }
 
 Future<void> main() async {
@@ -126,7 +153,27 @@ Future<void> main() async {
     }
 
     StartupDiagnostic.instance.logStage(StartupStage.firebaseInit);
-    final bootstrapResult = await FirebaseBootstrap.initialize().timeout(const Duration(seconds: 10));
+    late final FirebaseBootstrapResult bootstrapResult;
+    if (disableFirebaseBootstrap) {
+      bootstrapResult = const FirebaseBootstrapResult(
+        isConfigured: false,
+        message: 'Firebase bootstrap disabled by feature flag.',
+      );
+    } else {
+      try {
+        bootstrapResult = await FirebaseBootstrap.initialize().timeout(const Duration(seconds: 10));
+      } catch (e, st) {
+        StartupDiagnostic.instance.stackTrace.value = st;
+        bootstrapResult = FirebaseBootstrapResult(
+          isConfigured: false,
+          message: 'Firebase initialization degraded mode.\n\nError: $e',
+        );
+      }
+    }
+    if (!bootstrapResult.isConfigured) {
+      StartupDiagnostic.instance.degradedFirebase.value = true;
+      StartupDiagnostic.instance.logMessage(bootstrapResult.message);
+    }
 
     StartupDiagnostic.instance.logStage(StartupStage.controllersInit);
     final themeController = await AppThemeController.load().timeout(const Duration(seconds: 5));
@@ -167,6 +214,7 @@ class HasoobApp extends StatefulWidget {
 class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
   StreamSubscription<dynamic>? _authSubscription;
   bool _isInitialized = false;
+  bool _smartSyncReady = false;
 
   @override
   void initState() {
@@ -181,11 +229,16 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
 
   Future<void> _completeStartup() async {
     // 1. Signal first frame to JS and remove native splash
-    WebUtils.logDiagnostic('first Flutter frame rendered');
-    WebUtils.removeSplash();
+    try {
+      WebUtils.logDiagnostic('first Flutter frame rendered');
+      WebUtils.removeSplash();
+    } catch (e, st) {
+      StartupDiagnostic.instance.logMessage('Splash removal skipped: $e');
+      debugPrint(st.toString());
+    }
 
     // 2. Web Database (WASM) - Heavy initialization delayed until after first frame
-    if (kIsWeb) {
+    if (kIsWeb && !disableWebDatabaseBootstrap) {
       try {
         StartupDiagnostic.instance.logStage(StartupStage.sqfliteWebInit);
         databaseFactory = await Future.sync(() {
@@ -201,9 +254,13 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
         });
         debugPrint('[Startup] Web Database Factory set.');
       } catch (e, st) {
-        StartupDiagnostic.instance.fail('Web DB Init: $e', st);
-        return;
+        StartupDiagnostic.instance.degradedDatabase.value = true;
+        StartupDiagnostic.instance.stackTrace.value = st;
+        StartupDiagnostic.instance.logMessage('Web database degraded mode: $e');
       }
+    } else if (kIsWeb) {
+      StartupDiagnostic.instance.degradedDatabase.value = true;
+      StartupDiagnostic.instance.logMessage('Web database bootstrap disabled by feature flag.');
     }
 
     // 3. Connectivity Service
@@ -215,39 +272,57 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
     }
 
     // 4. Firebase Analytics
-    if (widget.bootstrapResult.isConfigured) {
+    if (widget.bootstrapResult.isConfigured && !disableAnalyticsBootstrap) {
       StartupDiagnostic.instance.logStage(StartupStage.analyticsInit);
       try {
         await FirebaseAnalytics.instance.setAnalyticsCollectionEnabled(true).timeout(const Duration(seconds: 3));
         await FirebaseAnalytics.instance.logEvent(name: 'app_open_custom').timeout(const Duration(seconds: 3));
-      } catch (e) {
+      } catch (e, st) {
+        StartupDiagnostic.instance.degradedAnalytics.value = true;
+        StartupDiagnostic.instance.stackTrace.value = st;
+        StartupDiagnostic.instance.logMessage('Analytics degraded mode: $e');
         debugPrint('[Startup] Non-critical Analytics error: $e');
       }
+    } else if (disableAnalyticsBootstrap) {
+      StartupDiagnostic.instance.degradedAnalytics.value = true;
+      StartupDiagnostic.instance.logMessage('Analytics bootstrap disabled by feature flag.');
     }
 
     // 5. Sync & Services
-    StartupDiagnostic.instance.logStage(StartupStage.syncInit);
-    try {
-      // Initialize SyncManager
-      await SyncManager.instance.initialize().timeout(const Duration(seconds: 10));
-      
-      // Initialize SmartSync
-      SmartSyncTriggerService.init(SyncManager.instance);
-      SmartSyncTriggerService.instance.initialize();
-      unawaited(SmartSyncTriggerService.instance.onAppStarted());
+    if (!disableSyncBootstrap) {
+      StartupDiagnostic.instance.logStage(StartupStage.syncInit);
+      try {
+        // Initialize SyncManager
+        await SyncManager.instance.initialize().timeout(const Duration(seconds: 10));
 
-      // Setup Auth listener
-      _authSubscription = AuthService.instance.authStateChanges().listen((user) {
-        if (user != null) {
-          unawaited(SyncManager.instance.onAuthenticated());
-          unawaited(SmartSyncTriggerService.instance.onAppStarted());
-        } else {
-          unawaited(SyncManager.instance.stopRealtimeSync());
-        }
-      });
-    } catch (e) {
-      debugPrint('[Startup] Sync initialization error: $e');
+        // Initialize SmartSync
+        SmartSyncTriggerService.init(SyncManager.instance);
+        SmartSyncTriggerService.instance.initialize();
+        _smartSyncReady = true;
+        unawaited(_guardedSyncCall(() => SmartSyncTriggerService.instance.onAppStarted()));
+
+        // Setup Auth listener
+        _authSubscription = AuthService.instance.authStateChanges().listen((user) {
+          if (user != null) {
+            unawaited(_guardedSyncCall(() => SyncManager.instance.onAuthenticated()));
+            unawaited(_guardedSyncCall(() => SmartSyncTriggerService.instance.onAppStarted()));
+          } else {
+            unawaited(_guardedSyncCall(() => SyncManager.instance.stopRealtimeSync()));
+          }
+        }, onError: (Object error, StackTrace stack) {
+          StartupDiagnostic.instance.degradedSync.value = true;
+          StartupDiagnostic.instance.stackTrace.value = stack;
+          StartupDiagnostic.instance.logMessage('Auth sync listener degraded mode: $error');
+        });
+      } catch (e, st) {
+        debugPrint('[Startup] Sync initialization error: $e');
+        StartupDiagnostic.instance.stackTrace.value = st;
+        StartupDiagnostic.instance.logMessage('Sync degraded mode: $e');
+        StartupDiagnostic.instance.degradedSync.value = true;
+      }
+    } else {
       StartupDiagnostic.instance.degradedSync.value = true;
+      StartupDiagnostic.instance.logMessage('Sync bootstrap disabled by feature flag.');
     }
 
     // 6. Complete
@@ -261,9 +336,19 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
     }
   }
 
+  Future<void> _guardedSyncCall(Future<void> Function() call) async {
+    try {
+      await call();
+    } catch (e, st) {
+      StartupDiagnostic.instance.degradedSync.value = true;
+      StartupDiagnostic.instance.stackTrace.value = st;
+      StartupDiagnostic.instance.logMessage('Sync background call failed: $e');
+    }
+  }
+
   @override
   void dispose() {
-    if (_isInitialized) {
+    if (_smartSyncReady) {
       try {
         SmartSyncTriggerService.instance.dispose();
       } catch (_) {}
@@ -276,8 +361,10 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed && _isInitialized) {
-      unawaited(SyncManager.instance.onAppResumed());
-      unawaited(SmartSyncTriggerService.instance.onAppStarted());
+      unawaited(_guardedSyncCall(() => SyncManager.instance.onAppResumed()));
+      if (_smartSyncReady) {
+        unawaited(_guardedSyncCall(() => SmartSyncTriggerService.instance.onAppStarted()));
+      }
     }
   }
 
@@ -313,19 +400,9 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
               },
               home: StartupShell(
                 isInitialized: _isInitialized,
-                child: const Scaffold(
-                  backgroundColor: Colors.red,
-                  body: Center(
-                    child: Text(
-                      'HASOOB TEST SCREEN',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 28,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
+                child: widget.bootstrapResult.isConfigured
+                    ? const AuthGate()
+                    : FirebaseSetupScreen(message: widget.bootstrapResult.message),
               ),
             );
           },
@@ -351,8 +428,13 @@ class StartupShell extends StatelessWidget {
       listenable: Listenable.merge([
         StartupDiagnostic.instance.stage,
         StartupDiagnostic.instance.error,
-        StartupDiagnostic.instance.elapsedSeconds,
+        StartupDiagnostic.instance.elapsedMilliseconds,
         StartupDiagnostic.instance.degradedSync,
+        StartupDiagnostic.instance.degradedDatabase,
+        StartupDiagnostic.instance.degradedAnalytics,
+        StartupDiagnostic.instance.degradedFirebase,
+        StartupDiagnostic.instance.lastLog,
+        StartupDiagnostic.instance.stackTrace,
       ]),
       builder: (context, _) {
         final error = StartupDiagnostic.instance.error.value;
@@ -362,11 +444,14 @@ class StartupShell extends StatelessWidget {
           return _StartupErrorUI(error: error);
         }
 
-        if (isInitialized && stage == StartupStage.running) {
-          return child;
-        }
-
-        return const _StartupLoadingUI();
+        return Stack(
+          children: [
+            child,
+            if (!isInitialized || stage != StartupStage.running)
+              const Positioned.fill(child: _StartupLoadingUI()),
+            if (kIsWeb) const _StartupDiagnosticsOverlay(),
+          ],
+        );
       },
     );
   }
@@ -379,8 +464,11 @@ class _StartupLoadingUI extends StatelessWidget {
   Widget build(BuildContext context) {
     final diag = StartupDiagnostic.instance;
     final stage = diag.stage.value;
-    final seconds = diag.elapsedSeconds.value;
-    final degraded = diag.degradedSync.value;
+    final elapsed = _formatElapsed(diag.elapsedMilliseconds.value);
+    final degraded = diag.degradedSync.value ||
+        diag.degradedDatabase.value ||
+        diag.degradedAnalytics.value ||
+        diag.degradedFirebase.value;
 
     return Scaffold(
       backgroundColor: const Color(0xFF0B1020),
@@ -396,7 +484,7 @@ class _StartupLoadingUI extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Stage: ${stage.name} (${seconds}s)',
+              'Stage: ${stage.name} ($elapsed)',
               style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
             ),
             if (degraded) ...[
@@ -412,6 +500,81 @@ class _StartupLoadingUI extends StatelessWidget {
               style: TextStyle(color: Colors.white24, fontSize: 10),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _StartupDiagnosticsOverlay extends StatelessWidget {
+  const _StartupDiagnosticsOverlay();
+
+  @override
+  Widget build(BuildContext context) {
+    final diag = StartupDiagnostic.instance;
+    final stage = diag.stage.value;
+    final stack = diag.stackTrace.value?.toString();
+    final degraded = <String>[
+      if (diag.degradedFirebase.value) 'Firebase',
+      if (diag.degradedDatabase.value) 'Database',
+      if (diag.degradedAnalytics.value) 'Analytics',
+      if (diag.degradedSync.value) 'Sync',
+    ];
+
+    return PositionedDirectional(
+      top: 12,
+      start: 12,
+      end: 12,
+      child: SafeArea(
+        child: Align(
+          alignment: AlignmentDirectional.topStart,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Material(
+              color: Colors.black.withValues(alpha: 0.78),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: DefaultTextStyle(
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    height: 1.35,
+                    fontFamily: 'monospace',
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Startup diagnostics ${WebUtils.browserHint()}'),
+                      Text('Stage: ${stage.name} - ${stage.label}'),
+                      Text('Elapsed: ${_formatElapsed(diag.elapsedMilliseconds.value)}'),
+                      Text('Last: ${diag.lastLog.value ?? '-'}'),
+                      if (degraded.isNotEmpty)
+                        Text(
+                          'Degraded: ${degraded.join(', ')}',
+                          style: const TextStyle(color: Colors.orangeAccent),
+                        ),
+                      if (diag.error.value != null)
+                        Text(
+                          'Error: ${diag.error.value}',
+                          style: const TextStyle(color: Colors.redAccent),
+                        ),
+                      if (stack != null) ...[
+                        const SizedBox(height: 6),
+                        Text(
+                          stack,
+                          maxLines: 6,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(color: Colors.white70),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ),
       ),
     );
@@ -456,7 +619,7 @@ class _StartupErrorUI extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'Stage: ${diag.stage.value.name} | Elapsed: ${diag.elapsedSeconds.value}s',
+                'Stage: ${diag.stage.value.name} | Elapsed: ${_formatElapsed(diag.elapsedMilliseconds.value)}',
                 style: const TextStyle(color: Colors.white70, fontSize: 12),
               ),
               const SizedBox(height: 16),
@@ -482,6 +645,13 @@ class _StartupErrorUI extends StatelessWidget {
                         style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 11, fontFamily: 'monospace'),
                       ),
                     ],
+                    if (diag.stackTrace.value != null) ...[
+                      const Divider(color: Colors.white10, height: 20),
+                      Text(
+                        diag.stackTrace.value.toString(),
+                        style: TextStyle(color: Colors.white.withValues(alpha: 0.65), fontSize: 11, fontFamily: 'monospace'),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -492,15 +662,10 @@ class _StartupErrorUI extends StatelessWidget {
                 style: TextStyle(color: Colors.white70, fontSize: 13),
               ),
               const SizedBox(height: 32),
-              if (!kIsWeb)
-                ElevatedButton(
-                  onPressed: () => io.exit(1),
-                  child: const Text('Close App'),
-                ),
               if (kIsWeb)
                 TextButton.icon(
-                  onPressed: () => StartupDiagnostic.instance.lastTrace != null 
-                    ? debugPrint(StartupDiagnostic.instance.lastTrace) 
+                  onPressed: () => StartupDiagnostic.instance.stackTrace.value != null
+                    ? debugPrint(StartupDiagnostic.instance.stackTrace.value.toString())
                     : null,
                   icon: const Icon(Icons.bug_report_outlined),
                   label: const Text('Print Trace to Console'),
@@ -517,3 +682,6 @@ class _StartupErrorUI extends StatelessWidget {
     );
   }
 }
+
+String _formatElapsed(int milliseconds) =>
+    '${milliseconds}ms/${(milliseconds / 1000).toStringAsFixed(1)}s';
