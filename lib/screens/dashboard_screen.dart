@@ -42,7 +42,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.initState();
     PerfLogger.logPageOpen('Dashboard');
     final businessId = BusinessContext.businessId;
-    _snapshot = _reportService.buildSnapshot(businessId: businessId);
+    _snapshot = _reportService
+        .buildSnapshot(businessId: businessId)
+        .timeout(const Duration(seconds: 10));
     _restoreStatus = CloudSyncService.instance.getLocalRestoreStatus();
 
     _snapshot.then((data) {
@@ -50,6 +52,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         setState(() => _cachedData = data);
         PerfLogger.logDataLoaded('Dashboard');
       }
+    }).catchError((error) {
+      debugPrint('[Dashboard] Error loading snapshot: $error');
+      // We don't set _cachedData, so it shows error state if we add one
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -59,11 +64,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Future<void> _refresh() async {
     final businessId = BusinessContext.businessId;
+    final future = _reportService
+        .buildSnapshot(businessId: businessId, forceRefresh: true)
+        .timeout(const Duration(seconds: 15));
     setState(() {
-      _snapshot = _reportService.buildSnapshot(businessId: businessId);
+      _snapshot = future;
       _restoreStatus = CloudSyncService.instance.getLocalRestoreStatus();
     });
-    await _snapshot;
+    try {
+      final data = await future;
+      if (mounted) setState(() => _cachedData = data);
+    } catch (e) {
+      if (mounted) AppMessages.error(context, AppCopy.of(context).t('loadDashboardError'));
+    }
   }
 
   Future<void> _restoreFromCloud() async {
@@ -202,10 +215,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildBody(BuildContext context, AppCopy copy) {
-    if (_cachedData == null) {
-      return _buildSkeleton(context, copy);
-    }
-    return _buildContent(context, copy, _cachedData!);
+    return FutureBuilder<ReportsSnapshot>(
+      future: _snapshot,
+      builder: (context, snapshot) {
+        if (_cachedData != null) {
+          return _buildContent(context, copy, _cachedData!);
+        }
+
+        if (snapshot.hasError) {
+          return _buildErrorState(context, copy, snapshot.error);
+        }
+
+        return _buildSkeleton(context, copy);
+      },
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, AppCopy copy, Object? error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded, color: AppTheme.danger, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              copy.t('loadDashboardError'),
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: _refresh,
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(copy.t('retry')),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildSkeleton(BuildContext context, AppCopy copy) {

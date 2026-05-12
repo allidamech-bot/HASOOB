@@ -127,47 +127,13 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         ),
         builder: (context, snapshot) {
           final hasData = snapshot.hasData && snapshot.data != null;
-          if (!hasData && snapshot.connectionState == ConnectionState.waiting) {
-            return _buildSkeleton(context, copy);
+          
+          if (snapshot.hasError && !hasData) {
+            return _buildErrorState(context, copy, snapshot.error);
           }
 
-          if (snapshot.hasError) {
-            return ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.all(16),
-              children: [
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(20),
-                    child: Column(
-                      children: [
-                        const Icon(
-                          Icons.error_outline_rounded,
-                          color: AppTheme.danger,
-                          size: 36,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          copy.t('loadSalesHistoryError'),
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${snapshot.error}',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: secondary),
-                        ),
-                        const SizedBox(height: 12),
-                        FilledButton(
-                          onPressed: _reloadSales,
-                          child: Text(copy.t('retry')),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            );
+          if (!hasData && snapshot.connectionState == ConnectionState.waiting) {
+            return _buildSkeleton(context, copy);
           }
 
           if (hasData) {
@@ -175,6 +141,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           }
 
           final rows = _applyFilters(snapshot.data ?? const []);
+
+          if (rows.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
+            return _buildEmptyState(context, copy);
+          }
 
           return RefreshIndicator(
             onRefresh: () => _reloadSales(showError: true),
@@ -448,6 +418,58 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           padding: EdgeInsets.only(bottom: 12),
           child: SkeletonCard(height: 140),
         )),
+      ],
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, AppCopy copy, Object? error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded, color: AppTheme.danger, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              copy.t('loadSalesHistoryError'),
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => setState(() {}),
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(copy.t('retry')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, AppCopy copy) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(24),
+      children: [
+        const SizedBox(height: 80),
+        const Icon(Icons.point_of_sale_rounded, size: 64, color: AppTheme.accent),
+        const SizedBox(height: 24),
+        Center(
+          child: Text(
+            copy.t('noSalesYet'),
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: Text(
+            copy.t('noMatchingSales'),
+            style: TextStyle(color: AppTheme.textSecondaryFor(context)),
+            textAlign: TextAlign.center,
+          ),
+        ),
       ],
     );
   }

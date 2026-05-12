@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../../data/database/database_helper.dart';
 import '../models/product_model.dart';
 import '../services/cloud_sync_service.dart';
@@ -19,10 +20,22 @@ class DeleteProductCheckResult {
 }
 
 class ProductRepository {
-  Stream<List<ProductModel>> watchProducts(String businessId) {
-    return CloudSyncService.instance.watchProducts(businessId).map(
-          (rows) => rows.map(ProductModel.fromMap).toList(),
-        );
+  Stream<List<ProductModel>> watchProducts(String businessId) async* {
+    // 1. Yield local data immediately
+    final localData = await getAllProducts(businessId);
+    yield localData;
+
+    // 2. Listen to cloud changes and refresh from local DB
+    // We use the cloud stream as a trigger to reload from SQLite
+    try {
+      await for (final _ in CloudSyncService.instance.watchProducts(businessId)) {
+        final refreshedData = await getAllProducts(businessId);
+        yield refreshedData;
+      }
+    } catch (e) {
+      debugPrint('[ProductRepository] watchProducts cloud stream error: $e');
+      // Continue yielding nothing more, but keep the initial local data
+    }
   }
 
   Future<List<ProductModel>> getAllProducts(String businessId) async {
@@ -173,7 +186,19 @@ class ProductRepository {
     return DBHelper.getSalesRecords(businessId);
   }
 
-  Stream<List<Map<String, dynamic>>> watchSalesRecords(String businessId) {
-    return CloudSyncService.instance.watchSalesRecords(businessId);
+  Stream<List<Map<String, dynamic>>> watchSalesRecords(String businessId) async* {
+    // 1. Yield local data immediately
+    final localData = await getSalesRecords(businessId);
+    yield localData;
+
+    // 2. Listen to cloud changes and refresh from local DB
+    try {
+      await for (final _ in CloudSyncService.instance.watchSalesRecords(businessId)) {
+        final refreshedData = await getSalesRecords(businessId);
+        yield refreshedData;
+      }
+    } catch (e) {
+      debugPrint('[ProductRepository] watchSalesRecords cloud stream error: $e');
+    }
   }
 }

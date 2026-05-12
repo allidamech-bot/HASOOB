@@ -46,12 +46,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
   void initState() {
     super.initState();
     PerfLogger.logPageOpen('Reports');
-    _snapshot = _buildSnapshot();
+    _snapshot = _buildSnapshot().timeout(const Duration(seconds: 15));
     _snapshot.then((data) {
       if (mounted) {
         setState(() => _cachedData = data);
         PerfLogger.logDataLoaded('Reports');
       }
+    }).catchError((error) {
+      debugPrint('[Reports] Error loading snapshot: $error');
     });
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -68,12 +70,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Future<void> _reload({bool showError = false}) async {
-    final future = _reportService.buildSnapshot(
-      businessId: BusinessContext.businessId,
-      period: _periodFilter,
-      productId: _selectedProductId,
-      forceRefresh: true,
-    );
+    final future = _reportService
+        .buildSnapshot(
+          businessId: BusinessContext.businessId,
+          period: _periodFilter,
+          productId: _selectedProductId,
+          forceRefresh: true,
+        )
+        .timeout(const Duration(seconds: 20));
     if (mounted) {
       setState(() => _snapshot = future);
     }
@@ -83,8 +87,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
         setState(() => _cachedData = data);
       }
     } catch (error) {
-      if (!mounted || !showError) return;
-      AppMessages.error(context, '${AppCopy.of(context).t('loadReportsError')}\n$error');
+      if (!mounted) return;
+      if (showError) {
+        AppMessages.error(context, AppCopy.of(context).t('loadReportsError'));
+      }
     }
   }
 
@@ -216,10 +222,46 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildBody(BuildContext context, AppCopy copy) {
-    if (_cachedData == null) {
-      return _buildSkeleton(context, copy);
-    }
-    return _buildContent(context, copy, _cachedData!);
+    return FutureBuilder<ReportsSnapshot>(
+      future: _snapshot,
+      builder: (context, snapshot) {
+        if (_cachedData != null) {
+          return _buildContent(context, copy, _cachedData!);
+        }
+
+        if (snapshot.hasError) {
+          return _buildErrorState(context, copy, snapshot.error);
+        }
+
+        return _buildSkeleton(context, copy);
+      },
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, AppCopy copy, Object? error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded, color: AppTheme.danger, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              copy.t('loadReportsError'),
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => _reload(showError: true),
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(copy.t('retry')),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildSkeleton(BuildContext context, AppCopy copy) {

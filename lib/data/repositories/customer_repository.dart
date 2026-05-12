@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../database/database_helper.dart';
 import '../services/cloud_sync_service.dart';
 import '../backend/backend_client.dart';
@@ -11,10 +12,20 @@ class CustomerRepository {
   CustomerRepository({BackendClient? backendClient})
       : backendClient = backendClient ?? BackendClientFactory.create();
 
-  Stream<List<Map<String, dynamic>>> watchCustomers(String businessId) {
-    return CloudSyncService.instance
-        .watchCustomers(businessId)
-        .asyncMap((_) => DBHelper.getCustomers(businessId));
+  Stream<List<Map<String, dynamic>>> watchCustomers(String businessId) async* {
+    // 1. Yield local data immediately
+    final localData = await getCustomers(businessId);
+    yield localData;
+
+    // 2. Listen to cloud changes and refresh from local DB
+    try {
+      await for (final _ in CloudSyncService.instance.watchCustomers(businessId)) {
+        final refreshedData = await getCustomers(businessId);
+        yield refreshedData;
+      }
+    } catch (e) {
+      debugPrint('[CustomerRepository] watchCustomers cloud stream error: $e');
+    }
   }
 
   Future<List<Map<String, dynamic>>> getCustomers(String businessId) {

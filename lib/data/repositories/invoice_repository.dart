@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../models/business_model.dart';
 import '../database/database_helper.dart';
 import '../models/invoice_model.dart';
@@ -8,29 +9,68 @@ import '../services/sync_queue_service.dart';
 import '../models/sync_operation.dart';
 
 class InvoiceRepository {
-  Stream<List<InvoiceModel>> watchInvoices(String businessId) {
-    return CloudSyncService.instance.watchInvoices(businessId).asyncMap((_) async {
-      final data = await DBHelper.getInvoices(businessId);
-      return data.map((e) => InvoiceModel.fromMap(e)).toList();
-    });
+  Stream<List<InvoiceModel>> watchInvoices(String businessId) async* {
+    // 1. Yield local data immediately
+    final localData = await getInvoices(businessId);
+    yield localData;
+
+    // 2. Listen to cloud changes and refresh from local DB
+    try {
+      await for (final _ in CloudSyncService.instance.watchInvoices(businessId)) {
+        final refreshedData = await getInvoices(businessId);
+        yield refreshedData;
+      }
+    } catch (e) {
+      debugPrint('[InvoiceRepository] watchInvoices cloud stream error: $e');
+    }
   }
 
-  Stream<InvoiceModel?> watchInvoiceById(String businessId, String id) {
-    return CloudSyncService.instance.watchInvoice(id, businessId).asyncMap((_) async {
-      final data = await DBHelper.getInvoiceById(businessId, id);
-      return data != null ? InvoiceModel.fromMap(data) : null;
-    });
+  Stream<InvoiceModel?> watchInvoiceById(String businessId, String id) async* {
+    // 1. Yield local data immediately
+    final localData = await getInvoiceById(businessId, id);
+    yield localData;
+
+    // 2. Listen to cloud changes and refresh from local DB
+    try {
+      await for (final _ in CloudSyncService.instance.watchInvoice(id, businessId)) {
+        final refreshedData = await getInvoiceById(businessId, id);
+        yield refreshedData;
+      }
+    } catch (e) {
+      debugPrint('[InvoiceRepository] watchInvoiceById cloud stream error: $e');
+    }
   }
 
-  Stream<List<Map<String, dynamic>>> watchInvoiceItems(String businessId, String id) {
-    return CloudSyncService.instance.watchInvoiceItems(id, businessId);
+  Stream<List<Map<String, dynamic>>> watchInvoiceItems(String businessId, String id) async* {
+    // 1. Yield local data immediately
+    final localData = await getInvoiceItems(businessId, id);
+    yield localData;
+
+    // 2. Listen to cloud changes and refresh from local DB
+    try {
+      await for (final _ in CloudSyncService.instance.watchInvoiceItems(id, businessId)) {
+        final refreshedData = await getInvoiceItems(businessId, id);
+        yield refreshedData;
+      }
+    } catch (e) {
+      debugPrint('[InvoiceRepository] watchInvoiceItems cloud stream error: $e');
+    }
   }
 
-  Stream<List<QuotationModel>> watchQuotations(String businessId) {
-    return CloudSyncService.instance.watchQuotations(businessId).asyncMap((_) async {
-      final data = await DBHelper.getQuotations(businessId);
-      return data.map((e) => QuotationModel.fromMap(e)).toList();
-    });
+  Stream<List<QuotationModel>> watchQuotations(String businessId) async* {
+    // 1. Yield local data immediately
+    final localData = await getQuotations(businessId);
+    yield localData;
+
+    // 2. Listen to cloud changes and refresh from local DB
+    try {
+      await for (final _ in CloudSyncService.instance.watchQuotations(businessId)) {
+        final refreshedData = await getQuotations(businessId);
+        yield refreshedData;
+      }
+    } catch (e) {
+      debugPrint('[InvoiceRepository] watchQuotations cloud stream error: $e');
+    }
   }
 
   Future<List<InvoiceModel>> getInvoices(String businessId) async {

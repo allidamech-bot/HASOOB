@@ -11,6 +11,7 @@ import '../data/repositories/product_repository.dart';
 import '../core/utils/perf_logger.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/sync_status_indicator.dart';
+import 'add_product_screen.dart';
 import 'edit_product_screen.dart';
 import 'product_details_screen.dart';
 import 'sell_product_screen.dart';
@@ -159,12 +160,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
           builder: (context, snapshot) {
             final hasData = snapshot.hasData && snapshot.data != null;
-            if (!hasData && snapshot.connectionState == ConnectionState.waiting) {
-              return _buildSkeleton(context, copy);
+            
+            if (snapshot.hasError && !hasData) {
+              return _buildErrorState(context, copy, snapshot.error);
             }
 
-            if (snapshot.hasError) {
-              return Center(child: Text('${snapshot.error}'));
+            if (!hasData && snapshot.connectionState == ConnectionState.waiting) {
+              return _buildSkeleton(context, copy);
             }
 
             if (hasData) {
@@ -173,6 +175,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
             final products = snapshot.data ?? const <ProductModel>[];
             final filteredProducts = _filterProducts(products);
+
+            if (products.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
+              return _buildEmptyState(context, copy);
+            }
 
             return ListView(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
@@ -286,6 +292,70 @@ class _InventoryScreenState extends State<InventoryScreen> {
           padding: EdgeInsets.only(bottom: 12),
           child: SkeletonCard(height: 160),
         )),
+      ],
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, AppCopy copy, Object? error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded, color: AppTheme.danger, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              copy.t('loadInventoryError'),
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => setState(() {}),
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(copy.t('retry')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, AppCopy copy) {
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const SizedBox(height: 80),
+        const Icon(Icons.inventory_2_outlined, size: 64, color: AppTheme.accent),
+        const SizedBox(height: 24),
+        Center(
+          child: Text(
+            copy.t('noProductsYet'),
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          ),
+        ),
+        const SizedBox(height: 12),
+        Center(
+          child: Text(
+            copy.t('startByAddingProduct'),
+            style: TextStyle(color: AppTheme.textSecondaryFor(context)),
+            textAlign: TextAlign.center,
+          ),
+        ),
+        const SizedBox(height: 32),
+        Center(
+          child: FilledButton.icon(
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const AddProductScreen()),
+              );
+            },
+            icon: const Icon(Icons.add_rounded),
+            label: Text(copy.t('addProduct')),
+          ),
+        ),
       ],
     );
   }

@@ -139,44 +139,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
           stream: _customerRepository.watchCustomers(_businessId),
           builder: (context, snapshot) {
             final hasData = snapshot.hasData && snapshot.data != null;
-            if (!hasData && snapshot.connectionState == ConnectionState.waiting) {
-              return _buildSkeleton(context, copy);
+            
+            if (snapshot.hasError && !hasData) {
+              return _buildErrorState(context, copy, snapshot.error);
             }
 
-            if (snapshot.hasError) {
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(16),
-                children: [
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Column(
-                        children: [
-                          const Icon(
-                            Icons.error_outline_rounded,
-                            color: AppTheme.danger,
-                            size: 36,
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            copy.t('loadCustomersError'),
-                            style: const TextStyle(fontWeight: FontWeight.w800),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            '${snapshot.error}',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              color: AppTheme.textSecondaryFor(context),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              );
+            if (!hasData && snapshot.connectionState == ConnectionState.waiting) {
+              return _buildSkeleton(context, copy);
             }
 
             if (hasData) {
@@ -184,19 +153,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
             }
 
             final customers = snapshot.data ?? const <Map<String, dynamic>>[];
-            if (customers.isEmpty) {
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
-                children: [
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Center(child: Text(copy.t('noCustomersYet'))),
-                    ),
-                  ),
-                ],
-              );
+            
+            if (customers.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
+              return _buildEmptyState(context, copy);
             }
 
             return ListView(
@@ -256,6 +215,58 @@ class _CustomersScreenState extends State<CustomersScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: List.generate(5, (index) => const SkeletonListTile()),
+    );
+  }
+
+  Widget _buildErrorState(BuildContext context, AppCopy copy, Object? error) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.error_outline_rounded, color: AppTheme.danger, size: 48),
+            const SizedBox(height: 16),
+            Text(
+              copy.t('loadCustomersError'),
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            FilledButton.icon(
+              onPressed: () => setState(() {}),
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(copy.t('retry')),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState(BuildContext context, AppCopy copy) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(24),
+      children: [
+        const SizedBox(height: 80),
+        const Icon(Icons.people_outline_rounded, size: 64, color: AppTheme.accent),
+        const SizedBox(height: 24),
+        Center(
+          child: Text(
+            copy.t('noCustomersYet'),
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+          ),
+        ),
+        const SizedBox(height: 32),
+        Center(
+          child: FilledButton.icon(
+            onPressed: () => _openCustomerForm(),
+            icon: const Icon(Icons.person_add_alt_1_rounded),
+            label: Text(copy.t('newCustomer')),
+          ),
+        ),
+      ],
     );
   }
 
