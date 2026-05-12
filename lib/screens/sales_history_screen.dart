@@ -8,6 +8,8 @@ import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
 import '../data/repositories/product_repository.dart';
+import '../core/utils/perf_logger.dart';
+import '../widgets/skeleton_loader.dart';
 import '../widgets/sync_status_indicator.dart';
 
 enum SalesPeriodFilter { all, today, last7Days, last30Days }
@@ -30,7 +32,11 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   @override
   void initState() {
     super.initState();
+    PerfLogger.logPageOpen('SalesHistory');
     _searchController.addListener(_handleSearchChanged);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PerfLogger.logFirstRender('SalesHistory');
+    });
   }
 
   @override
@@ -120,9 +126,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           BusinessContext.businessId,
         ),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
+          final hasData = snapshot.hasData && snapshot.data != null;
+          if (!hasData && snapshot.connectionState == ConnectionState.waiting) {
+            return _buildSkeleton(context, copy);
           }
 
           if (snapshot.hasError) {
@@ -162,6 +168,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                 ),
               ],
             );
+          }
+
+          if (hasData) {
+            PerfLogger.logDataLoaded('SalesHistory');
           }
 
           final rows = _applyFilters(snapshot.data ?? const []);
@@ -421,6 +431,24 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildSkeleton(BuildContext context, AppCopy copy) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 28),
+      children: [
+        const SkeletonLoader(height: 56, borderRadius: 12),
+        const SizedBox(height: 12),
+        const SkeletonCard(height: 120),
+        const SizedBox(height: 14),
+        const SkeletonLoader(width: 100, height: 20),
+        const SizedBox(height: 10),
+        ...List.generate(3, (index) => const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: SkeletonCard(height: 140),
+        )),
+      ],
     );
   }
 

@@ -37,9 +37,17 @@ class SyncManager extends ChangeNotifier {
     }
   }
 
-  Future<void> runSync() async {
+  DateTime? _lastSyncTime;
+
+  Future<void> runSync({bool force = false}) async {
     _syncRequested = false;
     if (_isRunning) return;
+
+    final now = DateTime.now();
+    if (!force && _lastSyncTime != null && now.difference(_lastSyncTime!).inSeconds < 15) {
+      debugPrint('[Sync] sync throttled (last sync was less than 15s ago)');
+      return;
+    }
 
     final queueLength = await SyncQueueService.instance.pendingQueueLength();
     debugPrint('[Sync] queue length before sync=$queueLength');
@@ -66,6 +74,7 @@ class SyncManager extends ChangeNotifier {
     try {
       debugPrint('[Sync] sync started');
       await _engine.processQueue();
+      _lastSyncTime = DateTime.now();
       final remaining = await SyncQueueService.instance.pendingQueueLength();
       debugPrint('[Sync] sync completed; remainingQueueLength=$remaining');
     } catch (e) {

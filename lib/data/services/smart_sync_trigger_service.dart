@@ -69,7 +69,7 @@ class SmartSyncTriggerService {
 
     try {
       if (force) {
-        await _syncManager.runSync();
+        await _syncManager.runSync(force: true);
       } else {
         final hasPending = await _syncManager.hasPendingOperations();
         final hasFailed = await _syncManager.hasFailedOperations();

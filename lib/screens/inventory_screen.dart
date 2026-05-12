@@ -8,6 +8,8 @@ import '../core/business/business_context.dart';
 import '../core/permissions/permissions.dart';
 import '../data/models/product_model.dart';
 import '../data/repositories/product_repository.dart';
+import '../core/utils/perf_logger.dart';
+import '../widgets/skeleton_loader.dart';
 import '../widgets/sync_status_indicator.dart';
 import 'edit_product_screen.dart';
 import 'product_details_screen.dart';
@@ -35,7 +37,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   void initState() {
     super.initState();
+    PerfLogger.logPageOpen('Inventory');
     _searchController.addListener(() => setState(() {}));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PerfLogger.logFirstRender('Inventory');
+    });
   }
 
   @override
@@ -152,13 +158,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
             BusinessContext.businessId,
           ),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting &&
-                !snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
+            final hasData = snapshot.hasData && snapshot.data != null;
+            if (!hasData && snapshot.connectionState == ConnectionState.waiting) {
+              return _buildSkeleton(context, copy);
             }
 
             if (snapshot.hasError) {
               return Center(child: Text('${snapshot.error}'));
+            }
+
+            if (hasData) {
+              PerfLogger.logDataLoaded('Inventory');
             }
 
             final products = snapshot.data ?? const <ProductModel>[];
@@ -259,6 +269,24 @@ class _InventoryScreenState extends State<InventoryScreen> {
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildSkeleton(BuildContext context, AppCopy copy) {
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+      children: [
+        const SkeletonLoader(height: 56, borderRadius: 12),
+        const SizedBox(height: 16),
+        const SkeletonCard(height: 180),
+        const SizedBox(height: 12),
+        const SkeletonLoader(width: 120, height: 20),
+        const SizedBox(height: 12),
+        ...List.generate(3, (index) => const Padding(
+          padding: EdgeInsets.only(bottom: 12),
+          child: SkeletonCard(height: 160),
+        )),
+      ],
     );
   }
 

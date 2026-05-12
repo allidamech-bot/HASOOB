@@ -9,11 +9,25 @@ enum ReportPeriodFilter { all, last7Days, last30Days, today }
 class ReportService {
   const ReportService();
 
+  static ReportsSnapshot? _lastSnapshot;
+  static DateTime? _lastFetch;
+
   Future<ReportsSnapshot> buildSnapshot({
     required String businessId,
     ReportPeriodFilter period = ReportPeriodFilter.all,
     String? productId,
+    bool forceRefresh = false,
   }) async {
+    final now = DateTime.now();
+    if (!forceRefresh &&
+        _lastSnapshot != null &&
+        _lastFetch != null &&
+        now.difference(_lastFetch!).inSeconds < 30 &&
+        period == ReportPeriodFilter.all &&
+        (productId == null || productId.isEmpty)) {
+      return _lastSnapshot!;
+    }
+
     final products =
         (await DBHelper.getProducts(businessId)).map(ProductModel.fromMap).toList();
     final salesRecords = await DBHelper.getSalesRecords(businessId);
@@ -65,7 +79,7 @@ class ReportService {
 
     final recentSales = filteredSales.take(6).toList();
 
-    return ReportsSnapshot(
+    final result = ReportsSnapshot(
       products: products,
       salesRecords: filteredSales,
       accounts: accounts,
@@ -89,6 +103,13 @@ class ReportService {
       topProductChart: _buildTopProductChart(bestSellingProducts),
       trialBalanceSummary: _buildTrialBalanceSummary(accounts, journalEntries),
     );
+
+    if (period == ReportPeriodFilter.all && (productId == null || productId.isEmpty)) {
+      _lastSnapshot = result;
+      _lastFetch = DateTime.now();
+    }
+
+    return result;
   }
 
   List<Map<String, dynamic>> _filterSalesRecords(

@@ -14,6 +14,8 @@ import '../core/app_web_utils.dart';
 import '../data/services/export_service.dart';
 import '../data/services/reports/report_models.dart';
 import '../data/services/reports/report_service.dart';
+import '../core/utils/perf_logger.dart';
+import '../widgets/skeleton_loader.dart';
 import '../widgets/app_section_header.dart';
 import '../widgets/metric_card.dart';
 import '../widgets/sync_status_indicator.dart';
@@ -36,13 +38,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
   final ExportService _exportService = ExportService();
 
   late Future<ReportsSnapshot> _snapshot;
+  ReportsSnapshot? _cachedData;
   ReportPeriodFilter _periodFilter = ReportPeriodFilter.all;
   String? _selectedProductId;
 
   @override
   void initState() {
     super.initState();
+    PerfLogger.logPageOpen('Reports');
     _snapshot = _buildSnapshot();
+    _snapshot.then((data) {
+      if (mounted) {
+        setState(() => _cachedData = data);
+        PerfLogger.logDataLoaded('Reports');
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PerfLogger.logFirstRender('Reports');
+    });
   }
 
   Future<ReportsSnapshot> _buildSnapshot() {
@@ -54,12 +68,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Future<void> _reload({bool showError = false}) async {
-    final future = _buildSnapshot();
+    final future = _reportService.buildSnapshot(
+      businessId: BusinessContext.businessId,
+      period: _periodFilter,
+      productId: _selectedProductId,
+      forceRefresh: true,
+    );
     if (mounted) {
       setState(() => _snapshot = future);
     }
     try {
-      await future;
+      final data = await future;
+      if (mounted) {
+        setState(() => _cachedData = data);
+      }
     } catch (error) {
       if (!mounted || !showError) return;
       AppMessages.error(context, '${AppCopy.of(context).t('loadReportsError')}\n$error');
@@ -188,122 +210,97 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: () => _reload(showError: true),
-        child: FutureBuilder<ReportsSnapshot>(
-          future: _snapshot,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting &&
-                !snapshot.hasData) {
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                children: const [
-                  SizedBox(height: 240),
-                  Center(child: CircularProgressIndicator()),
-                ],
-              );
-            }
+        child: _buildBody(context, copy),
+      ),
+    );
+  }
 
-            if (snapshot.hasError) {
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(20),
-                children: [
-                  _surface(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Icon(Icons.error_outline_rounded, color: AppTheme.danger),
-                        const SizedBox(height: 12),
-                        Text(
-                          copy.t('loadReportsError'),
-                          style: _theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text('${snapshot.error}', style: TextStyle(color: _muted)),
-                        const SizedBox(height: 16),
-                        FilledButton(
-                          onPressed: () => _reload(),
-                          child: Text(copy.t('retry')),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            }
+  Widget _buildBody(BuildContext context, AppCopy copy) {
+    if (_cachedData == null) {
+      return _buildSkeleton(context, copy);
+    }
+    return _buildContent(context, copy, _cachedData!);
+  }
 
-            final data = snapshot.data;
-            if (data == null) {
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(20),
-                children: [
-                  _surface(
-                    child: Text(
-                      copy.t('noDataAvailable'),
-                      style: _theme.textTheme.titleMedium,
-                    ),
-                  ),
-                ],
-              );
-            }
+  Widget _buildSkeleton(BuildContext context, AppCopy copy) {
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+      children: [
+        const SkeletonLoader(width: 150, height: 24),
+        const SizedBox(height: 16),
+        const SkeletonLoader(height: 180, borderRadius: 20),
+        const SizedBox(height: 20),
+        const SkeletonCard(height: 120),
+        const SizedBox(height: 20),
+        GridView.count(
+          crossAxisCount: MediaQuery.of(context).size.width < 420 ? 1 : 2,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          childAspectRatio: 1.5,
+          children: List.generate(4, (index) => const SkeletonCard(height: 80)),
+        ),
+      ],
+    );
+  }
 
-            final productOptions = [
-              DropdownMenuItem<String?>(value: null, child: Text(copy.t('allProducts'))),
-              ...data.products.map(
-                (product) => DropdownMenuItem<String?>(
-                  value: product.id,
-                  child: Text(product.name),
-                ),
-              ),
-            ];
-
-            return ListView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-              children: [
-                AppSectionHeader(
-                  title: copy.t('performanceSummary'),
-                  subtitle: _hasFilters
-                      ? copy.t('filtersAffectResults')
-                      : copy.t('currentSnapshotSummary'),
-                  trailing: _hasFilters
-                      ? ActionChip(
-                          label: Text(copy.t('clearFilters')),
-                          onPressed: () {
-                            setState(() {
-                              _periodFilter = ReportPeriodFilter.all;
-                              _selectedProductId = null;
-                              _snapshot = _buildSnapshot();
-                            });
-                          },
-                        )
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                _hero(data, copy),
-                const SizedBox(height: 20),
-                _filters(productOptions, copy),
-                const SizedBox(height: 20),
-                _metrics(data, copy),
-                const SizedBox(height: 20),
-                _exports(copy),
-                const SizedBox(height: 20),
-                _charts(data, copy),
-                const SizedBox(height: 20),
-                _bestSelling(data, copy),
-                const SizedBox(height: 20),
-                _lowStock(data, copy),
-                const SizedBox(height: 20),
-                _recentSales(data, copy),
-                const SizedBox(height: 20),
-                _accounting(data, copy),
-              ],
-            );
-          },
+  Widget _buildContent(BuildContext context, AppCopy copy, ReportsSnapshot data) {
+    final productOptions = [
+      DropdownMenuItem<String?>(value: null, child: Text(copy.t('allProducts'))),
+      ...data.products.map(
+        (product) => DropdownMenuItem<String?>(
+          value: product.id,
+          child: Text(product.name),
         ),
       ),
+    ];
+
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+      children: [
+        AppSectionHeader(
+          title: copy.t('performanceSummary'),
+          subtitle: _hasFilters
+              ? copy.t('filtersAffectResults')
+              : copy.t('currentSnapshotSummary'),
+          trailing: _hasFilters
+              ? ActionChip(
+                  label: Text(copy.t('clearFilters')),
+                  onPressed: () {
+                    setState(() {
+                      _periodFilter = ReportPeriodFilter.all;
+                      _selectedProductId = null;
+                      _snapshot = _buildSnapshot();
+                      _snapshot.then((data) {
+                        if (mounted) setState(() => _cachedData = data);
+                      });
+                    });
+                  },
+                )
+              : null,
+        ),
+        const SizedBox(height: 16),
+        _hero(data, copy),
+        const SizedBox(height: 20),
+        _filters(productOptions, copy),
+        const SizedBox(height: 20),
+        _metrics(data, copy),
+        const SizedBox(height: 20),
+        _exports(copy),
+        const SizedBox(height: 20),
+        _charts(data, copy),
+        const SizedBox(height: 20),
+        _bestSelling(data, copy),
+        const SizedBox(height: 20),
+        _lowStock(data, copy),
+        const SizedBox(height: 20),
+        _recentSales(data, copy),
+        const SizedBox(height: 20),
+        _accounting(data, copy),
+      ],
     );
   }
 

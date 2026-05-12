@@ -5,6 +5,8 @@ import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
 import '../data/repositories/customer_repository.dart';
+import '../core/utils/perf_logger.dart';
+import '../widgets/skeleton_loader.dart';
 import 'customer_statement_screen.dart';
 
 class CustomersScreen extends StatefulWidget {
@@ -18,6 +20,15 @@ class _CustomersScreenState extends State<CustomersScreen> {
   final CustomerRepository _customerRepository = CustomerRepository();
 
   String get _businessId => BusinessContext.businessId;
+
+  @override
+  void initState() {
+    super.initState();
+    PerfLogger.logPageOpen('Customers');
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PerfLogger.logFirstRender('Customers');
+    });
+  }
 
   Future<void> _refresh() async {
     await _customerRepository.getCustomers(_businessId);
@@ -127,16 +138,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
         child: StreamBuilder<List<Map<String, dynamic>>>(
           stream: _customerRepository.watchCustomers(_businessId),
           builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting &&
-                !snapshot.hasData) {
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
-                children: const [
-                  SizedBox(height: 180),
-                  Center(child: CircularProgressIndicator()),
-                ],
-              );
+            final hasData = snapshot.hasData && snapshot.data != null;
+            if (!hasData && snapshot.connectionState == ConnectionState.waiting) {
+              return _buildSkeleton(context, copy);
             }
 
             if (snapshot.hasError) {
@@ -173,6 +177,10 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   ),
                 ],
               );
+            }
+
+            if (hasData) {
+              PerfLogger.logDataLoaded('Customers');
             }
 
             final customers = snapshot.data ?? const <Map<String, dynamic>>[];
@@ -241,6 +249,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
           },
         ),
       ),
+    );
+  }
+
+  Widget _buildSkeleton(BuildContext context, AppCopy copy) {
+    return ListView(
+      padding: const EdgeInsets.all(16),
+      children: List.generate(5, (index) => const SkeletonListTile()),
     );
   }
 

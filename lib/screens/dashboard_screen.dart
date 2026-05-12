@@ -10,6 +10,8 @@ import '../data/services/auth_service.dart';
 import '../data/services/cloud_sync_service.dart';
 import '../data/services/reports/report_models.dart';
 import '../data/services/reports/report_service.dart';
+import '../core/utils/perf_logger.dart';
+import '../widgets/skeleton_loader.dart';
 import '../widgets/app_section_header.dart';
 import '../widgets/metric_card.dart';
 import 'add_product_screen.dart';
@@ -33,13 +35,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
   late Future<ReportsSnapshot> _snapshot;
   late Future<Map<String, dynamic>> _restoreStatus;
   bool _isRestoring = false;
+  ReportsSnapshot? _cachedData;
 
   @override
   void initState() {
     super.initState();
+    PerfLogger.logPageOpen('Dashboard');
     final businessId = BusinessContext.businessId;
     _snapshot = _reportService.buildSnapshot(businessId: businessId);
     _restoreStatus = CloudSyncService.instance.getLocalRestoreStatus();
+
+    _snapshot.then((data) {
+      if (mounted) {
+        setState(() => _cachedData = data);
+        PerfLogger.logDataLoaded('Dashboard');
+      }
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      PerfLogger.logFirstRender('Dashboard');
+    });
   }
 
   Future<void> _refresh() async {
@@ -158,7 +173,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
 
           return FloatingActionButton.extended(
-            onPressed: manager.isRunning ? null : () => manager.runSync(),
+            onPressed: manager.isRunning ? null : () => manager.runSync(force: true),
             backgroundColor: manager.isRunning
                 ? AppTheme.textSecondaryFor(context)
                 : AppTheme.accent,
@@ -181,365 +196,396 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
-        child: FutureBuilder<ReportsSnapshot>(
-          future: _snapshot,
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(24),
-                children: const [
-                  SizedBox(height: 180),
-                  Center(child: CircularProgressIndicator()),
+        child: _buildBody(context, copy),
+      ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context, AppCopy copy) {
+    if (_cachedData == null) {
+      return _buildSkeleton(context, copy);
+    }
+    return _buildContent(context, copy, _cachedData!);
+  }
+
+  Widget _buildSkeleton(BuildContext context, AppCopy copy) {
+    return SafeArea(
+      bottom: false,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        children: [
+          const SkeletonLoader(height: 120, borderRadius: 24),
+          const SizedBox(height: 24),
+          const SkeletonCard(height: 80),
+          const SizedBox(height: 24),
+          const SkeletonLoader(width: 150, height: 24),
+          const SizedBox(height: 16),
+          GridView.count(
+            crossAxisCount: MediaQuery.of(context).size.width >= 900 ? 4 : 2,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            children: List.generate(4, (index) => const SkeletonCard(height: 100)),
+          ),
+          const SizedBox(height: 24),
+          const SkeletonLoader(width: 150, height: 24),
+          const SizedBox(height: 12),
+          const Row(
+            children: [
+              Expanded(child: SkeletonLoader(height: 80, borderRadius: 16)),
+              SizedBox(width: 12),
+              Expanded(child: SkeletonLoader(height: 80, borderRadius: 16)),
+              SizedBox(width: 12),
+              Expanded(child: SkeletonLoader(height: 80, borderRadius: 16)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContent(BuildContext context, AppCopy copy, ReportsSnapshot data) {
+    final lowStockPreview = data.lowStockItems.take(3).toList();
+    final recentSalesPreview = data.recentSales.take(3).toList();
+
+    return SafeArea(
+      bottom: false,
+      child: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
+        children: [
+          _heroCard(context, copy),
+          const SizedBox(height: 24),
+          const SyncHealthCard(),
+          const SizedBox(height: 24),
+          AppSectionHeader(
+            title: copy.t('overview'),
+            subtitle: copy.t('overviewSubtitle'),
+          ),
+          const SizedBox(height: 16),
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final textScale = MediaQuery.textScalerOf(context).scale(1);
+              final crossAxisCount = constraints.maxWidth >= 900
+                  ? 4
+                  : constraints.maxWidth < 420
+                      ? 1
+                      : 2;
+              final baseHeight = constraints.maxWidth < 360 ? 162.0 : 172.0;
+              final cardHeight =
+                  baseHeight + ((textScale - 1) * 22).clamp(0, 26);
+
+              return GridView.count(
+                crossAxisCount: crossAxisCount,
+                crossAxisSpacing: 12,
+                mainAxisSpacing: 12,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                mainAxisExtent: cardHeight,
+                children: [
+                  MetricCard(
+                    title: copy.t('totalProducts'),
+                    value: AppFormatters.number(data.totalProducts),
+                    icon: Icons.inventory_2_rounded,
+                  ),
+                  MetricCard(
+                    title: copy.t('totalSales'),
+                    value: AppFormatters.currency(data.totalSales),
+                    icon: Icons.point_of_sale_rounded,
+                  ),
+                  MetricCard(
+                    title: copy.t('estimatedProfit'),
+                    value: AppFormatters.currency(data.netProfitEstimate),
+                    icon: Icons.trending_up_rounded,
+                    accentColor: AppTheme.success,
+                  ),
+                  MetricCard(
+                    title: copy.t('lowStockCount'),
+                    value: AppFormatters.number(data.lowStockItems.length),
+                    icon: Icons.warning_amber_rounded,
+                    accentColor: AppTheme.warning,
+                    caption: data.lowStockItems.isEmpty
+                        ? copy.t('noAlertsNow')
+                        : copy.t('needsAttentionSoon'),
+                  ),
                 ],
               );
-            }
+            },
+          ),
+          const SizedBox(height: 24),
+          AppSectionHeader(
+            title: copy.t('quickActions'),
+            subtitle: copy.t('quickActionsSubtitle'),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _quickAction(
+                  context,
+                  icon: Icons.add_box_rounded,
+                  title: copy.t('addProduct'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const AddProductScreen()),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _quickAction(
+                  context,
+                  icon: Icons.receipt_long_rounded,
+                  title: copy.t('newInvoice'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const DocumentsScreen()),
+                    );
+                  },
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _quickAction(
+                  context,
+                  icon: Icons.person_add_alt_1_rounded,
+                  title: copy.t('newCustomer'),
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CustomersScreen()),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Card(
+            child: FutureBuilder<Map<String, dynamic>>(
+              future: _restoreStatus,
+              builder: (context, restoreSnapshot) {
+                final restoreData = restoreSnapshot.data;
+                final hasRestored = restoreData?['has_restored'] == true;
+                final lastRestoreAt =
+                    restoreData?['last_restore_at']?.toString();
 
-            final data = snapshot.data!;
-            final lowStockPreview = data.lowStockItems.take(3).toList();
-            final recentSalesPreview = data.recentSales.take(3).toList();
-
-            return SafeArea(
-              bottom: false,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-                children: [
-                  _heroCard(context, copy),
-                  const SizedBox(height: 24),
-                  const SyncHealthCard(),
-                  const SizedBox(height: 24),
-                  AppSectionHeader(
-                    title: copy.t('overview'),
-                    subtitle: copy.t('overviewSubtitle'),
-                  ),
-                  const SizedBox(height: 16),
-                  LayoutBuilder(
-                    builder: (context, constraints) {
-                      final textScale = MediaQuery.textScalerOf(context).scale(1);
-                      final crossAxisCount = constraints.maxWidth >= 900
-                          ? 4
-                          : constraints.maxWidth < 420
-                              ? 1
-                              : 2;
-                      final baseHeight = constraints.maxWidth < 360 ? 162.0 : 172.0;
-                      final cardHeight =
-                          baseHeight + ((textScale - 1) * 22).clamp(0, 26);
-
-                      return GridView.count(
-                        crossAxisCount: crossAxisCount,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        mainAxisExtent: cardHeight,
-                        children: [
-                          MetricCard(
-                            title: copy.t('totalProducts'),
-                            value: AppFormatters.number(data.totalProducts),
-                            icon: Icons.inventory_2_rounded,
-                          ),
-                          MetricCard(
-                            title: copy.t('totalSales'),
-                            value: AppFormatters.currency(data.totalSales),
-                            icon: Icons.point_of_sale_rounded,
-                          ),
-                          MetricCard(
-                            title: copy.t('estimatedProfit'),
-                            value: AppFormatters.currency(data.netProfitEstimate),
-                            icon: Icons.trending_up_rounded,
-                            accentColor: AppTheme.success,
-                          ),
-                          MetricCard(
-                            title: copy.t('lowStockCount'),
-                            value: AppFormatters.number(data.lowStockItems.length),
-                            icon: Icons.warning_amber_rounded,
-                            accentColor: AppTheme.warning,
-                            caption: data.lowStockItems.isEmpty
-                                ? copy.t('noAlertsNow')
-                                : copy.t('needsAttentionSoon'),
-                          ),
-                        ],
-                      );
-                    },
-                  ),
-                  const SizedBox(height: 24),
-                  AppSectionHeader(
-                    title: copy.t('quickActions'),
-                    subtitle: copy.t('quickActionsSubtitle'),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
+                return Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
                     children: [
-                      Expanded(
-                        child: _quickAction(
+                      ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        leading: _iconShell(
                           context,
-                          icon: Icons.add_box_rounded,
-                          title: copy.t('addProduct'),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const AddProductScreen()),
-                            );
-                          },
+                          Icons.cloud_download_rounded,
+                          AppTheme.info,
                         ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _quickAction(
-                          context,
-                          icon: Icons.receipt_long_rounded,
-                          title: copy.t('newInvoice'),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const DocumentsScreen()),
-                            );
-                          },
+                        title: Text(
+                          copy.t('restoreFromCloud'),
+                          style: const TextStyle(fontWeight: FontWeight.w800),
                         ),
+                        subtitle: Text(copy.t('restoreFromCloudSubtitle')),
+                        trailing: _isRestoring
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(Icons.arrow_forward_ios_rounded, size: 18),
+                        onTap: _isRestoring ? null : _restoreFromCloud,
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _quickAction(
-                          context,
-                          icon: Icons.person_add_alt_1_rounded,
-                          title: copy.t('newCustomer'),
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const CustomersScreen()),
-                            );
-                          },
+                      const SizedBox(height: 8),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: hasRestored
+                              ? AppTheme.success.withValues(alpha: 0.08)
+                              : AppTheme.surfaceAltFor(context),
+                          borderRadius: BorderRadius.circular(
+                            AppTheme.radiusMedium,
+                          ),
+                          border: Border.all(
+                            color: hasRestored
+                                ? AppTheme.success.withValues(alpha: 0.24)
+                                : AppTheme.borderFor(context),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              hasRestored
+                                  ? Icons.cloud_done_rounded
+                                  : Icons.cloud_off_rounded,
+                              color: hasRestored
+                                  ? AppTheme.success
+                                  : AppTheme.textSecondaryFor(context),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    hasRestored
+                                        ? copy.t('restoreUsed')
+                                        : copy.t('restoreUnused'),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
+                                  if (lastRestoreAt != null &&
+                                      lastRestoreAt.trim().isNotEmpty) ...[
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      copy.dashboardLastRestore(
+                                        AppFormatters.dateTimeString(lastRestoreAt),
+                                      ),
+                                      style: Theme.of(context).textTheme.bodySmall,
+                                    ),
+                                  ],
+                                ],
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  Card(
-                    child: FutureBuilder<Map<String, dynamic>>(
-                      future: _restoreStatus,
-                      builder: (context, restoreSnapshot) {
-                        final restoreData = restoreSnapshot.data;
-                        final hasRestored = restoreData?['has_restored'] == true;
-                        final lastRestoreAt =
-                            restoreData?['last_restore_at']?.toString();
-
-                        return Padding(
-                          padding: const EdgeInsets.all(18),
-                          child: Column(
-                            children: [
-                              ListTile(
-                                contentPadding: EdgeInsets.zero,
-                                leading: _iconShell(
-                                  context,
-                                  Icons.cloud_download_rounded,
-                                  AppTheme.info,
-                                ),
-                                title: Text(
-                                  copy.t('restoreFromCloud'),
-                                  style: const TextStyle(fontWeight: FontWeight.w800),
-                                ),
-                                subtitle: Text(copy.t('restoreFromCloudSubtitle')),
-                                trailing: _isRestoring
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(strokeWidth: 2),
-                                      )
-                                    : const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-                                onTap: _isRestoring ? null : _restoreFromCloud,
-                              ),
-                              const SizedBox(height: 8),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(14),
-                                decoration: BoxDecoration(
-                                  color: hasRestored
-                                      ? AppTheme.success.withValues(alpha: 0.08)
-                                      : AppTheme.surfaceAltFor(context),
-                                  borderRadius: BorderRadius.circular(
-                                    AppTheme.radiusMedium,
-                                  ),
-                                  border: Border.all(
-                                    color: hasRestored
-                                        ? AppTheme.success.withValues(alpha: 0.24)
-                                        : AppTheme.borderFor(context),
-                                  ),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Icon(
-                                      hasRestored
-                                          ? Icons.cloud_done_rounded
-                                          : Icons.cloud_off_rounded,
-                                      color: hasRestored
-                                          ? AppTheme.success
-                                          : AppTheme.textSecondaryFor(context),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            hasRestored
-                                                ? copy.t('restoreUsed')
-                                                : copy.t('restoreUnused'),
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w800,
-                                            ),
-                                          ),
-                                          if (lastRestoreAt != null &&
-                                              lastRestoreAt.trim().isNotEmpty) ...[
-                                            const SizedBox(height: 4),
-                                            Text(
-                                              copy.dashboardLastRestore(
-                                                AppFormatters.dateTimeString(lastRestoreAt),
-                                              ),
-                                              style: Theme.of(context).textTheme.bodySmall,
-                                            ),
-                                          ],
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-                  AppSectionHeader(
-                    title: copy.t('stockAlerts'),
-                    subtitle: copy.t('stockAlertsSubtitle'),
-                  ),
-                  const SizedBox(height: 12),
-                  if (data.lowStockItems.isEmpty)
-                    _emptyCard(
-                      context,
-                      icon: Icons.inventory_2_outlined,
-                      text: copy.t('noLowStockNow'),
-                    )
-                  else ...[
-                    Card(
-                      color: AppTheme.warning.withValues(alpha: 0.08),
-                      child: ListTile(
-                        leading: _iconShell(
-                          context,
-                          Icons.crisis_alert_rounded,
-                          AppTheme.warning,
-                        ),
-                        title: Text(
-                          copy.dashboardLowStockCount(data.lowStockItems.length),
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        subtitle: Text(copy.t('reviewLowStock')),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...lowStockPreview.map(
-                      (item) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Card(
-                          child: ListTile(
-                            leading: _iconShell(
-                              context,
-                              item.isOutOfStock
-                                  ? Icons.remove_shopping_cart_rounded
-                                  : Icons.warning_amber_rounded,
-                              item.isOutOfStock
-                                  ? AppTheme.danger
-                                  : AppTheme.warning,
-                            ),
-                            title: Text(
-                              item.name,
-                              style: const TextStyle(fontWeight: FontWeight.w800),
-                            ),
-                            subtitle: Text(
-                              copy.dashboardStockLine(
-                                item.stockQty,
-                                item.unit,
-                                item.lowStockThreshold,
-                              ),
-                            ),
-                            trailing: _pill(
-                              item.isOutOfStock
-                                  ? copy.t('outOfStock')
-                                  : copy.t('lowStock'),
-                              item.isOutOfStock ? AppTheme.danger : AppTheme.warning,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                  const SizedBox(height: 24),
-                  AppSectionHeader(
-                    title: copy.t('recentSales'),
-                    subtitle: copy.t('recentSalesSubtitle'),
-                  ),
-                  const SizedBox(height: 12),
-                  if (data.recentSales.isEmpty)
-                    _emptyCard(
-                      context,
-                      icon: Icons.sell_outlined,
-                      text: copy.t('noSalesYet'),
-                    )
-                  else ...[
-                    Card(
-                      child: ListTile(
-                        leading: _iconShell(
-                          context,
-                          Icons.monitor_heart_rounded,
-                          AppTheme.info,
-                        ),
-                        title: Text(
-                          copy.dashboardRecentSalesCount(recentSalesPreview.length),
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        subtitle: Text(copy.t('recentSalesSubtitle')),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    ...recentSalesPreview.map(
-                      (row) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: Card(
-                          child: ListTile(
-                            leading: _iconShell(
-                              context,
-                              Icons.sell_rounded,
-                              AppTheme.info,
-                            ),
-                            title: Text(
-                              row['product_name']?.toString() ?? '',
-                              style: const TextStyle(fontWeight: FontWeight.w800),
-                            ),
-                            subtitle: Text(
-                              copy.dashboardRecentSaleSubtitle(
-                                customerName: row['customer_name']?.toString() ?? '',
-                                qty: row['qty'],
-                                date: AppFormatters.dateTimeString(
-                                  row['date']?.toString(),
-                                ),
-                              ),
-                            ),
-                            trailing: Text(
-                              AppFormatters.currency(_toDouble(row['total_sale'])),
-                              style: const TextStyle(fontWeight: FontWeight.w800),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ],
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 24),
+          AppSectionHeader(
+            title: copy.t('stockAlerts'),
+            subtitle: copy.t('stockAlertsSubtitle'),
+          ),
+          const SizedBox(height: 12),
+          if (data.lowStockItems.isEmpty)
+            _emptyCard(
+              context,
+              icon: Icons.inventory_2_outlined,
+              text: copy.t('noLowStockNow'),
+            )
+          else ...[
+            Card(
+              color: AppTheme.warning.withValues(alpha: 0.08),
+              child: ListTile(
+                leading: _iconShell(
+                  context,
+                  Icons.crisis_alert_rounded,
+                  AppTheme.warning,
+                ),
+                title: Text(
+                  copy.dashboardLowStockCount(data.lowStockItems.length),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                subtitle: Text(copy.t('reviewLowStock')),
               ),
-            );
-          },
-        ),
+            ),
+            const SizedBox(height: 12),
+            ...lowStockPreview.map(
+              (item) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Card(
+                  child: ListTile(
+                    leading: _iconShell(
+                      context,
+                      item.isOutOfStock
+                          ? Icons.remove_shopping_cart_rounded
+                          : Icons.warning_amber_rounded,
+                      item.isOutOfStock
+                          ? AppTheme.danger
+                          : AppTheme.warning,
+                    ),
+                    title: Text(
+                      item.name,
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(
+                      copy.dashboardStockLine(
+                        item.stockQty,
+                        item.unit,
+                        item.lowStockThreshold,
+                      ),
+                    ),
+                    trailing: _pill(
+                      item.isOutOfStock
+                          ? copy.t('outOfStock')
+                          : copy.t('lowStock'),
+                      item.isOutOfStock ? AppTheme.danger : AppTheme.warning,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+          const SizedBox(height: 24),
+          AppSectionHeader(
+            title: copy.t('recentSales'),
+            subtitle: copy.t('recentSalesSubtitle'),
+          ),
+          const SizedBox(height: 12),
+          if (data.recentSales.isEmpty)
+            _emptyCard(
+              context,
+              icon: Icons.sell_outlined,
+              text: copy.t('noSalesYet'),
+            )
+          else ...[
+            Card(
+              child: ListTile(
+                leading: _iconShell(
+                  context,
+                  Icons.monitor_heart_rounded,
+                  AppTheme.info,
+                ),
+                title: Text(
+                  copy.dashboardRecentSalesCount(recentSalesPreview.length),
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                subtitle: Text(copy.t('recentSalesSubtitle')),
+              ),
+            ),
+            const SizedBox(height: 12),
+            ...recentSalesPreview.map(
+              (row) => Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Card(
+                  child: ListTile(
+                    leading: _iconShell(
+                      context,
+                      Icons.sell_rounded,
+                      AppTheme.info,
+                    ),
+                    title: Text(
+                      row['product_name']?.toString() ?? '',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    subtitle: Text(
+                      copy.dashboardRecentSaleSubtitle(
+                        customerName: row['customer_name']?.toString() ?? '',
+                        qty: row['qty'],
+                        date: AppFormatters.dateTimeString(
+                          row['date']?.toString(),
+                        ),
+                      ),
+                    ),
+                    trailing: Text(
+                      AppFormatters.currency(_toDouble(row['total_sale'])),
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
