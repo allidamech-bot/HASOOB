@@ -31,7 +31,7 @@ class DefaultFirebaseOptions {
       'messagingSenderId',
       'authDomain',
     ]) {
-      final value = _readStringField(options, field);
+      final value = readStringField(options, field);
       if (value == null || value.trim().isEmpty) {
         missing.add(field);
       }
@@ -39,7 +39,7 @@ class DefaultFirebaseOptions {
     return missing;
   }
 
-  static String? _readStringField(Object options, String field) {
+  static String? readStringField(Object options, String field) {
     try {
       final dynamic dynamicOptions = options;
       final Object? value = switch (field) {

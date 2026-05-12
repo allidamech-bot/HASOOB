@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/business/business_context.dart';
 import '../../core/app_theme.dart';
+import '../../core/utils/web_utils.dart';
 import '../../data/services/auth_service.dart';
+import '../../data/services/firebase_bootstrap.dart';
 import '../main_navigation_screen.dart';
 import 'auth_shell.dart';
 
@@ -15,11 +17,11 @@ class AuthGate extends StatefulWidget {
   const AuthGate({
     super.key,
     required this.firebaseEnabled,
-    this.degradedMessage,
+    this.bootstrapResult,
   });
 
   final bool firebaseEnabled;
-  final String? degradedMessage;
+  final FirebaseBootstrapResult? bootstrapResult;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -43,7 +45,7 @@ class _AuthGateState extends State<AuthGate> {
   @override
   Widget build(BuildContext context) {
     if (!widget.firebaseEnabled) {
-      return _DegradedNoAuthShell(message: widget.degradedMessage);
+      return _DegradedNoAuthShell(bootstrapResult: widget.bootstrapResult);
     }
 
     return StreamBuilder<User?>(
@@ -75,7 +77,7 @@ class _AuthGateState extends State<AuthGate> {
           children: [
             AuthShell(),
             _CloudSyncPassiveBanner(
-              message: 'Cloud sync unavailable until sign-in/Firebase is ready',
+              message: 'Cloud sync is preparing...',
             ),
           ],
         );
@@ -85,29 +87,51 @@ class _AuthGateState extends State<AuthGate> {
 }
 
 class _CloudSyncPassiveBanner extends StatelessWidget {
-  const _CloudSyncPassiveBanner({required this.message});
+  const _CloudSyncPassiveBanner({
+    required this.message,
+    this.isError = false,
+  });
 
   final String message;
+  final bool isError;
 
   @override
   Widget build(BuildContext context) {
     return PositionedDirectional(
-      bottom: 12,
-      start: 12,
-      end: 12,
+      bottom: 16,
+      start: 16,
+      end: 16,
       child: SafeArea(
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 560),
             child: Material(
-              color: Colors.black.withValues(alpha: 0.72),
-              borderRadius: BorderRadius.circular(8),
+              color: (isError ? Colors.orange.shade900 : Colors.black).withValues(alpha: 0.8),
+              borderRadius: BorderRadius.circular(12),
+              elevation: 4,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                child: Text(
-                  message,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      isError ? Icons.sync_problem_rounded : Icons.sync_rounded,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                    const SizedBox(width: 10),
+                    Flexible(
+                      child: Text(
+                        message,
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -119,13 +143,12 @@ class _CloudSyncPassiveBanner extends StatelessWidget {
 }
 
 class _DegradedNoAuthShell extends StatelessWidget {
-  const _DegradedNoAuthShell({required this.message});
+  const _DegradedNoAuthShell({required this.bootstrapResult});
 
-  final String? message;
+  final FirebaseBootstrapResult? bootstrapResult;
 
   @override
   Widget build(BuildContext context) {
-    final degradedMessage = message;
     try {
       BusinessContext.businessId;
     } catch (_) {
@@ -136,45 +159,88 @@ class _DegradedNoAuthShell extends StatelessWidget {
       );
     }
 
+    final isDebug = WebUtils.isStartupDebugEnabled();
+
     return Stack(
       children: [
         const MainNavigationScreen(),
-        PositionedDirectional(
-          top: 12,
-          start: 12,
-          end: 12,
-          child: SafeArea(
-            child: Material(
-              color: Colors.orange.shade900.withValues(alpha: 0.92),
-              borderRadius: BorderRadius.circular(8),
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: DefaultTextStyle(
-                  style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.3),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Firebase unavailable - local degraded mode',
-                        style: TextStyle(fontWeight: FontWeight.w800),
-                      ),
-                      if (degradedMessage != null && degradedMessage.trim().isNotEmpty) ...[
-                        const SizedBox(height: 4),
-                        Text(
-                          degradedMessage,
-                          maxLines: 4,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ],
-                    ],
+        if (isDebug && bootstrapResult != null)
+          _TechnicalDiagnosticsOverlay(result: bootstrapResult!)
+        else
+          const _CloudSyncPassiveBanner(
+            message: 'Cloud sync unavailable. Your data is saved locally.',
+            isError: true,
+          ),
+      ],
+    );
+  }
+}
+
+class _TechnicalDiagnosticsOverlay extends StatelessWidget {
+  const _TechnicalDiagnosticsOverlay({required this.result});
+
+  final FirebaseBootstrapResult result;
+
+  @override
+  Widget build(BuildContext context) {
+    return PositionedDirectional(
+      top: 12,
+      start: 12,
+      end: 12,
+      child: SafeArea(
+        child: Material(
+          color: Colors.orange.shade900.withValues(alpha: 0.92),
+          borderRadius: BorderRadius.circular(8),
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: DefaultTextStyle(
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                height: 1.3,
+                fontFamily: 'monospace',
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'DEBUG: Firebase Degraded Mode',
+                    style: TextStyle(fontWeight: FontWeight.w800, fontSize: 12),
                   ),
-                ),
+                  const SizedBox(height: 6),
+                  Text('Platform: ${result.selectedPlatform}'),
+                  Text('Web Config Exists: ${result.webConfigExists}'),
+                  if (result.missingFields.isNotEmpty)
+                    Text('Missing Fields: ${result.missingFields.join(', ')}'),
+                  if (result.errorType != null) Text('Error Type: ${result.errorType}'),
+                  if (result.errorMessage != null)
+                    Text('Error Msg: ${result.errorMessage}'),
+                  if (result.configDiagnostics.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    const Text('Config Presence:',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    ...result.configDiagnostics.entries.map(
+                      (e) => Text('  ${e.key}: ${e.value ? 'PRESENT' : 'MISSING'}'),
+                    ),
+                  ],
+                  if (result.stackTrace != null) ...[
+                    const SizedBox(height: 6),
+                    const Text('Stack Trace (truncated):',
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      result.stackTrace!,
+                      maxLines: 5,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(color: Colors.white70),
+                    ),
+                  ],
+                ],
               ),
             ),
           ),
         ),
-      ],
+      ),
     );
   }
 }

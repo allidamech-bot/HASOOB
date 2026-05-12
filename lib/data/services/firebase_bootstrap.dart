@@ -10,6 +10,10 @@ class FirebaseBootstrapResult {
     required this.selectedPlatform,
     required this.webConfigExists,
     this.missingFields = const [],
+    this.errorType,
+    this.errorMessage,
+    this.stackTrace,
+    this.configDiagnostics = const {},
   });
 
   final bool isConfigured;
@@ -17,6 +21,10 @@ class FirebaseBootstrapResult {
   final String selectedPlatform;
   final bool webConfigExists;
   final List<String> missingFields;
+  final String? errorType;
+  final String? errorMessage;
+  final String? stackTrace;
+  final Map<String, bool> configDiagnostics;
 }
 
 class FirebaseBootstrap {
@@ -26,36 +34,36 @@ class FirebaseBootstrap {
     debugPrint('[Startup][Firebase] selectedPlatform=$selectedPlatform');
     debugPrint('[Startup][Firebase] webConfigExists=$webConfigExists');
 
-    final Object? selectedOptions;
+    Object? selectedOptions;
     try {
       selectedOptions = DefaultFirebaseOptions.currentPlatform;
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('[Startup][Firebase] currentPlatform failed: $e');
       return FirebaseBootstrapResult(
         isConfigured: false,
-        message: 'Firebase initialization failed.\n\n'
-            'Selected platform: $selectedPlatform\n'
-            'Web config exists: $webConfigExists\n'
-            'Missing Firebase config field(s): FirebaseOptions.currentPlatform\n'
-            'Error: $e',
+        message: 'Firebase initialization failed: currentPlatform error',
         selectedPlatform: selectedPlatform,
         webConfigExists: webConfigExists,
         missingFields: const ['FirebaseOptions.currentPlatform'],
+        errorType: e.runtimeType.toString(),
+        errorMessage: e.toString(),
+        stackTrace: st.toString(),
       );
     }
 
     final missingFields = DefaultFirebaseOptions.missingRequiredFields(selectedOptions);
     _logMissingFields(missingFields);
+
+    final configDiagnostics = _captureConfigDiagnostics(selectedOptions);
+
     if (missingFields.isNotEmpty) {
       return FirebaseBootstrapResult(
         isConfigured: false,
-        message: 'Firebase initialization skipped.\n\n'
-            'Selected platform: $selectedPlatform\n'
-            'Web config exists: $webConfigExists\n'
-            'Missing Firebase config field(s): ${missingFields.join(', ')}',
+        message: 'Firebase initialization skipped: missing required fields',
         selectedPlatform: selectedPlatform,
         webConfigExists: webConfigExists,
         missingFields: missingFields,
+        configDiagnostics: configDiagnostics,
       );
     }
 
@@ -71,43 +79,79 @@ class FirebaseBootstrap {
         message: '',
         selectedPlatform: selectedPlatform,
         webConfigExists: webConfigExists,
+        configDiagnostics: configDiagnostics,
       );
-    } on FirebaseException catch (e) {
+    } on FirebaseException catch (e, st) {
       if (e.code == 'duplicate-app') {
         return FirebaseBootstrapResult(
           isConfigured: true,
           message: '',
           selectedPlatform: selectedPlatform,
           webConfigExists: webConfigExists,
+          configDiagnostics: configDiagnostics,
         );
       }
 
+      _logFailure(selectedPlatform, e, st, configDiagnostics);
+
       return FirebaseBootstrapResult(
         isConfigured: false,
-        message: _failureMessage(
-          selectedPlatform: selectedPlatform,
-          webConfigExists: webConfigExists,
-          missingFields: missingFields,
-          error: e.message ?? e.code,
-        ),
+        message: 'Firebase initialization failed: ${e.message ?? e.code}',
         selectedPlatform: selectedPlatform,
         webConfigExists: webConfigExists,
         missingFields: missingFields,
+        errorType: 'FirebaseException(${e.code})',
+        errorMessage: e.message,
+        stackTrace: st.toString(),
+        configDiagnostics: configDiagnostics,
       );
-    } catch (e) {
+    } catch (e, st) {
+      _logFailure(selectedPlatform, e, st, configDiagnostics);
+
       return FirebaseBootstrapResult(
         isConfigured: false,
-        message: _failureMessage(
-          selectedPlatform: selectedPlatform,
-          webConfigExists: webConfigExists,
-          missingFields: missingFields,
-          error: e,
-        ),
+        message: 'Firebase initialization failed: $e',
         selectedPlatform: selectedPlatform,
         webConfigExists: webConfigExists,
         missingFields: missingFields,
+        errorType: e.runtimeType.toString(),
+        errorMessage: e.toString(),
+        stackTrace: st.toString(),
+        configDiagnostics: configDiagnostics,
       );
     }
+  }
+
+  static Map<String, bool> _captureConfigDiagnostics(Object? options) {
+    if (options == null) return {};
+    final fields = [
+      'apiKey',
+      'appId',
+      'projectId',
+      'messagingSenderId',
+      'authDomain',
+    ];
+    final diagnostics = <String, bool>{};
+    for (final field in fields) {
+      final value = DefaultFirebaseOptions.readStringField(options, field);
+      diagnostics[field] = value != null && value.trim().isNotEmpty;
+    }
+    return diagnostics;
+  }
+
+  static void _logFailure(
+    String platform,
+    Object error,
+    StackTrace st,
+    Map<String, bool> diagnostics,
+  ) {
+    debugPrint('[Startup][Firebase] FATAL: $error');
+    debugPrint('[Startup][Firebase] Platform: $platform');
+    diagnostics.forEach((key, present) {
+      debugPrint('[Startup][Firebase] Config: $key present=$present');
+    });
+    debugPrint('[Startup][Firebase] RuntimeType: ${error.runtimeType}');
+    debugPrint('[Startup][Firebase] StackTrace:\n$st');
   }
 
   static void _logMissingFields(List<String> missingFields) {
@@ -119,17 +163,5 @@ class FirebaseBootstrap {
       debugPrint('[Startup][Firebase] nullOrEmptyField=$field');
     }
   }
-
-  static String _failureMessage({
-    required String selectedPlatform,
-    required bool webConfigExists,
-    required List<String> missingFields,
-    required Object error,
-  }) {
-    return 'Firebase initialization failed.\n\n'
-        'Selected platform: $selectedPlatform\n'
-        'Web config exists: $webConfigExists\n'
-        'Missing Firebase config field(s): ${missingFields.isEmpty ? 'none' : missingFields.join(', ')}\n'
-        'Error: $error';
-  }
 }
+

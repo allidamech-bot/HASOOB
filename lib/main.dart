@@ -428,7 +428,7 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
                     ? const AuthGate(firebaseEnabled: true)
                     : AuthGate(
                         firebaseEnabled: false,
-                        degradedMessage: widget.bootstrapResult.message,
+                        bootstrapResult: widget.bootstrapResult,
                       ),
               ),
             );
