@@ -128,13 +128,17 @@
         return;
       }
       var diag = document.getElementById('diagnostics');
-      if (diag) {
-        diag.style.display = 'block';
-        var line = document.createElement('div');
-        line.textContent = new Date().toISOString().substr(14, 5) + ": " + msg;
-        diag.appendChild(line);
-        diag.scrollTop = diag.scrollHeight;
+      if (!diag) {
+        diag = document.createElement('div');
+        diag.id = 'diagnostics';
+        diag.setAttribute('aria-hidden', 'true');
+        document.body.appendChild(diag);
       }
+      diag.style.display = 'block';
+      var line = document.createElement('div');
+      line.textContent = new Date().toISOString().substr(14, 5) + ": " + msg;
+      diag.appendChild(line);
+      diag.scrollTop = diag.scrollHeight;
     }
 
     function notifyFlutterLifecycle(eventName) {
@@ -187,7 +191,6 @@
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
 </head>
 <body>
-  <div id="diagnostics" aria-hidden="true"></div>
   <picture id="splash">
       <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">

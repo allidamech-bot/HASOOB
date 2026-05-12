@@ -22,6 +22,14 @@ class WebUtils {
     }
   }
 
+  static bool isStartupDebugEnabled() {
+    try {
+      return js.context.callMethod('isStartupDebugEnabled') == true;
+    } catch (e) {
+      return false;
+    }
+  }
+
   static String browserHint() {
     try {
       final navigator = js.context['navigator'];

@@ -476,7 +476,8 @@ class StartupShell extends StatelessWidget {
             child,
             if (!isInitialized || stage != StartupStage.running)
               const Positioned.fill(child: _StartupLoadingUI()),
-            if (kIsWeb) const _StartupDiagnosticsOverlay(),
+            if (kIsWeb && WebUtils.isStartupDebugEnabled())
+              const _StartupDiagnosticsOverlay(),
           ],
         );
       },
@@ -496,6 +497,7 @@ class _StartupLoadingUI extends StatelessWidget {
         diag.degradedDatabase.value ||
         diag.degradedAnalytics.value ||
         diag.degradedFirebase.value;
+    final showDebug = WebUtils.isStartupDebugEnabled();
 
     return Scaffold(
       backgroundColor: const Color(0xFF0B1020),
@@ -504,28 +506,37 @@ class _StartupLoadingUI extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             const CircularProgressIndicator(color: Color(0xFF2F80ED)),
-            const SizedBox(height: 24),
-            Text(
-              stage.label,
-              style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w500),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Stage: ${stage.name} ($elapsed)',
-              style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
-            ),
-            if (degraded) ...[
+            if (showDebug) ...[
+              const SizedBox(height: 24),
+              Text(
+                stage.label,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500),
+              ),
               const SizedBox(height: 8),
+              Text(
+                'Stage: ${stage.name} ($elapsed)',
+                style: TextStyle(
+                    color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+              ),
+              if (degraded) ...[
+                const SizedBox(height: 8),
+                const Text(
+                  'Degraded Sync Mode Active',
+                  style: TextStyle(
+                      color: Colors.orangeAccent,
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold),
+                ),
+              ],
+              const SizedBox(height: 48),
               const Text(
-                'Degraded Sync Mode Active',
-                style: TextStyle(color: Colors.orangeAccent, fontSize: 12, fontWeight: FontWeight.bold),
+                'Startup diagnostics v3',
+                style: TextStyle(color: Colors.white24, fontSize: 10),
               ),
             ],
-            const SizedBox(height: 48),
-            const Text(
-              'Startup diagnostics v3',
-              style: TextStyle(color: Colors.white24, fontSize: 10),
-            ),
           ],
         ),
       ),
