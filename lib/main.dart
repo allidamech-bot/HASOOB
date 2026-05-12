@@ -20,7 +20,6 @@ import 'data/services/sync_manager.dart';
 import 'data/services/smart_sync_trigger_service.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/auth/auth_gate.dart';
-import 'screens/auth/firebase_setup_screen.dart';
 import 'screens/sync_center_screen.dart';
 import 'core/services/connectivity_service.dart';
 import 'core/utils/web_utils.dart';
@@ -153,11 +152,13 @@ Future<void> main() async {
     }
 
     StartupDiagnostic.instance.logStage(StartupStage.firebaseInit);
-    late final FirebaseBootstrapResult bootstrapResult;
+    FirebaseBootstrapResult bootstrapResult;
     if (disableFirebaseBootstrap) {
       bootstrapResult = const FirebaseBootstrapResult(
         isConfigured: false,
         message: 'Firebase bootstrap disabled by feature flag.',
+        selectedPlatform: 'disabled',
+        webConfigExists: false,
       );
     } else {
       try {
@@ -167,11 +168,18 @@ Future<void> main() async {
         bootstrapResult = FirebaseBootstrapResult(
           isConfigured: false,
           message: 'Firebase initialization degraded mode.\n\nError: $e',
+          selectedPlatform: 'unknown',
+          webConfigExists: false,
         );
       }
     }
     if (!bootstrapResult.isConfigured) {
       StartupDiagnostic.instance.degradedFirebase.value = true;
+      StartupDiagnostic.instance.logMessage(
+        'Firebase degraded: platform=${bootstrapResult.selectedPlatform}, '
+        'webConfigExists=${bootstrapResult.webConfigExists}, '
+        'missing=${bootstrapResult.missingFields.isEmpty ? 'none' : bootstrapResult.missingFields.join(', ')}',
+      );
       StartupDiagnostic.instance.logMessage(bootstrapResult.message);
     }
 
@@ -289,7 +297,7 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
     }
 
     // 5. Sync & Services
-    if (!disableSyncBootstrap) {
+    if (!disableSyncBootstrap && widget.bootstrapResult.isConfigured) {
       StartupDiagnostic.instance.logStage(StartupStage.syncInit);
       try {
         // Initialize SyncManager
@@ -322,7 +330,11 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
       }
     } else {
       StartupDiagnostic.instance.degradedSync.value = true;
-      StartupDiagnostic.instance.logMessage('Sync bootstrap disabled by feature flag.');
+      StartupDiagnostic.instance.logMessage(
+        disableSyncBootstrap
+            ? 'Sync bootstrap disabled by feature flag.'
+            : 'Sync bootstrap skipped because Firebase is unavailable.',
+      );
     }
 
     // 6. Complete
@@ -401,8 +413,11 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
               home: StartupShell(
                 isInitialized: _isInitialized,
                 child: widget.bootstrapResult.isConfigured
-                    ? const AuthGate()
-                    : FirebaseSetupScreen(message: widget.bootstrapResult.message),
+                    ? const AuthGate(firebaseEnabled: true)
+                    : AuthGate(
+                        firebaseEnabled: false,
+                        degradedMessage: widget.bootstrapResult.message,
+                      ),
               ),
             );
           },

@@ -12,7 +12,14 @@ const bool _disableAnalyticsBootstrap =
     bool.fromEnvironment('disableAnalyticsBootstrap');
 
 class AuthGate extends StatefulWidget {
-  const AuthGate({super.key});
+  const AuthGate({
+    super.key,
+    required this.firebaseEnabled,
+    this.degradedMessage,
+  });
+
+  final bool firebaseEnabled;
+  final String? degradedMessage;
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -22,15 +29,23 @@ class _AuthGateState extends State<AuthGate> {
   @override
   void initState() {
     super.initState();
-    if (!_disableAnalyticsBootstrap) {
-      FirebaseAnalytics.instance.logEvent(name: 'app_open_custom').catchError((Object error) {
+    if (widget.firebaseEnabled && !_disableAnalyticsBootstrap) {
+      try {
+        FirebaseAnalytics.instance.logEvent(name: 'app_open_custom').catchError((Object error) {
+          debugPrint('[Startup] AuthGate analytics ignored: $error');
+        });
+      } catch (error) {
         debugPrint('[Startup] AuthGate analytics ignored: $error');
-      });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!widget.firebaseEnabled) {
+      return _DegradedNoAuthShell(message: widget.degradedMessage);
+    }
+
     return StreamBuilder<User?>(
       stream: AuthService.instance.authStateChanges(),
       builder: (context, snapshot) {
@@ -58,6 +73,67 @@ class _AuthGateState extends State<AuthGate> {
 
         return const AuthShell();
       },
+    );
+  }
+}
+
+class _DegradedNoAuthShell extends StatelessWidget {
+  const _DegradedNoAuthShell({required this.message});
+
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) {
+    final degradedMessage = message;
+    try {
+      BusinessContext.businessId;
+    } catch (_) {
+      BusinessContext.initialize(
+        businessId: 'local-degraded',
+        userId: 'local-degraded',
+        role: 'owner',
+      );
+    }
+
+    return Stack(
+      children: [
+        const MainNavigationScreen(),
+        PositionedDirectional(
+          top: 12,
+          start: 12,
+          end: 12,
+          child: SafeArea(
+            child: Material(
+              color: Colors.orange.shade900.withValues(alpha: 0.92),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: DefaultTextStyle(
+                  style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.3),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Firebase unavailable - local degraded mode',
+                        style: TextStyle(fontWeight: FontWeight.w800),
+                      ),
+                      if (degradedMessage != null && degradedMessage.trim().isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          degradedMessage,
+                          maxLines: 4,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
