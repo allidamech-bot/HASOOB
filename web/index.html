@@ -40,6 +40,7 @@
     }
 
     #diagnostics {
+      display: none;
       position: fixed;
       top: 10px;
       left: 10px;
@@ -109,16 +110,53 @@
     }
   </style>
   <script id="splash-screen-script">
+    function isStartupDebugEnabled() {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get('debugStartup') === '1' || params.get('debugStartup') === 'true') {
+          return true;
+        }
+        return window.localStorage && window.localStorage.getItem('HASOOB_DEBUG_STARTUP') === 'true';
+      } catch (_) {
+        return false;
+      }
+    }
+
     function logDiagnostic(msg) {
       console.log("[Diagnostic] " + msg);
+      if (!isStartupDebugEnabled()) {
+        return;
+      }
       var diag = document.getElementById('diagnostics');
       if (diag) {
+        diag.style.display = 'block';
         var line = document.createElement('div');
         line.textContent = new Date().toISOString().substr(14, 5) + ": " + msg;
         diag.appendChild(line);
         diag.scrollTop = diag.scrollHeight;
       }
     }
+
+    function notifyFlutterLifecycle(eventName) {
+      try {
+        console.log("[Lifecycle] " + eventName);
+        if (typeof window.HASOOB_FLUTTER_SYNC_HOOK === 'function') {
+          window.HASOOB_FLUTTER_SYNC_HOOK(eventName);
+        }
+      } catch (e) {
+        console.warn("[Lifecycle] hook failed", e);
+      }
+    }
+
+    document.addEventListener('visibilitychange', function() {
+      notifyFlutterLifecycle(document.visibilityState === 'visible' ? 'visible' : 'hidden');
+    });
+    window.addEventListener('focus', function() { notifyFlutterLifecycle('focus'); });
+    window.addEventListener('blur', function() { notifyFlutterLifecycle('blur'); });
+    window.addEventListener('pagehide', function() { notifyFlutterLifecycle('pagehide'); });
+    window.addEventListener('pageshow', function() { notifyFlutterLifecycle('pageshow'); });
+    window.addEventListener('online', function() { notifyFlutterLifecycle('online'); });
+    window.addEventListener('offline', function() { notifyFlutterLifecycle('offline'); });
 
     window.onerror = function(message, source, lineno, colno, error) {
       logDiagnostic("ERR: " + message + " @ " + lineno);
@@ -149,7 +187,7 @@
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
 </head>
 <body>
-  <div id="diagnostics"></div>
+  <div id="diagnostics" aria-hidden="true"></div>
   <picture id="splash">
       <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
       <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">

@@ -71,8 +71,49 @@ class _AuthGateState extends State<AuthGate> {
           return const MainNavigationScreen();
         }
 
-        return const AuthShell();
+        return const Stack(
+          children: [
+            AuthShell(),
+            _CloudSyncPassiveBanner(
+              message: 'Cloud sync unavailable until sign-in/Firebase is ready',
+            ),
+          ],
+        );
       },
+    );
+  }
+}
+
+class _CloudSyncPassiveBanner extends StatelessWidget {
+  const _CloudSyncPassiveBanner({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    return PositionedDirectional(
+      bottom: 12,
+      start: 12,
+      end: 12,
+      child: SafeArea(
+        child: Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 560),
+            child: Material(
+              color: Colors.black.withValues(alpha: 0.72),
+              borderRadius: BorderRadius.circular(8),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                child: Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(color: Colors.white, fontSize: 12),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

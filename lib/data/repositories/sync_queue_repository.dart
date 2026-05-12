@@ -19,6 +19,17 @@ class SyncQueueRepository {
     return getOperationsByStatus([SyncStatus.pending]);
   }
 
+  Future<int> countOperationsByStatus(List<SyncStatus> statuses) async {
+    final db = await DBHelper.database();
+    final statusNames = statuses.map((s) => s.name).toList();
+    final placeholders = List.filled(statusNames.length, '?').join(', ');
+    final result = await db.rawQuery(
+      'SELECT COUNT(*) as count FROM $tableName WHERE status IN ($placeholders)',
+      statusNames,
+    );
+    return result.first['count'] as int? ?? 0;
+  }
+
   Future<List<SyncOperation>> getOperationsByStatus(List<SyncStatus> statuses) async {
     final db = await DBHelper.database();
     final statusNames = statuses.map((s) => s.name).toList();
@@ -77,6 +88,20 @@ class SyncQueueRepository {
       _toDbMap(operation),
       where: 'id = ?',
       whereArgs: [operation.id],
+    );
+  }
+
+  Future<int> resetProcessingToPending() async {
+    final db = await DBHelper.database();
+    return db.update(
+      tableName,
+      {
+        'status': SyncStatus.pending.name,
+        'updatedAt': DateTime.now().toIso8601String(),
+        'lastError': 'Recovered after interrupted sync lifecycle',
+      },
+      where: 'status = ?',
+      whereArgs: [SyncStatus.processing.name],
     );
   }
 

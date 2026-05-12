@@ -1,7 +1,9 @@
 
+import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
+import 'package:flutter/foundation.dart';
 import '../models/sync_operation.dart';
 import '../repositories/sync_queue_repository.dart';
 import 'sync_manager.dart';
@@ -46,7 +48,7 @@ class SyncQueueService {
           conflictStrategy: conflictStrategy,
           remoteVersion: remoteVersion,
         ));
-        SyncManager.instance.requestSync();
+        _requestAndScheduleSync();
         return;
       } else if (type == SyncOperationType.delete) {
         // If new op is delete, it overrides any pending update or create
@@ -58,7 +60,7 @@ class SyncQueueService {
           priority: 1, // Higher priority for deletes
           fingerprint: _calculateFingerprint(entityName, entityId, SyncOperationType.delete, {}),
         ));
-        SyncManager.instance.requestSync();
+        _requestAndScheduleSync();
         return;
       }
     }
@@ -85,8 +87,12 @@ class SyncQueueService {
 
     await _repository.enqueue(operation);
     
-    // Request sync status update
+    _requestAndScheduleSync();
+  }
+
+  void _requestAndScheduleSync() {
     SyncManager.instance.requestSync();
+    unawaited(SyncManager.instance.runIfRequested());
   }
   
   Future<List<SyncOperation>> getPending() async {
@@ -94,6 +100,27 @@ class SyncQueueService {
       SyncStatus.pending,
       SyncStatus.failed,
     ]);
+  }
+
+  Future<int> pendingQueueLength() {
+    return _repository.countOperationsByStatus([
+      SyncStatus.pending,
+      SyncStatus.failed,
+      SyncStatus.processing,
+    ]);
+  }
+
+  Future<void> recoverInterruptedProcessing() async {
+    final recovered = await _repository.resetProcessingToPending();
+    if (recovered > 0) {
+      debugPrint('[Sync] recoveredProcessing=$recovered');
+      SyncManager.instance.requestSync();
+    }
+  }
+
+  Future<void> flushPendingLocalWrites() async {
+    final pending = await pendingQueueLength();
+    debugPrint('[Sync] local queue persisted; queueLength=$pending');
   }
   
   Future<List<SyncOperation>> getAll() => _repository.getAllOperations();

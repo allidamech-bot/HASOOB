@@ -307,6 +307,11 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
         SmartSyncTriggerService.init(SyncManager.instance);
         SmartSyncTriggerService.instance.initialize();
         _smartSyncReady = true;
+        if (kIsWeb) {
+          WebUtils.registerSyncLifecycleHook((eventName) {
+            unawaited(_guardedSyncCall(() => SyncManager.instance.onLifecycleSignal(eventName)));
+          });
+        }
         unawaited(_guardedSyncCall(() => SmartSyncTriggerService.instance.onAppStarted()));
 
         // Setup Auth listener
@@ -364,6 +369,9 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
       try {
         SmartSyncTriggerService.instance.dispose();
       } catch (_) {}
+      if (kIsWeb) {
+        WebUtils.unregisterSyncLifecycleHook();
+      }
     }
     WidgetsBinding.instance.removeObserver(this);
     _authSubscription?.cancel();
@@ -377,6 +385,10 @@ class _HasoobAppState extends State<HasoobApp> with WidgetsBindingObserver {
       if (_smartSyncReady) {
         unawaited(_guardedSyncCall(() => SmartSyncTriggerService.instance.onAppStarted()));
       }
+    } else if ((state == AppLifecycleState.paused || state == AppLifecycleState.inactive) &&
+        _isInitialized &&
+        _smartSyncReady) {
+      unawaited(_guardedSyncCall(() => SyncManager.instance.onAppPausing()));
     }
   }
 
