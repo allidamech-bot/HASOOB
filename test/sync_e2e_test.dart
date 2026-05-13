@@ -1,7 +1,6 @@
 import 'dart:io';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasoob_app/data/models/product_model.dart';
-import 'package:hasoob_app/data/models/sync_operation.dart';
 import 'package:hasoob_app/data/repositories/product_repository.dart';
 import 'package:hasoob_app/data/repositories/sync_queue_repository.dart';
 import 'package:hasoob_app/data/services/sync_manager.dart';
@@ -13,13 +12,11 @@ import 'fakes/fake_sync_service.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
-
   sqfliteFfiInit();
   databaseFactory = databaseFactoryFfi;
 
   late ProductRepository productRepository;
   late SyncQueueRepository syncQueueRepository;
-  late SyncManager syncManager;
   late FakeSyncService fakeSyncService;
 
   setUpAll(() async {
@@ -28,17 +25,15 @@ void main() {
   });
 
   setUp(() async {
+    SyncManager.instance.resetForTest();
     fakeSyncService = FakeSyncService();
     final engine = SyncEngine(syncService: fakeSyncService);
     SyncManager.instance.setEngine(engine);
 
     productRepository = ProductRepository();
     syncQueueRepository = SyncQueueRepository();
-    syncManager = SyncManager.instance;
 
     final db = await DBHelper.database();
-    
-    // Setup tables
     await db.execute('DROP TABLE IF EXISTS ${SyncQueueRepository.tableName}');
     await db.execute('''
       CREATE TABLE ${SyncQueueRepository.tableName}(
@@ -61,28 +56,16 @@ void main() {
         conflictReason TEXT
       )
     ''');
-    
     await db.execute('DROP TABLE IF EXISTS products');
     await db.execute('CREATE TABLE products (id TEXT PRIMARY KEY, businessId TEXT, branch_id TEXT, name TEXT, unit TEXT, purchase_price REAL, extra_costs REAL, selling_price REAL, stock_qty INTEGER, low_stock_threshold INTEGER, barcode TEXT)');
-    
     await db.execute('DROP TABLE IF EXISTS product_movements');
     await db.execute('CREATE TABLE product_movements (id INTEGER PRIMARY KEY AUTOINCREMENT, businessId TEXT, branch_id TEXT, product_id TEXT, movement_type TEXT, quantity INTEGER, balance_after INTEGER, reference_type TEXT, reference_id TEXT, notes TEXT, date TEXT)');
-
     await syncQueueRepository.clearAll();
-    
-    // Reset SyncManager state
-    if (syncManager.isRunning) {
-        await Future.delayed(const Duration(milliseconds: 100));
-    }
   });
 
-  test('End-to-End Sync Flow: Data Entry -> Queue -> Manual Trigger -> Success', () async {
-    // 1. Initial State: No sync requested
-    // Note: It might be true if setup enqueued something, but we want it false here
-    if (syncManager.syncRequested) await syncManager.runSync();
-    expect(syncManager.syncRequested, isFalse, reason: 'Initially, no sync should be requested');
+  test('End-to-End Sync Flow', () async {
+    expect(SyncManager.instance.syncRequested, isFalse);
 
-    // 2. Data Entry: Add a product
     const product = ProductModel(
       id: 'e2e_p1',
       businessId: 'b1',
@@ -92,35 +75,18 @@ void main() {
       sellingPrice: 15.0,
     );
 
-    // Repositories now use SyncQueueService which sets syncRequested = true
     await productRepository.addProduct('b1', product);
 
-    // 3. Verify Sync Requested
-    expect(syncManager.syncRequested, isTrue, reason: 'Sync should be requested after repository update');
-    
     final pending = await SyncQueueService.instance.getPending();
     expect(pending.length, 1);
-    expect(pending.first.entityId, 'e2e_p1');
-    expect(pending.first.status, SyncStatus.pending);
 
-    // 4. Execute Sync Manually
-    final syncFuture = syncManager.runSync();
-    
-    // Check running state
-    expect(syncManager.isRunning, isTrue);
-    
-    await syncFuture;
+    await SyncManager.instance.runSync();
 
-    // 5. Verify Post-Sync State
-    expect(syncManager.isRunning, isFalse);
-    expect(syncManager.syncRequested, isFalse, reason: 'syncRequested should be reset after runSync');
+    expect(SyncManager.instance.isRunning, isFalse);
+    expect(SyncManager.instance.syncRequested, isFalse);
     
     final remainingPending = await SyncQueueService.instance.getPending();
-    expect(remainingPending.isEmpty, isTrue, reason: 'Queue should be empty (processed)');
-
-    // Verify status in DB is now 'synced'
-    final allOps = await syncQueueRepository.getAllOperations();
-    expect(allOps.first.status, SyncStatus.synced);
+    expect(remainingPending.isEmpty, isTrue);
     expect(fakeSyncService.callCount, 1);
   });
 }

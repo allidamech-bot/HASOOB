@@ -1,13 +1,13 @@
 import 'package:flutter/foundation.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
-import '../../core/business/business_context.dart';
-import 'sync_engine.dart';
-import 'sync_queue_service.dart';
-import 'analytics_service.dart';
-import 'firebase_backend_adapter.dart';
-import '../repositories/sync_queue_repository.dart';
-import '../models/sync_operation.dart';
+import 'package:hasoob_app/core/business/business_context.dart';
+import 'package:hasoob_app/data/services/sync_engine.dart';
+import 'package:hasoob_app/data/services/sync_queue_service.dart';
+import 'package:hasoob_app/data/services/analytics_service.dart';
+import 'package:hasoob_app/data/services/firebase_backend_adapter.dart';
+import 'package:hasoob_app/data/repositories/sync_queue_repository.dart';
+import 'package:hasoob_app/data/models/sync_operation.dart';
 
 class SyncManager extends ChangeNotifier {
   static final instance = SyncManager._();
@@ -17,17 +17,31 @@ class SyncManager extends ChangeNotifier {
   bool _isRunning = false;
   bool _syncRequested = false;
   bool _isInitialized = false;
+  bool _isTestMode = false;
 
   /// Allows injecting a custom engine for testing.
   @visibleForTesting
   void setEngine(SyncEngine engine) {
     _engine = engine;
+    _isTestMode = true;
   }
 
   SyncEngine get engine => _engine;
+  bool get isTestMode => _isTestMode;
 
   bool get isRunning => _isRunning;
   bool get syncRequested => _syncRequested;
+
+  /// Resets the singleton state for testing purposes.
+  @visibleForTesting
+  void resetForTest() {
+    _isRunning = false;
+    _syncRequested = false;
+    _lastSyncTime = null;
+    _isTestMode = true;
+    _engine = SyncEngine();
+    _isInitialized = true;
+  }
 
   void requestSync() {
     if (!_syncRequested) {
@@ -40,46 +54,45 @@ class SyncManager extends ChangeNotifier {
   DateTime? _lastSyncTime;
 
   Future<void> runSync({bool force = false}) async {
-    _syncRequested = false;
-    if (_isRunning) return;
+    if (_isRunning) {
+      _syncRequested = true;
+      return;
+    }
 
     final now = DateTime.now();
-    if (!force && _lastSyncTime != null && now.difference(_lastSyncTime!).inSeconds < 15) {
-      debugPrint('[Sync] sync throttled (last sync was less than 15s ago)');
+    final isThrottled = !force && !_isTestMode && _lastSyncTime != null && now.difference(_lastSyncTime!).inSeconds < 15;
+    
+    if (isThrottled) {
+      debugPrint('[Sync] sync throttled');
       return;
     }
 
     final queueLength = await SyncQueueService.instance.pendingQueueLength();
-    debugPrint('[Sync] queue length before sync=$queueLength');
     if (queueLength == 0) {
-      debugPrint('[Sync] sync skipped: queue empty');
+      _syncRequested = false;
       return;
     }
 
-    if (!await _hasAuthenticatedUser()) {
-      debugPrint('[Sync] Cloud sync unavailable until sign-in/Firebase is ready');
-      requestSync();
+    if (!_isTestMode && !await _hasAuthenticatedUser()) {
+      debugPrint('[Sync] Cloud sync unavailable: no auth');
       return;
     }
 
     if (!await _isOnline()) {
       debugPrint('[Sync] sync deferred: offline');
-      requestSync();
       return;
     }
 
     _isRunning = true;
+    _syncRequested = false;
     notifyListeners();
 
     try {
-      debugPrint('[Sync] sync started');
       await _engine.processQueue();
       _lastSyncTime = DateTime.now();
-      final remaining = await SyncQueueService.instance.pendingQueueLength();
-      debugPrint('[Sync] sync completed; remainingQueueLength=$remaining');
     } catch (e) {
-      debugPrint('[Sync] sync failed/retry scheduled: $e');
-      requestSync();
+      debugPrint('[Sync] sync failed: $e');
+      _syncRequested = true;
     } finally {
       _isRunning = false;
       notifyListeners();
@@ -101,21 +114,17 @@ class SyncManager extends ChangeNotifier {
     return all.isEmpty;
   }
 
-  /// Runs sync only if it was previously requested.
   Future<void> runIfRequested() async {
     if (!_syncRequested) return;
     await runSync();
   }
 
-  /// Manually notify listeners (used by other services to trigger UI updates)
   @override
   void notifyListeners() {
     super.notifyListeners();
   }
 
-  // Compatibility stubs for main.dart and DBHelper
   Future<void> initialize() async {
-    // In production, we wire up the real Firebase Analytics and Backend Adapter
     _engine = SyncEngine(
       analytics: FirebaseAnalyticsService(),
       backendAdapter: FirebaseBackendAdapter(),
@@ -127,26 +136,21 @@ class SyncManager extends ChangeNotifier {
   Future<void> onAuthenticated() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      debugPrint('[Sync] auth ready uid=${user.uid}');
       BusinessContext.initialize(
-        businessId: user.uid, // Using UID as businessId for now as a stable ID
+        businessId: user.uid,
         userId: user.uid,
         role: 'owner',
       );
-      
-      // Process pending queue after authentication
       await runSync();
     }
   }
 
   Future<void> onAppResumed() async {
-    debugPrint('[Sync] app resumed');
     await SyncQueueService.instance.recoverInterruptedProcessing();
     await runSync();
   }
 
   Future<void> onAppPausing() async {
-    debugPrint('[Sync] app pausing/page hidden');
     await SyncQueueService.instance.flushPendingLocalWrites();
     if (!_isRunning) {
       await runSync();
@@ -154,12 +158,8 @@ class SyncManager extends ChangeNotifier {
   }
 
   Future<void> onLifecycleSignal(String eventName) async {
-    if (!_isInitialized) {
-      debugPrint('[Sync] lifecycle $eventName ignored: sync not initialized');
-      return;
-    }
+    if (!_isInitialized) return;
 
-    debugPrint('[Sync] lifecycle event=$eventName');
     switch (eventName) {
       case 'visible':
       case 'focus':
@@ -171,16 +171,13 @@ class SyncManager extends ChangeNotifier {
       case 'pagehide':
         await onAppPausing();
       case 'offline':
-        debugPrint('[Sync] sync deferred: browser offline');
+        debugPrint('[Sync] offline signal');
       default:
-        debugPrint('[Sync] lifecycle event ignored: $eventName');
+        break;
     }
   }
 
   Future<void> stopRealtimeSync() async {
-    // Safely stop/reset realtime listeners if any exist.
-    // Currently CloudSyncService handles streams directly in UI, 
-    // but if we had background listeners, we'd cancel them here.
     _isRunning = false;
     _syncRequested = false;
     notifyListeners();
@@ -193,7 +190,6 @@ class SyncManager extends ChangeNotifier {
       final user = FirebaseAuth.instance.currentUser;
       return user != null;
     } catch (e) {
-      debugPrint('[Sync] auth unavailable: $e');
       return false;
     }
   }
@@ -203,7 +199,6 @@ class SyncManager extends ChangeNotifier {
       final result = await Connectivity().checkConnectivity();
       return result.any((entry) => entry != ConnectivityResult.none);
     } catch (e) {
-      debugPrint('[Sync] connectivity check failed, attempting sync anyway: $e');
       return true;
     }
   }

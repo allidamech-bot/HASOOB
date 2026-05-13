@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import 'package:flutter/foundation.dart';
-import 'sync_manager.dart';
+import 'package:hasoob_app/data/services/sync_manager.dart';
 
 class SmartSyncTriggerService {
   static SmartSyncTriggerService? _instance;

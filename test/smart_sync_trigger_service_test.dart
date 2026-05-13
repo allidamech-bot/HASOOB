@@ -10,6 +10,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'fakes/fake_sync_service.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late FakeSyncService fakeSyncService;
   late SmartSyncTriggerService triggerService;
 
@@ -47,6 +48,7 @@ void main() {
     ''');
     await db.delete('sync_operations');
 
+    SyncManager.instance.resetForTest();
     fakeSyncService = FakeSyncService();
     final engine = SyncEngine(syncService: fakeSyncService);
     SyncManager.instance.setEngine(engine);

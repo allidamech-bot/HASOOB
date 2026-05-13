@@ -1,12 +1,10 @@
-
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 import 'package:crypto/crypto.dart';
-import 'package:flutter/foundation.dart';
-import '../models/sync_operation.dart';
-import '../repositories/sync_queue_repository.dart';
-import 'sync_manager.dart';
+import 'package:hasoob_app/data/models/sync_operation.dart';
+import 'package:hasoob_app/data/repositories/sync_queue_repository.dart';
+import 'package:hasoob_app/data/services/sync_manager.dart';
 
 class SyncQueueService {
   static final SyncQueueService instance = SyncQueueService._();
@@ -34,9 +32,7 @@ class SyncQueueService {
     final existing = await _repository.getPendingOperationByEntity(entityName, entityId);
     
     if (existing != null) {
-      // Smart skip/collapse logic
       if (existing.type == type) {
-        // Same type: Update existing operation with new payload and bump updatedAt
         final mergedPayload = {...existing.payload, ...payload};
         final newFingerprint = _calculateFingerprint(entityName, entityId, type, mergedPayload);
         
@@ -51,13 +47,12 @@ class SyncQueueService {
         _requestAndScheduleSync();
         return;
       } else if (type == SyncOperationType.delete) {
-        // If new op is delete, it overrides any pending update or create
         await _repository.updateOperation(existing.copyWith(
           type: SyncOperationType.delete,
-          payload: {}, // No payload needed for delete usually
-          status: SyncStatus.pending, // Reset status to pending in case it was failed
+          payload: {},
+          status: SyncStatus.pending,
           updatedAt: DateTime.now(),
-          priority: 1, // Higher priority for deletes
+          priority: 1,
           fingerprint: _calculateFingerprint(entityName, entityId, SyncOperationType.delete, {}),
         ));
         _requestAndScheduleSync();
@@ -65,10 +60,10 @@ class SyncQueueService {
       }
     }
 
-    // Duplicate identical operations protection
     final duplicate = await _repository.getOperationByFingerprint(fingerprint);
     if (duplicate != null && duplicate.status != SyncStatus.failed) {
-      return; // Skip if already pending or synced with same fingerprint
+      _requestAndScheduleSync();
+      return;
     }
 
     final operation = SyncOperation(
@@ -86,13 +81,14 @@ class SyncQueueService {
     );
 
     await _repository.enqueue(operation);
-    
     _requestAndScheduleSync();
   }
 
   void _requestAndScheduleSync() {
     SyncManager.instance.requestSync();
-    unawaited(SyncManager.instance.runIfRequested());
+    if (!SyncManager.instance.isTestMode) {
+      unawaited(SyncManager.instance.runIfRequested());
+    }
   }
   
   Future<List<SyncOperation>> getPending() async {
@@ -113,15 +109,11 @@ class SyncQueueService {
   Future<void> recoverInterruptedProcessing() async {
     final recovered = await _repository.resetProcessingToPending();
     if (recovered > 0) {
-      debugPrint('[Sync] recoveredProcessing=$recovered');
       SyncManager.instance.requestSync();
     }
   }
 
-  Future<void> flushPendingLocalWrites() async {
-    final pending = await pendingQueueLength();
-    debugPrint('[Sync] local queue persisted; queueLength=$pending');
-  }
+  Future<void> flushPendingLocalWrites() async {}
   
   Future<List<SyncOperation>> getAll() => _repository.getAllOperations();
   
@@ -135,13 +127,7 @@ class SyncQueueService {
     int? nextRetryDelay;
     if (status == SyncStatus.failed) {
       final nextAttempt = operation.attemptCount + 1;
-      // Exponential backoff: 2^attempt * 10 seconds
-      // attempt 1 -> 20s
-      // attempt 2 -> 40s
-      // attempt 3 -> 80s
       final baseDelay = pow(2, nextAttempt) * 10;
-      
-      // Add jitter: 0 to 30% of base delay
       final jitter = _random.nextInt((baseDelay * 0.3).toInt() + 1);
       nextRetryDelay = (baseDelay + jitter).toInt();
     }

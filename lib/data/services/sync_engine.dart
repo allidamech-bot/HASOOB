@@ -1,5 +1,5 @@
-import 'sync_queue_service.dart';
-import '../models/sync_operation.dart';
+import 'package:hasoob_app/data/services/sync_queue_service.dart';
+import 'package:hasoob_app/data/models/sync_operation.dart';
 import 'backend_adapter.dart';
 import 'sync_log_service.dart';
 import 'analytics_service.dart';

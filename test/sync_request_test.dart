@@ -6,6 +6,7 @@ import 'package:hasoob_app/data/database/database_helper.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   setUpAll(() {
     sqfliteFfiInit();
     databaseFactory = databaseFactoryFfi;
@@ -14,10 +15,8 @@ void main() {
   setUp(() async {
     final db = await DBHelper.database();
     await db.delete('sync_operations');
-    // Ensure flag is reset
-    if (SyncManager.instance.syncRequested) {
-      await SyncManager.instance.runSync();
-    }
+    
+    SyncManager.instance.resetForTest();
   });
 
   test('Enqueuing should set syncRequested flag but NOT run sync', () async {

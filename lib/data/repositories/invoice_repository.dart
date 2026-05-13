@@ -4,9 +4,9 @@ import '../database/database_helper.dart';
 import '../models/invoice_model.dart';
 import '../models/quotation_model.dart';
 import '../models/product_model.dart';
-import '../services/cloud_sync_service.dart';
-import '../services/sync_queue_service.dart';
-import '../models/sync_operation.dart';
+import 'package:hasoob_app/data/services/cloud_sync_service.dart';
+import 'package:hasoob_app/data/services/sync_queue_service.dart';
+import 'package:hasoob_app/data/models/sync_operation.dart';
 
 class InvoiceRepository {
   Stream<List<InvoiceModel>> watchInvoices(String businessId) async* {
