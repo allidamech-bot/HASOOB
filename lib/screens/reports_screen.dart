@@ -37,60 +37,59 @@ class _ReportsScreenState extends State<ReportsScreen> {
   final ReportService _reportService = const ReportService();
   final ExportService _exportService = ExportService();
 
-  late Future<ReportsSnapshot> _snapshot;
   ReportsSnapshot? _cachedData;
   ReportPeriodFilter _periodFilter = ReportPeriodFilter.all;
   String? _selectedProductId;
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
     PerfLogger.logPageOpen('Reports');
-    _snapshot = _buildSnapshot().timeout(const Duration(seconds: 15));
-    _snapshot.then((data) {
-      if (mounted) {
-        setState(() => _cachedData = data);
-        PerfLogger.logDataLoaded('Reports');
-      }
-    }).catchError((error) {
-      debugPrint('[Reports] Error loading snapshot: $error');
-    });
-
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      PerfLogger.logFirstRender('Reports');
+      _loadData();
     });
   }
 
-  Future<ReportsSnapshot> _buildSnapshot() {
-    return _reportService.buildSnapshot(
-      businessId: BusinessContext.businessId,
-      period: _periodFilter,
-      productId: _selectedProductId,
-    );
+  Future<void> _loadData({bool forceRefresh = false}) async {
+    if (!mounted) return;
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final data = await _reportService.buildSnapshot(
+        businessId: BusinessContext.businessId,
+        period: _periodFilter,
+        productId: _selectedProductId,
+        forceRefresh: forceRefresh,
+      ).timeout(const Duration(seconds: 15));
+
+      if (mounted) {
+        setState(() {
+          _cachedData = data;
+          _isLoading = false;
+        });
+        PerfLogger.logDataLoaded('Reports');
+      }
+    } catch (e) {
+      debugPrint('[Reports] Error loading snapshot: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = e.toString();
+        });
+      }
+    }
   }
 
   Future<void> _reload({bool showError = false}) async {
-    final future = _reportService
-        .buildSnapshot(
-          businessId: BusinessContext.businessId,
-          period: _periodFilter,
-          productId: _selectedProductId,
-          forceRefresh: true,
-        )
-        .timeout(const Duration(seconds: 20));
-    if (mounted) {
-      setState(() => _snapshot = future);
-    }
-    try {
-      final data = await future;
-      if (mounted) {
-        setState(() => _cachedData = data);
-      }
-    } catch (error) {
-      if (!mounted) return;
-      if (showError) {
-        AppMessages.error(context, AppCopy.of(context).t('loadReportsError'));
-      }
+    await _loadData(forceRefresh: true);
+    if (_error != null && showError && mounted) {
+      AppMessages.error(context, AppCopy.of(context).t('loadReportsError'));
     }
   }
 
@@ -222,20 +221,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _buildBody(BuildContext context, AppCopy copy) {
-    return FutureBuilder<ReportsSnapshot>(
-      future: _snapshot,
-      builder: (context, snapshot) {
-        if (_cachedData != null) {
-          return _buildContent(context, copy, _cachedData!);
-        }
+    if (_isLoading && _cachedData == null) {
+      return _buildSkeleton(context, copy);
+    }
 
-        if (snapshot.hasError) {
-          return _buildErrorState(context, copy, snapshot.error);
-        }
+    if (_error != null && _cachedData == null) {
+      return _buildErrorState(context, copy, _error);
+    }
 
-        return _buildSkeleton(context, copy);
-      },
-    );
+    return _buildContent(context, copy, _cachedData ?? ReportsSnapshot.empty());
   }
 
   Widget _buildErrorState(BuildContext context, AppCopy copy, Object? error) {
@@ -315,11 +309,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     setState(() {
                       _periodFilter = ReportPeriodFilter.all;
                       _selectedProductId = null;
-                      _snapshot = _buildSnapshot();
-                      _snapshot.then((data) {
-                        if (mounted) setState(() => _cachedData = data);
-                      });
                     });
+                    _loadData();
                   },
                 )
               : null,
@@ -424,8 +415,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               if (value == null || value == _periodFilter) return;
               setState(() {
                 _periodFilter = value;
-                _snapshot = _buildSnapshot();
               });
+              _loadData();
             },
           ),
           const SizedBox(height: 12),
@@ -439,8 +430,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               if (value == _selectedProductId) return;
               setState(() {
                 _selectedProductId = value;
-                _snapshot = _buildSnapshot();
               });
+              _loadData();
             },
           ),
         ],

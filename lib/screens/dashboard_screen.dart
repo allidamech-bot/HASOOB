@@ -1,27 +1,28 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 
-import '../core/app_copy.dart';
-import '../core/app_formatters.dart';
-import '../core/app_messages.dart';
-import '../core/app_theme.dart';
-import '../core/business/business_context.dart';
-import '../data/database/database_helper.dart';
-import '../data/services/auth_service.dart';
-import '../data/services/cloud_sync_service.dart';
-import '../data/services/reports/report_models.dart';
-import '../data/services/reports/report_service.dart';
-import '../core/utils/perf_logger.dart';
-import '../widgets/skeleton_loader.dart';
-import '../widgets/app_section_header.dart';
-import '../widgets/metric_card.dart';
-import 'add_product_screen.dart';
-import 'business_profile_screen.dart';
-import 'customers_screen.dart';
-import 'documents_screen.dart';
-import 'settings_screen.dart';
-import '../data/services/sync_manager.dart';
-import '../widgets/sync_status_indicator.dart';
-import '../widgets/sync_health_card.dart';
+import 'package:hasoob_app/core/app_copy.dart';
+import 'package:hasoob_app/core/app_formatters.dart';
+import 'package:hasoob_app/core/app_messages.dart';
+import 'package:hasoob_app/core/app_theme.dart';
+import 'package:hasoob_app/core/business/business_context.dart';
+import 'package:hasoob_app/data/database/database_helper.dart';
+import 'package:hasoob_app/data/services/auth_service.dart';
+import 'package:hasoob_app/data/services/cloud_sync_service.dart';
+import 'package:hasoob_app/data/services/reports/report_models.dart';
+import 'package:hasoob_app/data/services/reports/report_service.dart';
+import 'package:hasoob_app/core/utils/perf_logger.dart';
+import 'package:hasoob_app/widgets/skeleton_loader.dart';
+import 'package:hasoob_app/widgets/app_section_header.dart';
+import 'package:hasoob_app/widgets/metric_card.dart';
+import 'package:hasoob_app/screens/add_product_screen.dart';
+import 'package:hasoob_app/screens/business_profile_screen.dart';
+import 'package:hasoob_app/screens/customers_screen.dart';
+import 'package:hasoob_app/screens/documents_screen.dart';
+import 'package:hasoob_app/screens/settings_screen.dart';
+import 'package:hasoob_app/data/services/sync_manager.dart';
+import 'package:hasoob_app/widgets/sync_status_indicator.dart';
+import 'package:hasoob_app/widgets/sync_health_card.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -32,51 +33,62 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final ReportService _reportService = const ReportService();
-  late Future<ReportsSnapshot> _snapshot;
-  late Future<Map<String, dynamic>> _restoreStatus;
-  bool _isRestoring = false;
   ReportsSnapshot? _cachedData;
+  Map<String, dynamic>? _restoreStatusData;
+  bool _isRestoring = false;
+  bool _isLoading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
     PerfLogger.logPageOpen('Dashboard');
-    final businessId = BusinessContext.businessId;
-    _snapshot = _reportService
-        .buildSnapshot(businessId: businessId)
-        .timeout(const Duration(seconds: 10));
-    _restoreStatus = CloudSyncService.instance.getLocalRestoreStatus();
-
-    _snapshot.then((data) {
-      if (mounted) {
-        setState(() => _cachedData = data);
-        PerfLogger.logDataLoaded('Dashboard');
-      }
-    }).catchError((error) {
-      debugPrint('[Dashboard] Error loading snapshot: $error');
-      // We don't set _cachedData, so it shows error state if we add one
-    });
-
+    
+    // Lazy load data after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      PerfLogger.logFirstRender('Dashboard');
+      _loadData();
     });
   }
 
-  Future<void> _refresh() async {
-    final businessId = BusinessContext.businessId;
-    final future = _reportService
-        .buildSnapshot(businessId: businessId, forceRefresh: true)
-        .timeout(const Duration(seconds: 15));
+  Future<void> _loadData({bool forceRefresh = false}) async {
+    if (!mounted) return;
     setState(() {
-      _snapshot = future;
-      _restoreStatus = CloudSyncService.instance.getLocalRestoreStatus();
+      _isLoading = true;
+      _error = null;
     });
+
     try {
-      final data = await future;
-      if (mounted) setState(() => _cachedData = data);
+      final businessId = BusinessContext.businessId;
+      
+      // Load restore status and report snapshot in parallel with timeouts
+      final results = await Future.wait([
+        _reportService.buildSnapshot(businessId: businessId, forceRefresh: forceRefresh)
+            .timeout(const Duration(seconds: 10)),
+        CloudSyncService.instance.getLocalRestoreStatus()
+            .timeout(const Duration(seconds: 5)),
+      ]);
+
+      if (mounted) {
+        setState(() {
+          _cachedData = results[0] as ReportsSnapshot;
+          _restoreStatusData = results[1] as Map<String, dynamic>;
+          _isLoading = false;
+          PerfLogger.logDataLoaded('Dashboard');
+        });
+      }
     } catch (e) {
-      if (mounted) AppMessages.error(context, AppCopy.of(context).t('loadDashboardError'));
+      debugPrint('[Dashboard] Error loading data: $e');
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+          _error = e.toString();
+        });
+      }
     }
+  }
+
+  Future<void> _refresh() async {
+    await _loadData(forceRefresh: true);
   }
 
   Future<void> _restoreFromCloud() async {
@@ -215,20 +227,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildBody(BuildContext context, AppCopy copy) {
-    return FutureBuilder<ReportsSnapshot>(
-      future: _snapshot,
-      builder: (context, snapshot) {
-        if (_cachedData != null) {
-          return _buildContent(context, copy, _cachedData!);
-        }
+    if (_isLoading && _cachedData == null) {
+      return _buildSkeleton(context, copy);
+    }
+    
+    if (_error != null && _cachedData == null) {
+      return _buildErrorState(context, copy, _error);
+    }
 
-        if (snapshot.hasError) {
-          return _buildErrorState(context, copy, snapshot.error);
-        }
-
-        return _buildSkeleton(context, copy);
-      },
-    );
+    return _buildContent(context, copy, _cachedData ?? ReportsSnapshot.empty());
   }
 
   Widget _buildErrorState(BuildContext context, AppCopy copy, Object? error) {
@@ -413,102 +420,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const SizedBox(height: 16),
-          Card(
-            child: FutureBuilder<Map<String, dynamic>>(
-              future: _restoreStatus,
-              builder: (context, restoreSnapshot) {
-                final restoreData = restoreSnapshot.data;
-                final hasRestored = restoreData?['has_restored'] == true;
-                final lastRestoreAt =
-                    restoreData?['last_restore_at']?.toString();
-
-                return Padding(
-                  padding: const EdgeInsets.all(18),
-                  child: Column(
-                    children: [
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: _iconShell(
-                          context,
-                          Icons.cloud_download_rounded,
-                          AppTheme.info,
-                        ),
-                        title: Text(
-                          copy.t('restoreFromCloud'),
-                          style: const TextStyle(fontWeight: FontWeight.w800),
-                        ),
-                        subtitle: Text(copy.t('restoreFromCloudSubtitle')),
-                        trailing: _isRestoring
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2),
-                              )
-                            : const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-                        onTap: _isRestoring ? null : _restoreFromCloud,
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: hasRestored
-                              ? AppTheme.success.withValues(alpha: 0.08)
-                              : AppTheme.surfaceAltFor(context),
-                          borderRadius: BorderRadius.circular(
-                            AppTheme.radiusMedium,
-                          ),
-                          border: Border.all(
-                            color: hasRestored
-                                ? AppTheme.success.withValues(alpha: 0.24)
-                                : AppTheme.borderFor(context),
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              hasRestored
-                                  ? Icons.cloud_done_rounded
-                                  : Icons.cloud_off_rounded,
-                              color: hasRestored
-                                  ? AppTheme.success
-                                  : AppTheme.textSecondaryFor(context),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    hasRestored
-                                        ? copy.t('restoreUsed')
-                                        : copy.t('restoreUnused'),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  if (lastRestoreAt != null &&
-                                      lastRestoreAt.trim().isNotEmpty) ...[
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      copy.dashboardLastRestore(
-                                        AppFormatters.dateTimeString(lastRestoreAt),
-                                      ),
-                                      style: Theme.of(context).textTheme.bodySmall,
-                                    ),
-                                  ],
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
-          ),
+          _buildRestoreCard(context, copy),
           const SizedBox(height: 24),
           AppSectionHeader(
             title: copy.t('stockAlerts'),
@@ -635,6 +547,98 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+
+  Widget _buildRestoreCard(BuildContext context, AppCopy copy) {
+    final hasRestored = _restoreStatusData?['has_restored'] == true;
+    final lastRestoreAt = _restoreStatusData?['last_restore_at']?.toString();
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          children: [
+            ListTile(
+              contentPadding: EdgeInsets.zero,
+              leading: _iconShell(
+                context,
+                Icons.cloud_download_rounded,
+                AppTheme.info,
+              ),
+              title: Text(
+                copy.t('restoreFromCloud'),
+                style: const TextStyle(fontWeight: FontWeight.w800),
+              ),
+              subtitle: Text(copy.t('restoreFromCloudSubtitle')),
+              trailing: _isRestoring
+                  ? const SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.arrow_forward_ios_rounded, size: 18),
+              onTap: _isRestoring ? null : _restoreFromCloud,
+            ),
+            const SizedBox(height: 8),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: hasRestored
+                    ? AppTheme.success.withValues(alpha: 0.08)
+                    : AppTheme.surfaceAltFor(context),
+                borderRadius: BorderRadius.circular(
+                  AppTheme.radiusMedium,
+                ),
+                border: Border.all(
+                  color: hasRestored
+                      ? AppTheme.success.withValues(alpha: 0.24)
+                      : AppTheme.borderFor(context),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    hasRestored
+                        ? Icons.cloud_done_rounded
+                        : Icons.cloud_off_rounded,
+                    color: hasRestored
+                        ? AppTheme.success
+                        : AppTheme.textSecondaryFor(context),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          hasRestored
+                              ? copy.t('restoreUsed')
+                              : copy.t('restoreUnused'),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        if (lastRestoreAt != null &&
+                            lastRestoreAt.trim().isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            copy.dashboardLastRestore(
+                              AppFormatters.dateTimeString(lastRestoreAt),
+                            ),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

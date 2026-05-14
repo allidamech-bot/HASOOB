@@ -22,6 +22,14 @@ class WebUtils {
     }
   }
 
+  static void reloadPage() {
+    try {
+      html.window.location.reload();
+    } catch (e) {
+      // ignore
+    }
+  }
+
   static bool isStartupDebugEnabled() {
     try {
       return js.context.callMethod('isStartupDebugEnabled') == true;

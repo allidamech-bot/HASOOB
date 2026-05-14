@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppThemeController extends ChangeNotifier {
   AppThemeController._(this._themeMode);
 
+  factory AppThemeController() => AppThemeController._(ThemeMode.system);
+
   static const String _storageKey = 'app_theme_mode';
 
   ThemeMode _themeMode;

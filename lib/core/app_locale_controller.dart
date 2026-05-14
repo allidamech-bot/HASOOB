@@ -4,6 +4,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 class AppLocaleController extends ChangeNotifier {
   AppLocaleController._(this._locale);
 
+  factory AppLocaleController() => AppLocaleController._(null);
+
   static const _preferenceKey = 'selected_locale_code';
 
   Locale? _locale;

@@ -82,4 +82,30 @@ class ReportsSnapshot {
   final List<MetricPoint> stockDistribution;
   final List<MetricPoint> topProductChart;
   final TrialBalanceSummary trialBalanceSummary;
+
+  factory ReportsSnapshot.empty() => const ReportsSnapshot(
+        products: [],
+        salesRecords: [],
+        accounts: [],
+        journalEntries: [],
+        totalProducts: 0,
+        totalQuantity: 0,
+        totalStockValue: 0,
+        totalSales: 0,
+        netProfitEstimate: 0,
+        realizedProfit: 0,
+        lowStockItems: [],
+        bestSellingProducts: [],
+        recentSales: [],
+        salesTrend: [],
+        profitTrend: [],
+        stockDistribution: [],
+        topProductChart: [],
+        trialBalanceSummary: TrialBalanceSummary(
+          totalDebit: 0,
+          totalCredit: 0,
+          isBalanced: true,
+          entriesCount: 0,
+        ),
+      );
 }
