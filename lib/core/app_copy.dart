@@ -163,6 +163,8 @@ class AppCopy {
     'ar': {
       'appTitle': 'Hasoob App',
       'navDashboard': 'الرئيسية',
+      'smartCopilot': 'المساعد الذكي',
+      'smartCopilotSubtitle': 'مركز التحكم الذكي في أعمالك التجارية.',
       'navInventory': 'المخزون',
       'navAdd': 'إضافة',
       'navTransactions': 'المعاملات',
@@ -613,6 +615,8 @@ class AppCopy {
     'en': {
       'appTitle': 'Hasoob App',
       'navDashboard': 'Home',
+      'smartCopilot': 'Smart Copilot',
+      'smartCopilotSubtitle': 'Your intelligent business command center.',
       'navInventory': 'Inventory',
       'navAdd': 'Add',
       'navTransactions': 'Transactions',

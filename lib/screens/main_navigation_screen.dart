@@ -108,6 +108,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return KeyedSubtree(
       key: ValueKey('main-nav-$localeKey'),
       child: Scaffold(
+        extendBody: true,
         body: IndexedStack(
           index: _index,
           children: screens,
@@ -115,68 +116,65 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         bottomNavigationBar: SafeArea(
           minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
           child: Container(
+            height: 72,
             decoration: BoxDecoration(
-              color: AppTheme.surfaceFor(context)
-                  .withValues(alpha: isDark ? 0.95 : 0.98),
-              borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
-              border: Border.all(
-                color: isDark
-                    ? AppTheme.borderFor(context)
-                    : AppTheme.borderFor(context).withValues(alpha: 0.95),
-              ),
+              color: AppTheme.background.withValues(alpha: 0.9),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: AppTheme.border, width: 1.5),
               boxShadow: [
-                ...AppTheme.softShadow(context),
-                if (!isDark)
-                  BoxShadow(
-                    color: AppTheme.brandBlue.withValues(alpha: 0.05),
-                    blurRadius: 18,
-                    offset: const Offset(0, 8),
-                  ),
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.4),
+                  blurRadius: 24,
+                  offset: const Offset(0, 8),
+                ),
               ],
             ),
-            child: NavigationBar(
-              backgroundColor: Colors.transparent,
-              indicatorColor: AppTheme.accent.withValues(
-                alpha: isDark ? 0.16 : 0.12,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: NavigationBar(
+                backgroundColor: Colors.transparent,
+                indicatorColor: AppTheme.accentBlue.withValues(alpha: 0.1),
+                selectedIndex: _index,
+                onDestinationSelected: _onDestinationSelected,
+                labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
+                destinations: [
+                  NavigationDestination(
+                    icon: const Icon(Icons.dashboard_outlined, size: 20),
+                    selectedIcon: const Icon(Icons.dashboard, color: AppTheme.accentBlue),
+                    label: copy.t('navDashboard'),
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.inventory_2_outlined, size: 20),
+                    selectedIcon: const Icon(Icons.inventory_2, color: AppTheme.accentBlue),
+                    label: copy.t('navInventory'),
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.add_circle_outline, size: 20),
+                    selectedIcon: const Icon(Icons.add_circle, color: AppTheme.accentBlue),
+                    label: copy.t('navAdd'),
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.receipt_long_outlined, size: 20),
+                    selectedIcon: const Icon(Icons.receipt_long, color: AppTheme.accentBlue),
+                    label: copy.t('navTransactions'),
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.auto_awesome_outlined, size: 20),
+                    selectedIcon: const Icon(Icons.auto_awesome, color: AppTheme.accentBlue),
+                    label: copy.isEnglish ? 'Smart' : 'ذكي',
+                  ),
+                  NavigationDestination(
+                    icon: const Icon(Icons.analytics_outlined, size: 20),
+                    selectedIcon: const Icon(Icons.analytics, color: AppTheme.accentBlue),
+                    label: copy.t('navReports'),
+                  ),
+                ],
               ),
-              selectedIndex: _index,
-              onDestinationSelected: _onDestinationSelected,
-              destinations: [
-                NavigationDestination(
-                  icon: const Icon(Icons.dashboard_outlined),
-                  selectedIcon: const Icon(Icons.dashboard),
-                  label: copy.t('navDashboard'),
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.inventory_2_outlined),
-                  selectedIcon: const Icon(Icons.inventory_2),
-                  label: copy.t('navInventory'),
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.add_circle_outline),
-                  selectedIcon: const Icon(Icons.add_circle),
-                  label: copy.t('navAdd'),
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.receipt_long_outlined),
-                  selectedIcon: const Icon(Icons.receipt_long),
-                  label: copy.t('navTransactions'),
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.functions_outlined),
-                  selectedIcon: const Icon(Icons.functions),
-                  label: copy.isEnglish ? 'Smart' : 'ذكي',
-                ),
-                NavigationDestination(
-                  icon: const Icon(Icons.analytics_outlined),
-                  selectedIcon: const Icon(Icons.analytics),
-                  label: copy.t('navReports'),
-                ),
-              ],
             ),
           ),
         ),
       ),
     );
+
   }
 }

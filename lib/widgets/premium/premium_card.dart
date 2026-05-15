@@ -9,6 +9,7 @@ class PremiumCard extends StatelessWidget {
   final Border? border;
   final List<BoxShadow>? shadows;
   final Gradient? gradient;
+  final bool useGlass;
 
   const PremiumCard({
     super.key,
@@ -19,29 +20,36 @@ class PremiumCard extends StatelessWidget {
     this.border,
     this.shadows,
     this.gradient,
+    this.useGlass = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final isDark = AppTheme.isDark(context);
     
     return Container(
       decoration: BoxDecoration(
-        color: color ?? (isDark ? AppTheme.surface : AppTheme.lightSurface),
+        color: color ?? (isDark ? AppTheme.surfaceSecondary : AppTheme.lightSurface),
         borderRadius: BorderRadius.circular(radius ?? AppTheme.radiusLarge),
         border: border ?? Border.all(
-          color: isDark 
-            ? AppTheme.outlineDark.withValues(alpha: 0.5) 
-            : AppTheme.outlineLight.withValues(alpha: 0.5),
+          color: isDark ? AppTheme.border : AppTheme.lightBorder,
           width: 1,
         ),
-        gradient: gradient,
+        gradient: gradient ?? (isDark ? AppTheme.premiumGradient : null),
         boxShadow: shadows ?? [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: isDark ? 0.2 : 0.05),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
+          if (isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.4),
+              blurRadius: 40,
+              offset: const Offset(0, 20),
+              spreadRadius: -10,
+            )
+          else
+            BoxShadow(
+              color: AppTheme.accentBlue.withValues(alpha: 0.05),
+              blurRadius: 30,
+              offset: const Offset(0, 15),
+            ),
         ],
       ),
       child: ClipRRect(
@@ -54,3 +62,4 @@ class PremiumCard extends StatelessWidget {
     );
   }
 }
+

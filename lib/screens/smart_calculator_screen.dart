@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
 
+import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
@@ -97,10 +99,16 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (context) {
-        return Padding(
+        return Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceSecondary,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXLarge)),
+            border: Border.all(color: AppTheme.border),
+          ),
           padding: EdgeInsets.fromLTRB(
-              20, 20, 20, 20 + MediaQuery.viewInsetsOf(context).bottom),
+              24, 32, 24, 32 + MediaQuery.viewInsetsOf(context).bottom),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -110,10 +118,16 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                       .textTheme
                       .titleLarge
                       ?.copyWith(fontWeight: FontWeight.w800)),
-              const SizedBox(height: 14),
-              TextField(controller: controller, autofocus: true),
-              const SizedBox(height: 16),
-              FilledButton(
+              const SizedBox(height: 20),
+              TextField(
+                controller: controller, 
+                autofocus: true,
+                decoration: InputDecoration(
+                  hintText: _text('Enter new value', 'أدخل القيمة الجديدة'),
+                ),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
                 onPressed: () {
                   final raw = controller.text.trim();
                   final parsed = double.tryParse(raw);
@@ -122,7 +136,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                   setState(() => _preview = next);
                   Navigator.pop(context);
                 },
-                child: Text(_text('Apply', 'تطبيق')),
+                child: Text(_text('Update Field', 'تحديث الحقل')),
               ),
             ],
           ),
@@ -133,57 +147,67 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
 
   void _showMessage(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: AppTheme.surfaceElevated,
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.sizeOf(context).width >= 900;
-    final body = CustomScrollView(
-      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-      slivers: [
-        SliverToBoxAdapter(child: _Header(isEnglish: _isEnglish)),
-        SliverPadding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 120),
-          sliver: SliverToBoxAdapter(
-            child: isWide
-                ? Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Expanded(flex: 7, child: _mainColumn()),
-                      const SizedBox(width: 18),
-                      Expanded(flex: 4, child: _historyCard()),
-                    ],
-                  )
-                : Column(
-                    children: [
-                      _mainColumn(),
-                      const SizedBox(height: 18),
-                      _historyCard(),
-                    ],
-                  ),
-          ),
-        ),
-      ],
-    );
-
+    final isWide = MediaQuery.sizeOf(context).width >= 1000;
+    
     return Scaffold(
+      extendBody: true,
       body: Stack(
         children: [
-          body,
-          if (_preview != null) _stickyActions(),
+          // Background Glow
+          Positioned(
+            top: -100,
+            right: -100,
+            child: Container(
+              width: 400,
+              height: 400,
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppTheme.glowBlue,
+              ),
+            ),
+          ),
+          
+          CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(child: _Header(isEnglish: _isEnglish)),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 140),
+                sliver: SliverToBoxAdapter(
+                  child: isWide
+                      ? Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Expanded(flex: 2, child: _mainColumn()),
+                            const SizedBox(width: 32),
+                            Expanded(flex: 1, child: _historyColumn()),
+                          ],
+                        )
+                      : Column(
+                          children: [
+                            _mainColumn(),
+                            const SizedBox(height: 32),
+                            _historyColumn(),
+                          ],
+                        ),
+                ),
+              ),
+            ],
+          ),
+          
+          if (_preview != null) _floatingActionBar(),
         ],
-      ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => _runPreview(),
-        icon: _busy
-            ? const SizedBox(
-                width: 18,
-                height: 18,
-                child: CircularProgressIndicator(strokeWidth: 2))
-            : const Icon(Icons.auto_awesome),
-        label: Text(_text('Analyze locally', 'تحليل محلي')),
       ),
     );
   }
@@ -192,218 +216,292 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _inputCard(),
-        const SizedBox(height: 18),
-        if (_preview != null) _previewCard(_preview!) else _emptyState(),
+        _aiInputArea(),
+        const SizedBox(height: 32),
+        if (_preview != null) _previewDetails(_preview!) else _emptyState(),
       ],
     );
   }
 
-  Widget _inputCard() {
+  Widget _aiInputArea() {
     final suggestions = _isEnglish
         ? [
-            'Bought 20 detergent cartons for 50 and want to sell for 75',
+            'Bought 20 detergent cartons for 50 each',
             'Customer Ahmad paid 500 remaining 200',
-            'Calculate VAT 15% on 1200',
+            'Calculate 15% VAT on 1200',
           ]
         : [
-            'اشتريت 20 كرتونة منظف بسعر 50 وبدي بيعها 75',
+            'اشتريت 20 كرتونة منظف بسعر 50 للواحدة',
             'زبون أحمد دفع 500 وباقي عليه 200',
             'احسب ضريبة 15% على 1200',
           ];
-    return PremiumCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          TextField(
-            controller: _controller,
-            minLines: 4,
-            maxLines: 8,
-            textInputAction: TextInputAction.newline,
-            decoration: InputDecoration(
-              hintText: _text(
-                  'Write a business instruction in Arabic or English...',
-                  'اكتب تعليمات تجارية بالعربية أو الإنجليزية...'),
-              prefixIcon: const Icon(Icons.edit_note),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: suggestions
-                .map((s) => ActionChip(
-                      avatar: const Icon(Icons.bolt, size: 18),
-                      label: Text(s, overflow: TextOverflow.ellipsis),
-                      onPressed: () {
-                        _controller.text = s;
-                        _runPreview(s);
-                      },
-                    ))
-                .toList(),
-          ),
-        ],
-      ),
-    );
-  }
 
-  Widget _previewCard(SmartAssistantPreview preview) {
-    const warningStyle =
-        TextStyle(color: AppTheme.warning, fontWeight: FontWeight.w700);
-    return AnimatedSwitcher(
-      duration: const Duration(milliseconds: 220),
-      child: PremiumCard(
-        key: ValueKey(preview.parse.userInput + preview.parse.intent.name),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    _text('Confirmation preview', 'معاينة قبل التأكيد'),
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleLarge
-                        ?.copyWith(fontWeight: FontWeight.w900),
-                  ),
-                ),
-                _ConfidencePill(value: preview.parse.confidence),
-              ],
-            ),
-            const SizedBox(height: 14),
-            _MetricStrip(preview: preview, isEnglish: _isEnglish),
-            const SizedBox(height: 18),
-            Text(preview.calculation.summary,
-                style: Theme.of(context)
-                    .textTheme
-                    .titleMedium
-                    ?.copyWith(fontWeight: FontWeight.w800)),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 10,
-              runSpacing: 10,
-              children: preview.fields
-                  .map((field) => _FieldChip(
-                        label: field.label,
-                        value: _formatValue(field.value),
-                        onTap: field.editable
-                            ? () => _editField(field.key, field.value)
-                            : null,
-                      ))
-                  .toList(),
-            ),
-            if (preview.parse.missingFields.isNotEmpty ||
-                preview.calculation.warnings.isNotEmpty) ...[
-              const SizedBox(height: 16),
-              ...preview.parse.missingFields.map((f) => Text(
-                  '${_text('Missing', 'ناقص')}: ${_label(f)}',
-                  style: warningStyle)),
-              ...preview.calculation.warnings
-                  .map((w) => Text(w, style: warningStyle)),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _historyCard() {
-    return PremiumCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        PremiumCard(
+          padding: const EdgeInsets.all(4),
+          radius: AppTheme.radiusLarge,
+          child: Column(
             children: [
-              const Icon(Icons.history),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(_text('Recent activity', 'النشاط الأخير'),
-                    style: Theme.of(context)
-                        .textTheme
-                        .titleMedium
-                        ?.copyWith(fontWeight: FontWeight.w900)),
+              TextField(
+                controller: _controller,
+                minLines: 3,
+                maxLines: 6,
+                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w500),
+                decoration: InputDecoration(
+                  hintText: _text('What would you like to record?', 'ماذا تريد أن تسجل؟'),
+                  fillColor: Colors.transparent,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(20),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                child: Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, color: AppTheme.accentBlue, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      _text('AI Copilot active', 'مساعدك التجاري نشط'),
+                      style: GoogleFonts.inter(
+                        fontSize: 12, 
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.accentBlue,
+                      ),
+                    ),
+                    const Spacer(),
+                    _busy 
+                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                      : IconButton.filled(
+                          onPressed: () => _runPreview(),
+                          icon: const Icon(Icons.arrow_upward),
+                          style: IconButton.styleFrom(
+                            backgroundColor: AppTheme.accentBlue,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                  ],
+                ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _searchController,
-            decoration: InputDecoration(
-              hintText: _text('Search history', 'بحث في السجل'),
-              prefixIcon: const Icon(Icons.search),
-            ),
-            onChanged: (query) async {
-              final results = await _service.searchHistory(query);
-              if (mounted) setState(() => _history = results);
-            },
+        ),
+        const SizedBox(height: 16),
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          child: Row(
+            children: suggestions.map((s) => Padding(
+              padding: const EdgeInsetsDirectional.only(end: 8),
+              child: ActionChip(
+                label: Text(s),
+                onPressed: () {
+                  _controller.text = s;
+                  _runPreview(s);
+                },
+                side: BorderSide(color: AppTheme.accentBlue.withValues(alpha: 0.2)),
+                backgroundColor: AppTheme.accentBlue.withValues(alpha: 0.05),
+              ),
+            )).toList(),
           ),
-          const SizedBox(height: 12),
-          if (_history.isEmpty)
-            Text(_text('No local history yet.', 'لا يوجد سجل محلي بعد.'))
-          else
-            ..._history.take(8).map((item) => ListTile(
-                  dense: true,
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(item.userInput,
-                      maxLines: 1, overflow: TextOverflow.ellipsis),
-                  subtitle: Text(
-                      '${item.detectedIntent.name} · ${item.actionStatus.name}'),
-                  leading: const Icon(Icons.receipt_long),
-                )),
-        ],
-      ),
+        ),
+      ],
+    );
+  }
+
+  Widget _previewDetails(SmartAssistantPreview preview) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Text(
+              _text('Assistant Analysis', 'تحليل المساعد'),
+              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+            ),
+            const Spacer(),
+            _ConfidenceBadge(value: preview.parse.confidence),
+          ],
+        ),
+        const SizedBox(height: 24),
+        _MetricGrid(preview: preview, isEnglish: _isEnglish),
+        const SizedBox(height: 32),
+        PremiumCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                _text('Detailed Data Points', 'نقاط البيانات التفصيلية'),
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+              ),
+              const SizedBox(height: 20),
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: preview.fields
+                    .map((field) => _PremiumFieldTile(
+                          label: field.label,
+                          value: _formatValue(field.value),
+                          onTap: field.editable
+                              ? () => _editField(field.key, field.value)
+                              : null,
+                        ))
+                    .toList(),
+              ),
+              if (preview.parse.missingFields.isNotEmpty || preview.calculation.warnings.isNotEmpty) ...[
+                const SizedBox(height: 24),
+                _WarningList(
+                  missing: preview.parse.missingFields.map((f) => _label(f)).toList(),
+                  warnings: preview.calculation.warnings,
+                  isEnglish: _isEnglish,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _historyColumn() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          _text('Recent Activity', 'النشاط الأخير'),
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 20),
+        PremiumCard(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            children: [
+              TextField(
+                controller: _searchController,
+                decoration: InputDecoration(
+                  hintText: _text('Search history...', 'بحث في السجل...'),
+                  prefixIcon: const Icon(Icons.search, size: 20),
+                  contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                onChanged: (query) async {
+                  final results = await _service.searchHistory(query);
+                  if (mounted) setState(() => _history = results);
+                },
+              ),
+              const SizedBox(height: 12),
+              if (_history.isEmpty)
+                Padding(
+                  padding: const EdgeInsets.all(32),
+                  child: Text(_text('No history found', 'لا يوجد سجل')),
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: _history.length.clamp(0, 5),
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final item = _history[index];
+                    return ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      title: Text(item.userInput, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text('${item.detectedIntent.name} • ${item.actionStatus.name}', style: TextStyle(fontSize: 12, color: AppTheme.textSecondaryFor(context))),
+                      trailing: const Icon(Icons.chevron_right, size: 16),
+                    );
+                  },
+                ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
   Widget _emptyState() {
     return PremiumCard(
+      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 40),
       child: Column(
         children: [
-          const Icon(Icons.lock_outline, size: 42),
-          const SizedBox(height: 12),
-          Text(_text('100% local assistant', 'مساعد محلي بالكامل'),
-              style: Theme.of(context)
-                  .textTheme
-                  .titleLarge
-                  ?.copyWith(fontWeight: FontWeight.w900)),
-          const SizedBox(height: 8),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: AppTheme.accentBlue.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.bolt, size: 48, color: AppTheme.accentBlue),
+          ),
+          const SizedBox(height: 32),
+          Text(
+            _text('Ready to assist', 'جاهز للمساعدة'),
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 16),
           Text(
             _text(
-                'Deterministic rules, regex extraction, and business calculations. No cloud AI, no API keys.',
-                'قواعد حتمية واستخراج منظم وحسابات تجارية فقط. بدون ذكاء اصطناعي سحابي أو مفاتيح API.'),
+                'Type your business operations naturally. I\'ll parse the data and calculate the results instantly.',
+                'اكتب عملياتك التجارية بشكل طبيعي. سأقوم بتحليل البيانات وحساب النتائج فوراً.'),
             textAlign: TextAlign.center,
+            style: TextStyle(color: AppTheme.textSecondaryFor(context), height: 1.5),
           ),
         ],
       ),
     );
   }
 
-  Widget _stickyActions() {
+  Widget _floatingActionBar() {
     return Positioned(
-      left: 16,
-      right: 16,
-      bottom: 16,
+      left: 24,
+      right: 24,
+      bottom: 24,
       child: SafeArea(
-        child: PremiumCard(
+        child: Container(
+          decoration: BoxDecoration(
+            color: AppTheme.surfaceElevated.withValues(alpha: 0.95),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.3)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.5),
+                blurRadius: 30,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
           padding: const EdgeInsets.all(12),
-          radius: 18,
           child: Row(
             children: [
-              Expanded(
-                  child: OutlinedButton(
-                      onPressed: () => setState(() => _preview = null),
-                      child: Text(_text('Cancel', 'إلغاء')))),
+              IconButton(
+                onPressed: () => setState(() => _preview = null),
+                icon: const Icon(Icons.close),
+                tooltip: _text('Dismiss', 'تجاهل'),
+              ),
               const SizedBox(width: 8),
               Expanded(
-                  child: OutlinedButton(
-                      onPressed: _saveDraft,
-                      child: Text(_text('Save draft', 'حفظ مسودة')))),
-              const SizedBox(width: 8),
+                child: FilledButton(
+                  onPressed: _saveDraft,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppTheme.surfaceSecondary,
+                    side: BorderSide(color: AppTheme.border),
+                  ),
+                  child: Text(_text('Save Draft', 'حفظ كمسودة')),
+                ),
+              ),
+              const SizedBox(width: 12),
               Expanded(
-                  child: FilledButton(
-                      onPressed: _busy ? null : _confirm,
-                      child: Text(_text('Confirm', 'تأكيد')))),
+                flex: 2,
+                child: ElevatedButton(
+                  onPressed: _busy ? null : _confirm,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.accentBlue,
+                    foregroundColor: Colors.white,
+                  ),
+                  child: _busy 
+                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text(_text('Confirm Entry', 'تأكيد العملية')),
+                ),
+              ),
             ],
           ),
         ),
@@ -430,52 +528,58 @@ class _Header extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = isEnglish
-        ? ('Smart Calculator', 'Offline local business assistant', 'Local only')
-        : ('الحاسبة الذكية', 'مساعد أعمال محلي بدون خدمات سحابية', 'محلي فقط');
+    final copy = AppCopy.of(context);
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 54, 20, 20),
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceFor(context),
-        border: Border(bottom: BorderSide(color: AppTheme.borderFor(context))),
-      ),
-      child: Row(
+      padding: const EdgeInsets.fromLTRB(24, 64, 24, 32),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-                color: AppTheme.accent.withValues(alpha: .14),
-                borderRadius: BorderRadius.circular(16)),
-            child: const Icon(Icons.functions, color: AppTheme.accent),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.accentBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.security, size: 14, color: AppTheme.accentBlue),
+                    const SizedBox(width: 6),
+                    Text(
+                      isEnglish ? 'LOCAL ENGINE' : 'محرك محلي',
+                      style: GoogleFonts.inter(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 1,
+                        color: AppTheme.accentBlue,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(text.$1,
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineSmall
-                        ?.copyWith(fontWeight: FontWeight.w900)),
-                Text(text.$2,
-                    style:
-                        TextStyle(color: AppTheme.textSecondaryFor(context))),
-              ],
-            ),
+          const SizedBox(height: 16),
+          Text(
+            copy.t('smartCopilot'),
+            style: Theme.of(context).textTheme.displayMedium?.copyWith(height: 1),
           ),
-          Chip(
-              label: Text(text.$3),
-              avatar: const Icon(Icons.wifi_off, size: 18)),
+          const SizedBox(height: 8),
+          Text(
+            copy.t('smartCopilotSubtitle'),
+            style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 16),
+          ),
         ],
       ),
     );
   }
 }
 
-class _MetricStrip extends StatelessWidget {
-  const _MetricStrip({required this.preview, required this.isEnglish});
+class _MetricGrid extends StatelessWidget {
+  const _MetricGrid({required this.preview, required this.isEnglish});
   final SmartAssistantPreview preview;
   final bool isEnglish;
 
@@ -483,63 +587,83 @@ class _MetricStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final values = preview.calculation.values;
     final tiles = [
-      ('Total cost', 'التكلفة', values['totalCost']),
-      ('Revenue', 'الإيراد', values['expectedRevenue'] ?? values['saleTotal']),
-      ('Profit', 'الربح', values['expectedProfit'] ?? values['profit']),
-      ('Margin', 'الهامش', values['profitMargin']),
+      ('Total Cost', 'إجمالي التكلفة', values['totalCost'], Icons.shopping_cart_outlined),
+      ('Revenue', 'الإيرادات', values['expectedRevenue'] ?? values['saleTotal'], Icons.payments_outlined),
+      ('Net Profit', 'صافي الربح', values['expectedProfit'] ?? values['profit'], Icons.trending_up),
+      ('Margin', 'الهامش', values['profitMargin'], Icons.pie_chart_outline),
     ].where((item) => item.$3 != null).toList();
-    return Wrap(
-      spacing: 10,
-      runSpacing: 10,
-      children: tiles
-          .map((item) => Container(
-                width: 150,
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: AppTheme.accent.withValues(alpha: .08),
-                  borderRadius: BorderRadius.circular(14),
-                  border:
-                      Border.all(color: AppTheme.accent.withValues(alpha: .14)),
+
+    return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: MediaQuery.sizeOf(context).width > 600 ? 4 : 2,
+        crossAxisSpacing: 16,
+        mainAxisSpacing: 16,
+        childAspectRatio: 1.5,
+      ),
+      itemCount: tiles.length,
+      itemBuilder: (context, index) {
+        final item = tiles[index];
+        return PremiumCard(
+          padding: const EdgeInsets.all(16),
+          radius: AppTheme.radiusMedium,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(item.$4, size: 20, color: AppTheme.accentBlue),
+              const Spacer(),
+              Text(
+                isEnglish ? item.$1 : item.$2,
+                style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 12),
+              ),
+              const SizedBox(height: 4),
+              FittedBox(
+                child: Text(
+                  item.$3 is num ? AppFormatters.number((item.$3 as num).toDouble()) : item.$3.toString(),
+                  style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 18),
                 ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(isEnglish ? item.$1 : item.$2,
-                        style: TextStyle(
-                            color: AppTheme.textSecondaryFor(context),
-                            fontSize: 12)),
-                    const SizedBox(height: 4),
-                    Text(
-                        item.$3 is num
-                            ? AppFormatters.number((item.$3 as num).toDouble())
-                            : item.$3.toString(),
-                        style: Theme.of(context)
-                            .textTheme
-                            .titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w900)),
-                  ],
-                ),
-              ))
-          .toList(),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
 
-class _ConfidencePill extends StatelessWidget {
-  const _ConfidencePill({required this.value});
+class _ConfidenceBadge extends StatelessWidget {
+  const _ConfidenceBadge({required this.value});
   final double value;
 
   @override
   Widget build(BuildContext context) {
-    return Chip(
-      avatar: const Icon(Icons.speed, size: 18),
-      label: Text('${(value * 100).round()}%'),
+    final color = value > 0.8 ? AppTheme.success : (value > 0.5 ? Colors.orange : Colors.red);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.check_circle_outline, size: 14, color: color),
+          const SizedBox(width: 6),
+          Text(
+            '${(value * 100).round()}% Match',
+            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: color),
+          ),
+        ],
+      ),
     );
   }
 }
 
-class _FieldChip extends StatelessWidget {
-  const _FieldChip({required this.label, required this.value, this.onTap});
+class _PremiumFieldTile extends StatelessWidget {
+  const _PremiumFieldTile({required this.label, required this.value, this.onTap});
   final String label;
   final String value;
   final VoidCallback? onTap;
@@ -548,26 +672,78 @@ class _FieldChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(12),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: AppTheme.borderFor(context)),
+          color: AppTheme.surfaceElevated.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: AppTheme.border),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Text('$label: ',
-                style: TextStyle(color: AppTheme.textSecondaryFor(context))),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.w800)),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 11, fontWeight: FontWeight.w600)),
+                const SizedBox(height: 2),
+                Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+              ],
+            ),
             if (onTap != null)
-              const Padding(
-                  padding: EdgeInsetsDirectional.only(start: 6),
-                  child: Icon(Icons.edit, size: 15)),
+              Padding(
+                padding: const EdgeInsetsDirectional.only(start: 12),
+                child: Icon(Icons.edit_outlined, size: 14, color: AppTheme.accentBlue.withValues(alpha: 0.6)),
+              ),
           ],
         ),
       ),
     );
   }
 }
+
+class _WarningList extends StatelessWidget {
+  const _WarningList({required this.missing, required this.warnings, required this.isEnglish});
+  final List<String> missing;
+  final List<String> warnings;
+  final bool isEnglish;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.danger.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.danger.withValues(alpha: 0.1)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          ...missing.map((m) => Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.error_outline, size: 16, color: AppTheme.danger),
+                const SizedBox(width: 8),
+                Text('${isEnglish ? 'Missing' : 'ناقص'}: $m', style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          )),
+          ...warnings.map((w) => Padding(
+            padding: const EdgeInsets.only(bottom: 4),
+            child: Row(
+              children: [
+                const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
+                const SizedBox(width: 8),
+                Text(w, style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w600)),
+              ],
+            ),
+          )),
+        ],
+      ),
+    );
+  }
+}
+

@@ -20,6 +20,8 @@ import 'package:hasoob_app/screens/business_profile_screen.dart';
 import 'package:hasoob_app/screens/customers_screen.dart';
 import 'package:hasoob_app/screens/documents_screen.dart';
 import 'package:hasoob_app/screens/settings_screen.dart';
+import 'package:hasoob_app/widgets/premium/premium_card.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'package:hasoob_app/data/services/sync_manager.dart';
 import 'package:hasoob_app/widgets/sync_status_indicator.dart';
 import 'package:hasoob_app/widgets/sync_health_card.dart';
@@ -156,12 +158,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
+    final isDark = AppTheme.isDark(context);
 
     return Scaffold(
+      extendBodyBehindAppBar: true,
       appBar: AppBar(
-        title: Text(copy.t('dashboardTitle')),
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        title: Text(copy.t('dashboardTitle'), style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
         actions: [
           const SyncStatusIndicator(),
+          const SizedBox(width: 8),
           IconButton(
             tooltip: copy.t('businessProfile'),
             onPressed: () {
@@ -170,7 +177,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 MaterialPageRoute(builder: (_) => const BusinessProfileScreen()),
               );
             },
-            icon: const Icon(Icons.apartment_rounded),
+            icon: const Icon(Icons.apartment_rounded, size: 20),
           ),
           IconButton(
             tooltip: copy.t('settings'),
@@ -180,13 +187,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 MaterialPageRoute(builder: (_) => const SettingsScreen()),
               );
             },
-            icon: const Icon(Icons.settings_outlined),
+            icon: const Icon(Icons.settings_outlined, size: 20),
           ),
           IconButton(
             tooltip: copy.t('logout'),
             onPressed: () => AuthService.instance.signOut(),
-            icon: const Icon(Icons.logout_rounded),
+            icon: const Icon(Icons.logout_rounded, size: 20),
           ),
+          const SizedBox(width: 8),
         ],
       ),
       floatingActionButton: ListenableBuilder(
@@ -200,8 +208,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           return FloatingActionButton.extended(
             onPressed: manager.isRunning ? null : () => manager.runSync(force: true),
             backgroundColor: manager.isRunning
-                ? AppTheme.textSecondaryFor(context)
-                : AppTheme.accent,
+                ? AppTheme.surfaceElevated
+                : AppTheme.accentBlue,
+            elevation: 8,
             icon: manager.isRunning
                 ? const SizedBox(
                     width: 18,
@@ -211,17 +220,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       color: Colors.white,
                     ),
                   )
-                : const Icon(Icons.sync_rounded),
+                : const Icon(Icons.sync_rounded, color: Colors.white),
             label: Text(
               manager.isRunning ? copy.t('syncRunning') : copy.t('syncNow'),
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
             ),
           );
         },
       ),
-      body: RefreshIndicator(
-        onRefresh: _refresh,
-        child: _buildBody(context, copy),
+      body: Stack(
+        children: [
+          // Background Glows
+          if (isDark) ...[
+            Positioned(
+              top: -100,
+              right: -100,
+              child: Container(
+                width: 300,
+                height: 300,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.glowBlue,
+                ),
+              ),
+            ),
+            Positioned(
+              bottom: 100,
+              left: -50,
+              child: Container(
+                width: 200,
+                height: 200,
+                decoration: const BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: AppTheme.glowCyan,
+                ),
+              ),
+            ),
+          ],
+
+          RefreshIndicator(
+            onRefresh: _refresh,
+            displacement: 100,
+            child: _buildBody(context, copy),
+          ),
+        ],
       ),
     );
   }
@@ -238,537 +280,400 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return _buildContent(context, copy, _cachedData ?? ReportsSnapshot.empty());
   }
 
-  Widget _buildErrorState(BuildContext context, AppCopy copy, Object? error) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(32),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.error_outline_rounded, color: AppTheme.danger, size: 48),
-            const SizedBox(height: 16),
-            Text(
-              copy.t('loadDashboardError'),
-              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 24),
-            FilledButton.icon(
-              onPressed: _refresh,
-              icon: const Icon(Icons.refresh_rounded),
-              label: Text(copy.t('retry')),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSkeleton(BuildContext context, AppCopy copy) {
-    return SafeArea(
-      bottom: false,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        children: [
-          const SkeletonLoader(height: 120, borderRadius: 24),
-          const SizedBox(height: 24),
-          const SkeletonCard(height: 80),
-          const SizedBox(height: 24),
-          const SkeletonLoader(width: 150, height: 24),
-          const SizedBox(height: 16),
-          GridView.count(
-            crossAxisCount: MediaQuery.of(context).size.width >= 900 ? 4 : 2,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            children: List.generate(4, (index) => const SkeletonCard(height: 100)),
-          ),
-          const SizedBox(height: 24),
-          const SkeletonLoader(width: 150, height: 24),
-          const SizedBox(height: 12),
-          const Row(
-            children: [
-              Expanded(child: SkeletonLoader(height: 80, borderRadius: 16)),
-              SizedBox(width: 12),
-              Expanded(child: SkeletonLoader(height: 80, borderRadius: 16)),
-              SizedBox(width: 12),
-              Expanded(child: SkeletonLoader(height: 80, borderRadius: 16)),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildContent(BuildContext context, AppCopy copy, ReportsSnapshot data) {
     final lowStockPreview = data.lowStockItems.take(3).toList();
     final recentSalesPreview = data.recentSales.take(3).toList();
+    final isWide = MediaQuery.sizeOf(context).width >= 1000;
 
-    return SafeArea(
-      bottom: false,
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
-        children: [
-          _heroCard(context, copy),
-          const SizedBox(height: 24),
-          const SyncHealthCard(),
-          const SizedBox(height: 24),
-          AppSectionHeader(
-            title: copy.t('overview'),
-            subtitle: copy.t('overviewSubtitle'),
-          ),
-          const SizedBox(height: 16),
-          LayoutBuilder(
-            builder: (context, constraints) {
-              final textScale = MediaQuery.textScalerOf(context).scale(1);
-              final crossAxisCount = constraints.maxWidth >= 900
-                  ? 4
-                  : constraints.maxWidth < 420
-                      ? 1
-                      : 2;
-              final baseHeight = constraints.maxWidth < 360 ? 162.0 : 172.0;
-              final cardHeight =
-                  baseHeight + ((textScale - 1) * 22).clamp(0, 26);
-
-              return GridView.count(
-                crossAxisCount: crossAxisCount,
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                mainAxisExtent: cardHeight,
-                children: [
-                  MetricCard(
-                    title: copy.t('totalProducts'),
-                    value: AppFormatters.number(data.totalProducts),
-                    icon: Icons.inventory_2_rounded,
-                  ),
-                  MetricCard(
-                    title: copy.t('totalSales'),
-                    value: AppFormatters.currency(data.totalSales),
-                    icon: Icons.point_of_sale_rounded,
-                  ),
-                  MetricCard(
-                    title: copy.t('estimatedProfit'),
-                    value: AppFormatters.currency(data.netProfitEstimate),
-                    icon: Icons.trending_up_rounded,
-                    accentColor: AppTheme.success,
-                  ),
-                  MetricCard(
-                    title: copy.t('lowStockCount'),
-                    value: AppFormatters.number(data.lowStockItems.length),
-                    icon: Icons.warning_amber_rounded,
-                    accentColor: AppTheme.warning,
-                    caption: data.lowStockItems.isEmpty
-                        ? copy.t('noAlertsNow')
-                        : copy.t('needsAttentionSoon'),
-                  ),
-                ],
-              );
-            },
-          ),
-          const SizedBox(height: 24),
-          AppSectionHeader(
-            title: copy.t('quickActions'),
-            subtitle: copy.t('quickActionsSubtitle'),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: _quickAction(
-                  context,
-                  icon: Icons.add_box_rounded,
-                  title: copy.t('addProduct'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const AddProductScreen()),
-                    );
-                  },
+    return CustomScrollView(
+      slivers: [
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 110, 20, 24),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _heroCard(context, copy),
+                const SizedBox(height: 24),
+                const SyncHealthCard(),
+                const SizedBox(height: 32),
+                
+                Text(
+                  copy.t('overview'),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _quickAction(
-                  context,
-                  icon: Icons.receipt_long_rounded,
-                  title: copy.t('newInvoice'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const DocumentsScreen()),
-                    );
-                  },
+                const SizedBox(height: 4),
+                Text(
+                  copy.t('overviewSubtitle'),
+                  style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 14),
                 ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: _quickAction(
-                  context,
-                  icon: Icons.person_add_alt_1_rounded,
-                  title: copy.t('newCustomer'),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const CustomersScreen()),
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          _buildRestoreCard(context, copy),
-          const SizedBox(height: 24),
-          AppSectionHeader(
-            title: copy.t('stockAlerts'),
-            subtitle: copy.t('stockAlertsSubtitle'),
-          ),
-          const SizedBox(height: 12),
-          if (data.lowStockItems.isEmpty)
-            _emptyCard(
-              context,
-              icon: Icons.inventory_2_outlined,
-              text: copy.t('noLowStockNow'),
-            )
-          else ...[
-            Card(
-              color: AppTheme.warning.withValues(alpha: 0.08),
-              child: ListTile(
-                leading: _iconShell(
-                  context,
-                  Icons.crisis_alert_rounded,
-                  AppTheme.warning,
-                ),
-                title: Text(
-                  copy.dashboardLowStockCount(data.lowStockItems.length),
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                subtitle: Text(copy.t('reviewLowStock')),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...lowStockPreview.map(
-              (item) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Card(
-                  child: ListTile(
-                    leading: _iconShell(
-                      context,
-                      item.isOutOfStock
-                          ? Icons.remove_shopping_cart_rounded
-                          : Icons.warning_amber_rounded,
-                      item.isOutOfStock
-                          ? AppTheme.danger
-                          : AppTheme.warning,
-                    ),
-                    title: Text(
-                      item.name,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    subtitle: Text(
-                      copy.dashboardStockLine(
-                        item.stockQty,
-                        item.unit,
-                        item.lowStockThreshold,
-                      ),
-                    ),
-                    trailing: _pill(
-                      item.isOutOfStock
-                          ? copy.t('outOfStock')
-                          : copy.t('lowStock'),
-                      item.isOutOfStock ? AppTheme.danger : AppTheme.warning,
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ],
-          const SizedBox(height: 24),
-          AppSectionHeader(
-            title: copy.t('recentSales'),
-            subtitle: copy.t('recentSalesSubtitle'),
-          ),
-          const SizedBox(height: 12),
-          if (data.recentSales.isEmpty)
-            _emptyCard(
-              context,
-              icon: Icons.sell_outlined,
-              text: copy.t('noSalesYet'),
-            )
-          else ...[
-            Card(
-              child: ListTile(
-                leading: _iconShell(
-                  context,
-                  Icons.monitor_heart_rounded,
-                  AppTheme.info,
-                ),
-                title: Text(
-                  copy.dashboardRecentSalesCount(recentSalesPreview.length),
-                  style: const TextStyle(fontWeight: FontWeight.w800),
-                ),
-                subtitle: Text(copy.t('recentSalesSubtitle')),
-              ),
-            ),
-            const SizedBox(height: 12),
-            ...recentSalesPreview.map(
-              (row) => Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: Card(
-                  child: ListTile(
-                    leading: _iconShell(
-                      context,
-                      Icons.sell_rounded,
-                      AppTheme.info,
-                    ),
-                    title: Text(
-                      row['product_name']?.toString() ?? '',
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    subtitle: Text(
-                      copy.dashboardRecentSaleSubtitle(
-                        customerName: row['customer_name']?.toString() ?? '',
-                        qty: row['qty'],
-                        date: AppFormatters.dateTimeString(
-                          row['date']?.toString(),
+                const SizedBox(height: 20),
+                
+                LayoutBuilder(
+                  builder: (context, constraints) {
+                    final crossAxisCount = constraints.maxWidth >= 900 ? 4 : (constraints.maxWidth < 420 ? 1 : 2);
+                    return GridView.count(
+                      crossAxisCount: crossAxisCount,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      childAspectRatio: 1.4,
+                      children: [
+                        MetricCard(
+                          title: copy.t('totalProducts'),
+                          value: AppFormatters.number(data.totalProducts),
+                          icon: Icons.inventory_2_rounded,
                         ),
+                        MetricCard(
+                          title: copy.t('totalSales'),
+                          value: AppFormatters.currency(data.totalSales),
+                          icon: Icons.point_of_sale_rounded,
+                        ),
+                        MetricCard(
+                          title: copy.t('estimatedProfit'),
+                          value: AppFormatters.currency(data.netProfitEstimate),
+                          icon: Icons.trending_up_rounded,
+                          accentColor: AppTheme.success,
+                        ),
+                        MetricCard(
+                          title: copy.t('lowStockCount'),
+                          value: AppFormatters.number(data.lowStockItems.length),
+                          icon: Icons.warning_amber_rounded,
+                          accentColor: Colors.orange,
+                          caption: data.lowStockItems.isEmpty
+                              ? copy.t('noAlertsNow')
+                              : copy.t('needsAttentionSoon'),
+                        ),
+                      ],
+                    );
+                  },
+                ),
+                
+                const SizedBox(height: 40),
+                Text(
+                  copy.t('quickActions'),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 16),
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
+                  child: Row(
+                    children: [
+                      _quickActionTile(
+                        context,
+                        icon: Icons.add_box_rounded,
+                        title: copy.t('addProduct'),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
                       ),
-                    ),
-                    trailing: Text(
-                      AppFormatters.currency(_toDouble(row['total_sale'])),
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
+                      const SizedBox(width: 12),
+                      _quickActionTile(
+                        context,
+                        icon: Icons.receipt_long_rounded,
+                        title: copy.t('newInvoice'),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen())),
+                      ),
+                      const SizedBox(width: 12),
+                      _quickActionTile(
+                        context,
+                        icon: Icons.person_add_alt_1_rounded,
+                        title: copy.t('newCustomer'),
+                        onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomersScreen())),
+                      ),
+                    ],
                   ),
                 ),
-              ),
+                
+                const SizedBox(height: 32),
+                _buildRestoreCard(context, copy),
+                
+                const SizedBox(height: 40),
+                if (isWide)
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _stockSection(context, copy, data, lowStockPreview)),
+                      const SizedBox(width: 32),
+                      Expanded(child: _salesSection(context, copy, data, recentSalesPreview)),
+                    ],
+                  )
+                else ...[
+                  _stockSection(context, copy, data, lowStockPreview),
+                  const SizedBox(height: 32),
+                  _salesSection(context, copy, data, recentSalesPreview),
+                ],
+                const SizedBox(height: 120),
+              ],
             ),
-          ],
-        ],
-      ),
+          ),
+        ),
+      ],
     );
   }
 
-  Widget _buildRestoreCard(BuildContext context, AppCopy copy) {
-    final hasRestored = _restoreStatusData?['has_restored'] == true;
-    final lastRestoreAt = _restoreStatusData?['last_restore_at']?.toString();
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(18),
-        child: Column(
-          children: [
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: _iconShell(
-                context,
-                Icons.cloud_download_rounded,
-                AppTheme.info,
-              ),
-              title: Text(
-                copy.t('restoreFromCloud'),
-                style: const TextStyle(fontWeight: FontWeight.w800),
-              ),
-              subtitle: Text(copy.t('restoreFromCloudSubtitle')),
-              trailing: _isRestoring
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-              onTap: _isRestoring ? null : _restoreFromCloud,
-            ),
-            const SizedBox(height: 8),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: hasRestored
-                    ? AppTheme.success.withValues(alpha: 0.08)
-                    : AppTheme.surfaceAltFor(context),
-                borderRadius: BorderRadius.circular(
-                  AppTheme.radiusMedium,
-                ),
-                border: Border.all(
-                  color: hasRestored
-                      ? AppTheme.success.withValues(alpha: 0.24)
-                      : AppTheme.borderFor(context),
-                ),
-              ),
+  Widget _stockSection(BuildContext context, AppCopy copy, ReportsSnapshot data, List<dynamic> preview) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionHeader(copy.t('stockAlerts'), copy.t('stockAlertsSubtitle')),
+        const SizedBox(height: 16),
+        if (data.lowStockItems.isEmpty)
+          _emptyCard(context, icon: Icons.inventory_2_outlined, text: copy.t('noLowStockNow'))
+        else ...[
+          ...preview.map((item) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: PremiumCard(
+              padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  Icon(
-                    hasRestored
-                        ? Icons.cloud_done_rounded
-                        : Icons.cloud_off_rounded,
-                    color: hasRestored
-                        ? AppTheme.success
-                        : AppTheme.textSecondaryFor(context),
-                  ),
-                  const SizedBox(width: 10),
+                  _iconBox(item.isOutOfStock ? Icons.remove_shopping_cart_rounded : Icons.warning_amber_rounded, 
+                           item.isOutOfStock ? Colors.red : Colors.orange),
+                  const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Text(item.name, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                        const SizedBox(height: 2),
                         Text(
-                          hasRestored
-                              ? copy.t('restoreUsed')
-                              : copy.t('restoreUnused'),
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w800,
-                          ),
+                          copy.dashboardStockLine(item.stockQty, item.unit, item.lowStockThreshold),
+                          style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 13),
                         ),
-                        if (lastRestoreAt != null &&
-                            lastRestoreAt.trim().isNotEmpty) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            copy.dashboardLastRestore(
-                              AppFormatters.dateTimeString(lastRestoreAt),
-                            ),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
                       ],
                     ),
+                  ),
+                  _statusPill(item.isOutOfStock ? copy.t('outOfStock') : copy.t('lowStock'),
+                              item.isOutOfStock ? Colors.red : Colors.orange),
+                ],
+              ),
+            ),
+          )),
+        ],
+      ],
+    );
+  }
+
+  Widget _salesSection(BuildContext context, AppCopy copy, ReportsSnapshot data, List<dynamic> preview) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _sectionHeader(copy.t('recentSales'), copy.t('recentSalesSubtitle')),
+        const SizedBox(height: 16),
+        if (data.recentSales.isEmpty)
+          _emptyCard(context, icon: Icons.sell_outlined, text: copy.t('noSalesYet'))
+        else ...[
+          ...preview.map((row) => Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: PremiumCard(
+              padding: const EdgeInsets.all(16),
+              child: Row(
+                children: [
+                  _iconBox(Icons.sell_rounded, AppTheme.accentBlue),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(row['product_name']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                        const SizedBox(height: 2),
+                        Text(
+                          copy.dashboardRecentSaleSubtitle(
+                            customerName: row['customer_name']?.toString() ?? '',
+                            qty: row['qty'],
+                            date: AppFormatters.dateTimeString(row['date']?.toString()),
+                          ),
+                          style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 13),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Text(
+                    AppFormatters.currency(_toDouble(row['total_sale'])),
+                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16, color: AppTheme.accentBlue),
                   ),
                 ],
               ),
             ),
-          ],
+          )),
+        ],
+      ],
+    );
+  }
+
+  Widget _sectionHeader(String title, String subtitle) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 18)),
+        const SizedBox(height: 2),
+        Text(subtitle, style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 13)),
+      ],
+    );
+  }
+
+  Widget _quickActionTile(BuildContext context, {required IconData icon, required String title, required VoidCallback onTap}) {
+    return PremiumCard(
+      padding: EdgeInsets.zero,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(16),
+        child: Container(
+          width: 130,
+          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          child: Column(
+            children: [
+              _iconBox(icon, AppTheme.accentBlue),
+              const SizedBox(height: 12),
+              Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+            ],
+          ),
         ),
       ),
     );
   }
 
   Widget _heroCard(BuildContext context, AppCopy copy) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.accent.withValues(alpha: 0.18),
-            AppTheme.surfaceFor(context),
-          ],
-          begin: Alignment.topRight,
-          end: Alignment.bottomLeft,
-        ),
-        borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
-        border: Border.all(color: AppTheme.borderFor(context)),
-        boxShadow: AppTheme.softShadow(context),
-      ),
+    return PremiumCard(
+      padding: const EdgeInsets.all(24),
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  copy.t('professionalDashboard'),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.2)),
+                  ),
+                  child: Text(
+                    copy.t('professionalDashboard').toUpperCase(),
+                    style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1, color: AppTheme.accentBlue),
+                  ),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 16),
                 Text(
                   copy.t('dashboardHero'),
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: AppTheme.textSecondaryFor(context),
-                        height: 1.5,
-                      ),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, height: 1.2),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 16),
-          _iconShell(context, Icons.dashboard_customize_rounded, AppTheme.accent),
+          const SizedBox(width: 24),
+          const Icon(Icons.bolt_rounded, size: 48, color: AppTheme.accentBlue),
         ],
       ),
     );
   }
 
-  Widget _quickAction(
-    BuildContext context, {
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
-    return InkWell(
-      borderRadius: BorderRadius.circular(16),
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: AppTheme.surfaceAltFor(context),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppTheme.borderFor(context)),
-        ),
+  Widget _iconBox(IconData icon, Color color) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Icon(icon, color: color, size: 22),
+    );
+  }
+
+  Widget _statusPill(String text, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 11)),
+    );
+  }
+
+  Widget _emptyCard(BuildContext context, {required IconData icon, required String text}) {
+    return PremiumCard(
+      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+      child: Center(
         child: Column(
           children: [
-            _iconShell(context, icon, AppTheme.accent),
-            const SizedBox(height: 8),
-            Text(
-              title,
-              textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.w700),
-            ),
+            Icon(icon, size: 32, color: AppTheme.textSecondaryFor(context).withValues(alpha: 0.5)),
+            const SizedBox(height: 12),
+            Text(text, style: TextStyle(color: AppTheme.textSecondaryFor(context))),
           ],
         ),
       ),
     );
   }
 
-  Widget _emptyCard(
-    BuildContext context, {
-    required IconData icon,
-    required String text,
-  }) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          children: [
-            _iconShell(context, icon, AppTheme.accent),
+
+  Widget _buildSkeleton(BuildContext context, AppCopy copy) {
+    return const Center(child: SkeletonLoader());
+  }
+
+  Widget _buildErrorState(BuildContext context, AppCopy copy, String? error) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Icon(Icons.error_outline, size: 48, color: AppTheme.danger),
+          const SizedBox(height: 16),
+          Text(error ?? copy.t('somethingWentWrong')),
+          const SizedBox(height: 16),
+          ElevatedButton(
+            onPressed: _refresh,
+            child: Text(copy.t('retry')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRestoreCard(BuildContext context, AppCopy copy) {
+    final status = _restoreStatusData?['status'] ?? 'unknown';
+    final lastDate = _restoreStatusData?['last_restore'];
+    
+    return PremiumCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              _iconBox(Icons.cloud_download_rounded, AppTheme.accentBlue),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(copy.t('restoreFromCloud'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+                    const SizedBox(height: 2),
+                    Text(
+                      status == 'used' ? copy.t('restoreUsed') : copy.t('restoreUnused'),
+                      style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 13),
+                    ),
+                  ],
+                ),
+              ),
+              if (!_isRestoring)
+                TextButton.icon(
+                  onPressed: _restoreFromCloud,
+                  icon: const Icon(Icons.restore_rounded, size: 18),
+                  label: Text(copy.t('restore')),
+                )
+              else
+                const CircularProgressIndicator(strokeWidth: 2),
+            ],
+          ),
+          if (lastDate != null) ...[
             const SizedBox(height: 12),
             Text(
-              text,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.textSecondaryFor(context),
-                  ),
+              copy.dashboardLastRestore(AppFormatters.dateTimeString(lastDate.toString())),
+              style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 12),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _iconShell(BuildContext context, IconData icon, Color color) {
-    return Container(
-      width: 46,
-      height: 46,
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: color.withValues(alpha: 0.18)),
-      ),
-      child: Icon(icon, color: color),
-    );
-  }
-
-  Widget _pill(String text, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withValues(alpha: 0.24)),
-      ),
-      child: Text(
-        text,
-        style: TextStyle(color: color, fontWeight: FontWeight.w800),
+        ],
       ),
     );
   }
