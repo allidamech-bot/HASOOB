@@ -8,7 +8,7 @@ class AppTheme {
 
   static const String fontFamily = 'Cairo';
 
-  static const Color accent = Color(0xFF2F80ED);
+  static const Color accent = Color(0xFF3B82F6);
   static const Color accentSoft = Color(0xFF60A5FA);
   static const Color accentLight = Color(0xFFDCEBFF);
 
@@ -18,28 +18,28 @@ class AppTheme {
   static const Color info = Color(0xFF3B82F6);
 
   static const Color background = Color(0xFF0B1020);
-  static const Color surface = Color(0xFF141B2D);
-  static const Color surfaceAlt = Color(0xFF1B2438);
-  static const Color surfaceMuted = Color(0xFF24314A);
-  static const Color outlineDark = Color(0xFF334155);
+  static const Color surface = Color(0xFF121A2B);
+  static const Color surfaceAlt = Color(0xFF182235);
+  static const Color surfaceMuted = Color(0xFF1E293B);
+  static const Color outlineDark = Color(0xFF243045);
 
   static const Color lightBackground = Color(0xFFF5F7FB);
   static const Color lightSurface = Color(0xFFFFFFFF);
   static const Color lightSurfaceAlt = Color(0xFFF8FBFF);
-  static const Color lightSurfaceMuted = Color(0xFFE7EEF7);
-  static const Color outlineLight = Color(0xFFD4E0EF);
+  static const Color lightSurfaceMuted = Color(0xFFF1F5F9);
+  static const Color outlineLight = Color(0xFFE2E8F0);
 
-  static const Color textPrimary = Color(0xFFF8FAFC);
+  static const Color textPrimary = Color(0xFFF3F4F6);
   static const Color textSecondary = Color(0xFF94A3B8);
   static const Color lightTextPrimary = Color(0xFF0F172A);
   static const Color lightTextSecondary = Color(0xFF475569);
-  static const Color brandBlue = Color(0xFF0D3B82);
-  static const Color lightDivider = Color(0xFFDCE6F2);
+  static const Color brandBlue = Color(0xFF2563EB);
+  static const Color lightDivider = Color(0xFFE2E8F0);
 
   static ThemeData darkTheme() {
     const colorScheme = ColorScheme.dark(
-      primary: Color(0xFF2F80ED),
-      secondary: Color(0xFF60A5FA),
+      primary: accent,
+      secondary: accentSoft,
       surface: surface,
       onSurface: textPrimary,
       error: danger,
