@@ -11,7 +11,7 @@ import 'package:flutter/foundation.dart';
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
-  static const _databaseVersion = 19;
+  static const _databaseVersion = 21;
 
   static const _cashAccountCode = '101';
   static const _inventoryAccountCode = '102';
@@ -164,6 +164,14 @@ class DBHelper {
             await _upgradeToV19(db);
           }
 
+          if (oldVersion < 20) {
+            await _upgradeToV20(db);
+          }
+
+          if (oldVersion < 21) {
+            await _upgradeToV21(db);
+          }
+
           await _repairAccountNamesForV12(db);
         },
         onOpen: (db) async {
@@ -179,7 +187,8 @@ class DBHelper {
   static Future<void> _repairAccountNamesForV12(Database db) async {
     // This is called during upgrade. Since we don't have businessId here,
     // we only repair if we can identify businessIds from existing accounts.
-    final result = await db.rawQuery('SELECT DISTINCT businessId FROM accounts WHERE businessId IS NOT NULL');
+    final result = await db.rawQuery(
+        'SELECT DISTINCT businessId FROM accounts WHERE businessId IS NOT NULL');
     for (final row in result) {
       final bId = row['businessId']?.toString();
       if (bId != null) {
@@ -243,7 +252,48 @@ class DBHelper {
         selling_price REAL,
         stock_qty INTEGER,
         low_stock_threshold INTEGER DEFAULT 5,
-        barcode TEXT
+        barcode TEXT,
+        sku TEXT,
+        qr_code TEXT,
+        category TEXT,
+        brand TEXT,
+        supplier TEXT,
+        description TEXT,
+        image_path TEXT,
+        gallery_paths TEXT,
+        wholesale_price REAL,
+        discount_price REAL,
+        vat_percentage REAL,
+        tax_amount REAL,
+        reserved_qty INTEGER,
+        min_stock_alert INTEGER,
+        max_stock INTEGER,
+        warehouse TEXT,
+        shelf_location TEXT,
+        branch_assignment TEXT,
+        status TEXT,
+        purchase_date TEXT,
+        production_date TEXT,
+        expiry_date TEXT,
+        created_at TEXT,
+        updated_at TEXT,
+        color TEXT,
+        size TEXT,
+        weight REAL,
+        dimensions TEXT,
+        material TEXT,
+        model_number TEXT,
+        serial_number TEXT,
+        origin_country TEXT,
+        internal_notes TEXT,
+        is_sellable INTEGER,
+        is_discount_allowed INTEGER,
+        is_tracking_enabled INTEGER,
+        show_in_reports INTEGER,
+        requires_serial INTEGER,
+        requires_expiry INTEGER,
+        is_featured INTEGER,
+        is_hidden INTEGER
       )
     ''');
 
@@ -448,6 +498,7 @@ class DBHelper {
       )
     ''');
 
+    await _createSmartAssistantHistoryTable(db);
     await _createPerformanceIndexes(db);
   }
 
@@ -484,6 +535,8 @@ class DBHelper {
         date TEXT
       )
     ''');
+
+    await _createSmartAssistantHistoryTable(db);
   }
 
   static Future<void> _upgradeToV4(Database db) async {
@@ -906,12 +959,13 @@ class DBHelper {
     ''');
 
     // 3. For each unique businessId, ensure a main branch exists and link existing data
-    final businesses = await db.rawQuery('SELECT DISTINCT businessId FROM products WHERE businessId IS NOT NULL');
+    final businesses = await db.rawQuery(
+        'SELECT DISTINCT businessId FROM products WHERE businessId IS NOT NULL');
     for (final row in businesses) {
       final bId = row['businessId']?.toString();
       if (bId != null && bId.isNotEmpty) {
         final mainBranchId = 'BR-$bId-MAIN';
-        
+
         // Create main branch if not exists
         await db.insert(
           'branches',
@@ -986,12 +1040,13 @@ class DBHelper {
     }
 
     // 3. Link records to main branch if null
-    final businesses = await db.rawQuery('SELECT DISTINCT businessId FROM products WHERE businessId IS NOT NULL');
+    final businesses = await db.rawQuery(
+        'SELECT DISTINCT businessId FROM products WHERE businessId IS NOT NULL');
     for (final row in businesses) {
       final bId = row['businessId']?.toString();
       if (bId != null && bId.isNotEmpty) {
         final mainBranchId = 'BR-$bId-MAIN';
-        
+
         // Ensure main branch exists (redundant but safe)
         await db.insert(
           'branches',
@@ -1013,11 +1068,13 @@ class DBHelper {
             await db.update(
               table,
               {'branch_id': mainBranchId},
-              where: 'businessId = ? AND (branch_id IS NULL OR branch_id = \'\')',
+              where:
+                  'businessId = ? AND (branch_id IS NULL OR branch_id = \'\')',
               whereArgs: [bId],
             );
           } catch (e) {
-             debugPrint('Warning: Could not update branch_id for $table ($bId): $e');
+            debugPrint(
+                'Warning: Could not update branch_id for $table ($bId): $e');
           }
         }
       }
@@ -1038,7 +1095,8 @@ class DBHelper {
         await db.execute('ALTER TABLE $table ADD COLUMN $column $definition');
       }
     } catch (e) {
-      debugPrint('Migration Error: Failed to ensure column $column in $table: $e');
+      debugPrint(
+          'Migration Error: Failed to ensure column $column in $table: $e');
     }
   }
 
@@ -1273,9 +1331,12 @@ class DBHelper {
       ..putIfAbsent('branch_id', () => branchId);
     final businessId = payload['businessId']?.toString() ?? '';
 
+    final insertPayload =
+        await _filterToExistingColumns(db, 'products', payload);
+
     await db.insert(
       'products',
-      payload,
+      insertPayload,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
 
@@ -1302,10 +1363,11 @@ class DBHelper {
     return payload['id'].toString();
   }
 
-  static Future<List<Map<String, dynamic>>> getProducts(String businessId) async {
+  static Future<List<Map<String, dynamic>>> getProducts(
+      String businessId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
-    
+
     return db.query(
       'products',
       where: 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
@@ -1314,13 +1376,15 @@ class DBHelper {
     );
   }
 
-  static Future<Map<String, dynamic>?> getProductById(String businessId, String id) async {
+  static Future<Map<String, dynamic>?> getProductById(
+      String businessId, String id) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
-    
+
     final result = await db.query(
       'products',
-      where: 'id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      where:
+          'id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
       whereArgs: [id, businessId, branchId ?? ''],
     );
     return result.isEmpty ? null : result.first;
@@ -1373,7 +1437,7 @@ class DBHelper {
   static Future<int> deleteProduct(String businessId, String id) async {
     final db = await database();
     final previous = await getProductById(businessId, id);
-    
+
     final result = await db.delete(
       'products',
       where: 'id = ? AND businessId = ?',
@@ -1474,14 +1538,17 @@ class DBHelper {
         throw Exception('سعر البيع المستخدم يجب أن يكون صفراً أو أكبر.');
       }
 
-      final cashAccountId = await _requireAccountId(txn, _cashAccountCode, businessId);
+      final cashAccountId =
+          await _requireAccountId(txn, _cashAccountCode, businessId);
       final inventoryAccountId = await _requireAccountId(
         txn,
         _inventoryAccountCode,
         businessId,
       );
-      final salesAccountId = await _requireAccountId(txn, _salesAccountCode, businessId);
-      final cogsAccountId = await _requireAccountId(txn, _cogsAccountCode, businessId);
+      final salesAccountId =
+          await _requireAccountId(txn, _salesAccountCode, businessId);
+      final cogsAccountId =
+          await _requireAccountId(txn, _cogsAccountCode, businessId);
 
       await txn.update(
         'products',
@@ -1656,8 +1723,10 @@ class DBHelper {
         _inventoryAccountCode,
         businessId,
       );
-      final payablesAccountId = await _requireAccountId(txn, _payablesAccountCode, businessId);
-      final cogsAccountId = await _requireAccountId(txn, _cogsAccountCode, businessId);
+      final payablesAccountId =
+          await _requireAccountId(txn, _payablesAccountCode, businessId);
+      final cogsAccountId =
+          await _requireAccountId(txn, _cogsAccountCode, businessId);
       final journalEntries = <Map<String, dynamic>>[];
 
       if (stockChanged) {
@@ -1791,10 +1860,11 @@ class DBHelper {
     });
   }
 
-  static Future<List<Map<String, dynamic>>> getCustomers(String businessId) async {
+  static Future<List<Map<String, dynamic>>> getCustomers(
+      String businessId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
-    
+
     return db.rawQuery('''
       SELECT c.*,
              COALESCE((
@@ -1839,23 +1909,22 @@ class DBHelper {
       payload,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
-    
+
     await AuditService().log(
       businessId: payload['businessId'] as String,
       entityType: 'customer',
       entityId: id,
-      action: data['id']?.toString().trim().isNotEmpty == true ? 'update' : 'create',
+      action: data['id']?.toString().trim().isNotEmpty == true
+          ? 'update'
+          : 'create',
       newValue: jsonEncode(payload),
     );
 
     return id;
   }
 
-
-
-
-
-  static Future<Map<String, dynamic>?> getBusinessProfile(String businessId) async {
+  static Future<Map<String, dynamic>?> getBusinessProfile(
+      String businessId) async {
     final db = await database();
     final rows = await db.query(
       'business_profile',
@@ -1913,10 +1982,11 @@ class DBHelper {
     );
   }
 
-  static Future<List<Map<String, dynamic>>> getQuotations(String businessId) async {
+  static Future<List<Map<String, dynamic>>> getQuotations(
+      String businessId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
-    
+
     return db.rawQuery('''
       SELECT q.*, c.name AS customer_name
       FROM quotations q
@@ -1939,7 +2009,8 @@ class DBHelper {
     );
   }
 
-  static Future<Map<String, dynamic>?> getQuotationById(String businessId, String quotationId) async {
+  static Future<Map<String, dynamic>?> getQuotationById(
+      String businessId, String quotationId) async {
     final db = await database();
     final rows = await db.rawQuery(
       '''
@@ -1989,7 +2060,7 @@ class DBHelper {
     await db.transaction((txn) async {
       quotationNumber = await _nextDocumentNumber(txn, prefix: 'QT');
       final finalBranchId = branchId ?? currentBranchId;
-      
+
       await txn.insert('quotations', {
         'id': quotationId,
         'businessId': businessId,
@@ -2018,23 +2089,25 @@ class DBHelper {
           'line_total': item['line_total'],
         });
       }
-      
+
       await AuditService().log(
         businessId: businessId,
         entityType: 'quotation',
         entityId: quotationId,
         action: 'create',
-        newValue: 'Quotation #$quotationNumber created for branch $finalBranchId',
+        newValue:
+            'Quotation #$quotationNumber created for branch $finalBranchId',
       );
     });
 
     return quotationId;
   }
 
-  static Future<List<Map<String, dynamic>>> getInvoices(String businessId) async {
+  static Future<List<Map<String, dynamic>>> getInvoices(
+      String businessId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
-    
+
     return db.rawQuery('''
       SELECT i.*, c.name AS customer_name
       FROM invoices i
@@ -2100,7 +2173,8 @@ class DBHelper {
     return result;
   }
 
-  static Future<Map<String, dynamic>?> getInvoiceById(String businessId, String invoiceId) async {
+  static Future<Map<String, dynamic>?> getInvoiceById(
+      String businessId, String invoiceId) async {
     final db = await database();
     final rows = await db.rawQuery(
       '''
@@ -2163,7 +2237,7 @@ class DBHelper {
     await db.transaction((txn) async {
       invoiceNumber = await _nextDocumentNumber(txn, prefix: 'INV');
       final finalBranchId = branchId ?? currentBranchId;
-      
+
       await _ensureDefaultAccounts(txn, businessId);
       await _repairAccountNames(txn, businessId);
 
@@ -2218,7 +2292,8 @@ class DBHelper {
             _toDouble(product['extra_costs']);
 
         if (shouldPostAccounting && currentQty < qty) {
-          throw Exception('الكمية المطلوبة في الفاتورة أكبر من المخزون المتاح.');
+          throw Exception(
+              'الكمية المطلوبة في الفاتورة أكبر من المخزون المتاح.');
         }
 
         final lineCogs = landedCost * qty;
@@ -2344,7 +2419,7 @@ class DBHelper {
           });
         }
       }
-      
+
       await AuditService().log(
         businessId: businessId,
         entityType: 'invoice',
@@ -2459,13 +2534,14 @@ class DBHelper {
         description: 'سداد على الفاتورة ${invoice['invoice_number']}',
         date: normalizedDate,
       );
-      
+
       await AuditService().log(
         businessId: businessId,
         entityType: 'payment',
         entityId: paymentId,
         action: 'create',
-        newValue: 'Payment of $amount for invoice ${invoice['invoice_number']} in branch $finalBranchId',
+        newValue:
+            'Payment of $amount for invoice ${invoice['invoice_number']} in branch $finalBranchId',
       );
     });
 
@@ -2533,7 +2609,8 @@ class DBHelper {
     return deletedCount;
   }
 
-  static Future<int> deleteQuotation(String businessId, String quotationId) async {
+  static Future<int> deleteQuotation(
+      String businessId, String quotationId) async {
     final db = await database();
     int deletedCount = 0;
 
@@ -2840,7 +2917,7 @@ class DBHelper {
     await db.transaction((txn) async {
       for (final table in const [
         'quotation_items', // Items don't have businessId but are linked to parent
-        'invoice_items',   // Items don't have businessId but are linked to parent
+        'invoice_items', // Items don't have businessId but are linked to parent
       ]) {
         await txn.delete(table);
       }
@@ -2859,9 +2936,11 @@ class DBHelper {
         'accounts',
       ]) {
         if (table == 'business_profile') {
-           await txn.delete(table); // Profile is special, usually one per local DB.
+          await txn
+              .delete(table); // Profile is special, usually one per local DB.
         } else {
-          await txn.delete(table, where: 'businessId = ?', whereArgs: [businessId]);
+          await txn
+              .delete(table, where: 'businessId = ?', whereArgs: [businessId]);
         }
       }
 
@@ -3087,10 +3166,11 @@ class DBHelper {
     );
   }
 
-  static Future<List<Map<String, dynamic>>> getTrialBalance(String businessId) async {
+  static Future<List<Map<String, dynamic>>> getTrialBalance(
+      String businessId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
-    
+
     return db.query(
       'accounts',
       where: 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
@@ -3099,10 +3179,11 @@ class DBHelper {
     );
   }
 
-  static Future<List<Map<String, dynamic>>> getJournalEntries(String businessId) async {
+  static Future<List<Map<String, dynamic>>> getJournalEntries(
+      String businessId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
-    
+
     return db.rawQuery('''
       SELECT j.*, 
              a1.name AS debit_account, 
@@ -3115,10 +3196,11 @@ class DBHelper {
     ''', [businessId, branchId]);
   }
 
-  static Future<List<Map<String, dynamic>>> getSalesRecords(String businessId) async {
+  static Future<List<Map<String, dynamic>>> getSalesRecords(
+      String businessId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
-    
+
     return db.query(
       'sales_records',
       where: 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
@@ -3204,7 +3286,8 @@ class DBHelper {
     );
   }
 
-  static Future<List<Map<String, dynamic>>> getLowStockProducts(String businessId) async {
+  static Future<List<Map<String, dynamic>>> getLowStockProducts(
+      String businessId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
     return db.rawQuery('''
@@ -3226,7 +3309,8 @@ class DBHelper {
     return _toInt(result.first['count']);
   }
 
-  static Future<int> getProductSalesCount(String businessId, String productId) async {
+  static Future<int> getProductSalesCount(
+      String businessId, String productId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
     final result = await db.rawQuery(
@@ -3236,7 +3320,8 @@ class DBHelper {
     return _toInt(result.first['count']);
   }
 
-  static Future<int> getProductSoldQty(String businessId, String productId) async {
+  static Future<int> getProductSoldQty(
+      String businessId, String productId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
     final result = await db.rawQuery(
@@ -3280,7 +3365,8 @@ class DBHelper {
     final branchId = BranchContext().currentBranchId;
     return db.query(
       'sales_records',
-      where: 'product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      where:
+          'product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
       whereArgs: [productId, businessId, branchId],
       orderBy: 'date DESC',
     );
@@ -3301,6 +3387,57 @@ class DBHelper {
       ORDER BY sold_qty DESC, total_sale DESC
       LIMIT ?
     ''', [businessId, branchId, limit]);
+  }
+
+  static Future<void> saveSmartAssistantHistory(
+      Map<String, dynamic> data) async {
+    final db = await database();
+    await _createSmartAssistantHistoryTable(db);
+    await db.insert(
+      'smart_assistant_history',
+      {
+        'id': data['id']?.toString() ?? _newTextId('SAH'),
+        'userInput': data['userInput']?.toString() ?? '',
+        'detectedIntent': data['detectedIntent']?.toString() ?? 'unknown',
+        'extractedPayloadJson':
+            data['extractedPayloadJson']?.toString() ?? '{}',
+        'calculationResultJson':
+            data['calculationResultJson']?.toString() ?? '{}',
+        'suggestedActionJson': data['suggestedActionJson']?.toString() ?? '{}',
+        'actionStatus': data['actionStatus']?.toString() ?? 'preview',
+        'createdAt':
+            data['createdAt']?.toString() ?? DateTime.now().toIso8601String(),
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  static Future<List<Map<String, dynamic>>> getSmartAssistantHistory({
+    int limit = 25,
+  }) async {
+    final db = await database();
+    await _createSmartAssistantHistoryTable(db);
+    return db.query(
+      'smart_assistant_history',
+      orderBy: 'createdAt DESC',
+      limit: limit,
+    );
+  }
+
+  static Future<List<Map<String, dynamic>>> searchSmartAssistantHistory(
+    String query, {
+    int limit = 25,
+  }) async {
+    final db = await database();
+    await _createSmartAssistantHistoryTable(db);
+    final like = '%${query.trim()}%';
+    return db.query(
+      'smart_assistant_history',
+      where: 'userInput LIKE ? OR detectedIntent LIKE ?',
+      whereArgs: [like, like],
+      orderBy: 'createdAt DESC',
+      limit: limit,
+    );
   }
 
   static List<Map<String, dynamic>> _normalizeDocumentItems(
@@ -3515,5 +3652,103 @@ class DBHelper {
     return int.tryParse(value.toString()) ?? 0;
   }
 
-  static ProductModel productFromMap(Map<String, dynamic> map) => ProductModel.fromMap(map);
+  static ProductModel productFromMap(Map<String, dynamic> map) =>
+      ProductModel.fromMap(map);
+
+  static Future<Map<String, dynamic>> _filterToExistingColumns(
+    DatabaseExecutor db,
+    String table,
+    Map<String, dynamic> payload,
+  ) async {
+    final columns = await db.rawQuery('PRAGMA table_info($table)');
+    if (columns.isEmpty) return payload;
+    final allowed = columns
+        .map((row) => row['name']?.toString())
+        .whereType<String>()
+        .toSet();
+    return Map<String, dynamic>.fromEntries(
+      payload.entries.where((entry) => allowed.contains(entry.key)),
+    );
+  }
+
+  static Future<void> _upgradeToV20(Database db) async {
+    final columns = {
+      'sku': 'TEXT',
+      'qr_code': 'TEXT',
+      'category': 'TEXT',
+      'brand': 'TEXT',
+      'supplier': 'TEXT',
+      'description': 'TEXT',
+      'image_path': 'TEXT',
+      'gallery_paths': 'TEXT',
+      'wholesale_price': 'REAL DEFAULT 0.0',
+      'discount_price': 'REAL DEFAULT 0.0',
+      'vat_percentage': 'REAL DEFAULT 0.0',
+      'tax_amount': 'REAL DEFAULT 0.0',
+      'reserved_qty': 'INTEGER DEFAULT 0',
+      'min_stock_alert': 'INTEGER DEFAULT 5',
+      'max_stock': 'INTEGER DEFAULT 999999',
+      'warehouse': 'TEXT',
+      'shelf_location': 'TEXT',
+      'branch_assignment': 'TEXT',
+      'status': "TEXT DEFAULT 'active'",
+      'purchase_date': 'TEXT',
+      'production_date': 'TEXT',
+      'expiry_date': 'TEXT',
+      'created_at': 'TEXT',
+      'updated_at': 'TEXT',
+      'color': 'TEXT',
+      'size': 'TEXT',
+      'weight': 'REAL DEFAULT 0.0',
+      'dimensions': 'TEXT',
+      'material': 'TEXT',
+      'model_number': 'TEXT',
+      'serial_number': 'TEXT',
+      'origin_country': 'TEXT',
+      'internal_notes': 'TEXT',
+      'is_sellable': 'INTEGER DEFAULT 1',
+      'is_discount_allowed': 'INTEGER DEFAULT 1',
+      'is_tracking_enabled': 'INTEGER DEFAULT 1',
+      'show_in_reports': 'INTEGER DEFAULT 1',
+      'requires_serial': 'INTEGER DEFAULT 0',
+      'requires_expiry': 'INTEGER DEFAULT 0',
+      'is_featured': 'INTEGER DEFAULT 0',
+      'is_hidden': 'INTEGER DEFAULT 0',
+    };
+
+    for (final entry in columns.entries) {
+      await _ensureColumn(
+        db,
+        table: 'products',
+        column: entry.key,
+        definition: entry.value,
+      );
+    }
+  }
+
+  static Future<void> _upgradeToV21(Database db) async {
+    await _createSmartAssistantHistoryTable(db);
+  }
+
+  static Future<void> _createSmartAssistantHistoryTable(
+      DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS smart_assistant_history(
+        id TEXT PRIMARY KEY,
+        userInput TEXT,
+        detectedIntent TEXT,
+        extractedPayloadJson TEXT,
+        calculationResultJson TEXT,
+        suggestedActionJson TEXT,
+        actionStatus TEXT,
+        createdAt TEXT
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_smart_assistant_history_createdAt ON smart_assistant_history(createdAt)',
+    );
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_smart_assistant_history_intent ON smart_assistant_history(detectedIntent)',
+    );
+  }
 }

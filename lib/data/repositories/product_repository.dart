@@ -28,7 +28,8 @@ class ProductRepository {
     // 2. Listen to cloud changes and refresh from local DB
     // We use the cloud stream as a trigger to reload from SQLite
     try {
-      await for (final _ in CloudSyncService.instance.watchProducts(businessId)) {
+      await for (final _
+          in CloudSyncService.instance.watchProducts(businessId)) {
         final refreshedData = await getAllProducts(businessId);
         yield refreshedData;
       }
@@ -43,7 +44,8 @@ class ProductRepository {
       final data = await DBHelper.getProducts(businessId);
       return data.map((e) => ProductModel.fromMap(e)).toList();
     } catch (e) {
-      debugPrint('[ProductRepository] Tolerating DB error on getAllProducts: $e');
+      debugPrint(
+          '[ProductRepository] Tolerating DB error on getAllProducts: $e');
       return [];
     }
   }
@@ -57,7 +59,7 @@ class ProductRepository {
   Future<void> addProduct(String businessId, ProductModel product) async {
     final productWithBusiness = product.copyWith(businessId: businessId);
     await DBHelper.insertProduct(productWithBusiness.toMap());
-    
+
     await SyncQueueService.instance.enqueue(
       entityName: 'products',
       entityId: productWithBusiness.id,
@@ -89,8 +91,10 @@ class ProductRepository {
     );
   }
 
-  Future<DeleteProductCheckResult> canDeleteProduct(ProductModel product) async {
-    final salesCount = await DBHelper.getProductSalesCount(product.businessId, product.id);
+  Future<DeleteProductCheckResult> canDeleteProduct(
+      ProductModel product) async {
+    final salesCount =
+        await DBHelper.getProductSalesCount(product.businessId, product.id);
     final hasStock = product.stockQty > 0;
     final hasSales = salesCount > 0;
 
@@ -176,7 +180,8 @@ class ProductRepository {
     return DBHelper.getProductRealizedSales(businessId, productId);
   }
 
-  Future<List<Map<String, dynamic>>> getProductSalesHistory(String businessId, String productId) {
+  Future<List<Map<String, dynamic>>> getProductSalesHistory(
+      String businessId, String productId) {
     return DBHelper.getProductSalesHistory(businessId, productId);
   }
 
@@ -191,24 +196,40 @@ class ProductRepository {
     try {
       return await DBHelper.getSalesRecords(businessId);
     } catch (e) {
-      debugPrint('[ProductRepository] Tolerating DB error on getSalesRecords: $e');
+      debugPrint(
+          '[ProductRepository] Tolerating DB error on getSalesRecords: $e');
       return [];
     }
   }
 
-  Stream<List<Map<String, dynamic>>> watchSalesRecords(String businessId) async* {
+  Future<double> getTotalInventoryValue(String businessId) {
+    return DBHelper.getTotalInventoryValue(businessId);
+  }
+
+  Future<List<Map<String, dynamic>>> getLowStockProducts(String businessId) {
+    return DBHelper.getLowStockProducts(businessId);
+  }
+
+  Future<List<Map<String, dynamic>>> getTopSellingProducts(String businessId) {
+    return DBHelper.getTopSellingProducts(businessId);
+  }
+
+  Stream<List<Map<String, dynamic>>> watchSalesRecords(
+      String businessId) async* {
     // 1. Yield local data immediately
     final localData = await getSalesRecords(businessId);
     yield localData;
 
     // 2. Listen to cloud changes and refresh from local DB
     try {
-      await for (final _ in CloudSyncService.instance.watchSalesRecords(businessId)) {
+      await for (final _
+          in CloudSyncService.instance.watchSalesRecords(businessId)) {
         final refreshedData = await getSalesRecords(businessId);
         yield refreshedData;
       }
     } catch (e) {
-      debugPrint('[ProductRepository] watchSalesRecords cloud stream error: $e');
+      debugPrint(
+          '[ProductRepository] watchSalesRecords cloud stream error: $e');
     }
   }
 }

@@ -9,6 +9,7 @@ import 'inventory_screen.dart';
 import 'invoice_form_screen.dart';
 import 'reports_screen.dart';
 import 'sales_history_screen.dart';
+import 'smart_calculator_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -100,6 +101,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       const InventoryScreen(),
       const SizedBox(),
       const SalesHistoryScreen(),
+      const SmartCalculatorScreen(),
       const ReportsScreen(),
     ];
 
@@ -159,6 +161,11 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   icon: const Icon(Icons.receipt_long_outlined),
                   selectedIcon: const Icon(Icons.receipt_long),
                   label: copy.t('navTransactions'),
+                ),
+                NavigationDestination(
+                  icon: const Icon(Icons.functions_outlined),
+                  selectedIcon: const Icon(Icons.functions),
+                  label: copy.isEnglish ? 'Smart' : 'ذكي',
                 ),
                 NavigationDestination(
                   icon: const Icon(Icons.analytics_outlined),
