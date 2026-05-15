@@ -56,10 +56,36 @@ Future<void> main() async {
       onTimeout: () {},
     );
 
-    // 5. Desktop DB setup (fast)
-    if (!kIsWeb && defaultTargetPlatform == TargetPlatform.windows) {
-      sqfliteFfiInit();
-      databaseFactory = databaseFactoryFfi;
+    // 5. Database Initialization (Critical before Repositories access)
+    try {
+      if (kIsWeb) {
+        if (!disableWebDatabaseBootstrap) {
+          debugPrint('[Startup] Initializing Web Database Factory (Web path)...');
+          databaseFactory = await Future.sync(() {
+            return createDatabaseFactoryFfiWeb(
+              options: SqfliteFfiWebOptions(
+                sqlite3WasmUri: Uri.parse('sqlite3.wasm'),
+                // ignore: invalid_use_of_visible_for_testing_member
+                forceAsBasicWorker: defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS, // Required for Safari/iOS WASM support
+              ),
+            );
+          }).timeout(const Duration(seconds: 15));
+          debugPrint('[Startup] Web Database Factory successfully initialized.');
+        } else {
+          debugPrint('[Startup] Web Database Bootstrap is disabled.');
+        }
+      } else if (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS) {
+        debugPrint('[Startup] Initializing Desktop Database Factory (Native path)...');
+        sqfliteFfiInit();
+        databaseFactory = databaseFactoryFfi;
+        debugPrint('[Startup] Desktop Database Factory successfully initialized.');
+      } else {
+        debugPrint('[Startup] Using default Mobile Database Factory (Native path).');
+      }
+    } catch (e, st) {
+      debugPrint('[Startup] Database Factory initialization failed: $e');
+      debugPrint(st.toString());
+      // Proceeding, but repositories might fail and return empty states.
     }
 
     // 6. Fast-track Firebase initialization (guarded)
@@ -122,24 +148,7 @@ class _HasoobAppState extends State<HasoobApp> {
       WebUtils.removeSplash();
     } catch (_) {}
 
-    // B. Web Database (WASM) - Heavy initialization delayed
-    if (kIsWeb && !disableWebDatabaseBootstrap) {
-      try {
-        databaseFactory = await Future.sync(() {
-          return createDatabaseFactoryFfiWeb(
-            options: SqfliteFfiWebOptions(
-              sqlite3WasmUri: Uri.parse('sqlite3.wasm'),
-              // ignore: invalid_use_of_visible_for_testing_member
-              forceAsBasicWorker: defaultTargetPlatform == TargetPlatform.iOS, // Required for Safari/iOS WASM support
-            ),
-          );
-        }).timeout(const Duration(seconds: 15));
-      } catch (e) {
-        debugPrint('[Startup] Web database failed to initialize: $e');
-      }
-    }
-
-    // C. Startup Coordinator handles non-critical services (Sync, Connectivity, Auth listeners)
+    // B. Startup Coordinator handles non-critical services (Sync, Connectivity, Auth listeners)
     await StartupCoordinator.instance.start(widget.firebaseResult);
   }
 

@@ -39,8 +39,13 @@ class ProductRepository {
   }
 
   Future<List<ProductModel>> getAllProducts(String businessId) async {
-    final data = await DBHelper.getProducts(businessId);
-    return data.map((e) => ProductModel.fromMap(e)).toList();
+    try {
+      final data = await DBHelper.getProducts(businessId);
+      return data.map((e) => ProductModel.fromMap(e)).toList();
+    } catch (e) {
+      debugPrint('[ProductRepository] Tolerating DB error on getAllProducts: $e');
+      return [];
+    }
   }
 
   Future<ProductModel?> getProductById(String businessId, String id) async {
@@ -182,8 +187,13 @@ class ProductRepository {
     return DBHelper.getProductMovementHistory(businessId, productId);
   }
 
-  Future<List<Map<String, dynamic>>> getSalesRecords(String businessId) {
-    return DBHelper.getSalesRecords(businessId);
+  Future<List<Map<String, dynamic>>> getSalesRecords(String businessId) async {
+    try {
+      return await DBHelper.getSalesRecords(businessId);
+    } catch (e) {
+      debugPrint('[ProductRepository] Tolerating DB error on getSalesRecords: $e');
+      return [];
+    }
   }
 
   Stream<List<Map<String, dynamic>>> watchSalesRecords(String businessId) async* {

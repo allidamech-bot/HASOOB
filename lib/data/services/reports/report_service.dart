@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 
 import '../../database/database_helper.dart';
 import '../../models/product_model.dart';
@@ -28,11 +29,19 @@ class ReportService {
       return _lastSnapshot!;
     }
 
-    final products =
-        (await DBHelper.getProducts(businessId)).map(ProductModel.fromMap).toList();
-    final salesRecords = await DBHelper.getSalesRecords(businessId);
-    final accounts = await DBHelper.getTrialBalance(businessId);
-    final journalEntries = await DBHelper.getJournalEntries(businessId);
+    List<ProductModel> products = [];
+    List<Map<String, dynamic>> salesRecords = [];
+    List<Map<String, dynamic>> accounts = [];
+    List<Map<String, dynamic>> journalEntries = [];
+
+    try {
+      products = (await DBHelper.getProducts(businessId)).map(ProductModel.fromMap).toList();
+      salesRecords = await DBHelper.getSalesRecords(businessId);
+      accounts = await DBHelper.getTrialBalance(businessId);
+      journalEntries = await DBHelper.getJournalEntries(businessId);
+    } catch (e) {
+      debugPrint('[ReportService] Tolerating DB error on first access: $e');
+    }
     final filteredSales = _filterSalesRecords(
       salesRecords,
       period: period,
