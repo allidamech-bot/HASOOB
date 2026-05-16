@@ -17,6 +17,11 @@
   <meta charset="UTF-8">
   <meta content="IE=Edge" http-equiv="X-UA-Compatible">
   <meta name="description" content="A new Flutter project.">
+  
+  <!-- Cache Control for stale assets fix -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
 
   <!-- iOS meta tags & icons -->
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -265,7 +270,15 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
-  <script src="flutter_bootstrap.js" defer=""></script>
+  <script>
+    // Cache bust flutter_bootstrap.js
+    (function() {
+      var script = document.createElement("script");
+      script.src = "flutter_bootstrap.js?v=" + new Date().getTime();
+      script.defer = true;
+      document.body.appendChild(script);
+    })();
+  </script>
 
 
 </body></html>

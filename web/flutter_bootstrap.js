@@ -10,9 +10,29 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
 
 (function() {
   try {
-    let swSettings = {
-      serviceWorkerVersion: {{flutter_service_worker_version}},
-    };
+    if (typeof logDiagnostic === 'function') logDiagnostic("Clearing caches and service workers...");
+    
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.getRegistrations().then((registrations) => {
+        for (let registration of registrations) {
+          registration.unregister();
+          if (typeof logDiagnostic === 'function') logDiagnostic("ServiceWorker unregistered: " + (registration.scope || 'unknown scope'));
+        }
+      }).catch((e) => {
+        if (typeof logDiagnostic === 'function') logDiagnostic("Failed to unregister SW: " + e);
+      });
+    }
+    
+    if ('caches' in window) {
+      caches.keys().then((names) => {
+        for (let name of names) {
+          caches.delete(name);
+          if (typeof logDiagnostic === 'function') logDiagnostic("Deleted cache: " + name);
+        }
+      }).catch((e) => {
+        if (typeof logDiagnostic === 'function') logDiagnostic("Failed to clear caches: " + e);
+      });
+    }
 
     if (isIOS) {
       if (typeof logDiagnostic === 'function') logDiagnostic("iOS detected: preferring CanvasKit renderer");
@@ -23,7 +43,6 @@ const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     }
 
     _flutter.loader.load({
-      serviceWorkerSettings: swSettings,
       onEntrypointLoaded: async function(engineInitializer) {
         if (typeof logDiagnostic === 'function') logDiagnostic("engine initializer received");
 
