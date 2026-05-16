@@ -24,6 +24,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hasoob_app/data/services/sync_manager.dart';
 import 'package:hasoob_app/widgets/sync_status_indicator.dart';
 import 'package:hasoob_app/widgets/sync_health_card.dart';
+import 'package:hasoob_app/widgets/local_mode_status_card.dart';
+import 'package:firebase_core/firebase_core.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -294,6 +296,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 _heroCard(context, copy),
                 const SizedBox(height: 24),
+                if (Firebase.apps.isEmpty) ...[
+                  const LocalModeStatusCard(),
+                  const SizedBox(height: 24),
+                ],
                 const SyncHealthCard(),
                 const SizedBox(height: 32),
                 

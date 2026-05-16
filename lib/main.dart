@@ -20,6 +20,10 @@ import 'package:hasoob_app/screens/auth/auth_gate.dart';
 import 'package:hasoob_app/screens/sync_center_screen.dart';
 import 'package:hasoob_app/core/utils/web_utils.dart';
 import 'package:hasoob_app/widgets/premium_splash_screen.dart';
+import 'package:provider/provider.dart';
+import 'package:hasoob_app/data/services/auth_service.dart';
+import 'package:hasoob_app/data/repositories/product_repository.dart';
+import 'package:hasoob_app/data/services/sync_manager.dart';
 
 const bool disableWebDatabaseBootstrap = bool.fromEnvironment('disableWebDatabaseBootstrap');
 
@@ -113,10 +117,17 @@ Future<void> main() async {
     }
 
     runApp(
-      HasoobApp(
-        firebaseResult: firebaseResult,
-        themeController: themeController,
-        localeController: localeController,
+      MultiProvider(
+        providers: [
+          Provider<AuthService>.value(value: AuthService.instance),
+          Provider<ProductRepository>(create: (_) => ProductRepository()),
+          ChangeNotifierProvider<SyncManager>.value(value: SyncManager.instance),
+        ],
+        child: HasoobApp(
+          firebaseResult: firebaseResult,
+          themeController: themeController,
+          localeController: localeController,
+        ),
       ),
     );
   } catch (e, st) {

@@ -99,70 +99,50 @@ class _CloudSyncPassiveBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PositionedDirectional(
-      bottom: 24,
-      start: 24,
-      end: 24,
+      bottom: 125, // Higher to clear bottom nav and Safari toolbar
+      start: 16,
+      end: 16,
       child: SafeArea(
+        top: false, 
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 480),
+            constraints: const BoxConstraints(maxWidth: 400),
             child: Dismissible(
-              key: const Key('local-mode-banner'),
+              key: const Key('local-mode-banner-top'),
               child: Material(
-                color: AppTheme.surfaceElevated.withValues(alpha: 0.95),
-                borderRadius: BorderRadius.circular(16),
-                elevation: 8,
-                shadowColor: Colors.black45,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                color: AppTheme.surfaceSecondary.withValues(alpha: 0.98),
+                borderRadius: BorderRadius.circular(30),
+                elevation: 4,
+                shadowColor: Colors.black26,
+                shape: StadiumBorder(
                   side: BorderSide(
-                    color: isError ? AppTheme.accentCyan.withValues(alpha: 0.3) : AppTheme.border,
+                    color: isError ? AppTheme.accentCyan.withValues(alpha: 0.4) : AppTheme.border,
                     width: 1,
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: (isError ? AppTheme.accentCyan : AppTheme.accentBlue).withValues(alpha: 0.1),
-                          shape: BoxShape.circle,
-                        ),
-                        child: Icon(
-                          isError ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
-                          color: isError ? AppTheme.accentCyan : AppTheme.accentBlue,
-                          size: 20,
+                      Icon(
+                        isError ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
+                        color: isError ? AppTheme.accentCyan : AppTheme.accentBlue,
+                        size: 14,
+                      ),
+                      const SizedBox(width: 8),
+                      Flexible(
+                        child: Text(
+                          isError ? 'الوضع المحلي مفعّل' : 'المزامنة مفعلة',
+                          style: const TextStyle(
+                            color: AppTheme.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              isError ? 'الوضع المحلي مفعّل' : 'المزامنة مفعلة',
-                              style: const TextStyle(
-                                color: AppTheme.textPrimary,
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              isError 
-                                ? 'بياناتك محفوظة بأمان على هذا الجهاز.'
-                                : 'بياناتك متزامنة مع السحابة.',
-                              style: const TextStyle(
-                                color: AppTheme.textSecondary,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.close_rounded, size: 12, color: AppTheme.textSecondary),
                     ],
                   ),
                 ),
