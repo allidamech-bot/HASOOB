@@ -152,13 +152,21 @@ class _AddProductScreenState extends State<AddProductScreen> {
   double get _margin => _landedCost > 0 ? (_netProfit / _landedCost) * 100 : 0.0;
 
   Future<void> _save() async {
-    if (!_formKey.currentState!.validate()) return;
+    debugPrint('[AddProductScreen] Save started');
+    if (!_formKey.currentState!.validate()) {
+      debugPrint('[AddProductScreen] Validation failed');
+      return;
+    }
+    debugPrint('[AddProductScreen] Validation passed');
 
     setState(() => _isSaving = true);
     final copy = AppCopy.of(context);
-    final businessId = Provider.of<AuthService>(context, listen: false).currentUser?.uid ?? '';
-
+    
     try {
+      final auth = Provider.of<AuthService>(context, listen: false);
+      final businessId = auth.currentUser?.uid ?? '';
+      debugPrint('[AddProductScreen] BusinessId: $businessId');
+
       final product = ProductModel(
         id: widget.product?.id ?? 'p-${DateTime.now().microsecondsSinceEpoch}',
         businessId: businessId,
@@ -203,28 +211,39 @@ class _AddProductScreenState extends State<AddProductScreen> {
         updatedAt: DateTime.now(),
         createdAt: widget.product?.createdAt ?? DateTime.now(),
       );
+      debugPrint('[AddProductScreen] ProductModel created: ${product.id}');
 
       final repo = Provider.of<ProductRepository>(context, listen: false);
       if (widget.product == null) {
+        debugPrint('[AddProductScreen] Calling addProduct');
         await repo.addProduct(businessId, product);
+        debugPrint('[AddProductScreen] addProduct success');
       } else {
+        debugPrint('[AddProductScreen] Calling updateProduct');
         await repo.updateProduct(businessId, product);
+        debugPrint('[AddProductScreen] updateProduct success');
       }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(copy.t(widget.product == null ? 'saveSuccessProduct' : 'updateProductSuccess'))),
         );
+        debugPrint('[AddProductScreen] Save completed, popping');
         Navigator.pop(context);
       }
-    } catch (e) {
+    } catch (e, stack) {
+      debugPrint('[AddProductScreen] Save failed: $e');
+      debugPrint(stack.toString());
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('${copy.t('saveErrorProduct')}: $e')),
         );
       }
     } finally {
-      if (mounted) setState(() => _isSaving = false);
+      if (mounted) {
+        setState(() => _isSaving = false);
+        debugPrint('[AddProductScreen] Save finally: _isSaving reset');
+      }
     }
   }
 

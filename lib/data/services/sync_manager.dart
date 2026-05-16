@@ -59,43 +59,46 @@ class SyncManager extends ChangeNotifier {
       return;
     }
 
-    final now = DateTime.now();
-    final isThrottled = !force && !_isTestMode && _lastSyncTime != null && now.difference(_lastSyncTime!).inSeconds < 15;
-    
-    if (isThrottled) {
-      debugPrint('[Sync] sync throttled');
-      return;
-    }
-
-    final queueLength = await SyncQueueService.instance.pendingQueueLength();
-    if (queueLength == 0) {
-      _syncRequested = false;
-      return;
-    }
-
-    if (!_isTestMode && !await _hasAuthenticatedUser()) {
-      debugPrint('[Sync] Cloud sync unavailable: no auth');
-      return;
-    }
-
-    if (!await _isOnline()) {
-      debugPrint('[Sync] sync deferred: offline');
-      return;
-    }
-
-    _isRunning = true;
-    _syncRequested = false;
-    notifyListeners();
-
     try {
+      final now = DateTime.now();
+      final isThrottled = !force && !_isTestMode && _lastSyncTime != null && now.difference(_lastSyncTime!).inSeconds < 15;
+      
+      if (isThrottled) {
+        debugPrint('[Sync] sync throttled');
+        return;
+      }
+
+      final queueLength = await SyncQueueService.instance.pendingQueueLength();
+      if (queueLength == 0) {
+        _syncRequested = false;
+        return;
+      }
+
+      if (!_isTestMode && !await _hasAuthenticatedUser()) {
+        debugPrint('[Sync] Cloud sync unavailable: no auth');
+        return;
+      }
+
+      if (!await _isOnline()) {
+        debugPrint('[Sync] sync deferred: offline');
+        return;
+      }
+
+      _isRunning = true;
+      _syncRequested = false;
+      notifyListeners();
+
       await _engine.processQueue();
       _lastSyncTime = DateTime.now();
-    } catch (e) {
+    } catch (e, stack) {
       debugPrint('[Sync] sync failed: $e');
+      debugPrint(stack.toString());
       _syncRequested = true;
     } finally {
-      _isRunning = false;
-      notifyListeners();
+      if (_isRunning) {
+        _isRunning = false;
+        notifyListeners();
+      }
     }
   }
 
@@ -134,46 +137,69 @@ class SyncManager extends ChangeNotifier {
   }
 
   Future<void> onAuthenticated() async {
-    final user = FirebaseAuth.instance.currentUser;
-    if (user != null) {
-      BusinessContext.initialize(
-        businessId: user.uid,
-        userId: user.uid,
-        role: 'owner',
-      );
-      await runSync();
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        BusinessContext.initialize(
+          businessId: user.uid,
+          userId: user.uid,
+          role: 'owner',
+        );
+        await runSync();
+      }
+    } catch (e, stack) {
+      debugPrint('[Sync] onAuthenticated failed: $e');
+      debugPrint(stack.toString());
     }
   }
 
   Future<void> onAppResumed() async {
-    await SyncQueueService.instance.recoverInterruptedProcessing();
-    await runSync();
+    try {
+      await SyncQueueService.instance.recoverInterruptedProcessing();
+      await runSync();
+    } catch (e, stack) {
+      debugPrint('[Sync] onAppResumed failed: $e');
+      debugPrint(stack.toString());
+    }
   }
 
   Future<void> onAppPausing() async {
-    await SyncQueueService.instance.flushPendingLocalWrites();
-    if (!_isRunning) {
-      await runSync();
+    try {
+      await SyncQueueService.instance.flushPendingLocalWrites();
+      if (!_isRunning) {
+        await runSync();
+      }
+    } catch (e, stack) {
+      debugPrint('[Sync] onAppPausing failed: $e');
+      debugPrint(stack.toString());
     }
   }
 
   Future<void> onLifecycleSignal(String eventName) async {
     if (!_isInitialized) return;
 
-    switch (eventName) {
-      case 'visible':
-      case 'focus':
-      case 'pageshow':
-      case 'online':
-        await onAppResumed();
-      case 'hidden':
-      case 'blur':
-      case 'pagehide':
-        await onAppPausing();
-      case 'offline':
-        debugPrint('[Sync] offline signal');
-      default:
-        break;
+    try {
+      switch (eventName) {
+        case 'visible':
+        case 'focus':
+        case 'pageshow':
+        case 'online':
+          await onAppResumed();
+          break;
+        case 'hidden':
+        case 'blur':
+        case 'pagehide':
+          await onAppPausing();
+          break;
+        case 'offline':
+          debugPrint('[Sync] offline signal');
+          break;
+        default:
+          break;
+      }
+    } catch (e, stack) {
+      debugPrint('[Sync] Lifecycle signal ($eventName) processing failed: $e');
+      debugPrint(stack.toString());
     }
   }
 

@@ -36,7 +36,118 @@
       margin: 0;
       padding: 0;
       overflow: hidden;
-      background-color: #0B1020;
+      background-color: #070B14;
+    }
+
+    #splash-container {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: radial-gradient(circle at 50% 50%, #0F172A 0%, #070B14 100%);
+      z-index: 20000;
+      transition: opacity 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+      overflow: hidden;
+    }
+
+    /* Luxury decorative elements */
+    .glow-overlay {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 150vmax;
+      height: 150vmax;
+      background: radial-gradient(circle at center, rgba(59, 130, 246, 0.08) 0%, transparent 50%);
+      pointer-events: none;
+      animation: pulsate 8s ease-in-out infinite;
+    }
+
+    .accent-line {
+      position: absolute;
+      width: 100%;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(212, 175, 55, 0.15), transparent);
+      bottom: 20%;
+    }
+
+    .business-pattern {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-image: 
+        radial-gradient(rgba(212, 175, 55, 0.05) 1px, transparent 1px);
+      background-size: 32px 32px;
+      opacity: 0.3;
+      pointer-events: none;
+    }
+
+    .logo-box {
+      position: relative;
+      z-index: 20001;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: splashEntry 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    }
+
+    #splash-logo {
+      width: clamp(120px, 15vw, 180px);
+      height: auto;
+      margin-bottom: 40px;
+      filter: drop-shadow(0 20px 40px rgba(0, 0, 0, 0.5));
+    }
+
+    /* Premium Gold Loader */
+    .premium-loader {
+      width: 40px;
+      height: 40px;
+      position: relative;
+    }
+
+    .premium-loader::before,
+    .premium-loader::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      border: 2px solid transparent;
+      border-top-color: #D4AF37;
+      animation: spin 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+    }
+
+    .premium-loader::after {
+      border-top-color: #22D3EE;
+      animation-delay: -0.4s;
+      width: 70%;
+      height: 70%;
+      top: 15%;
+      left: 15%;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes pulsate {
+      0%, 100% { opacity: 0.5; transform: translate(-50%, -50%) scale(1); }
+      50% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); }
+    }
+
+    @keyframes splashEntry {
+      from { opacity: 0; transform: translateY(20px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
     }
 
     #diagnostics {
@@ -44,69 +155,16 @@
       position: fixed;
       top: 10px;
       left: 10px;
-      background: rgba(0, 0, 0, 0.85);
-      color: #00ff00;
-      font-family: monospace;
+      background: rgba(7, 11, 20, 0.9);
+      color: #22D3EE;
+      font-family: 'Inter', monospace;
       font-size: 11px;
-      z-index: 20001;
+      z-index: 20010;
       pointer-events: none;
-      padding: 10px;
-      border-radius: 5px;
+      padding: 12px;
+      border-radius: 8px;
       max-width: 90%;
-      word-wrap: break-word;
-      max-height: 50vh;
-      overflow-y: auto;
-      border: 1px solid #333;
-    }
-
-    #splash {
-      pointer-events: none;
-    }
-
-    .center {
-      margin: 0;
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      -ms-transform: translate(-50%, -50%);
-      transform: translate(-50%, -50%);
-    }
-
-    .contain {
-      display:block;
-      width:100%; height:100%;
-      object-fit: contain;
-    }
-
-    .stretch {
-      display:block;
-      width:100%; height:100%;
-    }
-
-    .cover {
-      display:block;
-      width:100%; height:100%;
-      object-fit: cover;
-    }
-
-    .bottom {
-      position: absolute;
-      bottom: 0;
-      left: 50%;
-      -ms-transform: translate(-50%, 0);
-      transform: translate(-50%, 0);
-    }
-
-    .bottomLeft {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-    }
-
-    .bottomRight {
-      position: absolute;
-      bottom: 0;
-      right: 0;
+      border: 1px solid rgba(148, 163, 184, 0.1);
     }
   </style>
   <script id="splash-screen-script">
@@ -173,15 +231,13 @@
 
     function removeSplashFromWeb() {
       logDiagnostic("removeSplashFromWeb called");
-      const splash = document.getElementById("splash");
-      const branding = document.getElementById("splash-branding");
+      const splash = document.getElementById("splash-container");
       if (splash) {
-        splash.style.display = 'none';
-        splash.remove();
-        logDiagnostic("Splash removed");
-      }
-      if (branding) {
-        branding.remove();
+        splash.style.opacity = '0';
+        setTimeout(() => {
+          splash.remove();
+          logDiagnostic("Splash removed");
+        }, 600);
       }
       document.body.style.background = "transparent";
     }
@@ -191,11 +247,16 @@
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" name="viewport">
 </head>
 <body>
-  <picture id="splash">
-      <source srcset="splash/img/light-1x.png 1x, splash/img/light-2x.png 2x, splash/img/light-3x.png 3x, splash/img/light-4x.png 4x" media="(prefers-color-scheme: light)">
-      <source srcset="splash/img/dark-1x.png 1x, splash/img/dark-2x.png 2x, splash/img/dark-3x.png 3x, splash/img/dark-4x.png 4x" media="(prefers-color-scheme: dark)">
-      <img class="center" aria-hidden="true" src="splash/img/light-1x.png" alt="">
-  </picture>
+  <div id="splash-container">
+    <div class="business-pattern"></div>
+    <div class="glow-overlay"></div>
+    <div class="accent-line"></div>
+    
+    <div class="logo-box">
+      <img id="splash-logo" src="splash/img/dark-1x.png" alt="HASOOB Logo">
+      <div class="premium-loader"></div>
+    </div>
+  </div>
   <!--
     You can customize the "flutter_bootstrap.js" script.
     This is useful to provide a custom configuration to the Flutter loader

@@ -19,6 +19,7 @@ class AppTheme {
   
   static const Color accentBlue = Color(0xFF3B82F6);
   static const Color accentCyan = Color(0xFF22D3EE);
+  static const Color accentGold = Color(0xFFD4AF37);
   static const Color glowBlue = Color(0x2E3B82F6); // 18% opacity
 
   static const Color success = Color(0xFF10B981);

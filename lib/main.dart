@@ -19,6 +19,7 @@ import 'package:hasoob_app/l10n/app_localizations.dart';
 import 'package:hasoob_app/screens/auth/auth_gate.dart';
 import 'package:hasoob_app/screens/sync_center_screen.dart';
 import 'package:hasoob_app/core/utils/web_utils.dart';
+import 'package:hasoob_app/widgets/premium_splash_screen.dart';
 
 const bool disableWebDatabaseBootstrap = bool.fromEnvironment('disableWebDatabaseBootstrap');
 
@@ -26,13 +27,23 @@ Future<void> main() async {
   // 1. Crash Containment: Set up global error handlers immediately
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
-    debugPrint('[GlobalError] FlutterError: ${details.exception}');
+    debugPrint('---------------------------------------------------------');
+    debugPrint('[GlobalError] FlutterError detected:');
+    debugPrint('Exception: ${details.exception}');
+    debugPrint('Library: ${details.library}');
+    debugPrint('Stack trace:\n${details.stack}');
+    debugPrint('---------------------------------------------------------');
   };
 
   PlatformDispatcher.instance.onError = (error, stack) {
-    debugPrint('[GlobalError] PlatformDispatcherError: $error');
-    debugPrint(stack.toString());
-    return true;
+    debugPrint('---------------------------------------------------------');
+    debugPrint('[GlobalError] PlatformDispatcher error caught:');
+    debugPrint('Error: $error');
+    debugPrint('Stack trace:\n$stack');
+    debugPrint('---------------------------------------------------------');
+    // Returning true prevents the error from being reported to the console twice
+    // but in some web environments we want it to propagate for browser devtools.
+    return false; 
   };
 
   try {
@@ -132,6 +143,8 @@ class HasoobApp extends StatefulWidget {
 }
 
 class _HasoobAppState extends State<HasoobApp> {
+  bool _isInitializing = true;
+
   @override
   void initState() {
     super.initState();
@@ -143,13 +156,22 @@ class _HasoobAppState extends State<HasoobApp> {
   }
 
   Future<void> _finishInitialization() async {
-    // A. Remove splash immediately to show the app shell
+    // A. Keep the Flutter-side splash visible for a moment to ensure smooth transition
+    await Future.delayed(const Duration(milliseconds: 800));
+
+    // B. Remove web splash
     try {
       WebUtils.removeSplash();
     } catch (_) {}
 
-    // B. Startup Coordinator handles non-critical services (Sync, Connectivity, Auth listeners)
+    // C. Startup Coordinator handles non-critical services (Sync, Connectivity, Auth listeners)
     await StartupCoordinator.instance.start(widget.firebaseResult);
+
+    // D. Finalize initialization state with a slight delay for better UX
+    await Future.delayed(const Duration(milliseconds: 500));
+    if (mounted) {
+      setState(() => _isInitializing = false);
+    }
   }
 
   @override
@@ -182,12 +204,21 @@ class _HasoobAppState extends State<HasoobApp> {
               routes: {
                 '/sync': (context) => const SyncCenterScreen(),
               },
-              home: widget.firebaseResult.isConfigured
-                  ? const AuthGate(firebaseEnabled: true)
-                  : AuthGate(
-                      firebaseEnabled: false,
-                      bootstrapResult: widget.firebaseResult,
-                    ),
+              home: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 800),
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: child,
+                ),
+                child: _isInitializing
+                    ? const PremiumSplashScreen()
+                    : (widget.firebaseResult.isConfigured
+                        ? const AuthGate(firebaseEnabled: true)
+                        : AuthGate(
+                            firebaseEnabled: false,
+                            bootstrapResult: widget.firebaseResult,
+                          )),
+              ),
             );
           },
         ),
@@ -205,7 +236,7 @@ class _StartupErrorApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        backgroundColor: const Color(0xFF0B1020),
+        backgroundColor: const Color(0xFF070B14),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(32),

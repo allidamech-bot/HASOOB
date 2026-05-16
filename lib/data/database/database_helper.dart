@@ -1334,11 +1334,13 @@ class DBHelper {
     final insertPayload =
         await _filterToExistingColumns(db, 'products', payload);
 
+    debugPrint('[DBHelper] insertProduct: Inserting into table products...');
     await db.insert(
       'products',
       insertPayload,
       conflictAlgorithm: ConflictAlgorithm.replace,
     );
+    debugPrint('[DBHelper] insertProduct: Insert successful');
 
     await _recordProductMovement(
       db,

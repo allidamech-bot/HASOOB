@@ -65,15 +65,21 @@ class ProductRepository {
   }
 
   Future<void> addProduct(String businessId, ProductModel product) async {
+    debugPrint('[ProductRepository] addProduct started for ${product.id}');
     final productWithBusiness = product.copyWith(businessId: businessId);
+    
+    debugPrint('[ProductRepository] Inserting into local DB...');
     await DBHelper.insertProduct(productWithBusiness.toMap());
+    debugPrint('[ProductRepository] Local DB insert successful');
 
+    debugPrint('[ProductRepository] Enqueueing sync operation...');
     await SyncQueueService.instance.enqueue(
       entityName: 'products',
       entityId: productWithBusiness.id,
       type: SyncOperationType.create,
       payload: productWithBusiness.toMap(),
     );
+    debugPrint('[ProductRepository] Sync enqueue successful');
   }
 
   Future<void> updateProduct(String businessId, ProductModel product) async {
