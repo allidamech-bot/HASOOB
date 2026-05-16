@@ -8,6 +8,7 @@ import '../../core/utils/web_utils.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/firebase_bootstrap.dart';
 import '../main_navigation_screen.dart';
+import '../../widgets/premium_splash_screen.dart';
 import 'auth_shell.dart';
 
 const bool _disableAnalyticsBootstrap =
@@ -52,7 +53,7 @@ class _AuthGateState extends State<AuthGate> {
       stream: AuthService.instance.authStateChanges(),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const _LaunchSplashScreen();
+          return const PremiumSplashScreen();
         }
 
         if (snapshot.data != null) {
@@ -98,40 +99,72 @@ class _CloudSyncPassiveBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return PositionedDirectional(
-      bottom: 16,
-      start: 16,
-      end: 16,
+      bottom: 24,
+      start: 24,
+      end: 24,
       child: SafeArea(
         child: Center(
           child: ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 560),
-            child: Material(
-              color: (isError ? Colors.orange.shade900 : Colors.black).withValues(alpha: 0.8),
-              borderRadius: BorderRadius.circular(12),
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      isError ? Icons.sync_problem_rounded : Icons.sync_rounded,
-                      color: Colors.white,
-                      size: 16,
-                    ),
-                    const SizedBox(width: 10),
-                    Flexible(
-                      child: Text(
-                        message,
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: Dismissible(
+              key: const Key('local-mode-banner'),
+              child: Material(
+                color: AppTheme.surfaceElevated.withValues(alpha: 0.95),
+                borderRadius: BorderRadius.circular(16),
+                elevation: 8,
+                shadowColor: Colors.black45,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: isError ? AppTheme.accentCyan.withValues(alpha: 0.3) : AppTheme.border,
+                    width: 1,
+                  ),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: (isError ? AppTheme.accentCyan : AppTheme.accentBlue).withValues(alpha: 0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: Icon(
+                          isError ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
+                          color: isError ? AppTheme.accentCyan : AppTheme.accentBlue,
+                          size: 20,
                         ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              isError ? 'الوضع المحلي مفعّل' : 'المزامنة مفعلة',
+                              style: const TextStyle(
+                                color: AppTheme.textPrimary,
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              isError 
+                                ? 'بياناتك محفوظة بأمان على هذا الجهاز.'
+                                : 'بياناتك متزامنة مع السحابة.',
+                              style: const TextStyle(
+                                color: AppTheme.textSecondary,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -168,7 +201,7 @@ class _DegradedNoAuthShell extends StatelessWidget {
           _TechnicalDiagnosticsOverlay(result: bootstrapResult!)
         else
           const _CloudSyncPassiveBanner(
-            message: 'Cloud sync unavailable. Your data is saved locally.',
+            message: 'Local Mode Active',
             isError: true,
           ),
       ],
@@ -245,152 +278,4 @@ class _TechnicalDiagnosticsOverlay extends StatelessWidget {
   }
 }
 
-class _LaunchSplashScreen extends StatelessWidget {
-  const _LaunchSplashScreen();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: _SplashBackground(
-        child: _SplashLogo(),
-      ),
-    );
-  }
-}
-
-class _SplashBackground extends StatelessWidget {
-  const _SplashBackground({required this.child});
-
-  final Widget child;
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox.expand(
-      child: Container(
-        width: double.infinity,
-        height: double.infinity,
-        decoration: const BoxDecoration(
-          color: AppTheme.background,
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              Color(0xFF133B78),
-              Color(0xFF0E2C5C),
-              AppTheme.background,
-            ],
-          ),
-        ),
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            const Positioned(
-              top: -140,
-              left: -120,
-              child: _GlowCircle(
-                size: 340,
-                color: AppTheme.accentSoft,
-                opacity: 0.10,
-              ),
-            ),
-            const Positioned(
-              right: -120,
-              bottom: -150,
-              child: _GlowCircle(
-                size: 360,
-                color: AppTheme.accent,
-                opacity: 0.10,
-              ),
-            ),
-            Positioned.fill(
-              child: SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
-                  child: child,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _GlowCircle extends StatelessWidget {
-  const _GlowCircle({
-    required this.size,
-    required this.color,
-    required this.opacity,
-  });
-
-  final double size;
-  final Color color;
-  final double opacity;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: size,
-      height: size,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: color.withValues(alpha: opacity),
-      ),
-    );
-  }
-}
-
-class _SplashLogo extends StatelessWidget {
-  const _SplashLogo();
-
-  @override
-  Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final logoBoxSize =
-            (constraints.biggest.shortestSide * 0.58).clamp(220.0, 340.0);
-
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Spacer(),
-            Center(
-              child: Container(
-                width: logoBoxSize,
-                height: logoBoxSize,
-                alignment: Alignment.center,
-                child: Padding(
-                  padding: const EdgeInsets.all(8),
-                  child: Image.asset(
-                    'assets/images/logo.png',
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Image.asset(
-                      'assets/images/logo.png.png',
-                      fit: BoxFit.contain,
-                      errorBuilder: (_, __, ___) => const Icon(
-                        Icons.inventory_2_rounded,
-                        color: Colors.white,
-                        size: 112,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-            const SizedBox(
-              width: 34,
-              height: 34,
-              child: CircularProgressIndicator(
-                strokeWidth: 2.6,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            ),
-            const Spacer(),
-          ],
-        );
-      },
-    );
-  }
-}
+// Removed old splash widgets as they are replaced by PremiumSplashScreen
