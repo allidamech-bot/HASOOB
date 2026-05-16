@@ -483,7 +483,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                   onPressed: _saveDraft,
                   style: FilledButton.styleFrom(
                     backgroundColor: AppTheme.surfaceSecondary,
-                    side: BorderSide(color: AppTheme.border),
+                    side: const BorderSide(color: AppTheme.border),
                   ),
                   child: Text(_text('Save Draft', 'حفظ كمسودة')),
                 ),

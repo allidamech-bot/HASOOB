@@ -13,7 +13,6 @@ import 'package:hasoob_app/data/services/reports/report_models.dart';
 import 'package:hasoob_app/data/services/reports/report_service.dart';
 import 'package:hasoob_app/core/utils/perf_logger.dart';
 import 'package:hasoob_app/widgets/skeleton_loader.dart';
-import 'package:hasoob_app/widgets/app_section_header.dart';
 import 'package:hasoob_app/widgets/metric_card.dart';
 import 'package:hasoob_app/screens/add_product_screen.dart';
 import 'package:hasoob_app/screens/business_profile_screen.dart';

@@ -46,8 +46,6 @@ class AppTheme {
   );
 
   static ThemeData darkTheme() {
-    final baseTextTheme = GoogleFonts.interTextTheme(ThemeData.dark().textTheme);
-    
     const colorScheme = ColorScheme.dark(
       primary: accentBlue,
       secondary: accentCyan,
@@ -173,7 +171,7 @@ class AppTheme {
     final theme = ThemeData(
       useMaterial3: true,
       brightness: Brightness.light,
-      colorScheme: ColorScheme.light(
+      colorScheme: const ColorScheme.light(
         primary: accentBlue,
         secondary: accentCyan,
         surface: lightSurface,
@@ -280,7 +278,7 @@ class AppTheme {
     ),
   );
 
-  // Compatibility Aliases (for existing widgets)
+  // Compatibility Layer (Restored for Phase 25C Compatibility)
   static const Color accent = accentBlue;
   static const Color accentSoft = accentCyan;
   static const Color surface = surfaceSecondary;
@@ -294,14 +292,13 @@ class AppTheme {
   static const Color lightSurfaceMuted = Color(0xFFF1F5F9);
   static const String fontFamily = 'Inter';
 
-  // Helper getters
+  // Helper Methods (Restored/Maintained for legacy screens)
   static bool isDark(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
   static Color surfaceFor(BuildContext context) => isDark(context) ? surfaceSecondary : lightSurface;
   static Color surfaceAltFor(BuildContext context) => isDark(context) ? surfaceElevated : lightSurfaceMuted;
   static Color backgroundFor(BuildContext context) => isDark(context) ? background : lightBackground;
   static Color borderFor(BuildContext context) => isDark(context) ? border : lightBorder;
   static Color textSecondaryFor(BuildContext context) => isDark(context) ? textSecondary : lightTextSecondary;
-
 
   static List<BoxShadow> softShadow(BuildContext context) => [
     BoxShadow(

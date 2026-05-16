@@ -93,7 +93,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = AppTheme.isDark(context);
     final copy = AppCopy.of(context);
     final localeKey = Localizations.localeOf(context).languageCode;
     final screens = <Widget>[
