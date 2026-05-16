@@ -16,12 +16,13 @@ class InvoiceRepository {
 
     // 2. Listen to cloud changes and refresh from local DB
     try {
-      await for (final _ in CloudSyncService.instance.watchInvoices(businessId)) {
+      final cloudStream = CloudSyncService.instance.watchInvoices(businessId);
+      await for (final _ in cloudStream) {
         final refreshedData = await getInvoices(businessId);
         yield refreshedData;
       }
     } catch (e) {
-      debugPrint('[InvoiceRepository] watchInvoices cloud stream error: $e');
+      debugPrint('[InvoiceRepository] watchInvoices cloud failure: $e');
     }
   }
 
@@ -32,12 +33,13 @@ class InvoiceRepository {
 
     // 2. Listen to cloud changes and refresh from local DB
     try {
-      await for (final _ in CloudSyncService.instance.watchInvoice(id, businessId)) {
+      final cloudStream = CloudSyncService.instance.watchInvoice(id, businessId);
+      await for (final _ in cloudStream) {
         final refreshedData = await getInvoiceById(businessId, id);
         yield refreshedData;
       }
     } catch (e) {
-      debugPrint('[InvoiceRepository] watchInvoiceById cloud stream error: $e');
+      debugPrint('[InvoiceRepository] watchInvoiceById cloud failure: $e');
     }
   }
 
@@ -48,12 +50,13 @@ class InvoiceRepository {
 
     // 2. Listen to cloud changes and refresh from local DB
     try {
-      await for (final _ in CloudSyncService.instance.watchInvoiceItems(id, businessId)) {
+      final cloudStream = CloudSyncService.instance.watchInvoiceItems(id, businessId);
+      await for (final _ in cloudStream) {
         final refreshedData = await getInvoiceItems(businessId, id);
         yield refreshedData;
       }
     } catch (e) {
-      debugPrint('[InvoiceRepository] watchInvoiceItems cloud stream error: $e');
+      debugPrint('[InvoiceRepository] watchInvoiceItems cloud failure: $e');
     }
   }
 
@@ -64,12 +67,13 @@ class InvoiceRepository {
 
     // 2. Listen to cloud changes and refresh from local DB
     try {
-      await for (final _ in CloudSyncService.instance.watchQuotations(businessId)) {
+      final cloudStream = CloudSyncService.instance.watchQuotations(businessId);
+      await for (final _ in cloudStream) {
         final refreshedData = await getQuotations(businessId);
         yield refreshedData;
       }
     } catch (e) {
-      debugPrint('[InvoiceRepository] watchQuotations cloud stream error: $e');
+      debugPrint('[InvoiceRepository] watchQuotations cloud failure: $e');
     }
   }
 

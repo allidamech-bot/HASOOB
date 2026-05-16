@@ -21,21 +21,29 @@ class DeleteProductCheckResult {
 
 class ProductRepository {
   Stream<List<ProductModel>> watchProducts(String businessId) async* {
-    // 1. Yield local data immediately
+    // 1. Yield local data immediately as the source of truth
     final localData = await getAllProducts(businessId);
     yield localData;
 
     // 2. Listen to cloud changes and refresh from local DB
-    // We use the cloud stream as a trigger to reload from SQLite
+    // We treat cloud streams as optional triggers only.
     try {
-      await for (final _
-          in CloudSyncService.instance.watchProducts(businessId)) {
+      final cloudStream = CloudSyncService.instance.watchProducts(businessId);
+      
+      await for (final _ in cloudStream) {
+        // Refresh from SQLite whenever cloud notifies of a change
         final refreshedData = await getAllProducts(businessId);
         yield refreshedData;
       }
+      
+      debugPrint('[ProductRepository] watchProducts cloud stream closed normally or after handled error.');
     } catch (e) {
-      debugPrint('[ProductRepository] watchProducts cloud stream error: $e');
-      // Continue yielding nothing more, but keep the initial local data
+      // This block is defensive; CloudSyncService now handles most errors internally.
+      if (e.toString().contains('permission-denied')) {
+        debugPrint('[ProductRepository] Cloud stream unavailable (permission-denied). Continuing in local-only mode.');
+      } else {
+        debugPrint('[ProductRepository] watchProducts cloud stream error: $e. Using local data only.');
+      }
     }
   }
 
@@ -222,14 +230,20 @@ class ProductRepository {
 
     // 2. Listen to cloud changes and refresh from local DB
     try {
-      await for (final _
-          in CloudSyncService.instance.watchSalesRecords(businessId)) {
+      final cloudStream = CloudSyncService.instance.watchSalesRecords(businessId);
+      
+      await for (final _ in cloudStream) {
         final refreshedData = await getSalesRecords(businessId);
         yield refreshedData;
       }
+      
+      debugPrint('[ProductRepository] watchSalesRecords cloud stream closed.');
     } catch (e) {
-      debugPrint(
-          '[ProductRepository] watchSalesRecords cloud stream error: $e');
+      if (e.toString().contains('permission-denied')) {
+        debugPrint('[ProductRepository] watchSalesRecords cloud stream unavailable (permission-denied).');
+      } else {
+        debugPrint('[ProductRepository] watchSalesRecords cloud stream error: $e');
+      }
     }
   }
 }

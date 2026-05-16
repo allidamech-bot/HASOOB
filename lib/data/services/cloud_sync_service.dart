@@ -22,6 +22,22 @@ class CloudSyncService implements SyncService {
     }
   }
 
+  void _logCloudError(String source, dynamic error) {
+    if (error is FirebaseException) {
+      final code = error.code;
+      final message = error.message;
+      debugPrint('[CloudSyncService] $source failure ($code): $message');
+      
+      if (code == 'permission-denied') {
+        debugPrint('[CloudSyncService] Diagnostic: User may lack Firestore rules permission for this resource.');
+      } else if (code == 'unavailable') {
+        debugPrint('[CloudSyncService] Diagnostic: Firestore service is unavailable (offline or service issue).');
+      }
+    } else {
+      debugPrint('[CloudSyncService] $source unexpected error: $error');
+    }
+  }
+
   CollectionReference<Map<String, dynamic>> _productsRef(String uid) =>
       _firestore.collection('users').doc(uid).collection('products');
 
@@ -581,6 +597,7 @@ class CloudSyncService implements SyncService {
     return _productsRef(uid)
         .where('businessId', isEqualTo: businessId)
         .snapshots()
+        .handleError((e) => _logCloudError('watchProducts', e))
         .map((snapshot) {
       final rows = snapshot.docs.map(_mapDoc).toList();
       rows.sort((a, b) => _compareText(a['name'], b['name']));
@@ -595,6 +612,7 @@ class CloudSyncService implements SyncService {
     return _customersRef(uid)
         .where('businessId', isEqualTo: businessId)
         .snapshots()
+        .handleError((e) => _logCloudError('watchCustomers', e))
         .map((snapshot) {
       final rows = snapshot.docs.map(_mapDoc).toList();
       rows.sort((a, b) => _compareText(a['name'], b['name']));
@@ -609,6 +627,7 @@ class CloudSyncService implements SyncService {
     return _invoicesRef(uid)
         .where('businessId', isEqualTo: businessId)
         .snapshots()
+        .handleError((e) => _logCloudError('watchInvoices', e))
         .map((snapshot) {
       final rows = snapshot.docs.map(_mapDoc).toList();
       rows.sort(_compareDocumentsByDateAndNumber);
@@ -622,7 +641,9 @@ class CloudSyncService implements SyncService {
       return Stream.value(null);
     }
 
-    return _invoicesRef(uid).doc(invoiceId).snapshots().map((snapshot) {
+    return _invoicesRef(uid).doc(invoiceId).snapshots()
+        .handleError((e) => _logCloudError('watchInvoice', e))
+        .map((snapshot) {
       if (!snapshot.exists) return null;
       final data = _mapDoc(snapshot);
       if (data['businessId'] != businessId) return null;
@@ -640,6 +661,7 @@ class CloudSyncService implements SyncService {
         .where('invoice_id', isEqualTo: invoiceId)
         .where('businessId', isEqualTo: businessId)
         .snapshots()
+        .handleError((e) => _logCloudError('watchInvoiceItems', e))
         .map((snapshot) {
       final rows = snapshot.docs.map(_mapDoc).toList();
       rows.sort((a, b) {
@@ -658,6 +680,7 @@ class CloudSyncService implements SyncService {
     return _quotationsRef(uid)
         .where('businessId', isEqualTo: businessId)
         .snapshots()
+        .handleError((e) => _logCloudError('watchQuotations', e))
         .map((snapshot) {
       final rows = snapshot.docs.map(_mapDoc).toList();
       rows.sort(_compareDocumentsByDateAndNumber);
@@ -672,6 +695,7 @@ class CloudSyncService implements SyncService {
     return _salesRecordsRef(uid)
         .where('businessId', isEqualTo: businessId)
         .snapshots()
+        .handleError((e) => _logCloudError('watchSalesRecords', e))
         .map((snapshot) {
       final rows = snapshot.docs.map(_mapDoc).toList();
       rows.sort((a, b) => _compareDateDesc(a['date'], b['date']));
@@ -694,7 +718,7 @@ class CloudSyncService implements SyncService {
         if (change.doc.metadata.hasPendingWrites) continue;
         onChange(change);
       }
-    });
+    }, onError: (e) => _logCloudError('listenToCustomers', e));
   }
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? listenToProducts(
@@ -712,7 +736,7 @@ class CloudSyncService implements SyncService {
         if (change.doc.metadata.hasPendingWrites) continue;
         onChange(change);
       }
-    });
+    }, onError: (e) => _logCloudError('listenToProducts', e));
   }
 
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>? listenToInvoices(
@@ -730,7 +754,7 @@ class CloudSyncService implements SyncService {
         if (change.doc.metadata.hasPendingWrites) continue;
         onChange(change);
       }
-    });
+    }, onError: (e) => _logCloudError('listenToInvoices', e));
   }
 
   Future<List<Map<String, dynamic>>> fetchAccounts(String businessId) async {

@@ -19,12 +19,13 @@ class CustomerRepository {
 
     // 2. Listen to cloud changes and refresh from local DB
     try {
-      await for (final _ in CloudSyncService.instance.watchCustomers(businessId)) {
+      final cloudStream = CloudSyncService.instance.watchCustomers(businessId);
+      await for (final _ in cloudStream) {
         final refreshedData = await getCustomers(businessId);
         yield refreshedData;
       }
     } catch (e) {
-      debugPrint('[CustomerRepository] watchCustomers cloud stream error: $e');
+      debugPrint('[CustomerRepository] watchCustomers cloud failure: $e. Using local data.');
     }
   }
 
