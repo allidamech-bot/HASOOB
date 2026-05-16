@@ -1,4 +1,6 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:async/async.dart';
 import '../database/database_helper.dart';
 import '../services/cloud_sync_service.dart';
 import '../backend/backend_client.dart';
@@ -12,21 +14,44 @@ class CustomerRepository {
   CustomerRepository({BackendClient? backendClient})
       : backendClient = backendClient ?? BackendClientFactory.create();
 
-  Stream<List<Map<String, dynamic>>> watchCustomers(String businessId) async* {
-    // 1. Yield local data immediately
-    final localData = await getCustomers(businessId);
-    yield localData;
+  final _localChanges = StreamController<void>.broadcast();
 
-    // 2. Listen to cloud changes and refresh from local DB
-    try {
-      final cloudStream = CloudSyncService.instance.watchCustomers(businessId);
-      await for (final _ in cloudStream) {
-        final refreshedData = await getCustomers(businessId);
-        yield refreshedData;
+  void _notifyChange() {
+    _localChanges.add(null);
+  }
+
+  Stream<List<Map<String, dynamic>>> watchCustomers(String businessId) {
+    late StreamController<List<Map<String, dynamic>>> controller;
+    StreamSubscription? localSub;
+    StreamSubscription? cloudSub;
+
+    void emit() async {
+      try {
+        final data = await getCustomers(businessId);
+        if (!controller.isClosed) controller.add(data);
+      } catch (e) {
+        if (!controller.isClosed) controller.addError(e);
       }
-    } catch (e) {
-      debugPrint('[CustomerRepository] watchCustomers cloud failure: $e. Using local data.');
     }
+
+    controller = StreamController<List<Map<String, dynamic>>>.broadcast(
+      onListen: () {
+        emit();
+        localSub = _localChanges.stream.listen((_) => emit());
+        cloudSub = CloudSyncService.instance.watchCustomers(businessId).listen(
+          (_) => emit(),
+          onError: (e) {
+            debugPrint('[CustomerRepository] Cloud watch failure: $e');
+          },
+        );
+      },
+      onCancel: () {
+        localSub?.cancel();
+        cloudSub?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   Future<List<Map<String, dynamic>>> getCustomers(String businessId) {
@@ -50,6 +75,7 @@ class CustomerRepository {
       type: isUpdate ? SyncOperationType.update : SyncOperationType.create,
       payload: payload,
     );
+    _notifyChange();
   }
 
   Future<void> deleteCustomer(String businessId, String id) async {
@@ -66,6 +92,7 @@ class CustomerRepository {
       type: SyncOperationType.delete,
       payload: {'id': id, 'businessId': businessId},
     );
+    _notifyChange();
   }
 
   Future<Map<String, dynamic>> getCustomerStatement(String businessId, String customerId) {

@@ -168,6 +168,7 @@ class _FakeHistoryRepository extends SmartAssistantHistoryRepository {
 }
 
 class _FakeProductRepository extends ProductRepository {
+  _FakeProductRepository() : super.forTest();
   int addProductCalls = 0;
 
   @override

@@ -18,6 +18,8 @@ class SyncManager extends ChangeNotifier {
   bool _syncRequested = false;
   bool _isInitialized = false;
   bool _isTestMode = false;
+  bool _isCloudAvailable = true;
+  String? _lastSyncError;
 
   /// Allows injecting a custom engine for testing.
   @visibleForTesting
@@ -31,12 +33,16 @@ class SyncManager extends ChangeNotifier {
 
   bool get isRunning => _isRunning;
   bool get syncRequested => _syncRequested;
+  bool get isCloudAvailable => _isCloudAvailable;
+  String? get lastSyncError => _lastSyncError;
 
   /// Resets the singleton state for testing purposes.
   @visibleForTesting
   void resetForTest() {
     _isRunning = false;
     _syncRequested = false;
+    _isCloudAvailable = true;
+    _lastSyncError = null;
     _lastSyncTime = null;
     _isTestMode = true;
     _engine = SyncEngine();
@@ -47,6 +53,22 @@ class SyncManager extends ChangeNotifier {
     if (!_syncRequested) {
       _syncRequested = true;
       debugPrint('[Sync] sync requested');
+      notifyListeners();
+    }
+  }
+
+  void markCloudUnavailable({String? error}) {
+    if (_isCloudAvailable) {
+      _isCloudAvailable = false;
+      _lastSyncError = error;
+      notifyListeners();
+    }
+  }
+
+  void markCloudAvailable() {
+    if (!_isCloudAvailable) {
+      _isCloudAvailable = true;
+      _lastSyncError = null;
       notifyListeners();
     }
   }
@@ -90,10 +112,17 @@ class SyncManager extends ChangeNotifier {
 
       await _engine.processQueue();
       _lastSyncTime = DateTime.now();
+      _isCloudAvailable = true;
+      _lastSyncError = null;
+      notifyListeners();
     } catch (e, stack) {
       debugPrint('[Sync] sync failed: $e');
-      debugPrint(stack.toString());
+      _lastSyncError = e.toString();
+      if (e.toString().contains('permission-denied')) {
+        _isCloudAvailable = false;
+      }
       _syncRequested = true;
+      notifyListeners();
     } finally {
       if (_isRunning) {
         _isRunning = false;

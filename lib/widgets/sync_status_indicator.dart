@@ -32,6 +32,7 @@ class SyncStatusIndicator extends StatelessWidget {
                 final pendingItems = snapshot.data ?? [];
                 final hasFailed = pendingItems.any((item) => 
                   item.status == SyncStatus.failed || item.status == SyncStatus.conflict);
+                final isCloudAvailable = SyncManager.instance.isCloudAvailable;
                 final isRunning = SyncManager.instance.isRunning;
                 final hasPending = pendingItems.isNotEmpty;
 
@@ -39,7 +40,11 @@ class SyncStatusIndicator extends StatelessWidget {
                 IconData icon;
                 String tooltip;
 
-                if (hasFailed) {
+                if (!isCloudAvailable) {
+                  color = Colors.amber;
+                  icon = Icons.cloud_off_rounded;
+                  tooltip = 'Cloud limited (Permissions)';
+                } else if (hasFailed) {
                   color = AppTheme.danger;
                   icon = Icons.sync_problem_rounded;
                   tooltip = 'Sync Failed';

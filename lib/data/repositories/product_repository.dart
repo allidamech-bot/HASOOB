@@ -1,8 +1,11 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
+import 'package:async/async.dart';
 import '../../data/database/database_helper.dart';
 import '../models/product_model.dart';
 import 'package:hasoob_app/data/services/cloud_sync_service.dart';
 import 'package:hasoob_app/data/services/sync_queue_service.dart';
+import 'package:hasoob_app/data/services/sync_manager.dart';
 import 'package:hasoob_app/data/models/sync_operation.dart';
 
 class DeleteProductCheckResult {
@@ -20,31 +23,61 @@ class DeleteProductCheckResult {
 }
 
 class ProductRepository {
-  Stream<List<ProductModel>> watchProducts(String businessId) async* {
-    // 1. Yield local data immediately as the source of truth
-    final localData = await getAllProducts(businessId);
-    yield localData;
+  static final ProductRepository instance = ProductRepository.internal();
+  ProductRepository.internal();
+  factory ProductRepository() => instance;
 
-    // 2. Listen to cloud changes and refresh from local DB
-    // We treat cloud streams as optional triggers only.
-    try {
-      final cloudStream = CloudSyncService.instance.watchProducts(businessId);
-      
-      await for (final _ in cloudStream) {
-        // Refresh from SQLite whenever cloud notifies of a change
-        final refreshedData = await getAllProducts(businessId);
-        yield refreshedData;
-      }
-      
-      debugPrint('[ProductRepository] watchProducts cloud stream closed normally or after handled error.');
-    } catch (e) {
-      // This block is defensive; CloudSyncService now handles most errors internally.
-      if (e.toString().contains('permission-denied')) {
-        debugPrint('[ProductRepository] Cloud stream unavailable (permission-denied). Continuing in local-only mode.');
-      } else {
-        debugPrint('[ProductRepository] watchProducts cloud stream error: $e. Using local data only.');
+  @visibleForTesting
+  ProductRepository.forTest();
+
+  static CloudSyncService? _mockCloudSync;
+  @visibleForTesting
+  static set mockCloudSync(CloudSyncService? mock) => _mockCloudSync = mock;
+
+  CloudSyncService get _cloudSync => _mockCloudSync ?? CloudSyncService.instance;
+
+  final _localChanges = StreamController<void>.broadcast();
+
+  void _notifyChange() {
+    debugPrint('[ProductRepository] Notifying local change');
+    _localChanges.add(null);
+  }
+
+  Stream<List<ProductModel>> watchProducts(String businessId) {
+    late StreamController<List<ProductModel>> controller;
+    StreamSubscription? localSub;
+    StreamSubscription? cloudSub;
+
+    void emit() async {
+      try {
+        final data = await getAllProducts(businessId);
+        if (!controller.isClosed) controller.add(data);
+      } catch (e) {
+        if (!controller.isClosed) controller.addError(e);
       }
     }
+
+    controller = StreamController<List<ProductModel>>.broadcast(
+      onListen: () {
+        emit();
+        localSub = _localChanges.stream.listen((_) => emit());
+        cloudSub = _cloudSync.watchProducts(businessId).listen(
+          (_) => emit(),
+          onError: (e) {
+            debugPrint('[ProductRepository] Cloud watch error: $e');
+            if (e.toString().contains('permission-denied')) {
+              SyncManager.instance.markCloudUnavailable(error: e.toString());
+            }
+          },
+        );
+      },
+      onCancel: () {
+        localSub?.cancel();
+        cloudSub?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 
   Future<List<ProductModel>> getAllProducts(String businessId) async {
@@ -80,6 +113,7 @@ class ProductRepository {
       payload: productWithBusiness.toMap(),
     );
     debugPrint('[ProductRepository] Sync enqueue successful');
+    _notifyChange();
   }
 
   Future<void> updateProduct(String businessId, ProductModel product) async {
@@ -92,6 +126,7 @@ class ProductRepository {
       type: SyncOperationType.update,
       payload: productWithBusiness.toMap(),
     );
+    _notifyChange();
   }
 
   Future<void> deleteProduct(String businessId, String id) async {
@@ -103,6 +138,7 @@ class ProductRepository {
       type: SyncOperationType.delete,
       payload: {'id': id, 'businessId': businessId},
     );
+    _notifyChange();
   }
 
   Future<DeleteProductCheckResult> canDeleteProduct(
@@ -158,6 +194,7 @@ class ProductRepository {
       saleNote: saleNote,
       currencyCode: currencyCode,
     );
+    _notifyChange();
   }
 
   Future<void> applyInventoryAdjustment({
@@ -176,6 +213,7 @@ class ProductRepository {
       newExtraCosts: newExtraCosts,
       reason: reason,
     );
+    _notifyChange();
   }
 
   Future<int> getProductSalesCount(String businessId, String productId) {
@@ -228,28 +266,40 @@ class ProductRepository {
     return DBHelper.getTopSellingProducts(businessId);
   }
 
-  Stream<List<Map<String, dynamic>>> watchSalesRecords(
-      String businessId) async* {
-    // 1. Yield local data immediately
-    final localData = await getSalesRecords(businessId);
-    yield localData;
+  Stream<List<Map<String, dynamic>>> watchSalesRecords(String businessId) {
+    late StreamController<List<Map<String, dynamic>>> controller;
+    StreamSubscription? localSub;
+    StreamSubscription? cloudSub;
 
-    // 2. Listen to cloud changes and refresh from local DB
-    try {
-      final cloudStream = CloudSyncService.instance.watchSalesRecords(businessId);
-      
-      await for (final _ in cloudStream) {
-        final refreshedData = await getSalesRecords(businessId);
-        yield refreshedData;
-      }
-      
-      debugPrint('[ProductRepository] watchSalesRecords cloud stream closed.');
-    } catch (e) {
-      if (e.toString().contains('permission-denied')) {
-        debugPrint('[ProductRepository] watchSalesRecords cloud stream unavailable (permission-denied).');
-      } else {
-        debugPrint('[ProductRepository] watchSalesRecords cloud stream error: $e');
+    void emit() async {
+      try {
+        final data = await getSalesRecords(businessId);
+        if (!controller.isClosed) controller.add(data);
+      } catch (e) {
+        if (!controller.isClosed) controller.addError(e);
       }
     }
+
+    controller = StreamController<List<Map<String, dynamic>>>.broadcast(
+      onListen: () {
+        emit();
+        localSub = _localChanges.stream.listen((_) => emit());
+        cloudSub = _cloudSync.watchSalesRecords(businessId).listen(
+          (_) => emit(),
+          onError: (e) {
+            debugPrint('[ProductRepository] Sales cloud watch error: $e');
+            if (e.toString().contains('permission-denied')) {
+              SyncManager.instance.markCloudUnavailable(error: e.toString());
+            }
+          },
+        );
+      },
+      onCancel: () {
+        localSub?.cancel();
+        cloudSub?.cancel();
+      },
+    );
+
+    return controller.stream;
   }
 }
