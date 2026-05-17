@@ -234,18 +234,17 @@
       logDiagnostic("REJ: " + event.reason);
     };
 
-    function removeSplashFromWeb() {
-      logDiagnostic("removeSplashFromWeb called");
-      const splash = document.getElementById("splash-container");
-      if (splash) {
-        splash.style.opacity = '0';
-        setTimeout(() => {
-          splash.remove();
-          logDiagnostic("Splash removed");
-        }, 600);
+function removeSplashFromWeb() {
+        logDiagnostic("removeSplashFromWeb called");
+        const splash = document.getElementById("splash-container");
+        if (splash) {
+          splash.style.opacity = '0';
+          splash.style.visibility = 'hidden';
+          splash.style.pointerEvents = 'none';
+          logDiagnostic("Splash hidden safely, not removed");
+        }
+        document.body.style.background = "transparent";
       }
-      document.body.style.background = "transparent";
-    }
 
     logDiagnostic("index loaded");
   </script>
