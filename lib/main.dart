@@ -1,3 +1,4 @@
+import 'package:hasoob_app/data/services/database_initializer.dart';
 // ignore_for_file: deprecated_member_use
 import 'dart:async';
 import 'dart:ui';
@@ -7,8 +8,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:intl/intl.dart';
-import 'package:sqflite_common_ffi/sqflite_ffi.dart';
-import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
+// SQFlite imports will be handled by DatabaseInitializer, so they can be removed here
+// import 'package:sqflite_common_ffi/sqflite_ffi.dart';
+// import 'package:sqflite_common_ffi_web/sqflite_ffi_web.dart';
 
 import 'package:hasoob_app/core/app_locale_controller.dart';
 import 'package:hasoob_app/core/app_theme.dart';
@@ -25,7 +27,8 @@ import 'package:hasoob_app/data/services/auth_service.dart';
 import 'package:hasoob_app/data/repositories/product_repository.dart';
 import 'package:hasoob_app/data/services/sync_manager.dart';
 
-const bool disableWebDatabaseBootstrap = bool.fromEnvironment('disableWebDatabaseBootstrap');
+// No longer needed here as initialization is moved
+// const bool disableWebDatabaseBootstrap = bool.fromEnvironment('disableWebDatabaseBootstrap');
 
 Future<void> main() async {
   // 1. Crash Containment: Set up global error handlers immediately
@@ -71,37 +74,7 @@ Future<void> main() async {
       onTimeout: () {},
     );
 
-    // 5. Database Initialization (Critical before Repositories access)
-    try {
-      if (kIsWeb) {
-        if (!disableWebDatabaseBootstrap) {
-          debugPrint('[Startup] Initializing Web Database Factory (Web path)...');
-          databaseFactory = await Future.sync(() {
-            return createDatabaseFactoryFfiWeb(
-              options: SqfliteFfiWebOptions(
-                sqlite3WasmUri: Uri.parse('sqlite3.wasm'),
-                // ignore: invalid_use_of_visible_for_testing_member
-                forceAsBasicWorker: defaultTargetPlatform == TargetPlatform.iOS || defaultTargetPlatform == TargetPlatform.macOS, // Required for Safari/iOS WASM support
-              ),
-            );
-          }).timeout(const Duration(seconds: 15));
-          debugPrint('[Startup] Web Database Factory successfully initialized.');
-        } else {
-          debugPrint('[Startup] Web Database Bootstrap is disabled.');
-        }
-      } else if (defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS) {
-        debugPrint('[Startup] Initializing Desktop Database Factory (Native path)...');
-        sqfliteFfiInit();
-        databaseFactory = databaseFactoryFfi;
-        debugPrint('[Startup] Desktop Database Factory successfully initialized.');
-      } else {
-        debugPrint('[Startup] Using default Mobile Database Factory (Native path).');
-      }
-    } catch (e, st) {
-      debugPrint('[Startup] Database Factory initialization failed: $e');
-      debugPrint(st.toString());
-      // Proceeding, but repositories might fail and return empty states.
-    }
+    // 5. Database Initialization is now handled by StartupCoordinator after first frame.
 
     // 6. Fast-track Firebase initialization (guarded)
     FirebaseBootstrapResult firebaseResult;
@@ -162,6 +135,7 @@ class _HasoobAppState extends State<HasoobApp> {
     
     // 7. Post-frame initialization: Move heavy work after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      debugPrint('[AppLifecycle] First frame rendered, deferred startup initiated.');
       _finishInitialization();
     });
   }

@@ -1,6 +1,5 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:async/async.dart';
 import '../database/database_helper.dart';
 import '../services/cloud_sync_service.dart';
 import '../backend/backend_client.dart';

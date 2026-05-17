@@ -6,6 +6,7 @@ import 'package:hasoob_app/data/services/smart_sync_trigger_service.dart';
 import 'package:hasoob_app/data/services/auth_service.dart';
 import 'package:hasoob_app/core/services/connectivity_service.dart';
 import 'package:hasoob_app/core/utils/web_utils.dart';
+import 'package:hasoob_app/data/services/database_initializer.dart'; // NEW: DatabaseInitializer import
 
 enum StartupStatus {
   idle,
@@ -41,11 +42,14 @@ class StartupCoordinator extends ChangeNotifier {
   }
 
   Future<void> start(FirebaseBootstrapResult initialFirebaseResult) async {
-    if (_isInitialized) return;
+    if (_isInitialized) {
+      _log('StartupCoordinator already initialized.');
+      return;
+    }
     _isInitialized = true;
     _status = StartupStatus.initializing;
     _firebaseResult = initialFirebaseResult;
-    _log('Startup started. Firebase configured: ${initialFirebaseResult.isConfigured}');
+    _log('Deferred startup initiated. Firebase configured: ${initialFirebaseResult.isConfigured}');
 
     // We run the rest of the initialization after a short delay to ensure first frame is rendered
     // and to avoid blocking the UI thread on heavy tasks.
@@ -53,14 +57,22 @@ class StartupCoordinator extends ChangeNotifier {
   }
 
   Future<void> _runInitialization() async {
+    _log('Deferred initialization sequence started.');
     try {
-      // 1. Connectivity (Non-critical)
+      // NEW: 1. Database Initialization (moved from main.dart)
+      await _guardedTask('Database Init', () async {
+        await DatabaseInitializer.initializeDatabase();
+        _log('Database Init: isInitialized = ${DatabaseInitializer.isInitialized}');
+      });
+
+      // 2. Connectivity (Non-critical)
       await _guardedTask('Connectivity', () async {
         await ConnectivityService.instance.initialize().timeout(const Duration(seconds: 5));
       });
 
-      // 2. Sync & Services (Critical for cloud functionality, but non-blocking for UI)
+      // 3. Sync & Services (Critical for cloud functionality, but non-blocking for UI)
       if (_firebaseResult?.isConfigured == true) {
+        _log('Sync & Auth initialization started (Firebase enabled).');
         await _guardedTask('Sync & Auth', () async {
           // Initialize SyncManager
           await SyncManager.instance.initialize().timeout(const Duration(seconds: 10));
@@ -96,15 +108,16 @@ class StartupCoordinator extends ChangeNotifier {
             _log('Auth listener error: $e');
           });
         });
+        _log('Sync & Auth initialization completed.');
       } else {
-        _log('Sync initialization skipped: Firebase not configured');
-        _status = StartupStatus.degraded;
+        _log('Sync & Auth initialization skipped: Firebase not configured. Running in degraded mode for cloud features.');
+        _status = StartupStatus.degraded; // Set status to degraded if Firebase is not configured for cloud features.
       }
 
       if (_status == StartupStatus.initializing) {
         _status = StartupStatus.ready;
       }
-      _log('Startup initialization completed. Status: $_status');
+      _log('Startup initialization completed. Final status: $_status');
     } catch (e, st) {
       _log('Startup critical failure: $e');
       debugPrint(st.toString());
@@ -122,6 +135,10 @@ class StartupCoordinator extends ChangeNotifier {
     } catch (e, st) {
       _log('Task failed: $name. Error: $e');
       debugPrint(st.toString());
+      // A failed guarded task generally means degraded status, not necessarily fatal for entire app.
+      if (_status != StartupStatus.failed) { // Only change to degraded if not already marked as fatal.
+        _status = StartupStatus.degraded;
+      }
     }
   }
 }

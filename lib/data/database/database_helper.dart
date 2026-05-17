@@ -8,6 +8,7 @@ import '../../core/services/branch_context.dart';
 import '../../core/services/audit_service.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:hasoob_app/data/services/database_initializer.dart';
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
@@ -61,6 +62,15 @@ class DBHelper {
 
   static Future<Database> database() async {
     try {
+      // NEW: Ensure databaseFactory is initialized for web/desktop platforms
+      if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS) {
+        if (!DatabaseInitializer.isInitialized) {
+          debugPrint('[DBHelper] Awaiting DatabaseInitializer to complete...');
+          await DatabaseInitializer.initializeDatabase(); // This is idempotent
+          debugPrint('[DBHelper] DatabaseInitializer completed.');
+        }
+      }
+
       String path;
       if (kIsWeb) {
         path = _databaseName;
