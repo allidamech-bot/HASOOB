@@ -169,6 +169,7 @@ class SyncManager extends ChangeNotifier {
       analytics: FirebaseAnalyticsService(),
       backendAdapter: FirebaseBackendAdapter(),
     );
+    debugPrint('[Sync] Manager initialized. Engine ready.');
     _isInitialized = true;
     await SyncQueueService.instance.recoverInterruptedProcessing();
   }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
@@ -13,9 +14,14 @@ class SyncQueueService {
   final SyncQueueRepository _repository = SyncQueueRepository();
   final Random _random = Random();
 
-  String _calculateFingerprint(String entityName, String entityId, SyncOperationType type, Map<String, dynamic> payload) {
+  String _calculateFingerprint(String entityName, String entityId,
+      SyncOperationType type, Map<String, dynamic> payload) {
     final data = '$entityName|$entityId|${type.name}|${jsonEncode(payload)}';
     return sha256.convert(utf8.encode(data)).toString();
+  }
+
+  void _log(String msg) {
+    if (kDebugMode) debugPrint('[SyncQueue] $msg');
   }
 
   Future<void> enqueue({
@@ -27,15 +33,19 @@ class SyncQueueService {
     SyncConflictStrategy conflictStrategy = SyncConflictStrategy.lastWriteWins,
     int? remoteVersion,
   }) async {
-    final fingerprint = _calculateFingerprint(entityName, entityId, type, payload);
+    final fingerprint =
+        _calculateFingerprint(entityName, entityId, type, payload);
+    _log('Enqueueing $type for $entityName:$entityId');
 
-    final existing = await _repository.getPendingOperationByEntity(entityName, entityId);
-    
+    final existing =
+        await _repository.getPendingOperationByEntity(entityName, entityId);
+
     if (existing != null) {
       if (existing.type == type) {
         final mergedPayload = {...existing.payload, ...payload};
-        final newFingerprint = _calculateFingerprint(entityName, entityId, type, mergedPayload);
-        
+        final newFingerprint =
+            _calculateFingerprint(entityName, entityId, type, mergedPayload);
+
         await _repository.updateOperation(existing.copyWith(
           payload: mergedPayload,
           updatedAt: DateTime.now(),
@@ -53,7 +63,8 @@ class SyncQueueService {
           status: SyncStatus.pending,
           updatedAt: DateTime.now(),
           priority: 1,
-          fingerprint: _calculateFingerprint(entityName, entityId, SyncOperationType.delete, {}),
+          fingerprint: _calculateFingerprint(
+              entityName, entityId, SyncOperationType.delete, {}),
         ));
         _requestAndScheduleSync();
         return;
@@ -90,7 +101,7 @@ class SyncQueueService {
       unawaited(SyncManager.instance.runIfRequested());
     }
   }
-  
+
   Future<List<SyncOperation>> getPending() async {
     return _repository.getOperationsByStatus([
       SyncStatus.pending,
@@ -113,14 +124,16 @@ class SyncQueueService {
     }
   }
 
-  Future<void> flushPendingLocalWrites() async {}
-  
+  Future<void> flushPendingLocalWrites() async {
+    _log('Flushing local writes (WAL checkpoint simulation)');
+  }
+
   Future<List<SyncOperation>> getAll() => _repository.getAllOperations();
-  
+
   Future<void> updateStatus(
-    SyncOperation operation, 
+    SyncOperation operation,
     SyncStatus status, {
-    String? error, 
+    String? error,
     String? conflictReason,
     int? remoteVersion,
   }) async {
@@ -138,7 +151,9 @@ class SyncQueueService {
       conflictReason: conflictReason,
       remoteVersion: remoteVersion ?? operation.remoteVersion,
       updatedAt: DateTime.now(),
-      attemptCount: status == SyncStatus.failed ? operation.attemptCount + 1 : operation.attemptCount,
+      attemptCount: status == SyncStatus.failed
+          ? operation.attemptCount + 1
+          : operation.attemptCount,
       retryDelaySeconds: nextRetryDelay,
     ));
   }
@@ -148,7 +163,7 @@ class SyncQueueService {
   Future<void> retryOperation(String id) async {
     final all = await _repository.getAllOperations();
     final op = all.firstWhere((o) => o.id == id);
-    
+
     if (op.status != SyncStatus.failed && op.status != SyncStatus.conflict) {
       return;
     }
@@ -162,7 +177,8 @@ class SyncQueueService {
   }
 
   Future<void> retryAllFailed() async {
-    final failed = await _repository.getOperationsByStatus([SyncStatus.failed, SyncStatus.conflict]);
+    final failed = await _repository
+        .getOperationsByStatus([SyncStatus.failed, SyncStatus.conflict]);
     for (final op in failed) {
       await _repository.updateOperation(op.copyWith(
         status: SyncStatus.pending,
@@ -181,7 +197,7 @@ class SyncQueueService {
   Future<void> resolveConflictUseLocal(String id) async {
     final all = await _repository.getAllOperations();
     final op = all.firstWhere((o) => o.id == id);
-    
+
     if (op.status != SyncStatus.conflict) return;
 
     await _repository.updateOperation(op.copyWith(
@@ -196,7 +212,7 @@ class SyncQueueService {
   Future<void> resolveConflictUseRemote(String id) async {
     final all = await _repository.getAllOperations();
     final op = all.firstWhere((o) => o.id == id);
-    
+
     if (op.status != SyncStatus.conflict) return;
 
     await _repository.deleteOperation(id);
@@ -204,7 +220,8 @@ class SyncQueueService {
   }
 
   Future<void> clearRejected() async {
-    await _repository.getOperationsByStatus([SyncStatus.rejected]).then((ops) async {
+    await _repository
+        .getOperationsByStatus([SyncStatus.rejected]).then((ops) async {
       for (final op in ops) {
         await _repository.deleteOperation(op.id);
       }

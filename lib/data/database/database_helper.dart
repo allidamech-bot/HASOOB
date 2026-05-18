@@ -63,7 +63,10 @@ class DBHelper {
   static Future<Database> database() async {
     try {
       // NEW: Ensure databaseFactory is initialized for web/desktop platforms
-      if (kIsWeb || defaultTargetPlatform == TargetPlatform.windows || defaultTargetPlatform == TargetPlatform.linux || defaultTargetPlatform == TargetPlatform.macOS) {
+      if (kIsWeb ||
+          defaultTargetPlatform == TargetPlatform.windows ||
+          defaultTargetPlatform == TargetPlatform.linux ||
+          defaultTargetPlatform == TargetPlatform.macOS) {
         if (!DatabaseInitializer.isInitialized) {
           debugPrint('[DBHelper] Awaiting DatabaseInitializer to complete...');
           await DatabaseInitializer.initializeDatabase(); // This is idempotent
@@ -1492,7 +1495,7 @@ class DBHelper {
     });
   }
 
-  static Future<void> sellProduct({
+  static Future<int> sellProduct({
     required String businessId,
     required String productId,
     required int qty,
@@ -1502,6 +1505,7 @@ class DBHelper {
     String? currencyCode,
   }) async {
     final db = await database();
+    int saleRecordId = 0;
 
     await db.transaction((txn) async {
       await _ensureDefaultAccounts(txn, businessId);
@@ -1611,7 +1615,7 @@ class DBHelper {
         });
       }
 
-      final saleRecordId = await txn.insert('sales_records', {
+      saleRecordId = await txn.insert('sales_records', {
         'businessId': businessId,
         'product_id': productId,
         'product_name': productName,
@@ -1641,6 +1645,7 @@ class DBHelper {
         'date': transactionDate,
       });
     });
+    return saleRecordId;
   }
 
   static Future<void> _recordProductMovement(

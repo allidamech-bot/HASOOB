@@ -27,11 +27,13 @@ class CloudSyncService implements SyncService {
       final code = error.code;
       final message = error.message;
       debugPrint('[CloudSyncService] $source failure ($code): $message');
-      
+
       if (code == 'permission-denied') {
-        debugPrint('[CloudSyncService] Diagnostic: User may lack Firestore rules permission for this resource.');
+        debugPrint(
+            '[CloudSyncService] Diagnostic: User may lack Firestore rules permission for this resource.');
       } else if (code == 'unavailable') {
-        debugPrint('[CloudSyncService] Diagnostic: Firestore service is unavailable (offline or service issue).');
+        debugPrint(
+            '[CloudSyncService] Diagnostic: Firestore service is unavailable (offline or service issue).');
       }
     } else {
       debugPrint('[CloudSyncService] $source unexpected error: $error');
@@ -57,7 +59,11 @@ class CloudSyncService implements SyncService {
       _firestore.collection('users').doc(uid).collection('customers');
 
   DocumentReference<Map<String, dynamic>> _businessProfileRef(String uid) =>
-      _firestore.collection('users').doc(uid).collection('meta').doc('business_profile');
+      _firestore
+          .collection('users')
+          .doc(uid)
+          .collection('meta')
+          .doc('business_profile');
 
   CollectionReference<Map<String, dynamic>> _quotationsRef(String uid) =>
       _firestore.collection('users').doc(uid).collection('quotations');
@@ -110,8 +116,15 @@ class CloudSyncService implements SyncService {
         return upsertPayment(data);
       case 'product_movements':
         return upsertProductMovement(data);
+      case 'sales_records':
+        return addSaleRecord(data);
+      case 'journal_entries':
+        return addJournalEntry(data);
+      case 'accounts':
+        return syncAccounts([data]);
       default:
-        throw UnimplementedError('Upsert for entity $entityName not implemented');
+        throw UnimplementedError(
+            'Upsert for entity $entityName not implemented');
     }
   }
 
@@ -124,8 +137,15 @@ class CloudSyncService implements SyncService {
         return deleteCustomer(id);
       case 'invoices':
         return deleteInvoice(id);
+      case 'quotations':
+        final uid = _uid;
+        if (uid == null || id.isEmpty) return;
+        return _quotationsRef(uid).doc(id).delete();
+      case 'payments':
+        return _paymentsRef(_uid!).doc(id).delete();
       default:
-        throw UnimplementedError('Delete for entity $entityName not implemented');
+        throw UnimplementedError(
+            'Delete for entity $entityName not implemented');
     }
   }
 
@@ -159,7 +179,8 @@ class CloudSyncService implements SyncService {
   }
 
   @override
-  Future<Map<String, dynamic>?> getRemoteData(String entityName, String id) async {
+  Future<Map<String, dynamic>?> getRemoteData(
+      String entityName, String id) async {
     final uid = _uid;
     if (uid == null || id.isEmpty) return null;
 
@@ -206,9 +227,9 @@ class CloudSyncService implements SyncService {
     }
 
     await _productsRef(uid).doc(productId).set(
-      _ownedPayload(uid, data, id: productId),
-      SetOptions(merge: true),
-    );
+          _ownedPayload(uid, data, id: productId),
+          SetOptions(merge: true),
+        );
   }
 
   Future<void> deleteProduct(String id) async {
@@ -226,16 +247,17 @@ class CloudSyncService implements SyncService {
 
     final customerId = data['id']?.toString();
     if (customerId == null || customerId.isEmpty) {
-      debugPrint('CloudSyncService.upsertCustomer skipped: missing customer id');
+      debugPrint(
+          'CloudSyncService.upsertCustomer skipped: missing customer id');
       return;
     }
 
     final payload = _ownedPayload(uid, data, id: customerId);
 
     await _customersRef(uid).doc(customerId).set(
-      payload,
-      SetOptions(merge: true),
-    );
+          payload,
+          SetOptions(merge: true),
+        );
   }
 
   Future<void> deleteCustomer(String id) async {
@@ -257,10 +279,16 @@ class CloudSyncService implements SyncService {
       return;
     }
 
-    await _invoicesRef(uid).doc(invoiceId).set(
-      _ownedPayload(uid, data, id: invoiceId),
-      SetOptions(merge: true),
-    );
+    final payload = _ownedPayload(uid, data, id: invoiceId);
+    await _invoicesRef(uid)
+        .doc(invoiceId)
+        .set(payload, SetOptions(merge: true));
+
+    // If payload contains items, sync them too
+    if (data.containsKey('items') && data['items'] is List) {
+      await upsertInvoiceItems(
+          invoiceId, List<Map<String, dynamic>>.from(data['items']));
+    }
   }
 
   Future<void> deleteInvoice(String id) async {
@@ -296,7 +324,8 @@ class CloudSyncService implements SyncService {
 
     final quotationId = data['id']?.toString();
     if (quotationId == null || quotationId.isEmpty) {
-      debugPrint('CloudSyncService.upsertQuotation skipped: missing quotation id');
+      debugPrint(
+          'CloudSyncService.upsertQuotation skipped: missing quotation id');
       return;
     }
 
@@ -304,9 +333,9 @@ class CloudSyncService implements SyncService {
       ..['updated_at'] = DateTime.now().toIso8601String();
 
     await _quotationsRef(uid).doc(quotationId).set(
-      payload,
-      SetOptions(merge: true),
-    );
+          payload,
+          SetOptions(merge: true),
+        );
 
     if (items.isNotEmpty) {
       final batch = _firestore.batch();
@@ -381,10 +410,10 @@ class CloudSyncService implements SyncService {
     final paymentId = data['id']?.toString();
     if (paymentId == null || paymentId.isEmpty) return;
     await _paymentsRef(uid).doc(paymentId).set(
-      _ownedPayload(uid, data, id: paymentId)
-        ..['updated_at'] = DateTime.now().toIso8601String(),
-      SetOptions(merge: true),
-    );
+          _ownedPayload(uid, data, id: paymentId)
+            ..['updated_at'] = DateTime.now().toIso8601String(),
+          SetOptions(merge: true),
+        );
   }
 
   Future<void> upsertProductMovement(Map<String, dynamic> data) async {
@@ -393,10 +422,10 @@ class CloudSyncService implements SyncService {
     final movementId = data['id']?.toString();
     if (movementId == null || movementId.isEmpty) return;
     await _productMovementsRef(uid).doc(movementId).set(
-      _ownedPayload(uid, data, id: movementId)
-        ..['updated_at'] = DateTime.now().toIso8601String(),
-      SetOptions(merge: true),
-    );
+          _ownedPayload(uid, data, id: movementId)
+            ..['updated_at'] = DateTime.now().toIso8601String(),
+          SetOptions(merge: true),
+        );
   }
 
   Future<void> addSaleRecord(Map<String, dynamic> data) async {
@@ -408,9 +437,9 @@ class CloudSyncService implements SyncService {
 
     if (saleId != null && saleId.isNotEmpty) {
       await _salesRecordsRef(uid).doc(saleId).set(
-        payload,
-        SetOptions(merge: true),
-      );
+            payload,
+            SetOptions(merge: true),
+          );
       return;
     }
 
@@ -426,9 +455,9 @@ class CloudSyncService implements SyncService {
 
     if (journalId != null && journalId.isNotEmpty) {
       await _journalEntriesRef(uid).doc(journalId).set(
-        payload,
-        SetOptions(merge: true),
-      );
+            payload,
+            SetOptions(merge: true),
+          );
       return;
     }
 
@@ -459,7 +488,9 @@ class CloudSyncService implements SyncService {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _productsRef(uid).where('businessId', isEqualTo: businessId).get();
+    final snapshot = await _productsRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .get();
 
     return snapshot.docs.map((doc) {
       final data = doc.data();
@@ -474,7 +505,9 @@ class CloudSyncService implements SyncService {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _customersRef(uid).where('businessId', isEqualTo: businessId).get();
+    final snapshot = await _customersRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .get();
 
     return snapshot.docs.map((doc) {
       final data = doc.data();
@@ -489,7 +522,9 @@ class CloudSyncService implements SyncService {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _invoicesRef(uid).where('businessId', isEqualTo: businessId).get();
+    final snapshot = await _invoicesRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .get();
 
     return snapshot.docs.map((doc) {
       final data = doc.data();
@@ -518,7 +553,9 @@ class CloudSyncService implements SyncService {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _quotationsRef(uid).where('businessId', isEqualTo: businessId).get();
+    final snapshot = await _quotationsRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {
@@ -528,7 +565,8 @@ class CloudSyncService implements SyncService {
     }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchQuotationItems(String businessId) async {
+  Future<List<Map<String, dynamic>>> fetchQuotationItems(
+      String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
@@ -545,7 +583,8 @@ class CloudSyncService implements SyncService {
     }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchInvoiceItems(String businessId) async {
+  Future<List<Map<String, dynamic>>> fetchInvoiceItems(
+      String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
@@ -566,7 +605,9 @@ class CloudSyncService implements SyncService {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _paymentsRef(uid).where('businessId', isEqualTo: businessId).get();
+    final snapshot = await _paymentsRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {
@@ -576,11 +617,14 @@ class CloudSyncService implements SyncService {
     }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchProductMovements(String businessId) async {
+  Future<List<Map<String, dynamic>>> fetchProductMovements(
+      String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _productMovementsRef(uid).where('businessId', isEqualTo: businessId).get();
+    final snapshot = await _productMovementsRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {
@@ -635,13 +679,16 @@ class CloudSyncService implements SyncService {
     });
   }
 
-  Stream<Map<String, dynamic>?> watchInvoice(String invoiceId, String businessId) {
+  Stream<Map<String, dynamic>?> watchInvoice(
+      String invoiceId, String businessId) {
     final uid = _uid;
     if (uid == null || invoiceId.trim().isEmpty) {
       return Stream.value(null);
     }
 
-    return _invoicesRef(uid).doc(invoiceId).snapshots()
+    return _invoicesRef(uid)
+        .doc(invoiceId)
+        .snapshots()
         .handleError((e) => _logCloudError('watchInvoice', e))
         .map((snapshot) {
       if (!snapshot.exists) return null;
@@ -651,7 +698,8 @@ class CloudSyncService implements SyncService {
     });
   }
 
-  Stream<List<Map<String, dynamic>>> watchInvoiceItems(String invoiceId, String businessId) {
+  Stream<List<Map<String, dynamic>>> watchInvoiceItems(
+      String invoiceId, String businessId) {
     final uid = _uid;
     if (uid == null || invoiceId.trim().isEmpty) {
       return Stream.value(const []);
@@ -761,7 +809,9 @@ class CloudSyncService implements SyncService {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _accountsRef(uid).where('businessId', isEqualTo: businessId).get();
+    final snapshot = await _accountsRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {
@@ -771,11 +821,14 @@ class CloudSyncService implements SyncService {
     }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchSalesRecords(String businessId) async {
+  Future<List<Map<String, dynamic>>> fetchSalesRecords(
+      String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _salesRecordsRef(uid).where('businessId', isEqualTo: businessId).get();
+    final snapshot = await _salesRecordsRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {
@@ -785,11 +838,14 @@ class CloudSyncService implements SyncService {
     }).toList();
   }
 
-  Future<List<Map<String, dynamic>>> fetchJournalEntries(String businessId) async {
+  Future<List<Map<String, dynamic>>> fetchJournalEntries(
+      String businessId) async {
     final uid = _uid;
     if (uid == null) return [];
 
-    final snapshot = await _journalEntriesRef(uid).where('businessId', isEqualTo: businessId).get();
+    final snapshot = await _journalEntriesRef(uid)
+        .where('businessId', isEqualTo: businessId)
+        .get();
     return snapshot.docs.map((doc) {
       final data = doc.data();
       return {

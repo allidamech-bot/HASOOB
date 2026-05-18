@@ -34,7 +34,8 @@ class ProductRepository {
   @visibleForTesting
   static set mockCloudSync(CloudSyncService? mock) => _mockCloudSync = mock;
 
-  CloudSyncService get _cloudSync => _mockCloudSync ?? CloudSyncService.instance;
+  CloudSyncService get _cloudSync =>
+      _mockCloudSync ?? CloudSyncService.instance;
 
   final _localChanges = StreamController<void>.broadcast();
 
@@ -100,7 +101,7 @@ class ProductRepository {
   Future<void> addProduct(String businessId, ProductModel product) async {
     debugPrint('[ProductRepository] addProduct started for ${product.id}');
     final productWithBusiness = product.copyWith(businessId: businessId);
-    
+
     debugPrint('[ProductRepository] Inserting into local DB...');
     await DBHelper.insertProduct(productWithBusiness.toMap());
     debugPrint('[ProductRepository] Local DB insert successful');
@@ -185,7 +186,7 @@ class ProductRepository {
     String? saleNote,
     String? currencyCode,
   }) async {
-    await DBHelper.sellProduct(
+    final saleId = await DBHelper.sellProduct(
       businessId: businessId,
       productId: productId,
       qty: qty,
@@ -194,6 +195,29 @@ class ProductRepository {
       saleNote: saleNote,
       currencyCode: currencyCode,
     );
+
+    // Enqueue the sale record for sync
+    final saleData = await DBHelper.getSalesRecords(businessId);
+    final saleRecord = saleData.firstWhere((s) => s['id'] == saleId);
+
+    await SyncQueueService.instance.enqueue(
+      entityName: 'sales_records',
+      entityId: saleId.toString(),
+      type: SyncOperationType.create,
+      payload: saleRecord,
+    );
+
+    // Enqueue the updated product state for sync
+    final updatedProduct = await getProductById(businessId, productId);
+    if (updatedProduct != null) {
+      await SyncQueueService.instance.enqueue(
+        entityName: 'products',
+        entityId: productId,
+        type: SyncOperationType.update,
+        payload: updatedProduct.toMap(),
+      );
+    }
+
     _notifyChange();
   }
 
@@ -213,6 +237,18 @@ class ProductRepository {
       newExtraCosts: newExtraCosts,
       reason: reason,
     );
+
+    // Enqueue updated product state
+    final updatedProduct = await getProductById(businessId, productId);
+    if (updatedProduct != null) {
+      await SyncQueueService.instance.enqueue(
+        entityName: 'products',
+        entityId: productId,
+        type: SyncOperationType.update,
+        payload: updatedProduct.toMap(),
+      );
+    }
+
     _notifyChange();
   }
 
