@@ -37,8 +37,11 @@ class FirebaseBootstrap {
     Object? selectedOptions;
     try {
       selectedOptions = DefaultFirebaseOptions.currentPlatform;
+      debugPrint(
+          '[Startup][Firebase] selectedOptions runtimeType: ${selectedOptions.runtimeType}');
     } catch (e, st) {
-      debugPrint('[Startup][Firebase] currentPlatform failed: $e');
+      debugPrint(
+          '[Startup][Firebase] FATAL: currentPlatform selection failed: $e');
       return FirebaseBootstrapResult(
         isConfigured: false,
         message: 'Firebase initialization failed: currentPlatform error',
@@ -51,7 +54,18 @@ class FirebaseBootstrap {
       );
     }
 
-    final missingFields = DefaultFirebaseOptions.missingRequiredFields(selectedOptions);
+    if (selectedOptions == null) {
+      debugPrint('[Startup][Firebase] FATAL: selectedOptions is null');
+      return FirebaseBootstrapResult(
+        isConfigured: false,
+        message: 'Firebase initialization skipped: platform options are null',
+        selectedPlatform: selectedPlatform,
+        webConfigExists: webConfigExists,
+      );
+    }
+
+    final missingFields =
+        DefaultFirebaseOptions.missingRequiredFields(selectedOptions);
     _logMissingFields(missingFields);
 
     final configDiagnostics = _captureConfigDiagnostics(selectedOptions);
@@ -68,10 +82,34 @@ class FirebaseBootstrap {
     }
 
     try {
-      if (Firebase.apps.isEmpty) {
+      // SAFARI FIX: Use robust access for Firebase.apps.
+      // In some minified environments, property access on the Firebase global can throw.
+      bool alreadyInitialized = false;
+      try {
+        alreadyInitialized = Firebase.apps.isNotEmpty;
+      } catch (e) {
+        debugPrint(
+            '[Startup][Firebase] Warning: Could not check Firebase.apps: $e');
+      }
+
+      if (!alreadyInitialized) {
+        debugPrint('[Startup][Firebase] Calling Firebase.initializeApp...');
+
+        // SAFARI FIX: Avoid unsafe subtype cast 'as FirebaseOptions'.
+        // If minification causes NV (FirebaseOptions) to not match the expected NV,
+        // we use dynamic to bypass the DDC/dart2js subtype check while maintaining structure.
+        FirebaseOptions? optionsToUse;
+        if (selectedOptions is FirebaseOptions) {
+          optionsToUse = selectedOptions;
+        } else {
+          debugPrint(
+              '[Startup][Firebase] Type mismatch detected (likely minification). Using dynamic fallback.');
+        }
+
         await Firebase.initializeApp(
-          options: selectedOptions as FirebaseOptions,
+          options: optionsToUse ?? (selectedOptions as dynamic),
         );
+        debugPrint('[Startup][Firebase] Firebase.initializeApp successful.');
       }
 
       return FirebaseBootstrapResult(
@@ -164,4 +202,3 @@ class FirebaseBootstrap {
     }
   }
 }
-

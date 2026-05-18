@@ -50,7 +50,7 @@ Future<void> main() async {
     debugPrint('---------------------------------------------------------');
     // Returning true prevents the error from being reported to the console twice
     // but in some web environments we want it to propagate for browser devtools.
-    return false; 
+    return false;
   };
 
   try {
@@ -79,7 +79,8 @@ Future<void> main() async {
     // 6. Fast-track Firebase initialization (guarded)
     FirebaseBootstrapResult firebaseResult;
     try {
-      firebaseResult = await FirebaseBootstrap.initialize().timeout(const Duration(seconds: 5));
+      firebaseResult = await FirebaseBootstrap.initialize()
+          .timeout(const Duration(seconds: 5));
     } catch (e) {
       firebaseResult = FirebaseBootstrapResult(
         isConfigured: false,
@@ -89,12 +90,18 @@ Future<void> main() async {
       );
     }
 
+    // 7. Initialize providers with lazy creation.
+    // We avoid accessing AuthService.instance directly here because its
+    // constructor may crash if Firebase initialization failed.
     runApp(
       MultiProvider(
         providers: [
-          Provider<AuthService>.value(value: AuthService.instance),
+          // create: (_) => ... makes initialization lazy, preventing a crash
+          // during the main bootstrap sequence.
+          Provider<AuthService>(create: (_) => AuthService.instance),
           Provider<ProductRepository>(create: (_) => ProductRepository()),
-          ChangeNotifierProvider<SyncManager>.value(value: SyncManager.instance),
+          ChangeNotifierProvider<SyncManager>.value(
+              value: SyncManager.instance),
         ],
         child: HasoobApp(
           firebaseResult: firebaseResult,
@@ -132,10 +139,11 @@ class _HasoobAppState extends State<HasoobApp> {
   @override
   void initState() {
     super.initState();
-    
+
     // 7. Post-frame initialization: Move heavy work after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      debugPrint('[AppLifecycle] First frame rendered, deferred startup initiated.');
+      debugPrint(
+          '[AppLifecycle] First frame rendered, deferred startup initiated.');
       _finishInitialization();
     });
   }
@@ -166,7 +174,8 @@ class _HasoobAppState extends State<HasoobApp> {
       child: AppLocaleControllerScope(
         controller: widget.localeController,
         child: AnimatedBuilder(
-          animation: Listenable.merge([widget.themeController, widget.localeController]),
+          animation: Listenable.merge(
+              [widget.themeController, widget.localeController]),
           builder: (context, _) {
             final locale = widget.localeController.locale;
             Intl.defaultLocale = (locale ?? const Locale('ar')).languageCode;
@@ -174,7 +183,8 @@ class _HasoobAppState extends State<HasoobApp> {
             return MaterialApp(
               key: ValueKey(locale?.languageCode ?? 'ar'),
               debugShowCheckedModeBanner: false,
-              onGenerateTitle: (context) => AppLocalizations.of(context)!.appTitle,
+              onGenerateTitle: (context) =>
+                  AppLocalizations.of(context)!.appTitle,
               locale: locale,
               supportedLocales: AppLocalizations.supportedLocales,
               localizationsDelegates: const [
@@ -228,16 +238,23 @@ class _StartupErrorApp extends StatelessWidget {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.error_outline_rounded, color: Colors.red, size: 64),
+                const Icon(Icons.error_outline_rounded,
+                    color: Colors.red, size: 64),
                 const SizedBox(height: 24),
                 const Text(
                   'Startup Failure',
-                  style: TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
                 Text(
                   error,
-                  style: const TextStyle(color: Colors.white70, fontSize: 14, fontFamily: 'monospace'),
+                  style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 14,
+                      fontFamily: 'monospace'),
                   textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 32),
@@ -257,7 +274,9 @@ class _StartupErrorApp extends StatelessWidget {
                   const SizedBox(height: 16),
                   Text(
                     'Try refreshing the page or using a different browser.',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.5), fontSize: 12),
+                    style: TextStyle(
+                        color: Colors.white.withValues(alpha: 0.5),
+                        fontSize: 12),
                   ),
                 ],
               ],
