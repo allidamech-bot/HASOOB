@@ -81,10 +81,18 @@ class SyncManager extends ChangeNotifier {
       return;
     }
 
+    if (!_isInitialized) {
+      _syncRequested = true;
+      return;
+    }
+
     try {
       final now = DateTime.now();
-      final isThrottled = !force && !_isTestMode && _lastSyncTime != null && now.difference(_lastSyncTime!).inSeconds < 15;
-      
+      final isThrottled = !force &&
+          !_isTestMode &&
+          _lastSyncTime != null &&
+          now.difference(_lastSyncTime!).inSeconds < 15;
+
       if (isThrottled) {
         debugPrint('[Sync] sync throttled');
         return;

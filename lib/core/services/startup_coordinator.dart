@@ -34,7 +34,8 @@ class StartupCoordinator extends ChangeNotifier {
   List<String> get logs => List.unmodifiable(_logs);
 
   void _log(String message) {
-    final timestamp = DateTime.now().toIso8601String().split('T').last.substring(0, 8);
+    final timestamp =
+        DateTime.now().toIso8601String().split('T').last.substring(0, 8);
     final logMsg = '[$timestamp] $message';
     _logs.add(logMsg);
     debugPrint('[StartupCoordinator] $message');
@@ -49,7 +50,8 @@ class StartupCoordinator extends ChangeNotifier {
     _isInitialized = true;
     _status = StartupStatus.initializing;
     _firebaseResult = initialFirebaseResult;
-    _log('Deferred startup initiated. Firebase configured: ${initialFirebaseResult.isConfigured}');
+    _log(
+        'Deferred startup initiated. Firebase configured: ${initialFirebaseResult.isConfigured}');
 
     // We run the rest of the initialization after a short delay to ensure first frame is rendered
     // and to avoid blocking the UI thread on heavy tasks.
@@ -62,20 +64,31 @@ class StartupCoordinator extends ChangeNotifier {
       // NEW: 1. Database Initialization (moved from main.dart)
       await _guardedTask('Database Init', () async {
         await DatabaseInitializer.initializeDatabase();
-        _log('Database Init: isInitialized = ${DatabaseInitializer.isInitialized}');
+        _log(
+            'Database Init: isInitialized = ${DatabaseInitializer.isInitialized}');
       });
 
       // 2. Connectivity (Non-critical)
       await _guardedTask('Connectivity', () async {
-        await ConnectivityService.instance.initialize().timeout(const Duration(seconds: 5));
+        await ConnectivityService.instance
+            .initialize()
+            .timeout(const Duration(seconds: 5));
       });
 
       // 3. Sync & Services (Critical for cloud functionality, but non-blocking for UI)
       if (_firebaseResult?.isConfigured == true) {
-        _log('Sync & Auth initialization started (Firebase enabled).');
+        if (_firebaseResult?.isConfigComplete == true) {
+          _log('Firebase app initialized and fully configured. Sync allowed.');
+        } else {
+          _log(
+              'Firebase app initialized (Degraded/Missing non-critical fields). Sync allowed.');
+        }
+
         await _guardedTask('Sync & Auth', () async {
           // Initialize SyncManager
-          await SyncManager.instance.initialize().timeout(const Duration(seconds: 10));
+          await SyncManager.instance
+              .initialize()
+              .timeout(const Duration(seconds: 10));
 
           // Initialize SmartSync
           SmartSyncTriggerService.init(SyncManager.instance);
@@ -88,9 +101,6 @@ class StartupCoordinator extends ChangeNotifier {
               });
             });
           }
-
-          // Initial sync run
-          unawaited(SyncManager.instance.runSync());
 
           // Setup Auth listener for sync
           AuthService.instance.authStateChanges().listen((user) {
@@ -108,10 +118,14 @@ class StartupCoordinator extends ChangeNotifier {
             _log('Auth listener error: $e');
           });
         });
-        _log('Sync & Auth initialization completed.');
       } else {
-        _log('Sync & Auth initialization skipped: Firebase not configured. Running in degraded mode for cloud features.');
-        _status = StartupStatus.degraded; // Set status to degraded if Firebase is not configured for cloud features.
+        _log('Sync & Auth blocked: Firebase app initialization failed.');
+      }
+
+      if (_firebaseResult?.isConfigured == true &&
+          _firebaseResult?.isConfigComplete == false) {
+        _status = StartupStatus
+            .degraded; // Set status to degraded if Firebase is not configured for cloud features.
       }
 
       if (_status == StartupStatus.initializing) {
@@ -136,7 +150,8 @@ class StartupCoordinator extends ChangeNotifier {
       _log('Task failed: $name. Error: $e');
       debugPrint(st.toString());
       // A failed guarded task generally means degraded status, not necessarily fatal for entire app.
-      if (_status != StartupStatus.failed) { // Only change to degraded if not already marked as fatal.
+      if (_status != StartupStatus.failed) {
+        // Only change to degraded if not already marked as fatal.
         _status = StartupStatus.degraded;
       }
     }

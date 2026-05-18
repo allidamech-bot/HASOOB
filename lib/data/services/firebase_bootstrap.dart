@@ -6,6 +6,7 @@ import '../../firebase_options.dart';
 class FirebaseBootstrapResult {
   const FirebaseBootstrapResult({
     required this.isConfigured,
+    this.isConfigComplete = false,
     required this.message,
     required this.selectedPlatform,
     required this.webConfigExists,
@@ -17,6 +18,7 @@ class FirebaseBootstrapResult {
   });
 
   final bool isConfigured;
+  final bool isConfigComplete;
   final String message;
   final String selectedPlatform;
   final bool webConfigExists;
@@ -70,17 +72,6 @@ class FirebaseBootstrap {
 
     final configDiagnostics = _captureConfigDiagnostics(selectedOptions);
 
-    if (missingFields.isNotEmpty) {
-      return FirebaseBootstrapResult(
-        isConfigured: false,
-        message: 'Firebase initialization skipped: missing required fields',
-        selectedPlatform: selectedPlatform,
-        webConfigExists: webConfigExists,
-        missingFields: missingFields,
-        configDiagnostics: configDiagnostics,
-      );
-    }
-
     try {
       // SAFARI FIX: Use robust access for Firebase.apps.
       // In some minified environments, property access on the Firebase global can throw.
@@ -114,6 +105,7 @@ class FirebaseBootstrap {
 
       return FirebaseBootstrapResult(
         isConfigured: true,
+        isConfigComplete: missingFields.isEmpty,
         message: '',
         selectedPlatform: selectedPlatform,
         webConfigExists: webConfigExists,
@@ -123,6 +115,7 @@ class FirebaseBootstrap {
       if (e.code == 'duplicate-app') {
         return FirebaseBootstrapResult(
           isConfigured: true,
+          isConfigComplete: missingFields.isEmpty,
           message: '',
           selectedPlatform: selectedPlatform,
           webConfigExists: webConfigExists,
@@ -134,6 +127,7 @@ class FirebaseBootstrap {
 
       return FirebaseBootstrapResult(
         isConfigured: false,
+        isConfigComplete: false,
         message: 'Firebase initialization failed: ${e.message ?? e.code}',
         selectedPlatform: selectedPlatform,
         webConfigExists: webConfigExists,
@@ -148,6 +142,7 @@ class FirebaseBootstrap {
 
       return FirebaseBootstrapResult(
         isConfigured: false,
+        isConfigComplete: false,
         message: 'Firebase initialization failed: $e',
         selectedPlatform: selectedPlatform,
         webConfigExists: webConfigExists,
