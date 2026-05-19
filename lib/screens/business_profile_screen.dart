@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../../core/business/business_context.dart';
 import '../../data/models/business_model.dart';
 import '../../data/repositories/business_profile_repository.dart';
 import '../core/app_copy.dart';
@@ -31,6 +32,8 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
   final _defaultInvoiceNotesController = TextEditingController();
   final _defaultQuotationNotesController = TextEditingController();
   final _paymentTermsController = TextEditingController();
+
+  String get _currentBusinessId => BusinessContext.businessId;
 
   Uint8List? _logoBytes;
   String? _logoPath;
@@ -111,7 +114,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
 
     try {
       await _repository.saveBusinessProfile(BusinessModel(
-        id: '', // Handled by DB for profile
+        id: _currentBusinessId,
         name: _businessNameController.text.trim(),
         tradeName: _tradeNameController.text.trim(),
         logoPath: _logoPath ?? '',
@@ -124,7 +127,7 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
         defaultInvoiceNotes: _defaultInvoiceNotesController.text.trim(),
         defaultQuotationNotes: _defaultQuotationNotesController.text.trim(),
         paymentTermsFooter: _paymentTermsController.text.trim(),
-        ownerId: '',
+        ownerId: _currentBusinessId,
         createdAt: DateTime.now(),
       ));
 

@@ -6,7 +6,9 @@ import 'package:hasoob_app/data/services/sync_engine.dart';
 import 'package:hasoob_app/data/services/sync_queue_service.dart';
 import 'package:hasoob_app/data/services/analytics_service.dart';
 import 'package:hasoob_app/data/services/firebase_backend_adapter.dart';
+import 'package:hasoob_app/data/services/cloud_sync_service.dart';
 import 'package:hasoob_app/data/repositories/sync_queue_repository.dart';
+import 'package:hasoob_app/data/database/database_helper.dart';
 import 'package:hasoob_app/data/models/sync_operation.dart';
 
 class SyncManager extends ChangeNotifier {
@@ -123,7 +125,7 @@ class SyncManager extends ChangeNotifier {
       _isCloudAvailable = true;
       _lastSyncError = null;
       notifyListeners();
-    } catch (e, stack) {
+    } catch (e) {
       debugPrint('[Sync] sync failed: $e');
       _lastSyncError = e.toString();
       if (e.toString().contains('permission-denied')) {
@@ -183,11 +185,59 @@ class SyncManager extends ChangeNotifier {
           userId: user.uid,
           role: 'owner',
         );
+        
+        // Restore business profile from cloud if local is empty
+        await _restoreBusinessProfileIfNeeded(user.uid);
+        
         await runSync();
       }
-    } catch (e, stack) {
+    } catch (e) {
       debugPrint('[Sync] onAuthenticated failed: $e');
-      debugPrint(stack.toString());
+    }
+  }
+
+  Future<void> _restoreBusinessProfileIfNeeded(String businessId) async {
+    try {
+      final localProfile = await DBHelper.getBusinessProfile(businessId);
+      final localHasData = localProfile != null && 
+          (localProfile['business_name']?.toString().trim().isNotEmpty == true ||
+           localProfile['trade_name']?.toString().trim().isNotEmpty == true ||
+           localProfile['phone']?.toString().trim().isNotEmpty == true);
+      
+      if (localHasData) {
+        debugPrint('[Sync] Local business profile exists with data, skipping cloud restore');
+        return;
+      }
+      
+      final cloudProfile = await CloudSyncService.instance.fetchBusinessProfile(businessId);
+      if (cloudProfile != null && 
+          (cloudProfile['business_name']?.toString().trim().isNotEmpty == true ||
+           cloudProfile['trade_name']?.toString().trim().isNotEmpty == true ||
+           cloudProfile['phone']?.toString().trim().isNotEmpty == true)) {
+        debugPrint('[Sync] Restoring business profile from cloud');
+        await DBHelper.saveBusinessProfile({
+          'id': '1',
+          'businessId': businessId,
+          'business_name': cloudProfile['business_name'] ?? '',
+          'trade_name': cloudProfile['trade_name'],
+          'logo_path': cloudProfile['logo_path'],
+          'phone': cloudProfile['phone'],
+          'whatsapp': cloudProfile['whatsapp'],
+          'email': cloudProfile['email'],
+          'address': cloudProfile['address'],
+          'tax_number': cloudProfile['tax_number'],
+          'registration_number': cloudProfile['registration_number'],
+          'default_invoice_notes': cloudProfile['default_invoice_notes'],
+          'default_quotation_notes': cloudProfile['default_quotation_notes'],
+          'payment_terms_footer': cloudProfile['payment_terms_footer'],
+          'branch_id': cloudProfile['branch_id'],
+          'createdAt': DateTime.now().toIso8601String(),
+        });
+      } else {
+        debugPrint('[Sync] No meaningful cloud business profile to restore');
+      }
+    } catch (e) {
+      debugPrint('[Sync] Business profile restore failed: $e');
     }
   }
 
@@ -195,9 +245,8 @@ class SyncManager extends ChangeNotifier {
     try {
       await SyncQueueService.instance.recoverInterruptedProcessing();
       await runSync();
-    } catch (e, stack) {
+    } catch (e) {
       debugPrint('[Sync] onAppResumed failed: $e');
-      debugPrint(stack.toString());
     }
   }
 
@@ -207,9 +256,8 @@ class SyncManager extends ChangeNotifier {
       if (!_isRunning) {
         await runSync();
       }
-    } catch (e, stack) {
+    } catch (e) {
       debugPrint('[Sync] onAppPausing failed: $e');
-      debugPrint(stack.toString());
     }
   }
 
@@ -235,9 +283,8 @@ class SyncManager extends ChangeNotifier {
         default:
           break;
       }
-    } catch (e, stack) {
+    } catch (e) {
       debugPrint('[Sync] Lifecycle signal ($eventName) processing failed: $e');
-      debugPrint(stack.toString());
     }
   }
 

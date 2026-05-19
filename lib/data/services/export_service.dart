@@ -505,7 +505,9 @@ class ExportService {
     final dueDate = _cleanText(
       AppFormatters.dateTimeString(invoice.dueDate?.toIso8601String()),
     );
-    final notes = _cleanText(invoice.notes);
+    final invoiceNotes = _cleanText(invoice.notes);
+    final defaultNotes = _profileText(businessProfile, 'default_invoice_notes');
+    final notes = invoiceNotes.isNotEmpty ? invoiceNotes : defaultNotes;
     final paymentTermsFooter = _profileText(
       businessProfile,
       'payment_terms_footer',
@@ -623,7 +625,9 @@ class ExportService {
     final expiryDate = _cleanText(
       AppFormatters.dateTimeString(quotation.expiryDate?.toIso8601String()),
     );
-    final notes = _cleanText(quotation.notes);
+    final quotationNotes = _cleanText(quotation.notes);
+    final defaultNotes = _profileText(businessProfile, 'default_quotation_notes');
+    final notes = quotationNotes.isNotEmpty ? quotationNotes : defaultNotes;
     final paymentTermsFooter = _profileText(
       businessProfile,
       'payment_terms_footer',
