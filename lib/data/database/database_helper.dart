@@ -1383,6 +1383,17 @@ class DBHelper {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
 
+    if (branchId == null) {
+      // BranchContext not yet initialized — return all products for the business
+      // so that product lists are never empty due to timing of init().
+      return db.query(
+        'products',
+        where: 'businessId = ?',
+        whereArgs: [businessId],
+        orderBy: 'name COLLATE NOCASE ASC',
+      );
+    }
+
     return db.query(
       'products',
       where: 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
@@ -1396,11 +1407,21 @@ class DBHelper {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
 
+    if (branchId == null) {
+      // BranchContext not yet initialized — look up by id and businessId only
+      final result = await db.query(
+        'products',
+        where: 'id = ? AND businessId = ?',
+        whereArgs: [id, businessId],
+      );
+      return result.isEmpty ? null : result.first;
+    }
+
     final result = await db.query(
       'products',
       where:
           'id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
-      whereArgs: [id, businessId, branchId ?? ''],
+      whereArgs: [id, businessId, branchId],
     );
     return result.isEmpty ? null : result.first;
   }
@@ -3188,6 +3209,15 @@ class DBHelper {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
 
+    if (branchId == null) {
+      return db.query(
+        'accounts',
+        where: 'businessId = ?',
+        whereArgs: [businessId],
+        orderBy: 'code ASC',
+      );
+    }
+
     return db.query(
       'accounts',
       where: 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
@@ -3200,6 +3230,19 @@ class DBHelper {
       String businessId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
+
+    if (branchId == null) {
+      return db.rawQuery('''
+        SELECT j.*, 
+               a1.name AS debit_account, 
+               a2.name AS credit_account
+        FROM journal_entries j
+        JOIN accounts a1 ON j.debit_account_id = a1.id
+        JOIN accounts a2 ON j.credit_account_id = a2.id
+        WHERE j.businessId = ?
+        ORDER BY j.date DESC
+      ''', [businessId]);
+    }
 
     return db.rawQuery('''
       SELECT j.*, 
@@ -3218,6 +3261,15 @@ class DBHelper {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
 
+    if (branchId == null) {
+      return db.query(
+        'sales_records',
+        where: 'businessId = ?',
+        whereArgs: [businessId],
+        orderBy: 'date DESC',
+      );
+    }
+
     return db.query(
       'sales_records',
       where: 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
@@ -3228,78 +3280,110 @@ class DBHelper {
 
   static Future<double> getTotalRealizedProfit(String businessId) async {
     final branchId = BranchContext().currentBranchId;
+    final where = branchId == null
+        ? 'businessId = ?'
+        : 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)';
+    final args = branchId == null ? [businessId] : [businessId, branchId];
     return _singleDouble(
-      'SELECT SUM(total_profit) AS total FROM sales_records WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
-      whereArgs: [businessId, branchId],
+      'SELECT SUM(total_profit) AS total FROM sales_records WHERE $where',
+      whereArgs: args,
     );
   }
 
   static Future<double> getTotalRealizedSales(String businessId) async {
     final branchId = BranchContext().currentBranchId;
+    final where = branchId == null
+        ? 'businessId = ?'
+        : 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)';
+    final args = branchId == null ? [businessId] : [businessId, branchId];
     return _singleDouble(
-      'SELECT SUM(total_sale) AS total FROM sales_records WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
-      whereArgs: [businessId, branchId],
+      'SELECT SUM(total_sale) AS total FROM sales_records WHERE $where',
+      whereArgs: args,
     );
   }
 
   static Future<int> getSalesCount(String businessId) async {
     final branchId = BranchContext().currentBranchId;
+    final where = branchId == null
+        ? 'businessId = ?'
+        : 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)';
+    final args = branchId == null ? [businessId] : [businessId, branchId];
     return _singleInt(
-      'SELECT COUNT(*) AS count FROM sales_records WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
-      whereArgs: [businessId, branchId],
+      'SELECT COUNT(*) AS count FROM sales_records WHERE $where',
+      whereArgs: args,
     );
   }
 
   static Future<double> getTotalInventoryValue(String businessId) async {
     final branchId = BranchContext().currentBranchId;
+    final where = branchId == null
+        ? 'businessId = ?'
+        : 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)';
+    final args = branchId == null ? [businessId] : [businessId, branchId];
     return _singleDouble(
       '''
       SELECT SUM((purchase_price + extra_costs) * stock_qty) AS total
       FROM products
-      WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)
+      WHERE $where
     ''',
-      whereArgs: [businessId, branchId],
+      whereArgs: args,
     );
   }
 
   static Future<double> getTotalExpectedRevenue(String businessId) async {
     final branchId = BranchContext().currentBranchId;
+    final where = branchId == null
+        ? 'businessId = ?'
+        : 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)';
+    final args = branchId == null ? [businessId] : [businessId, branchId];
     return _singleDouble(
       '''
       SELECT SUM(selling_price * stock_qty) AS total
       FROM products
-      WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)
+      WHERE $where
     ''',
-      whereArgs: [businessId, branchId],
+      whereArgs: args,
     );
   }
 
   static Future<double> getTotalExpectedProfit(String businessId) async {
     final branchId = BranchContext().currentBranchId;
+    final where = branchId == null
+        ? 'businessId = ?'
+        : 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)';
+    final args = branchId == null ? [businessId] : [businessId, branchId];
     return _singleDouble(
       '''
       SELECT SUM((selling_price - purchase_price - extra_costs) * stock_qty) AS total
       FROM products
-      WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)
+      WHERE $where
     ''',
-      whereArgs: [businessId, branchId],
+      whereArgs: args,
     );
   }
 
   static Future<int> getProductsCount(String businessId) async {
     final branchId = BranchContext().currentBranchId;
+    final where = branchId == null
+        ? 'businessId = ?'
+        : 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)';
+    final args = branchId == null ? [businessId] : [businessId, branchId];
     return _singleInt(
-      'SELECT COUNT(*) AS count FROM products WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
-      whereArgs: [businessId, branchId],
+      'SELECT COUNT(*) AS count FROM products WHERE $where',
+      whereArgs: args,
     );
   }
 
   static Future<int> getTotalStockQty(String businessId) async {
     final branchId = BranchContext().currentBranchId;
+    final where = branchId == null
+        ? 'businessId = ?'
+        : 'businessId = ? AND (branch_id = ? OR branch_id IS NULL)';
+    final args = branchId == null ? [businessId] : [businessId, branchId];
     return _singleInt(
-      'SELECT SUM(stock_qty) AS total FROM products WHERE businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
+      'SELECT SUM(stock_qty) AS total FROM products WHERE $where',
       key: 'total',
-      whereArgs: [businessId, branchId],
+      whereArgs: args,
     );
   }
 
@@ -3307,6 +3391,16 @@ class DBHelper {
       String businessId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
+
+    if (branchId == null) {
+      return db.rawQuery('''
+        SELECT *
+        FROM products
+        WHERE businessId = ? AND stock_qty <= COALESCE(low_stock_threshold, 5)
+        ORDER BY stock_qty ASC, name COLLATE NOCASE ASC
+      ''', [businessId]);
+    }
+
     return db.rawQuery('''
       SELECT *
       FROM products
@@ -3318,6 +3412,16 @@ class DBHelper {
   static Future<int> getLowStockCount(String businessId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
+
+    if (branchId == null) {
+      final result = await db.rawQuery('''
+        SELECT COUNT(*) AS count
+        FROM products
+        WHERE businessId = ? AND stock_qty <= COALESCE(low_stock_threshold, 5)
+      ''', [businessId]);
+      return _toInt(result.first['count']);
+    }
+
     final result = await db.rawQuery('''
       SELECT COUNT(*) AS count
       FROM products
@@ -3330,9 +3434,17 @@ class DBHelper {
       String businessId, String productId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
+
+    final whereClause = branchId == null
+        ? 'product_id = ? AND businessId = ?'
+        : 'product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)';
+    final whereArgs = branchId == null
+        ? [productId, businessId]
+        : [productId, businessId, branchId];
+
     final result = await db.rawQuery(
-      'SELECT COUNT(*) AS count FROM sales_records WHERE product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
-      [productId, businessId, branchId],
+      'SELECT COUNT(*) AS count FROM sales_records WHERE $whereClause',
+      whereArgs,
     );
     return _toInt(result.first['count']);
   }
@@ -3341,9 +3453,17 @@ class DBHelper {
       String businessId, String productId) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
+
+    final whereClause = branchId == null
+        ? 'product_id = ? AND businessId = ?'
+        : 'product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)';
+    final whereArgs = branchId == null
+        ? [productId, businessId]
+        : [productId, businessId, branchId];
+
     final result = await db.rawQuery(
-      'SELECT SUM(qty) AS total FROM sales_records WHERE product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
-      [productId, businessId, branchId],
+      'SELECT SUM(qty) AS total FROM sales_records WHERE $whereClause',
+      whereArgs,
     );
     return _toInt(result.first['total']);
   }
@@ -3354,9 +3474,17 @@ class DBHelper {
   ) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
+
+    final whereClause = branchId == null
+        ? 'product_id = ? AND businessId = ?'
+        : 'product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)';
+    final whereArgs = branchId == null
+        ? [productId, businessId]
+        : [productId, businessId, branchId];
+
     final result = await db.rawQuery(
-      'SELECT SUM(total_profit) AS total FROM sales_records WHERE product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
-      [productId, businessId, branchId],
+      'SELECT SUM(total_profit) AS total FROM sales_records WHERE $whereClause',
+      whereArgs,
     );
     return _toDouble(result.first['total']);
   }
@@ -3367,9 +3495,17 @@ class DBHelper {
   ) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
+
+    final whereClause = branchId == null
+        ? 'product_id = ? AND businessId = ?'
+        : 'product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)';
+    final whereArgs = branchId == null
+        ? [productId, businessId]
+        : [productId, businessId, branchId];
+
     final result = await db.rawQuery(
-      'SELECT SUM(total_sale) AS total FROM sales_records WHERE product_id = ? AND businessId = ? AND (branch_id = ? OR branch_id IS NULL)',
-      [productId, businessId, branchId],
+      'SELECT SUM(total_sale) AS total FROM sales_records WHERE $whereClause',
+      whereArgs,
     );
     return _toDouble(result.first['total']);
   }
@@ -3380,6 +3516,16 @@ class DBHelper {
   ) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
+
+    if (branchId == null) {
+      return db.query(
+        'sales_records',
+        where: 'product_id = ? AND businessId = ?',
+        whereArgs: [productId, businessId],
+        orderBy: 'date DESC',
+      );
+    }
+
     return db.query(
       'sales_records',
       where:
@@ -3395,6 +3541,19 @@ class DBHelper {
   }) async {
     final db = await database();
     final branchId = BranchContext().currentBranchId;
+
+    if (branchId == null) {
+      return db.rawQuery('''
+        SELECT product_id, product_name, SUM(qty) AS sold_qty,
+               SUM(total_sale) AS total_sale, SUM(total_profit) AS total_profit
+        FROM sales_records
+        WHERE businessId = ?
+        GROUP BY product_id, product_name
+        ORDER BY sold_qty DESC, total_sale DESC
+        LIMIT ?
+      ''', [businessId, limit]);
+    }
+
     return db.rawQuery('''
       SELECT product_id, product_name, SUM(qty) AS sold_qty,
              SUM(total_sale) AS total_sale, SUM(total_profit) AS total_profit

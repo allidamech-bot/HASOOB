@@ -4,6 +4,8 @@ import 'package:hasoob_app/data/services/firebase_bootstrap.dart';
 import 'package:hasoob_app/data/services/sync_manager.dart';
 import 'package:hasoob_app/data/services/smart_sync_trigger_service.dart';
 import 'package:hasoob_app/data/services/auth_service.dart';
+import 'package:hasoob_app/core/business/business_context.dart';
+import 'package:hasoob_app/core/services/branch_context.dart';
 import 'package:hasoob_app/core/services/connectivity_service.dart';
 import 'package:hasoob_app/core/utils/web_utils.dart';
 import 'package:hasoob_app/data/services/database_initializer.dart'; // NEW: DatabaseInitializer import
@@ -108,6 +110,27 @@ class StartupCoordinator extends ChangeNotifier {
               _guardedTask('Auth Login Sync', () async {
                 await SyncManager.instance.onAuthenticated();
                 await SmartSyncTriggerService.instance.onAppStarted();
+
+                // Ensure branch context is initialized so product queries are branch-safe
+                try {
+                  String? resolvedBusinessId;
+                  try {
+                    resolvedBusinessId = BusinessContext.businessId;
+                  } catch (_) {
+                    resolvedBusinessId = null;
+                  }
+                  if (resolvedBusinessId == null || resolvedBusinessId.isEmpty) {
+                    resolvedBusinessId = user.uid;
+                  }
+                  if (resolvedBusinessId.isNotEmpty) {
+                    await BranchContext().init(resolvedBusinessId);
+                    _log('BranchContext initialized for $resolvedBusinessId');
+                  } else {
+                    _log('BranchContext init skipped: no businessId or uid available');
+                  }
+                } catch (e) {
+                  _log('BranchContext init skipped: $e');
+                }
               });
             } else {
               _guardedTask('Auth Logout Sync', () async {

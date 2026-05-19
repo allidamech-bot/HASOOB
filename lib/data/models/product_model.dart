@@ -64,6 +64,7 @@ class ProductModel {
   final bool requiresExpiry;
   final bool isFeatured;
   final bool isHidden;
+  final String? branchId;
 
   const ProductModel({
     required this.id,
@@ -117,6 +118,7 @@ class ProductModel {
     this.requiresExpiry = false,
     this.isFeatured = false,
     this.isHidden = false,
+    this.branchId,
   });
 
   double get landedCost => purchasePrice + extraCosts;
@@ -124,11 +126,13 @@ class ProductModel {
   double get totalStockValue => landedCost * stockQty;
   double get expectedRevenue => sellingPrice * stockQty;
   double get totalExpectedProfit => netProfit * stockQty;
-  double get marginPercentage => landedCost > 0 ? (netProfit / landedCost) * 100 : 0.0;
+  double get marginPercentage =>
+      landedCost > 0 ? (netProfit / landedCost) * 100 : 0.0;
 
   bool get isOutOfStock => stockQty <= 0;
   bool get isLowStock => stockQty <= lowStockThreshold;
-  bool get isExpired => expiryDate != null && expiryDate!.isBefore(DateTime.now());
+  bool get isExpired =>
+      expiryDate != null && expiryDate!.isBefore(DateTime.now());
 
   ProductModel copyWith({
     String? id,
@@ -182,6 +186,7 @@ class ProductModel {
     bool? requiresExpiry,
     bool? isFeatured,
     bool? isHidden,
+    String? branchId,
   }) {
     return ProductModel(
       id: id ?? this.id,
@@ -235,6 +240,7 @@ class ProductModel {
       requiresExpiry: requiresExpiry ?? this.requiresExpiry,
       isFeatured: isFeatured ?? this.isFeatured,
       isHidden: isHidden ?? this.isHidden,
+      branchId: branchId ?? this.branchId,
     );
   }
 
@@ -291,6 +297,7 @@ class ProductModel {
       'requires_expiry': requiresExpiry ? 1 : 0,
       'is_featured': isFeatured ? 1 : 0,
       'is_hidden': isHidden ? 1 : 0,
+      'branch_id': branchId,
     };
   }
 
@@ -347,6 +354,7 @@ class ProductModel {
       requiresExpiry: _toBool(map['requires_expiry'], fallback: false),
       isFeatured: _toBool(map['is_featured'], fallback: false),
       isHidden: _toBool(map['is_hidden'], fallback: false),
+      branchId: map['branch_id']?.toString(),
     );
   }
 
