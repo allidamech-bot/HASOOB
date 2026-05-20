@@ -290,29 +290,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
       slivers: [
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 110, 20, 24),
+            padding: const EdgeInsets.fromLTRB(20, 100, 20, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _heroCard(context, copy),
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
                 if (Firebase.apps.isEmpty) ...[
                   const LocalModeStatusCard(),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 16),
                 ],
                 const SyncHealthCard(),
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
                 
                 Text(
                   copy.t('overview'),
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  copy.t('overviewSubtitle'),
-                  style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 14),
-                ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 12),
                 
                 LayoutBuilder(
                   builder: (context, constraints) {
@@ -357,14 +352,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 ),
                 
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
                 Text(
                   copy.t('quickActions'),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w800),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
+                  clipBehavior: Clip.none,
                   child: Row(
                     children: [
                       _quickActionTile(
@@ -391,10 +387,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
                 _buildRestoreCard(context, copy),
                 
-                const SizedBox(height: 40),
+                const SizedBox(height: 32),
                 if (isWide)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -519,20 +515,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _quickActionTile(BuildContext context, {required IconData icon, required String title, required VoidCallback onTap}) {
-    return PremiumCard(
-      padding: EdgeInsets.zero,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(16),
-        child: Container(
-          width: 110,
-          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
-          child: Column(
-            children: [
-              _iconBox(icon, AppTheme.accentBlue),
-              const SizedBox(height: 8),
-              Text(title, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
-            ],
+    final isDark = AppTheme.isDark(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.surfaceSecondary : Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: isDark ? Colors.white.withValues(alpha: 0.1) : AppTheme.lightBorder,
+        ),
+        boxShadow: [
+          if (isDark)
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            )
+          else
+            const BoxShadow(
+              color: Color(0x0A000000),
+              blurRadius: 10,
+              offset: Offset(0, 4),
+            ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(6),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Icon(icon, color: AppTheme.accentBlue, size: 16),
+                ),
+                const SizedBox(width: 10),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                ),
+                const SizedBox(width: 4),
+              ],
+            ),
           ),
         ),
       ),
@@ -540,42 +571,45 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _heroCard(BuildContext context, AppCopy copy) {
-    return PremiumCard(
-      padding: const EdgeInsets.all(20),
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            AppTheme.accentBlue.withValues(alpha: 0.15),
+            AppTheme.accentBlue.withValues(alpha: 0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.2)),
+      ),
       child: Row(
         children: [
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.accentBlue.withValues(alpha: 0.15),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.show_chart_rounded, size: 24, color: AppTheme.accentBlue),
+          ),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.accentBlue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.2)),
-                  ),
-                  child: Text(
-                    copy.t('professionalDashboard').toUpperCase(),
-                    style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: AppTheme.accentBlue),
-                  ),
-                ),
-                const SizedBox(height: 12),
                 Text(
                   copy.t('dashboardHero'),
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, height: 1.2),
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  copy.t('professionalDashboard'),
+                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.accentBlue),
                 ),
               ],
             ),
-          ),
-          const SizedBox(width: 16),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.accentBlue.withValues(alpha: 0.1),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.bolt_rounded, size: 32, color: AppTheme.accentBlue),
           ),
         ],
       ),

@@ -38,11 +38,11 @@ class AppTheme {
   static const Color lightTextSecondary = Color(0xFF64748B);
 
   static LinearGradient premiumGradient = const LinearGradient(
-    begin: Alignment.topCenter,
-    end: Alignment.bottomCenter,
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
     colors: [
-      Color(0xF2182235), // rgba(24,34,53,0.95)
-      Color(0xF20F172A), // rgba(15,23,42,0.95)
+      Color(0xFF1E293B),
+      Color(0xFF0F172A),
     ],
   );
 

@@ -28,101 +28,138 @@ class MetricCard extends StatelessWidget {
         color: isDark ? AppTheme.surfaceSecondary : Colors.white,
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
         border: Border.all(
-          color: isDark ? AppTheme.border : AppTheme.lightBorder,
-          width: 1.5,
+          color: isDark ? color.withValues(alpha: 0.15) : AppTheme.lightBorder,
+          width: 1,
         ),
-        gradient: isDark ? AppTheme.premiumGradient : null,
+        gradient: isDark
+            ? LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  color.withValues(alpha: 0.05),
+                  AppTheme.surfaceSecondary,
+                  AppTheme.surfaceSecondary.withValues(alpha: 0.8),
+                ],
+              )
+            : null,
         boxShadow: [
           if (isDark)
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 24,
-              offset: const Offset(0, 8),
-              spreadRadius: -4,
+              color: color.withValues(alpha: 0.03),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
             )
           else
             BoxShadow(
               color: color.withValues(alpha: 0.05),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              blurRadius: 15,
+              offset: const Offset(0, 8),
             ),
         ],
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.center,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        child: Stack(
           children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: color.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(10),
-                    border: Border.all(color: color.withValues(alpha: 0.2)),
+            // Top Accent Rail
+            Positioned(
+              top: 0,
+              left: 0,
+              right: 0,
+              height: 2,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      color.withValues(alpha: 0.8),
+                      color.withValues(alpha: 0.1),
+                    ],
                   ),
-                  child: Icon(icon, color: color, size: 18),
                 ),
-                if (isDark)
-                  Container(
-                    width: 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: color,
-                      shape: BoxShape.circle,
-                      boxShadow: [
-                        BoxShadow(
-                          color: color.withValues(alpha: 0.6),
-                          blurRadius: 6,
-                          spreadRadius: 1,
+              ),
+            ),
+            // Background Glow / Halo
+            Positioned(
+              top: -20,
+              right: -20,
+              child: Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: color.withValues(alpha: 0.1),
+                ),
+              ),
+            ),
+            // Content
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Glass Icon Capsule
+                      Container(
+                        padding: const EdgeInsets.all(6),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withValues(alpha: 0.03) : color.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                            color: isDark ? Colors.white.withValues(alpha: 0.05) : color.withValues(alpha: 0.2),
+                          ),
                         ),
-                      ],
+                        child: Icon(icon, color: color, size: 16),
+                      ),
+                      if (caption != null && caption!.isNotEmpty)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: color.withValues(alpha: 0.1),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: Text(
+                            caption!,
+                            style: GoogleFonts.inter(
+                              fontSize: 9,
+                              fontWeight: FontWeight.w600,
+                              color: color.withValues(alpha: 0.9),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                  const Spacer(),
+                  Text(
+                    title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.inter(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: isDark ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
                     ),
                   ),
-              ],
-            ),
-            const Spacer(),
-            Text(
-              title,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.inter(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
-                color: isDark ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
+                  const SizedBox(height: 2),
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: AlignmentDirectional.centerStart,
+                    child: Text(
+                      value,
+                      style: GoogleFonts.inter(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w800,
+                        color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                        letterSpacing: -0.5,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 4),
-            FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: AlignmentDirectional.centerStart,
-              child: Text(
-                value,
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-                  letterSpacing: -0.5,
-                ),
-              ),
-            ),
-            if (caption != null && caption!.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text(
-                caption!,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.inter(
-                  fontSize: 10,
-                  fontWeight: FontWeight.w500,
-                  color: color.withValues(alpha: 0.8),
-                ),
-              ),
-            ],
           ],
         ),
       ),
