@@ -493,6 +493,7 @@ class ExportService {
 
     final logo = await _loadBusinessLogo(
       businessProfile?.logoPath,
+      businessProfile?.logoBase64,
     );
 
     final businessName = _businessDisplayName(businessProfile);
@@ -611,6 +612,7 @@ class ExportService {
 
     final logo = await _loadBusinessLogo(
       businessProfile?.logoPath,
+      businessProfile?.logoBase64,
     );
 
     final businessName = _businessDisplayName(businessProfile);
@@ -1400,7 +1402,16 @@ class ExportService {
     );
   }
 
-  Future<pw.MemoryImage?> _loadBusinessLogo(String? logoPath) async {
+  Future<pw.MemoryImage?> _loadBusinessLogo(String? logoPath, String? logoBase64) async {
+    try {
+      if (logoBase64 != null && logoBase64.isNotEmpty) {
+        final bytes = base64Decode(logoBase64);
+        if (bytes.isNotEmpty) {
+          return pw.MemoryImage(bytes);
+        }
+      }
+    } catch (_) {}
+
     final normalizedPath = _cleanText(logoPath);
     if (normalizedPath.isEmpty) return null;
 

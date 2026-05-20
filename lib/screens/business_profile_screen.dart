@@ -11,6 +11,7 @@ import '../core/app_theme.dart';
 
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:io' as io;
+import 'dart:convert';
 
 class BusinessProfileScreen extends StatefulWidget {
   const BusinessProfileScreen({super.key});
@@ -91,7 +92,13 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
         _paymentTermsController.text = data.paymentTermsFooter ?? '';
         _logoPath = data.logoPath;
 
-        if (_logoPath != null && _logoPath!.isNotEmpty && !kIsWeb) {
+        if (data.logoBase64 != null && data.logoBase64!.isNotEmpty) {
+          try {
+            _logoBytes = base64Decode(data.logoBase64!);
+          } catch (_) {
+            _logoBytes = null;
+          }
+        } else if (_logoPath != null && _logoPath!.isNotEmpty && !kIsWeb) {
           final file = io.File(_logoPath!);
           if (await file.exists()) {
             _logoBytes = await file.readAsBytes();
@@ -118,6 +125,9 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
         name: _businessNameController.text.trim(),
         tradeName: _tradeNameController.text.trim(),
         logoPath: _logoPath ?? '',
+        logoBase64: (_logoBytes != null && _logoBytes!.length < 500 * 1024)
+            ? base64Encode(_logoBytes!)
+            : null,
         phone: _phoneController.text.trim(),
         whatsapp: _whatsAppController.text.trim(),
         email: _emailController.text.trim(),

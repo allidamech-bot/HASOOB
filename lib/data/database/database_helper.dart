@@ -12,7 +12,7 @@ import 'package:hasoob_app/data/services/database_initializer.dart';
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
-  static const _databaseVersion = 21;
+  static const _databaseVersion = 22;
 
   static const _cashAccountCode = '101';
   static const _inventoryAccountCode = '102';
@@ -183,6 +183,10 @@ class DBHelper {
 
           if (oldVersion < 21) {
             await _upgradeToV21(db);
+          }
+
+          if (oldVersion < 22) {
+            await _upgradeToV22(db);
           }
 
           await _repairAccountNamesForV12(db);
@@ -469,7 +473,8 @@ class DBHelper {
         registration_number TEXT,
         default_invoice_notes TEXT,
         default_quotation_notes TEXT,
-        payment_terms_footer TEXT
+        payment_terms_footer TEXT,
+        logo_data TEXT
       )
     ''');
 
@@ -717,7 +722,8 @@ class DBHelper {
         default_invoice_notes TEXT,
         default_quotation_notes TEXT,
         payment_terms_footer TEXT,
-        branch_id TEXT
+        branch_id TEXT,
+        logo_data TEXT
       )
     ''');
   }
@@ -3904,6 +3910,15 @@ class DBHelper {
 
   static Future<void> _upgradeToV21(Database db) async {
     await _createSmartAssistantHistoryTable(db);
+  }
+
+  static Future<void> _upgradeToV22(Database db) async {
+    await _ensureColumn(
+      db,
+      table: 'business_profile',
+      column: 'logo_data',
+      definition: 'TEXT',
+    );
   }
 
   static Future<void> _createSmartAssistantHistoryTable(

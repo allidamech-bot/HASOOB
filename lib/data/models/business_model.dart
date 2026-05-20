@@ -3,6 +3,7 @@ class BusinessModel {
   final String name;
   final String? tradeName;
   final String? logoPath;
+  final String? logoBase64;
   final String? phone;
   final String? whatsapp;
   final String? email;
@@ -21,6 +22,7 @@ class BusinessModel {
     required this.name,
     this.tradeName,
     this.logoPath,
+    this.logoBase64,
     this.phone,
     this.whatsapp,
     this.email,
@@ -40,6 +42,7 @@ class BusinessModel {
     String? name,
     String? tradeName,
     String? logoPath,
+    String? logoBase64,
     String? phone,
     String? whatsapp,
     String? email,
@@ -58,6 +61,7 @@ class BusinessModel {
       name: name ?? this.name,
       tradeName: tradeName ?? this.tradeName,
       logoPath: logoPath ?? this.logoPath,
+      logoBase64: logoBase64 ?? this.logoBase64,
       phone: phone ?? this.phone,
       whatsapp: whatsapp ?? this.whatsapp,
       email: email ?? this.email,
@@ -80,6 +84,7 @@ class BusinessModel {
       'business_name': name,
       'trade_name': tradeName,
       'logo_path': logoPath,
+      'logo_data': logoBase64,
       'phone': phone,
       'whatsapp': whatsapp,
       'email': email,
@@ -101,6 +106,7 @@ class BusinessModel {
       name: map['business_name']?.toString() ?? map['name']?.toString() ?? '',
       tradeName: map['trade_name']?.toString(),
       logoPath: map['logo_path']?.toString(),
+      logoBase64: map['logo_data']?.toString(),
       phone: map['phone']?.toString(),
       whatsapp: map['whatsapp']?.toString(),
       email: map['email']?.toString(),
