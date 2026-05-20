@@ -316,24 +316,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 
                 LayoutBuilder(
                   builder: (context, constraints) {
-                    final crossAxisCount = constraints.maxWidth >= 900 ? 4 : (constraints.maxWidth < 420 ? 1 : 2);
+                    final crossAxisCount = constraints.maxWidth >= 900 ? 4 : 2;
                     return GridView.count(
                       crossAxisCount: crossAxisCount,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
+                      crossAxisSpacing: 12,
+                      mainAxisSpacing: 12,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      childAspectRatio: 1.4,
+                      childAspectRatio: constraints.maxWidth < 400 ? 1.4 : 1.5,
                       children: [
                         MetricCard(
                           title: copy.t('totalProducts'),
                           value: AppFormatters.number(data.totalProducts),
                           icon: Icons.inventory_2_rounded,
+                          accentColor: AppTheme.accentBlue,
                         ),
                         MetricCard(
                           title: copy.t('totalSales'),
                           value: AppFormatters.currency(data.totalSales),
                           icon: Icons.point_of_sale_rounded,
+                          accentColor: Colors.cyan,
                         ),
                         MetricCard(
                           title: copy.t('estimatedProfit'),
@@ -345,7 +347,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           title: copy.t('lowStockCount'),
                           value: AppFormatters.number(data.lowStockItems.length),
                           icon: Icons.warning_amber_rounded,
-                          accentColor: Colors.orange,
+                          accentColor: Colors.amber,
                           caption: data.lowStockItems.isEmpty
                               ? copy.t('noAlertsNow')
                               : copy.t('needsAttentionSoon'),
@@ -407,7 +409,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: 32),
                   _salesSection(context, copy, data, recentSalesPreview),
                 ],
-                const SizedBox(height: 120),
+                const SizedBox(height: 160),
               ],
             ),
           ),
@@ -523,13 +525,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
         onTap: onTap,
         borderRadius: BorderRadius.circular(16),
         child: Container(
-          width: 130,
-          padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
+          width: 110,
+          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
           child: Column(
             children: [
               _iconBox(icon, AppTheme.accentBlue),
-              const SizedBox(height: 12),
-              Text(title, textAlign: TextAlign.center, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+              const SizedBox(height: 8),
+              Text(title, textAlign: TextAlign.center, maxLines: 2, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12)),
             ],
           ),
         ),
@@ -539,7 +541,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _heroCard(BuildContext context, AppCopy copy) {
     return PremiumCard(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       child: Row(
         children: [
           Expanded(
@@ -547,7 +549,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: AppTheme.accentBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(6),
@@ -555,19 +557,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                   child: Text(
                     copy.t('professionalDashboard').toUpperCase(),
-                    style: GoogleFonts.inter(fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1, color: AppTheme.accentBlue),
+                    style: GoogleFonts.inter(fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 0.5, color: AppTheme.accentBlue),
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 Text(
                   copy.t('dashboardHero'),
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, height: 1.2),
+                  style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900, height: 1.2),
                 ),
               ],
             ),
           ),
-          const SizedBox(width: 24),
-          const Icon(Icons.bolt_rounded, size: 48, color: AppTheme.accentBlue),
+          const SizedBox(width: 16),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppTheme.accentBlue.withValues(alpha: 0.1),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.bolt_rounded, size: 32, color: AppTheme.accentBlue),
+          ),
         ],
       ),
     );
@@ -575,25 +584,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _iconBox(IconData icon, Color color) {
     return Container(
-      padding: const EdgeInsets.all(10),
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(10),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
-      child: Icon(icon, color: color, size: 22),
+      child: Icon(icon, color: color, size: 18),
     );
   }
 
   Widget _statusPill(String text, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: color.withValues(alpha: 0.2)),
       ),
-      child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 11)),
+      child: Text(text, style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 10)),
     );
   }
 
