@@ -2018,6 +2018,7 @@ class DBHelper {
           data['default_quotation_notes']?.toString().trim(),
       'payment_terms_footer': data['payment_terms_footer']?.toString().trim(),
       'branch_id': data['branch_id']?.toString().trim(),
+      'logo_data': data['logo_data']?.toString(),
     };
     await db.insert(
       'business_profile',

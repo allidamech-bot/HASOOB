@@ -68,6 +68,16 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
     final picked = await picker.pickImage(source: ImageSource.gallery);
     if (picked != null) {
       final bytes = await picked.readAsBytes();
+      debugPrint(
+          '[BusinessProfile] Picked logo path: ${picked.path}, size: ${bytes.length} bytes');
+      if (bytes.length > 1024 * 1024) {
+        debugPrint('[BusinessProfile] Picked logo exceeds 1MB limit');
+        if (mounted) {
+          AppMessages.error(
+              context, 'حجم الشعار كبير. اختر صورة أصغر من 1 ميغابايت.');
+        }
+        return;
+      }
       setState(() {
         _logoBytes = bytes;
         _logoPath = picked.path;
@@ -88,9 +98,13 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
         _taxNumberController.text = data.taxNumber ?? '';
         _registrationNumberController.text = data.registrationNumber ?? '';
         _defaultInvoiceNotesController.text = data.defaultInvoiceNotes ?? '';
-        _defaultQuotationNotesController.text = data.defaultQuotationNotes ?? '';
+        _defaultQuotationNotesController.text =
+            data.defaultQuotationNotes ?? '';
         _paymentTermsController.text = data.paymentTermsFooter ?? '';
         _logoPath = data.logoPath;
+
+        debugPrint(
+            '[BusinessProfile] Loaded business profile. logoBase64 length: ${data.logoBase64?.length ?? 0}');
 
         if (data.logoBase64 != null && data.logoBase64!.isNotEmpty) {
           try {
@@ -117,17 +131,28 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
   }
 
   Future<void> _save() async {
+    if (_logoBytes != null && _logoBytes!.length > 1024 * 1024) {
+      debugPrint(
+          '[BusinessProfile] Save blocked: logo bytes exceeds 1MB limit (${_logoBytes!.length} bytes)');
+      AppMessages.error(
+          context, 'حجم الشعار كبير. اختر صورة أصغر من 1 ميغابايت.');
+      return;
+    }
+
     setState(() => _saving = true);
 
     try {
+      final logoBase64Str =
+          _logoBytes != null ? base64Encode(_logoBytes!) : null;
+      debugPrint(
+          '[BusinessProfile] Saving business profile. logoBase64 length: ${logoBase64Str?.length ?? 0}. logoBytes length: ${_logoBytes?.length ?? 0}');
+
       await _repository.saveBusinessProfile(BusinessModel(
         id: _currentBusinessId,
         name: _businessNameController.text.trim(),
         tradeName: _tradeNameController.text.trim(),
         logoPath: _logoPath ?? '',
-        logoBase64: (_logoBytes != null && _logoBytes!.length < 500 * 1024)
-            ? base64Encode(_logoBytes!)
-            : null,
+        logoBase64: logoBase64Str,
         phone: _phoneController.text.trim(),
         whatsapp: _whatsAppController.text.trim(),
         email: _emailController.text.trim(),
@@ -141,9 +166,32 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
         createdAt: DateTime.now(),
       ));
 
+      // Reload profile from repository to verify and synchronize UI state
+      final savedProfile = await _repository.getBusinessProfile();
+      if (savedProfile != null) {
+        debugPrint(
+            '[BusinessProfile] Reloaded business profile after save. logoBase64 length: ${savedProfile.logoBase64?.length ?? 0}');
+        if (_logoBytes != null &&
+            (savedProfile.logoBase64 == null ||
+                savedProfile.logoBase64!.isEmpty)) {
+          throw Exception(
+              'Failed to verify saved logo data in local database storage.');
+        }
+
+        setState(() {
+          _logoPath = savedProfile.logoPath;
+          if (savedProfile.logoBase64 != null &&
+              savedProfile.logoBase64!.isNotEmpty) {
+            _logoBytes = base64Decode(savedProfile.logoBase64!);
+          }
+        });
+      }
+
       if (!mounted) return;
-      AppMessages.success(context, AppCopy.of(context).t('businessProfileSaved'));
+      AppMessages.success(
+          context, AppCopy.of(context).t('businessProfileSaved'));
     } catch (e) {
+      debugPrint('[BusinessProfile] Save failed with error: $e');
       if (!mounted) return;
       AppMessages.error(context, '$e');
     } finally {
@@ -252,7 +300,8 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
             decoration: BoxDecoration(
               color: AppTheme.surfaceAltFor(context),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: AppTheme.borderFor(context), width: 1.15),
+              border:
+                  Border.all(color: AppTheme.borderFor(context), width: 1.15),
             ),
             child: Row(
               children: [
@@ -311,7 +360,8 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                         child: FilledButton.icon(
                           onPressed: _pickLogo,
                           icon: const Icon(Icons.upload_rounded),
-                          label: Text(copy.businessLogoAction(_logoBytes != null)),
+                          label:
+                              Text(copy.businessLogoAction(_logoBytes != null)),
                         ),
                       ),
                     ],
@@ -395,16 +445,19 @@ class _BusinessProfileScreenState extends State<BusinessProfileScreen> {
                     icon: Icons.verified_user_rounded,
                     children: [
                       _field(_taxNumberController, copy.t('taxNumber')),
-                      _field(_registrationNumberController, copy.t('registrationNumber')),
+                      _field(_registrationNumberController,
+                          copy.t('registrationNumber')),
                     ],
                   ),
                   _buildSection(
                     title: copy.t('documentDefaults'),
                     icon: Icons.description_rounded,
                     children: [
-                      _field(_defaultQuotationNotesController, copy.t('quotationNotes'),
+                      _field(_defaultQuotationNotesController,
+                          copy.t('quotationNotes'),
                           minLines: 2),
-                      _field(_defaultInvoiceNotesController, copy.t('invoiceNotes'),
+                      _field(_defaultInvoiceNotesController,
+                          copy.t('invoiceNotes'),
                           minLines: 2),
                       _field(_paymentTermsController, copy.t('paymentTerms'),
                           minLines: 2),
