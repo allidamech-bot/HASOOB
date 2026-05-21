@@ -193,7 +193,6 @@ class DBHelper {
         },
         onOpen: (db) async {
           await _createPerformanceIndexes(db);
-          await _createAiCopilotTables(db);
         },
       );
     } catch (e) {
@@ -3942,97 +3941,6 @@ class DBHelper {
     );
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_smart_assistant_history_intent ON smart_assistant_history(detectedIntent)',
-    );
-  }
-
-  /// Creates AI Copilot tables idempotently.
-  /// Called from onOpen so tables exist regardless of DB version.
-  /// Does NOT modify any existing business tables.
-  static Future<void> _createAiCopilotTables(DatabaseExecutor db) async {
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS ai_threads(
-        id TEXT PRIMARY KEY,
-        businessId TEXT,
-        userId TEXT,
-        title TEXT,
-        status TEXT DEFAULT 'active',
-        createdAt TEXT,
-        updatedAt TEXT
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS ai_messages(
-        id TEXT PRIMARY KEY,
-        threadId TEXT,
-        businessId TEXT,
-        role TEXT,
-        content TEXT,
-        metadataJson TEXT,
-        createdAt TEXT
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS ai_memory_items(
-        id TEXT PRIMARY KEY,
-        businessId TEXT,
-        userId TEXT,
-        type TEXT,
-        key TEXT,
-        value TEXT,
-        confidence REAL DEFAULT 1.0,
-        source TEXT,
-        createdAt TEXT,
-        updatedAt TEXT
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS ai_action_drafts(
-        id TEXT PRIMARY KEY,
-        threadId TEXT,
-        businessId TEXT,
-        userId TEXT,
-        actionType TEXT,
-        title TEXT,
-        summary TEXT,
-        payloadJson TEXT,
-        status TEXT DEFAULT 'draft',
-        validationErrorsJson TEXT,
-        createdAt TEXT,
-        updatedAt TEXT
-      )
-    ''');
-
-    await db.execute('''
-      CREATE TABLE IF NOT EXISTS ai_action_logs(
-        id TEXT PRIMARY KEY,
-        draftId TEXT,
-        threadId TEXT,
-        businessId TEXT,
-        eventType TEXT,
-        message TEXT,
-        payloadJson TEXT,
-        createdAt TEXT
-      )
-    ''');
-
-    // Indexes for AI Copilot tables
-    await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_ai_threads_businessId ON ai_threads(businessId)',
-    );
-    await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_ai_messages_threadId ON ai_messages(threadId)',
-    );
-    await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_ai_memory_items_businessId ON ai_memory_items(businessId)',
-    );
-    await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_ai_action_drafts_businessId ON ai_action_drafts(businessId)',
-    );
-    await db.execute(
-      'CREATE INDEX IF NOT EXISTS idx_ai_action_logs_draftId ON ai_action_logs(draftId)',
     );
   }
 }
