@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:async/async.dart';
 import '../../data/database/database_helper.dart';
+
 import '../models/product_model.dart';
 import 'package:hasoob_app/data/services/cloud_sync_service.dart';
 import 'package:hasoob_app/data/services/sync_queue_service.dart';

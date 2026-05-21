@@ -35,6 +35,9 @@ class _PremiumSplashScreenState extends State<PremiumSplashScreen> with SingleTi
       ),
     );
 
+
+
+
     _controller.forward();
   }
 
@@ -97,15 +100,13 @@ class _PremiumSplashScreenState extends State<PremiumSplashScreen> with SingleTi
               animation: _controller,
               builder: (context, child) {
                 // Combine entry scale/fade with a subtle continuous float
-                final floatOffset = Offset(0, 5 * (1.0 - _fadeAnimation.value) + 5 * (1.0 - _fadeAnimation.value)); 
-                // Wait, I should add a separate controller for idle float if I want it perfect, 
-                // but I can simulate it here for now or add a second controller.
-                
+                // Entry fade/scale is handled by _fadeAnimation and _scaleAnimation.
                 return Opacity(
                   opacity: _fadeAnimation.value,
                   child: Transform.scale(
                     scale: _scaleAnimation.value,
                     child: Column(
+
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         // Floating Logo - No boundaries
@@ -120,6 +121,7 @@ class _PremiumSplashScreenState extends State<PremiumSplashScreen> with SingleTi
                         const SizedBox(height: 60),
                         // Luxury Minimal Loader
                         const _PremiumLoader(),
+
                       ],
                     ),
                   ),
