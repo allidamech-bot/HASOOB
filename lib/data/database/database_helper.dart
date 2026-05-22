@@ -3776,6 +3776,58 @@ class DBHelper {
     return _toInt(rows.first['id']);
   }
 
+  static Future<void> _enqueueSyncOperation(
+    DatabaseExecutor db, {
+    required String entityName,
+    required String entityId,
+    required String type,
+    required Map<String, dynamic> payload,
+  }) async {
+    final now = DateTime.now().toIso8601String();
+    await db.insert(
+      'sync_operations',
+      {
+        'id': '${DateTime.now().microsecondsSinceEpoch}_$entityName',
+        'entityName': entityName,
+        'entityId': entityId,
+        'type': type,
+        'payload': jsonEncode(payload),
+        'status': 'pending',
+        'createdAt': now,
+        'updatedAt': now,
+        'attemptCount': 0,
+        'priority': 2,
+        'fingerprint': '${entityName}_${entityId}_$now',
+        'conflictStrategy': 'lastWriteWins',
+        'remoteVersion': 0,
+        'localVersion': 0,
+        'branch_id': BranchContext().currentBranchId,
+      },
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  static Future<void> _enqueueAccountSync(
+    DatabaseExecutor db,
+    int accountId,
+    String businessId,
+  ) async {
+    final rows = await db.query(
+      'accounts',
+      where: 'id = ? AND businessId = ?',
+      whereArgs: [accountId, businessId],
+    );
+    if (rows.isNotEmpty) {
+      await _enqueueSyncOperation(
+        db,
+        entityName: 'accounts',
+        entityId: accountId.toString(),
+        type: 'update',
+        payload: rows.first,
+      );
+    }
+  }
+
   static Future<int> _postJournalEntry(
     DatabaseExecutor db, {
     required String businessId,
@@ -3786,7 +3838,7 @@ class DBHelper {
     required String date,
   }) async {
     final branchId = BranchContext().currentBranchId;
-    final journalEntryId = await db.insert('journal_entries', {
+    final payload = {
       'businessId': businessId,
       'branch_id': branchId,
       'debit_account_id': debitAccountId,
@@ -3794,7 +3846,8 @@ class DBHelper {
       'amount': amount,
       'description': description,
       'date': date,
-    });
+    };
+    final journalEntryId = await db.insert('journal_entries', payload);
 
     await db.execute(
       'UPDATE accounts SET balance = balance + ? WHERE id = ? AND businessId = ?',
@@ -3804,6 +3857,16 @@ class DBHelper {
       'UPDATE accounts SET balance = balance - ? WHERE id = ? AND businessId = ?',
       [amount, creditAccountId, businessId],
     );
+
+    await _enqueueSyncOperation(
+      db,
+      entityName: 'journal_entries',
+      entityId: journalEntryId.toString(),
+      type: 'create',
+      payload: {'id': journalEntryId, ...payload},
+    );
+    await _enqueueAccountSync(db, debitAccountId, businessId);
+    await _enqueueAccountSync(db, creditAccountId, businessId);
 
     return journalEntryId;
   }
