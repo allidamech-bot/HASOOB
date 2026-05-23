@@ -112,7 +112,8 @@ void main() {
 
       final preview =
           await service.preview('Bought 3 units cost 10 sell for 15');
-      await service.confirm(businessId: 'biz_1', preview: preview);
+      final readyPreview = service.previewWithFields(preview, {'productName': 'Test Product'});
+      await service.confirm(businessId: 'biz_1', preview: readyPreview);
 
       expect(products.addProductCalls, 1);
       expect(history.savedCount, 1);
@@ -133,6 +134,97 @@ void main() {
 
       expect(products.addProductCalls, 0);
       expect(history.draftCount, 1);
+    });
+
+    test('blocks confirm when required fields are missing', () async {
+      final service = SmartCalculatorService(
+        historyRepository: _FakeHistoryRepository(),
+        productRepository: _FakeProductRepository(),
+        customerRepository: _FakeCustomerRepository(),
+      );
+
+      final preview = SmartAssistantPreview(
+        parse: const SmartAssistantParseResult(
+          userInput: 'Buy something',
+          intent: SmartAssistantIntent.addProductDraft,
+          extracted: {},
+          missingFields: ['productName', 'quantity'],
+          warnings: [],
+          confidence: 0.5,
+        ),
+        calculation: const SmartCalculationResult(values: {}, summary: ''),
+        fields: [],
+      );
+
+      expect(
+        () => service.confirm(businessId: 'biz_1', preview: preview),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('rejects negative quantity or price during confirm', () async {
+      final service = SmartCalculatorService(
+        historyRepository: _FakeHistoryRepository(),
+        productRepository: _FakeProductRepository(),
+        customerRepository: _FakeCustomerRepository(),
+      );
+
+      final preview = SmartAssistantPreview(
+        parse: const SmartAssistantParseResult(
+          userInput: 'Bought -3 units',
+          intent: SmartAssistantIntent.addProductDraft,
+          extracted: {
+            'productName': 'Test',
+            'quantity': -3,
+            'purchasePrice': 10,
+            'salePrice': 15,
+          },
+          missingFields: [],
+          warnings: [],
+          confidence: 0.9,
+        ),
+        calculation: const SmartCalculationResult(values: {}, summary: ''),
+        fields: [],
+      );
+
+      expect(
+        () => service.confirm(businessId: 'biz_1', preview: preview),
+        throwsA(isA<StateError>()),
+      );
+    });
+
+    test('stock update confirm with empty productName throws StateError', () async {
+      final products = _FakeProductRepository();
+      final service = SmartCalculatorService(
+        historyRepository: _FakeHistoryRepository(),
+        productRepository: products,
+        customerRepository: _FakeCustomerRepository(),
+      );
+
+      final preview = SmartAssistantPreview(
+        parse: const SmartAssistantParseResult(
+          userInput: 'update stock to 5',
+          intent: SmartAssistantIntent.updateStockDraft,
+          extracted: {
+            'productName': '',
+            'quantity': 5,
+          },
+          missingFields: [],
+          warnings: [],
+          confidence: 0.9,
+        ),
+        calculation: const SmartCalculationResult(values: {}, summary: ''),
+        fields: [],
+      );
+
+      await expectLater(
+        () => service.confirm(businessId: 'biz_1', preview: preview),
+        throwsA(
+          isA<StateError>().having((e) => e.message, 'message', 'Product name is required for stock update.')
+        ),
+      );
+
+      expect(products.applyInventoryAdjustmentCalls, 0);
     });
   });
 }
@@ -170,10 +262,23 @@ class _FakeHistoryRepository extends SmartAssistantHistoryRepository {
 class _FakeProductRepository extends ProductRepository {
   _FakeProductRepository() : super.forTest();
   int addProductCalls = 0;
+  int applyInventoryAdjustmentCalls = 0;
 
   @override
   Future<void> addProduct(String businessId, ProductModel product) async {
     addProductCalls++;
+  }
+
+  @override
+  Future<void> applyInventoryAdjustment({
+    required String businessId,
+    required String productId,
+    int? newStockQty,
+    double? newPurchasePrice,
+    double? newExtraCosts,
+    required String reason,
+  }) async {
+    applyInventoryAdjustmentCalls++;
   }
 }
 

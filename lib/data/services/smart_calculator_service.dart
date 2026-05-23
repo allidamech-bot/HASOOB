@@ -126,16 +126,27 @@ class SmartCalculatorService {
       String businessId, Map<String, dynamic> data) async {
     final now = DateTime.now();
     final productName = data['productName']?.toString().trim();
+    if (productName == null || productName.isEmpty) {
+      throw StateError('Product name is required.');
+    }
+    
+    final quantity = _double(data['quantity']).round();
+    if (quantity < 0) throw StateError('Quantity cannot be negative.');
+    
+    final purchasePrice = _double(data['purchasePrice']);
+    if (purchasePrice < 0) throw StateError('Purchase price cannot be negative.');
+    
+    final sellingPrice = _double(data['salePrice']);
+    if (sellingPrice < 0) throw StateError('Sale price cannot be negative.');
+
     final product = ProductModel(
       id: 'PRD_${now.microsecondsSinceEpoch}',
       businessId: businessId,
-      name: productName == null || productName.isEmpty
-          ? 'Smart draft product'
-          : productName,
+      name: productName,
       unit: data['unit']?.toString() ?? 'unit',
-      purchasePrice: _double(data['purchasePrice']),
-      sellingPrice: _double(data['salePrice']),
-      stockQty: _double(data['quantity']).round(),
+      purchasePrice: purchasePrice,
+      sellingPrice: sellingPrice,
+      stockQty: quantity,
       lowStockThreshold:
           _double(data['lowStockThreshold']).round().clamp(0, 999999),
       createdAt: now,
@@ -149,13 +160,22 @@ class SmartCalculatorService {
       String businessId, Map<String, dynamic> data) async {
     final products = await _productRepository.getAllProducts(businessId);
     final name = data['productName']?.toString().trim().toLowerCase() ?? '';
+    
+    if (name.isEmpty) {
+      throw StateError('Product name is required for stock update.');
+    }
+
     final match =
         products.where((p) => p.name.toLowerCase().contains(name)).firstOrNull;
     if (match == null) throw StateError('Product not found for stock update.');
+    
+    final newStockQty = _double(data['quantity']).round();
+    if (newStockQty < 0) throw StateError('Stock quantity cannot be negative.');
+    
     await _productRepository.applyInventoryAdjustment(
       businessId: businessId,
       productId: match.id,
-      newStockQty: _double(data['quantity']).round(),
+      newStockQty: newStockQty,
       reason: 'Smart calculator confirmed stock update',
     );
     return 'Stock updated for ${match.name}.';
@@ -195,11 +215,18 @@ class SmartCalculatorService {
       ));
       return 'Sale draft saved. Match a product before posting stock movement.';
     }
+    
+    final qty = _double(data['quantity']).round();
+    if (qty <= 0) throw StateError('Sale quantity must be greater than zero.');
+    
+    final sellingPrice = _double(data['salePrice']);
+    if (sellingPrice < 0) throw StateError('Sale price cannot be negative.');
+
     await _productRepository.sellProduct(
       businessId: businessId,
       productId: match.id,
-      qty: _double(data['quantity']).round(),
-      sellingPrice: _double(data['salePrice']),
+      qty: qty,
+      sellingPrice: sellingPrice,
       customerName: data['customerName']?.toString(),
       saleNote: 'Created from offline smart calculator',
       currencyCode: data['currency']?.toString(),
@@ -209,13 +236,22 @@ class SmartCalculatorService {
 
   Future<String> _saveCustomerPaymentDraft(
       String businessId, Map<String, dynamic> data) async {
-    if ((data['customerName']?.toString().trim().isNotEmpty ?? false)) {
-      await _customerRepository.saveCustomer(businessId, {
-        'name': data['customerName'].toString().trim(),
-        'notes':
-            'Payment draft from smart calculator. Paid: ${data['paidAmount'] ?? 0}, remaining: ${data['remainingAmount'] ?? 0}',
-      });
+    final customerName = data['customerName']?.toString().trim();
+    if (customerName == null || customerName.isEmpty) {
+      throw StateError('Customer name is required for payment.');
     }
+    
+    final paidAmount = _double(data['paidAmount']);
+    if (paidAmount < 0) throw StateError('Paid amount cannot be negative.');
+    
+    final remainingAmount = _double(data['remainingAmount']);
+    if (remainingAmount < 0) throw StateError('Remaining amount cannot be negative.');
+
+    await _customerRepository.saveCustomer(businessId, {
+      'name': customerName,
+      'notes':
+          'Payment draft from smart calculator. Paid: $paidAmount, remaining: $remainingAmount',
+    });
     return 'Customer payment draft saved.';
   }
 

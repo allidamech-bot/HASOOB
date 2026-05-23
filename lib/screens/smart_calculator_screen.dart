@@ -66,8 +66,8 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
     final preview = _preview;
     if (preview == null) return;
     if (preview.parse.missingFields.isNotEmpty) {
-      _showMessage(_text('Complete missing fields before confirming.',
-          'أكمل الحقول الناقصة قبل التأكيد.'));
+      final missing = preview.parse.missingFields.map(_label).join(', ');
+      _showMessage(_text('Missing fields: $missing', 'حقول ناقصة: $missing'));
       return;
     }
     setState(() => _busy = true);
@@ -80,7 +80,8 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
       setState(() => _preview = null);
       await _loadHistory();
     } catch (error) {
-      _showMessage(error.toString());
+      final msg = error is StateError ? error.message : error.toString();
+      _showMessage(msg);
     } finally {
       if (mounted) setState(() => _busy = false);
     }
