@@ -9,6 +9,7 @@ import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
 import '../data/repositories/product_repository.dart';
 import '../core/utils/perf_logger.dart';
+import '../widgets/premium/premium_card.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/sync_status_indicator.dart';
 
@@ -154,8 +155,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
               children: [
                 TextField(
                   controller: _searchController,
+                  style: TextStyle(color: onSurface),
                   decoration: InputDecoration(
                     hintText: copy.t('searchSalesHint'),
+                    hintStyle: TextStyle(color: secondary),
                     prefixIcon: const Icon(Icons.search_rounded),
                     suffixIcon: _searchController.text.isEmpty
                         ? null
@@ -163,51 +166,70 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                             onPressed: _searchController.clear,
                             icon: const Icon(Icons.close_rounded),
                           ),
+                    filled: true,
+                    fillColor: AppTheme.surfaceAltFor(context),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      borderSide: BorderSide(color: AppTheme.borderFor(context)),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      borderSide: BorderSide(color: AppTheme.borderFor(context)),
+                    ),
                   ),
                 ),
                 const SizedBox(height: 12),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          copy.t('recordPeriod'),
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: onSurface,
+                PremiumCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        copy.t('recordPeriod'),
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w800,
+                          color: onSurface,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      DropdownButtonFormField<SalesPeriodFilter>(
+                        initialValue: _periodFilter,
+                        dropdownColor: AppTheme.surfaceFor(context),
+                        style: TextStyle(
+                          color: onSurface,
+                          fontWeight: FontWeight.w600,
+                        ),
+                        iconEnabledColor: secondary,
+                        decoration: InputDecoration(
+                          labelText: copy.t('period'),
+                          labelStyle: TextStyle(color: secondary),
+                          filled: true,
+                          fillColor: AppTheme.surfaceAltFor(context),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                            borderSide: BorderSide(color: AppTheme.borderFor(context)),
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                            borderSide: BorderSide(color: AppTheme.borderFor(context)),
                           ),
                         ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<SalesPeriodFilter>(
-                          initialValue: _periodFilter,
-                          dropdownColor: AppTheme.surfaceFor(context),
-                          style: TextStyle(
-                            color: onSurface,
-                            fontWeight: FontWeight.w600,
-                          ),
-                          iconEnabledColor: secondary,
-                          decoration: InputDecoration(
-                            labelText: copy.t('period'),
-                          ),
-                          items: SalesPeriodFilter.values
-                              .map(
-                                (filter) => DropdownMenuItem(
-                                  value: filter,
-                                  child: Text(_periodLabel(filter, copy)),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() {
-                              _periodFilter = value;
-                            });
-                          },
-                        ),
-                      ],
-                    ),
+                        items: SalesPeriodFilter.values
+                            .map(
+                              (filter) => DropdownMenuItem(
+                                value: filter,
+                                child: Text(_periodLabel(filter, copy)),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() {
+                            _periodFilter = value;
+                          });
+                        },
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -220,15 +242,13 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                 ),
                 const SizedBox(height: 10),
                 if (rows.isEmpty)
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(20),
-                      child: Center(
-                        child: Text(
-                          copy.t('noMatchingSales'),
-                          style: TextStyle(color: secondary),
-                          textAlign: TextAlign.center,
-                        ),
+                  PremiumCard(
+                    padding: const EdgeInsets.all(24),
+                    child: Center(
+                      child: Text(
+                        copy.t('noMatchingSales'),
+                        style: TextStyle(color: secondary),
+                        textAlign: TextAlign.center,
                       ),
                     ),
                   )
@@ -245,10 +265,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                     final productName =
                         row['product_name']?.toString().trim() ?? '';
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 12),
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: PremiumCard(
+                        padding: const EdgeInsets.all(20),
                         child: Row(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [

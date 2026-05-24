@@ -15,6 +15,7 @@ import '../data/services/export_service.dart';
 import '../data/services/reports/report_models.dart';
 import '../data/services/reports/report_service.dart';
 import '../core/utils/perf_logger.dart';
+import '../widgets/premium/premium_card.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/app_section_header.dart';
 import '../widgets/metric_card.dart';
@@ -194,13 +195,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Color get _onSurface => _theme.colorScheme.onSurface;
   Color get _muted => AppTheme.textSecondaryFor(context);
 
-  BoxDecoration get _surfaceDecoration => BoxDecoration(
-        color: AppTheme.surfaceFor(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.borderFor(context)),
-        boxShadow: AppTheme.softShadow(context),
-      );
-
   @override
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
@@ -338,26 +332,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _surface({required Widget child}) {
-    return Container(
+    return PremiumCard(
       padding: const EdgeInsets.all(16),
-      decoration: _surfaceDecoration,
+      radius: 18,
       child: child,
     );
   }
 
   Widget _hero(ReportsSnapshot data, AppCopy copy) {
-    return Container(
+    return PremiumCard(
       padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.surfaceAltFor(context),
-            AppTheme.surfaceFor(context),
-          ],
-        ),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: _blue.withValues(alpha: 0.18)),
+      gradient: LinearGradient(
+        colors: [
+          AppTheme.surfaceAltFor(context),
+          AppTheme.surfaceFor(context),
+        ],
       ),
+      radius: 20,
+      border: Border.all(color: _blue.withValues(alpha: 0.18)),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -823,12 +815,9 @@ class _ListSurface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppTheme.surfaceFor(context),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppTheme.borderFor(context)),
-      ),
+    return PremiumCard(
+      padding: EdgeInsets.zero,
+      radius: 18,
       child: child,
     );
   }
