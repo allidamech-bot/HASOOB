@@ -117,19 +117,19 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           child: Container(
             height: 72,
             decoration: BoxDecoration(
-              color: AppTheme.background.withValues(alpha: 0.9),
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppTheme.border, width: 1.5),
+              color: AppTheme.background.withValues(alpha: 0.95),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: AppTheme.border, width: 1),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.4),
-                  blurRadius: 24,
-                  offset: const Offset(0, 8),
+                  color: Colors.black.withValues(alpha: 0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
             child: ClipRRect(
-              borderRadius: BorderRadius.circular(24),
+              borderRadius: BorderRadius.circular(16),
               child: NavigationBar(
                 backgroundColor: Colors.transparent,
                 indicatorColor: AppTheme.accentBlue.withValues(alpha: 0.1),
@@ -160,7 +160,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                   NavigationDestination(
                     icon: const Icon(Icons.auto_awesome_outlined, size: 20),
                     selectedIcon: const Icon(Icons.auto_awesome, color: AppTheme.accentBlue),
-                    label: copy.isEnglish ? 'Smart' : 'ذكي',
+                    label: copy.isEnglish ? 'Smart' : 'ذكي', // Smart Calculator
                   ),
                   NavigationDestination(
                     icon: const Icon(Icons.analytics_outlined, size: 20),

@@ -159,7 +159,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   @override
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
-    final isDark = AppTheme.isDark(context);
 
     return Scaffold(
       extendBodyBehindAppBar: true,
@@ -231,33 +230,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: Stack(
         children: [
-          // Background Glows
-          if (isDark) ...[
-            Positioned(
-              top: -100,
-              right: -100,
-              child: Container(
-                width: 300,
-                height: 300,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.glowBlue,
-                ),
-              ),
-            ),
-            Positioned(
-              bottom: 100,
-              left: -50,
-              child: Container(
-                width: 200,
-                height: 200,
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppTheme.glowCyan,
-                ),
-              ),
-            ),
-          ],
+          // Background Glows removed for cleaner SaaS look
 
           RefreshIndicator(
             onRefresh: _refresh,
@@ -352,7 +325,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   },
                 ),
                 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
                 Text(
                   copy.t('quickActions'),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
@@ -390,7 +363,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 24),
                 _buildRestoreCard(context, copy),
                 
-                const SizedBox(height: 32),
+                const SizedBox(height: 24),
                 if (isWide)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -571,18 +544,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _heroCard(BuildContext context, AppCopy copy) {
+    final isDark = AppTheme.isDark(context);
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [
-            AppTheme.accentBlue.withValues(alpha: 0.15),
-            AppTheme.accentBlue.withValues(alpha: 0.05),
-          ],
-        ),
+        color: isDark ? AppTheme.surfaceSecondary : AppTheme.lightSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.2)),
+        border: Border.all(color: AppTheme.borderFor(context)),
       ),
       child: Row(
         children: [

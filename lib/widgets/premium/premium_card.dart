@@ -35,20 +35,19 @@ class PremiumCard extends StatelessWidget {
           color: isDark ? Colors.white.withValues(alpha: 0.05) : AppTheme.lightBorder,
           width: 1,
         ),
-        gradient: gradient ?? (isDark ? AppTheme.premiumGradient : null),
+        gradient: gradient,
         boxShadow: shadows ?? [
           if (isDark)
             BoxShadow(
-              color: Colors.black.withValues(alpha: 0.3),
-              blurRadius: 30,
-              offset: const Offset(0, 15),
-              spreadRadius: -5,
+              color: Colors.black.withValues(alpha: 0.15),
+              blurRadius: 16,
+              offset: const Offset(0, 4),
             )
           else
             BoxShadow(
               color: AppTheme.accentBlue.withValues(alpha: 0.04),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
+              blurRadius: 12,
+              offset: const Offset(0, 4),
             ),
         ],
       ),

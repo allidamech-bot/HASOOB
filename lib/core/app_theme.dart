@@ -3,19 +3,19 @@ import 'package:google_fonts/google_fonts.dart';
 
 class AppTheme {
   // Radius System
-  static const double radiusSmall = 12;
-  static const double radiusMedium = 16;
-  static const double radiusLarge = 24;
-  static const double radiusXLarge = 32;
+  static const double radiusSmall = 8;
+  static const double radiusMedium = 12;
+  static const double radiusLarge = 16;
+  static const double radiusXLarge = 24;
 
   // Font Families
   static const String fontFamilyArabic = 'Cairo';
   static String? get fontFamilyEnglish => GoogleFonts.inter().fontFamily;
 
   // Premium Palette
-  static const Color background = Color(0xFF070B14);
-  static const Color surfaceSecondary = Color(0xFF0F172A);
-  static const Color surfaceElevated = Color(0xFF131D31);
+  static const Color background = Color(0xFF0F172A);
+  static const Color surfaceSecondary = Color(0xFF1E293B);
+  static const Color surfaceElevated = Color(0xFF334155);
   
   static const Color accentBlue = Color(0xFF3B82F6);
   static const Color accentCyan = Color(0xFF22D3EE);
@@ -41,8 +41,8 @@ class AppTheme {
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
     colors: [
+      Color(0xFF233045),
       Color(0xFF1E293B),
-      Color(0xFF0F172A),
     ],
   );
 
@@ -303,9 +303,9 @@ class AppTheme {
 
   static List<BoxShadow> softShadow(BuildContext context) => [
     BoxShadow(
-      color: isDark(context) ? Colors.black.withValues(alpha: 0.3) : accentBlue.withValues(alpha: 0.08),
-      blurRadius: 24,
-      offset: const Offset(0, 8),
+      color: isDark(context) ? Colors.black.withValues(alpha: 0.15) : accentBlue.withValues(alpha: 0.04),
+      blurRadius: 12,
+      offset: const Offset(0, 4),
     ),
   ];
 }
