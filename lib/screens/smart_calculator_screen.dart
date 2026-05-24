@@ -266,7 +266,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                     const Icon(Icons.auto_awesome, color: AppTheme.accentBlue, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      _text('AI Copilot active', 'مساعدك التجاري نشط'),
+                      _text('AI Copilot active', 'المساعد الذكي نشط'),
                       style: GoogleFonts.inter(
                         fontSize: 12, 
                         fontWeight: FontWeight.w600,
@@ -317,12 +317,15 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              _text('Assistant Analysis', 'تحليل المساعد'),
-              style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+            Expanded(
+              child: Text(
+                _text('Assistant Analysis', 'تحليل المساعد'),
+                style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+              ),
             ),
-            const Spacer(),
+            const SizedBox(width: 16),
             _ConfidenceBadge(value: preview.parse.confidence),
           ],
         ),
@@ -382,7 +385,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
               TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: _text('Search history...', 'بحث في السجل...'),
+                  hintText: _text('Search history...', 'ابحث في السجل...'),
                   prefixIcon: const Icon(Icons.search, size: 20),
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
