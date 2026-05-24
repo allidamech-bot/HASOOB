@@ -14,6 +14,7 @@ import '../data/models/quotation_model.dart';
 import '../data/repositories/business_profile_repository.dart';
 import '../data/repositories/invoice_repository.dart';
 import '../data/services/export_service.dart';
+import '../widgets/premium/premium_card.dart';
 import 'invoice_details_screen.dart';
 import 'invoice_form_screen.dart';
 import 'quotation_details_screen.dart';
@@ -380,26 +381,25 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 ),
                 const SizedBox(height: 16),
                 if (rows.isEmpty)
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20,
-                        vertical: 28,
-                      ),
-                      child: Column(
-                        children: [
-                          Icon(
-                            Icons.description_outlined,
-                            size: 46,
-                            color: AppTheme.textSecondaryFor(context),
-                          ),
-                          const SizedBox(height: 12),
-                          Text(
-                            copy.t('noDocuments'),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
+                  PremiumCard(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 32,
+                    ),
+                    child: Column(
+                      children: [
+                        Icon(
+                          Icons.description_outlined,
+                          size: 56,
+                          color: AppTheme.textSecondaryFor(context),
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          copy.t('noDocuments'),
+                          style: const TextStyle(fontWeight: FontWeight.w800),
+                          textAlign: TextAlign.center,
+                        ),
+                      ],
                     ),
                   )
                 else
@@ -425,12 +425,11 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     final remaining = invoice.remainingAmount;
     final currencyCode = invoice.currencyCode;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return PremiumCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
             Text(
               invoice.invoiceNumber,
               style: const TextStyle(
@@ -466,10 +465,10 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 12,
+              runSpacing: 12,
               children: [
                 FilledButton(
                   onPressed: () {
@@ -523,7 +522,6 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 
@@ -531,12 +529,11 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     final total = quotation.total;
     final currencyCode = quotation.currencyCode;
 
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return PremiumCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
             Text(
               quotation.quotationNumber,
               style: const TextStyle(
@@ -558,10 +555,10 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
               copy.t('total'),
               AppFormatters.currency(total, currencyLabel: currencyCode),
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 12,
+              runSpacing: 12,
               children: [
                 FilledButton(
                   onPressed: () {
@@ -615,7 +612,6 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 

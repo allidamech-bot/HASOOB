@@ -11,6 +11,7 @@ import '../data/repositories/product_repository.dart';
 import '../core/utils/perf_logger.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/sync_status_indicator.dart';
+import '../widgets/premium/premium_card.dart';
 import 'add_product_screen.dart';
 import 'edit_product_screen.dart';
 import 'product_details_screen.dart';
@@ -198,53 +199,52 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      children: [
-                        DropdownButtonFormField<InventoryFilter>(
-                          initialValue: _selectedFilter,
-                          decoration: InputDecoration(labelText: copy.t('productFilter')),
-                          items: InventoryFilter.values
-                              .map(
-                                (filter) => DropdownMenuItem(
-                                  value: filter,
-                                  child: Text(_filterLabel(filter, copy)),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() => _selectedFilter = value);
-                          },
-                        ),
-                        const SizedBox(height: 12),
-                        DropdownButtonFormField<InventorySort>(
-                          initialValue: _selectedSort,
-                          decoration: InputDecoration(labelText: copy.t('sortBy')),
-                          items: InventorySort.values
-                              .map(
-                                (sort) => DropdownMenuItem(
-                                  value: sort,
-                                  child: Text(_sortLabel(sort, copy)),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (value) {
-                            if (value == null) return;
-                            setState(() => _selectedSort = value);
-                          },
-                        ),
-                        SwitchListTile(
-                          contentPadding: EdgeInsets.zero,
-                          value: _sortAscending,
-                          title: Text(copy.t('ascendingSort')),
-                          onChanged: (value) =>
-                              setState(() => _sortAscending = value),
-                        ),
-                      ],
-                    ),
+                PremiumCard(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    children: [
+                      DropdownButtonFormField<InventoryFilter>(
+                        initialValue: _selectedFilter,
+                        decoration: InputDecoration(labelText: copy.t('productFilter')),
+                        items: InventoryFilter.values
+                            .map(
+                              (filter) => DropdownMenuItem(
+                                value: filter,
+                                child: Text(_filterLabel(filter, copy)),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() => _selectedFilter = value);
+                        },
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<InventorySort>(
+                        initialValue: _selectedSort,
+                        decoration: InputDecoration(labelText: copy.t('sortBy')),
+                        items: InventorySort.values
+                            .map(
+                              (sort) => DropdownMenuItem(
+                                value: sort,
+                                child: Text(_sortLabel(sort, copy)),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (value) {
+                          if (value == null) return;
+                          setState(() => _selectedSort = value);
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      SwitchListTile(
+                        contentPadding: EdgeInsets.zero,
+                        value: _sortAscending,
+                        title: Text(copy.t('ascendingSort')),
+                        onChanged: (value) =>
+                            setState(() => _sortAscending = value),
+                      ),
+                    ],
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -257,11 +257,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ),
                 const SizedBox(height: 12),
                 if (filteredProducts.isEmpty)
-                  Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(24),
-                      child: Center(child: Text(copy.t('noMatchingProducts'))),
-                    ),
+                  PremiumCard(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(child: Text(copy.t('noMatchingProducts'))),
                   )
                 else
                   ...filteredProducts.map(
@@ -362,12 +360,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Widget _productCard(ProductModel product, AppCopy copy) {
     final badge = _statusBadge(product, copy);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
+    return PremiumCard(
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
             Row(
               children: [
                 CircleAvatar(
@@ -416,10 +413,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   _infoChip(copy.t('barcode'), product.barcode!),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 20),
             Wrap(
-              spacing: 8,
-              runSpacing: 8,
+              spacing: 12,
+              runSpacing: 12,
               children: [
                 FilledButton.icon(
                   onPressed: product.isOutOfStock
@@ -474,7 +471,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ),
           ],
         ),
-      ),
     );
   }
 

@@ -7,6 +7,7 @@ import '../core/business/business_context.dart';
 import '../data/repositories/customer_repository.dart';
 import '../core/utils/perf_logger.dart';
 import '../widgets/skeleton_loader.dart';
+import '../widgets/premium/premium_card.dart';
 import 'customer_statement_screen.dart';
 
 class CustomersScreen extends StatefulWidget {
@@ -165,31 +166,10 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 final phone = customer['phone']?.toString() ?? '';
                 final outstanding = _toDouble(customer['outstanding_balance']);
 
-                return Card(
-                  child: ListTile(
-                    leading: CircleAvatar(
-                      child: Text(name.isEmpty ? '?' : name.substring(0, 1)),
-                    ),
-                    title: Text(
-                      name,
-                      style: const TextStyle(fontWeight: FontWeight.w800),
-                    ),
-                    subtitle: Text(
-                      copy.customerBalanceLine(
-                        phone,
-                        outstanding.toStringAsFixed(2),
-                      ),
-                    ),
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        IconButton(
-                          onPressed: () => _openCustomerForm(customer),
-                          icon: const Icon(Icons.edit_outlined),
-                        ),
-                        const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-                      ],
-                    ),
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -201,6 +181,54 @@ class _CustomersScreenState extends State<CustomersScreen> {
                         ),
                       );
                     },
+                    child: PremiumCard(
+                      padding: const EdgeInsets.all(20),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 24,
+                            backgroundColor: AppTheme.accent.withValues(alpha: 0.14),
+                            child: Text(
+                              name.isEmpty ? '?' : name.substring(0, 1),
+                              style: const TextStyle(
+                                color: AppTheme.accent,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  name,
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  copy.customerBalanceLine(
+                                    phone,
+                                    outstanding.toStringAsFixed(2),
+                                  ),
+                                  style: TextStyle(
+                                    color: AppTheme.textSecondaryFor(context),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          IconButton(
+                            onPressed: () => _openCustomerForm(customer),
+                            icon: const Icon(Icons.edit_outlined),
+                          ),
+                          const Icon(Icons.arrow_forward_ios_rounded, size: 16),
+                        ],
+                      ),
+                    ),
                   ),
                 );
               }).toList(),
