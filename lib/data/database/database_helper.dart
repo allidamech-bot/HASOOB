@@ -12,7 +12,7 @@ import 'package:hasoob_app/data/services/database_initializer.dart';
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
-  static const _databaseVersion = 22;
+  static const _databaseVersion = 23;
 
   static const _cashAccountCode = '101';
   static const _inventoryAccountCode = '102';
@@ -187,6 +187,10 @@ class DBHelper {
 
           if (oldVersion < 22) {
             await _upgradeToV22(db);
+          }
+
+          if (oldVersion < 23) {
+            await _upgradeToV23(db);
           }
 
           await _repairAccountNamesForV12(db);
@@ -517,6 +521,7 @@ class DBHelper {
     ''');
 
     await _createSmartAssistantHistoryTable(db);
+    await _createAiCopilotTables(db);
     await _createPerformanceIndexes(db);
   }
 
@@ -3240,8 +3245,8 @@ class DBHelper {
 
     if (branchId == null) {
       return db.rawQuery('''
-        SELECT j.*, 
-               a1.name AS debit_account, 
+        SELECT j.*,
+               a1.name AS debit_account,
                a2.name AS credit_account
         FROM journal_entries j
         JOIN accounts a1 ON j.debit_account_id = a1.id
@@ -3252,8 +3257,8 @@ class DBHelper {
     }
 
     return db.rawQuery('''
-      SELECT j.*, 
-             a1.name AS debit_account, 
+      SELECT j.*,
+             a1.name AS debit_account,
              a2.name AS credit_account
       FROM journal_entries j
       JOIN accounts a1 ON j.debit_account_id = a1.id
@@ -4005,5 +4010,86 @@ class DBHelper {
     await db.execute(
       'CREATE INDEX IF NOT EXISTS idx_smart_assistant_history_intent ON smart_assistant_history(detectedIntent)',
     );
+  }
+
+  static Future<void> _upgradeToV23(Database db) async {
+    await _createAiCopilotTables(db);
+  }
+
+  static Future<void> _createAiCopilotTables(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ai_threads(
+        id TEXT PRIMARY KEY,
+        businessId TEXT,
+        userId TEXT,
+        title TEXT,
+        status TEXT,
+        createdAt TEXT,
+        updatedAt TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ai_messages(
+        id TEXT PRIMARY KEY,
+        threadId TEXT,
+        businessId TEXT,
+        role TEXT,
+        content TEXT,
+        metadataJson TEXT,
+        createdAt TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ai_memory_items(
+        id TEXT PRIMARY KEY,
+        businessId TEXT,
+        userId TEXT,
+        type TEXT,
+        key TEXT,
+        value TEXT,
+        confidence REAL,
+        source TEXT,
+        createdAt TEXT,
+        updatedAt TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ai_action_drafts(
+        id TEXT PRIMARY KEY,
+        threadId TEXT,
+        businessId TEXT,
+        userId TEXT,
+        actionType TEXT,
+        title TEXT,
+        summary TEXT,
+        payloadJson TEXT,
+        status TEXT,
+        validationErrorsJson TEXT,
+        createdAt TEXT,
+        updatedAt TEXT
+      )
+    ''');
+
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ai_action_logs(
+        id TEXT PRIMARY KEY,
+        draftId TEXT,
+        threadId TEXT,
+        businessId TEXT,
+        eventType TEXT,
+        message TEXT,
+        payloadJson TEXT,
+        createdAt TEXT
+      )
+    ''');
+
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_threads_bus_upd ON ai_threads(businessId, updatedAt)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_messages_thread_crt ON ai_messages(threadId, createdAt)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_memory_items_bus_key ON ai_memory_items(businessId, key)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_action_drafts_bus_stat ON ai_action_drafts(businessId, status)');
+    await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_action_logs_draft_crt ON ai_action_logs(draftId, createdAt)');
   }
 }
