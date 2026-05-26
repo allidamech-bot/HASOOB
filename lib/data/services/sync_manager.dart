@@ -9,7 +9,6 @@ import 'package:hasoob_app/data/services/firebase_backend_adapter.dart';
 import 'package:hasoob_app/data/services/cloud_sync_service.dart';
 import 'package:hasoob_app/data/repositories/sync_queue_repository.dart';
 import 'package:hasoob_app/data/database/database_helper.dart';
-import 'package:hasoob_app/data/models/sync_operation.dart';
 
 class SyncManager extends ChangeNotifier {
   static final instance = SyncManager._();
@@ -23,7 +22,6 @@ class SyncManager extends ChangeNotifier {
   bool _isCloudAvailable = true;
   String? _lastSyncError;
 
-  /// Allows injecting a custom engine for testing.
   @visibleForTesting
   void setEngine(SyncEngine engine) {
     _engine = engine;
@@ -38,7 +36,6 @@ class SyncManager extends ChangeNotifier {
   bool get isCloudAvailable => _isCloudAvailable;
   String? get lastSyncError => _lastSyncError;
 
-  /// Resets the singleton state for testing purposes.
   @visibleForTesting
   void resetForTest() {
     _isRunning = false;
@@ -185,10 +182,9 @@ class SyncManager extends ChangeNotifier {
           userId: user.uid,
           role: 'owner',
         );
-        
-        // Restore business profile from cloud if local is empty
+
         await _restoreBusinessProfileIfNeeded(user.uid);
-        
+
         await runSync();
       }
     } catch (e) {
@@ -199,21 +195,23 @@ class SyncManager extends ChangeNotifier {
   Future<void> _restoreBusinessProfileIfNeeded(String businessId) async {
     try {
       final localProfile = await DBHelper.getBusinessProfile(businessId);
-      final localHasData = localProfile != null && 
+      final localHasData = localProfile != null &&
           (localProfile['business_name']?.toString().trim().isNotEmpty == true ||
-           localProfile['trade_name']?.toString().trim().isNotEmpty == true ||
-           localProfile['phone']?.toString().trim().isNotEmpty == true);
-      
+              localProfile['trade_name']?.toString().trim().isNotEmpty == true ||
+              localProfile['phone']?.toString().trim().isNotEmpty == true ||
+              localProfile['logo_data']?.toString().trim().isNotEmpty == true);
+
       if (localHasData) {
         debugPrint('[Sync] Local business profile exists with data, skipping cloud restore');
         return;
       }
-      
+
       final cloudProfile = await CloudSyncService.instance.fetchBusinessProfile(businessId);
-      if (cloudProfile != null && 
+      if (cloudProfile != null &&
           (cloudProfile['business_name']?.toString().trim().isNotEmpty == true ||
-           cloudProfile['trade_name']?.toString().trim().isNotEmpty == true ||
-           cloudProfile['phone']?.toString().trim().isNotEmpty == true)) {
+              cloudProfile['trade_name']?.toString().trim().isNotEmpty == true ||
+              cloudProfile['phone']?.toString().trim().isNotEmpty == true ||
+              cloudProfile['logo_data']?.toString().trim().isNotEmpty == true)) {
         debugPrint('[Sync] Restoring business profile from cloud');
         await DBHelper.saveBusinessProfile({
           'id': '1',
@@ -221,6 +219,7 @@ class SyncManager extends ChangeNotifier {
           'business_name': cloudProfile['business_name'] ?? '',
           'trade_name': cloudProfile['trade_name'],
           'logo_path': cloudProfile['logo_path'],
+          'logo_data': cloudProfile['logo_data'],
           'phone': cloudProfile['phone'],
           'whatsapp': cloudProfile['whatsapp'],
           'email': cloudProfile['email'],
