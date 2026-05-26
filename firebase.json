@@ -1,4 +1,4 @@
-{
+﻿{
   "hosting": {
     "public": "build/web",
     "ignore": [
@@ -31,6 +31,15 @@
         ]
       },
       {
+        "source": "main.dart.js",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
         "source": "flutter_bootstrap.js",
         "headers": [
           {
@@ -58,7 +67,25 @@
         ]
       },
       {
-        "source": "**/*.{js,css,png,jpg,jpeg,gif,webp,svg,wasm,json}",
+        "source": "manifest.json",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "no-cache, no-store, must-revalidate"
+          }
+        ]
+      },
+      {
+        "source": "assets/**",
+        "headers": [
+          {
+            "key": "Cache-Control",
+            "value": "public, max-age=86400"
+          }
+        ]
+      },
+      {
+        "source": "canvaskit/**",
         "headers": [
           {
             "key": "Cache-Control",
