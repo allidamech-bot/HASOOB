@@ -9,6 +9,7 @@ import 'package:hasoob_app/data/services/firebase_backend_adapter.dart';
 import 'package:hasoob_app/data/services/cloud_sync_service.dart';
 import 'package:hasoob_app/data/repositories/sync_queue_repository.dart';
 import 'package:hasoob_app/data/database/database_helper.dart';
+import 'package:hasoob_app/data/models/sync_operation.dart';
 
 class SyncManager extends ChangeNotifier {
   static final instance = SyncManager._();
