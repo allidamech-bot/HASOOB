@@ -14,13 +14,19 @@ class AppTheme {
 
   // Premium Palette
   static const Color background = Color(0xFF0F172A);
+  static const Color backgroundDeep = Color(0xFF090D16);
   static const Color surfaceSecondary = Color(0xFF1E293B);
   static const Color surfaceElevated = Color(0xFF334155);
   
   static const Color accentBlue = Color(0xFF3B82F6);
   static const Color accentCyan = Color(0xFF22D3EE);
   static const Color accentGold = Color(0xFFD4AF37);
+  static const Color accentViolet = Color(0xFF8B5CF6);
+  static const Color accentAmber = Color(0xFFF59E0B);
+  
   static const Color glowBlue = Color(0x2E3B82F6); // 18% opacity
+  static const Color glowBlueStrong = Color(0x403B82F6); // 25% opacity
+  static const Color glowViolet = Color(0x2E8B5CF6); // 18% opacity
 
   static const Color success = Color(0xFF10B981);
   static const Color danger = Color(0xFFEF4444);
@@ -31,7 +37,8 @@ class AppTheme {
   static const Color border = Color(0x1F94A3B8); // 12% opacity
 
   // Light Mode (Refined)
-  static const Color lightBackground = Color(0xFFF8FAFC);
+  static const Color lightBackground = Color(0xFFF9F7F4);
+  static const Color lightBackgroundDeep = Color(0xFFF1EFEA);
   static const Color lightSurface = Color(0xFFFFFFFF);
   static const Color lightBorder = Color(0xFFE2E8F0);
   static const Color lightTextPrimary = Color(0xFF0F172A);
@@ -306,6 +313,53 @@ class AppTheme {
       color: isDark(context) ? Colors.black.withValues(alpha: 0.15) : accentBlue.withValues(alpha: 0.04),
       blurRadius: 12,
       offset: const Offset(0, 4),
+    ),
+  ];
+
+  static LinearGradient commandGradient(BuildContext context) {
+    return isDark(context)
+        ? const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFF1E1B4B), // very deep indigo/navy
+              Color(0xFF0F172A), // slate background
+            ],
+          )
+        : const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0xFFEFF6FF), // soft blue
+              Color(0xFFE0F2FE), // soft cyan
+            ],
+          );
+  }
+
+  static Color navBarBackground(BuildContext context) => isDark(context) ? backgroundDeep : lightBackgroundDeep;
+
+  static List<BoxShadow> shadowStrong(BuildContext context) => [
+    BoxShadow(
+      color: isDark(context) ? Colors.black.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.08),
+      blurRadius: 16,
+      offset: const Offset(0, 8),
+    ),
+  ];
+
+  static List<BoxShadow> shadowGlow(BuildContext context, Color glowColor) => [
+    BoxShadow(
+      color: glowColor.withValues(alpha: 0.25),
+      blurRadius: 12,
+      spreadRadius: 2,
+      offset: const Offset(0, 0),
+    ),
+  ];
+
+  static List<BoxShadow> haloShadow(Color glowColor) => [
+    BoxShadow(
+      color: glowColor.withValues(alpha: 0.2),
+      blurRadius: 24,
+      spreadRadius: 4,
     ),
   ];
 }

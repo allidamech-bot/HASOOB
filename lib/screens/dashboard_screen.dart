@@ -13,19 +13,20 @@ import 'package:hasoob_app/data/services/reports/report_models.dart';
 import 'package:hasoob_app/data/services/reports/report_service.dart';
 import 'package:hasoob_app/core/utils/perf_logger.dart';
 import 'package:hasoob_app/widgets/skeleton_loader.dart';
-import 'package:hasoob_app/widgets/metric_card.dart';
 import 'package:hasoob_app/screens/add_product_screen.dart';
 import 'package:hasoob_app/screens/business_profile_screen.dart';
 import 'package:hasoob_app/screens/customers_screen.dart';
 import 'package:hasoob_app/screens/documents_screen.dart';
 import 'package:hasoob_app/screens/settings_screen.dart';
 import 'package:hasoob_app/widgets/premium/premium_card.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:hasoob_app/data/services/sync_manager.dart';
 import 'package:hasoob_app/widgets/sync_status_indicator.dart';
 import 'package:hasoob_app/widgets/sync_health_card.dart';
 import 'package:hasoob_app/widgets/local_mode_status_card.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:hasoob_app/widgets/business_health_module.dart';
+import 'package:hasoob_app/widgets/orbit_node_card.dart';
+import 'package:hasoob_app/widgets/app_section_header.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -156,47 +157,175 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
+  Widget _actionCapsule(
+    BuildContext context, {
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+    Color? accentColor,
+  }) {
+    final isDark = AppTheme.isDark(context);
+    final color = accentColor ?? AppTheme.accentBlue;
+
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        height: 38,
+        width: 38,
+        decoration: BoxDecoration(
+          color: isDark ? AppTheme.surfaceSecondary : Colors.white,
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          border: Border.all(
+            color: isDark ? color.withValues(alpha: 0.15) : AppTheme.lightBorder,
+            width: 1.2,
+          ),
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+            onTap: onTap,
+            child: Icon(
+              icon,
+              color: isDark ? AppTheme.textPrimary : AppTheme.lightTextPrimary,
+              size: 18,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _premiumHeader(BuildContext context, AppCopy copy) {
+    final isDark = AppTheme.isDark(context);
+    final now = DateTime.now();
+    final monthsAr = ["يناير", "فبراير", "مارس", "أبريل", "مايو", "يونيو", "يوليو", "أغسطس", "سبتمبر", "أكتوبر", "نوفمبر", "ديسمبر"];
+    final monthsEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    final dateStr = copy.isEnglish 
+        ? "${now.day} ${monthsEn[now.month - 1]} ${now.year}"
+        : "${now.day} ${monthsAr[now.month - 1]} ${now.year}";
+
+    final greeting = copy.isEnglish ? "Welcome, Ahmed" : "مرحباً، أحمد";
+    final subtitle = copy.isEnglish ? "SaaS Business Command Center" : "مركز قيادة الأعمال الذكي";
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 20),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.backgroundDeep : AppTheme.lightBackgroundDeep,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(AppTheme.radiusXLarge),
+          bottomRight: Radius.circular(AppTheme.radiusXLarge),
+        ),
+        boxShadow: AppTheme.softShadow(context),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        greeting,
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w900,
+                          color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.calendar_today_outlined,
+                            size: 11,
+                            color: AppTheme.textSecondaryFor(context),
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            dateStr,
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.textSecondaryFor(context),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            "•",
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: AppTheme.textSecondaryFor(context),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Text(
+                            subtitle,
+                            style: const TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.accentCyan,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                // Action capsules
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SyncStatusIndicator(),
+                    const SizedBox(width: 8),
+                    _actionCapsule(
+                      context,
+                      icon: Icons.apartment_rounded,
+                      tooltip: copy.t('businessProfile'),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const BusinessProfileScreen()),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _actionCapsule(
+                      context,
+                      icon: Icons.settings_outlined,
+                      tooltip: copy.t('settings'),
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    _actionCapsule(
+                      context,
+                      icon: Icons.logout_rounded,
+                      tooltip: copy.t('logout'),
+                      onTap: () => AuthService.instance.signOut(),
+                      accentColor: AppTheme.danger,
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
 
     return Scaffold(
-      extendBodyBehindAppBar: true,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        title: Text(copy.t('dashboardTitle'), style: GoogleFonts.inter(fontWeight: FontWeight.w800)),
-        actions: [
-          const SyncStatusIndicator(),
-          const SizedBox(width: 8),
-          IconButton(
-            tooltip: copy.t('businessProfile'),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const BusinessProfileScreen()),
-              );
-            },
-            icon: const Icon(Icons.apartment_rounded, size: 20),
-          ),
-          IconButton(
-            tooltip: copy.t('settings'),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-            },
-            icon: const Icon(Icons.settings_outlined, size: 20),
-          ),
-          IconButton(
-            tooltip: copy.t('logout'),
-            onPressed: () => AuthService.instance.signOut(),
-            icon: const Icon(Icons.logout_rounded, size: 20),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      appBar: null, // Premium custom header used instead
       floatingActionButton: ListenableBuilder(
         listenable: SyncManager.instance,
         builder: (context, _) {
@@ -228,16 +357,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           );
         },
       ),
-      body: Stack(
-        children: [
-          // Background Glows removed for cleaner SaaS look
-
-          RefreshIndicator(
-            onRefresh: _refresh,
-            displacement: 100,
-            child: _buildBody(context, copy),
-          ),
-        ],
+      body: RefreshIndicator(
+        onRefresh: _refresh,
+        displacement: 100,
+        child: _buildBody(context, copy),
       ),
     );
   }
@@ -251,10 +374,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return _buildErrorState(context, copy, _error);
     }
 
-    return _buildContent(context, copy, _cachedData ?? ReportsSnapshot.empty());
+    return _buildContent(context, copy);
   }
 
-  Widget _buildContent(BuildContext context, AppCopy copy, ReportsSnapshot data) {
+  Widget _buildContent(BuildContext context, AppCopy copy) {
+    final data = _cachedData ?? ReportsSnapshot.empty();
     final lowStockPreview = data.lowStockItems.take(3).toList();
     final recentSalesPreview = data.recentSales.take(3).toList();
     final isWide = MediaQuery.sizeOf(context).width >= 1000;
@@ -262,13 +386,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return CustomScrollView(
       slivers: [
         SliverToBoxAdapter(
+          child: _premiumHeader(context, copy),
+        ),
+        SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(20, 100, 20, 0),
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _heroCard(context, copy),
-                const SizedBox(height: 16),
+                BusinessHealthModule(snapshot: data),
+                const SizedBox(height: 24),
                 if (Firebase.apps.isEmpty) ...[
                   const LocalModeStatusCard(),
                   const SizedBox(height: 16),
@@ -276,9 +403,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SyncHealthCard(),
                 const SizedBox(height: 24),
                 
-                Text(
-                  copy.t('overview'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                AppSectionHeader(
+                  title: copy.t('overview'),
+                  hasAccentLine: true,
                 ),
                 const SizedBox(height: 12),
                 
@@ -291,44 +418,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       mainAxisSpacing: 12,
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      childAspectRatio: constraints.maxWidth < 400 ? 1.4 : 1.5,
+                      childAspectRatio: constraints.maxWidth < 400 ? 2.0 : 2.2,
                       children: [
-                        MetricCard(
+                        OrbitNodeCard(
                           title: copy.t('totalProducts'),
                           value: AppFormatters.number(data.totalProducts),
                           icon: Icons.inventory_2_rounded,
                           accentColor: AppTheme.accentBlue,
                         ),
-                        MetricCard(
+                        OrbitNodeCard(
                           title: copy.t('totalSales'),
                           value: AppFormatters.currency(data.totalSales),
                           icon: Icons.point_of_sale_rounded,
-                          accentColor: Colors.cyan,
+                          accentColor: AppTheme.accentCyan,
                         ),
-                        MetricCard(
+                        OrbitNodeCard(
                           title: copy.t('estimatedProfit'),
                           value: AppFormatters.currency(data.netProfitEstimate),
                           icon: Icons.trending_up_rounded,
                           accentColor: AppTheme.success,
                         ),
-                        MetricCard(
+                        OrbitNodeCard(
                           title: copy.t('lowStockCount'),
                           value: AppFormatters.number(data.lowStockItems.length),
                           icon: Icons.warning_amber_rounded,
-                          accentColor: Colors.amber,
-                          caption: data.lowStockItems.isEmpty
-                              ? copy.t('noAlertsNow')
-                              : copy.t('needsAttentionSoon'),
+                          accentColor: AppTheme.warning,
+                          trendText: data.lowStockItems.isEmpty ? null : "${data.lowStockItems.length}",
+                          isTrendUp: false,
                         ),
                       ],
                     );
                   },
                 ),
                 
-                const SizedBox(height: 24),
-                Text(
-                  copy.t('quickActions'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+                const SizedBox(height: 28),
+                AppSectionHeader(
+                  title: copy.t('quickActions'),
+                  hasAccentLine: true,
                 ),
                 const SizedBox(height: 12),
                 SingleChildScrollView(
@@ -360,10 +486,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ),
                 ),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 _buildRestoreCard(context, copy),
                 
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 if (isWide)
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
@@ -492,95 +618,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppTheme.surfaceSecondary : Colors.white,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         border: Border.all(
-          color: isDark ? Colors.white.withValues(alpha: 0.1) : AppTheme.lightBorder,
+          color: isDark ? AppTheme.accentBlue.withValues(alpha: 0.15) : AppTheme.lightBorder,
+          width: 1.2,
         ),
-        boxShadow: [
-          if (isDark)
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.2),
-              blurRadius: 10,
-              offset: const Offset(0, 4),
-            )
-          else
-            const BoxShadow(
-              color: Color(0x0A000000),
-              blurRadius: 10,
-              offset: Offset(0, 4),
-            ),
-        ],
+        boxShadow: AppTheme.softShadow(context),
       ),
       child: Material(
         color: Colors.transparent,
         child: InkWell(
           onTap: onTap,
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Container(
-                  padding: const EdgeInsets.all(6),
+                  padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
                     color: AppTheme.accentBlue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(6),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
                   ),
-                  child: Icon(icon, color: AppTheme.accentBlue, size: 16),
+                  child: Icon(icon, color: AppTheme.accentBlue, size: 18),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 12),
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
-                const SizedBox(width: 4),
               ],
             ),
           ),
         ),
-      ),
-    );
-  }
-
-  Widget _heroCard(BuildContext context, AppCopy copy) {
-    final isDark = AppTheme.isDark(context);
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-      decoration: BoxDecoration(
-        color: isDark ? AppTheme.surfaceSecondary : AppTheme.lightSurface,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: AppTheme.borderFor(context)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.accentBlue.withValues(alpha: 0.15),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.show_chart_rounded, size: 24, color: AppTheme.accentBlue),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  copy.t('dashboardHero'),
-                  style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  copy.t('professionalDashboard'),
-                  style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w600, color: AppTheme.accentBlue),
-                ),
-              ],
-            ),
-          ),
-        ],
       ),
     );
   }
@@ -624,7 +695,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-
   Widget _buildSkeleton(BuildContext context, AppCopy copy) {
     return const Center(child: SkeletonLoader());
   }
@@ -650,46 +720,68 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildRestoreCard(BuildContext context, AppCopy copy) {
     final status = _restoreStatusData?['status'] ?? 'unknown';
     final lastDate = _restoreStatusData?['last_restore'];
+    final isDark = AppTheme.isDark(context);
     
-    return PremiumCard(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.surfaceSecondary : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        border: Border.all(
+          color: AppTheme.borderFor(context),
+          width: 1,
+        ),
+      ),
+      child: Row(
         children: [
-          Row(
-            children: [
-              _iconBox(Icons.cloud_download_rounded, AppTheme.accentBlue),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(copy.t('restoreFromCloud'), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
-                    const SizedBox(height: 2),
-                    Text(
-                      status == 'used' ? copy.t('restoreUsed') : copy.t('restoreUnused'),
-                      style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 13),
-                    ),
-                  ],
-                ),
+          Icon(
+            Icons.cloud_download_outlined,
+            size: 16,
+            color: AppTheme.accentBlue.withValues(alpha: 0.8),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              status == 'used' ? copy.t('restoreUsed') : copy.t('restoreUnused'),
+              style: TextStyle(
+                color: AppTheme.textSecondaryFor(context),
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
               ),
-              if (!_isRestoring)
-                TextButton.icon(
-                  onPressed: _restoreFromCloud,
-                  icon: const Icon(Icons.restore_rounded, size: 18),
-                  label: Text(copy.t('restore')),
-                )
-              else
-                const CircularProgressIndicator(strokeWidth: 2),
-            ],
+            ),
           ),
           if (lastDate != null) ...[
-            const SizedBox(height: 12),
             Text(
               copy.dashboardLastRestore(AppFormatters.dateTimeString(lastDate.toString())),
-              style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 12),
+              style: TextStyle(
+                color: AppTheme.textSecondaryFor(context),
+                fontSize: 10,
+              ),
             ),
+            const SizedBox(width: 12),
           ],
+          if (!_isRestoring)
+            InkWell(
+              onTap: _restoreFromCloud,
+              borderRadius: BorderRadius.circular(4),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                child: Text(
+                  copy.t('restore'),
+                  style: const TextStyle(
+                    color: AppTheme.accentBlue,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            )
+          else
+            const SizedBox(
+              width: 12,
+              height: 12,
+              child: CircularProgressIndicator(strokeWidth: 1.5),
+            ),
         ],
       ),
     );

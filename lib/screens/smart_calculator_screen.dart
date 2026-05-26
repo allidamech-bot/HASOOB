@@ -237,12 +237,21 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
             'احسب ضريبة 15% على 1200',
           ];
 
+    final isDark = AppTheme.isDark(context);
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        PremiumCard(
-          padding: const EdgeInsets.all(4),
-          radius: AppTheme.radiusLarge,
+        Container(
+          decoration: BoxDecoration(
+            color: isDark ? AppTheme.surfaceSecondary : Colors.white,
+            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+            border: Border.all(
+              color: AppTheme.accentBlue.withValues(alpha: 0.25),
+              width: 1.5,
+            ),
+            boxShadow: AppTheme.softShadow(context),
+          ),
           child: Column(
             children: [
               TextField(
@@ -293,6 +302,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
         const SizedBox(height: 16),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
           child: Row(
             children: suggestions.map((s) => Padding(
               padding: const EdgeInsetsDirectional.only(end: 8),
@@ -302,8 +312,16 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                   _controller.text = s;
                   _runPreview(s);
                 },
-                side: BorderSide(color: AppTheme.accentBlue.withValues(alpha: 0.2)),
-                backgroundColor: AppTheme.accentBlue.withValues(alpha: 0.05),
+                side: BorderSide(
+                  color: AppTheme.accentBlue.withValues(alpha: 0.3),
+                  width: 1.2,
+                ),
+                backgroundColor: AppTheme.accentBlue.withValues(alpha: 0.08),
+                labelStyle: const TextStyle(
+                  color: AppTheme.accentBlue,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 11,
+                ),
               ),
             )).toList(),
           ),
@@ -429,17 +447,31 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
       child: Column(
         children: [
           Container(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: AppTheme.accentBlue.withValues(alpha: 0.1),
+              color: AppTheme.accentBlue.withValues(alpha: 0.05),
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.bolt, size: 48, color: AppTheme.accentBlue),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.accentBlue.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.accentBlue.withValues(alpha: 0.2),
+                    blurRadius: 20,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.bolt, size: 36, color: AppTheme.accentBlue),
+            ),
           ),
           const SizedBox(height: 32),
           Text(
-            _text('Ready to assist', 'جاهز للمساعدة'),
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+            _text('Ready to Assist', 'جاهز للمساعدة'),
+            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
           ),
           const SizedBox(height: 16),
           Text(
@@ -447,7 +479,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                 'Type your business operations naturally. I\'ll parse the data and calculate the results instantly.',
                 'اكتب عملياتك التجارية بشكل طبيعي. سأقوم بتحليل البيانات وحساب النتائج فوراً.'),
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.textSecondaryFor(context), height: 1.5),
+            style: TextStyle(color: AppTheme.textSecondaryFor(context), height: 1.5, fontSize: 13),
           ),
         ],
       ),
@@ -526,57 +558,117 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
   }
 }
 
-class _Header extends StatelessWidget {
+class _Header extends StatefulWidget {
   const _Header({required this.isEnglish});
   final bool isEnglish;
 
   @override
+  State<_Header> createState() => _HeaderState();
+}
+
+class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+  late Animation<double> _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    )..repeat(reverse: true);
+    _pulse = Tween<double>(begin: 0.35, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
+    final isDark = AppTheme.isDark(context);
+
     return Container(
-      padding: const EdgeInsets.fromLTRB(24, 64, 24, 32),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: AppTheme.accentBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.2)),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.security, size: 14, color: AppTheme.accentBlue),
-                    const SizedBox(width: 6),
-                    Text(
-                      isEnglish ? 'LOCAL ENGINE' : 'محرك محلي',
-                      style: GoogleFonts.inter(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 1,
-                        color: AppTheme.accentBlue,
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.backgroundDeep : AppTheme.lightBackgroundDeep,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(AppTheme.radiusXLarge),
+          bottomRight: Radius.circular(AppTheme.radiusXLarge),
+        ),
+        boxShadow: AppTheme.softShadow(context),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppTheme.accentBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                    border: Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.2)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Pulsing AI active indicator dot
+                      FadeTransition(
+                        opacity: _pulse,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: AppTheme.accentCyan,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      Text(
+                        widget.isEnglish ? 'LOCAL AI ENGINE ACTIVE' : 'محرك المساعد الذكي نشط',
+                        style: GoogleFonts.inter(
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1,
+                          color: AppTheme.accentBlue,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              copy.t('smartCopilot'),
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.w900,
+                color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                letterSpacing: -0.5,
               ),
-            ],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            copy.t('smartCopilot'),
-            style: Theme.of(context).textTheme.displayMedium?.copyWith(height: 1),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            copy.t('smartCopilotSubtitle'),
-            style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 16),
-          ),
-        ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              copy.t('smartCopilotSubtitle'),
+              style: TextStyle(
+                color: AppTheme.textSecondaryFor(context),
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

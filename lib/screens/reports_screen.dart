@@ -18,8 +18,8 @@ import '../core/utils/perf_logger.dart';
 import '../widgets/premium/premium_card.dart';
 import '../widgets/skeleton_loader.dart';
 import '../widgets/app_section_header.dart';
-import '../widgets/metric_card.dart';
 import '../widgets/sync_status_indicator.dart';
+import '../widgets/orbit_node_card.dart';
 import 'accounting/trial_balance_screen.dart';
 
 // ignore: avoid_web_libraries_in_flutter
@@ -195,18 +195,73 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Color get _onSurface => _theme.colorScheme.onSurface;
   Color get _muted => AppTheme.textSecondaryFor(context);
 
+  Widget _premiumHeader(BuildContext context, AppCopy copy) {
+    final isDark = AppTheme.isDark(context);
+    final title = copy.t('reportsTitle');
+    final subtitle = copy.isEnglish ? "Business Intelligence & Analysis" : "مركز تحليل وتقارير الأداء";
+
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(16, 24, 16, 20),
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.backgroundDeep : AppTheme.lightBackgroundDeep,
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(AppTheme.radiusXLarge),
+          bottomRight: Radius.circular(AppTheme.radiusXLarge),
+        ),
+        boxShadow: AppTheme.softShadow(context),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900,
+                      color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      Icon(
+                        Icons.analytics_outlined,
+                        size: 11,
+                        color: AppTheme.textSecondaryFor(context),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        subtitle,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: AppTheme.textSecondaryFor(context),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SyncStatusIndicator(),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          copy.t('reportsTitle'),
-          style: const TextStyle(fontWeight: FontWeight.w800),
-        ),
-        actions: const [SyncStatusIndicator()],
-      ),
+      appBar: null,
       body: RefreshIndicator(
         onRefresh: () => _reload(showError: true),
         child: _buildBody(context, copy),
@@ -289,44 +344,54 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+      padding: EdgeInsets.zero,
       children: [
-        AppSectionHeader(
-          title: copy.t('performanceSummary'),
-          subtitle: _hasFilters
-              ? copy.t('filtersAffectResults')
-              : copy.t('currentSnapshotSummary'),
-          trailing: _hasFilters
-              ? ActionChip(
-                  label: Text(copy.t('clearFilters')),
-                  onPressed: () {
-                    setState(() {
-                      _periodFilter = ReportPeriodFilter.all;
-                      _selectedProductId = null;
-                    });
-                    _loadData();
-                  },
-                )
-              : null,
+        _premiumHeader(context, copy),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              AppSectionHeader(
+                title: copy.t('performanceSummary'),
+                subtitle: _hasFilters
+                    ? copy.t('filtersAffectResults')
+                    : copy.t('currentSnapshotSummary'),
+                hasAccentLine: true,
+                trailing: _hasFilters
+                    ? ActionChip(
+                        label: Text(copy.t('clearFilters')),
+                        onPressed: () {
+                          setState(() {
+                            _periodFilter = ReportPeriodFilter.all;
+                            _selectedProductId = null;
+                          });
+                          _loadData();
+                        },
+                      )
+                    : null,
+              ),
+              const SizedBox(height: 16),
+              _hero(data, copy),
+              const SizedBox(height: 24),
+              _filters(productOptions, copy),
+              const SizedBox(height: 24),
+              _metrics(data, copy),
+              const SizedBox(height: 24),
+              _exports(copy),
+              const SizedBox(height: 24),
+              _charts(data, copy),
+              const SizedBox(height: 24),
+              _bestSelling(data, copy),
+              const SizedBox(height: 24),
+              _lowStock(data, copy),
+              const SizedBox(height: 24),
+              _recentSales(data, copy),
+              const SizedBox(height: 24),
+              _accounting(data, copy),
+            ],
+          ),
         ),
-        const SizedBox(height: 16),
-        _hero(data, copy),
-        const SizedBox(height: 20),
-        _filters(productOptions, copy),
-        const SizedBox(height: 20),
-        _metrics(data, copy),
-        const SizedBox(height: 20),
-        _exports(copy),
-        const SizedBox(height: 20),
-        _charts(data, copy),
-        const SizedBox(height: 20),
-        _bestSelling(data, copy),
-        const SizedBox(height: 20),
-        _lowStock(data, copy),
-        const SizedBox(height: 20),
-        _recentSales(data, copy),
-        const SizedBox(height: 20),
-        _accounting(data, copy),
       ],
     );
   }
@@ -340,46 +405,70 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _hero(ReportsSnapshot data, AppCopy copy) {
+    final isDark = AppTheme.isDark(context);
     return PremiumCard(
-      padding: const EdgeInsets.all(20),
-      gradient: LinearGradient(
-        colors: [
-          AppTheme.surfaceAltFor(context),
-          AppTheme.surfaceFor(context),
-        ],
-      ),
+      padding: const EdgeInsets.all(24),
+      gradient: AppTheme.commandGradient(context),
       radius: 20,
-      border: Border.all(color: _blue.withValues(alpha: 0.18)),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      border: Border.all(
+        color: isDark
+            ? AppTheme.accentBlue.withValues(alpha: 0.25)
+            : AppTheme.borderFor(context),
+        width: 1.5,
+      ),
+      child: Row(
         children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  copy.t('totalSales'),
+                  style: TextStyle(
+                    color: AppTheme.textSecondaryFor(context),
+                    fontWeight: FontWeight.bold,
+                    fontSize: 12,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  AppFormatters.currency(data.totalSales),
+                  style: _theme.textTheme.headlineMedium?.copyWith(
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -1.0,
+                    color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _hasFilters
+                      ? copy.t('filtersAffectResults')
+                      : copy.t('currentSnapshotSummary'),
+                  style: TextStyle(
+                    color: AppTheme.textSecondaryFor(context),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
           Container(
-            width: 44,
-            height: 44,
+            width: 56,
+            height: 56,
             decoration: BoxDecoration(
-              color: _blue.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(14),
+              color: AppTheme.accentBlue.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(
+                color: AppTheme.accentBlue.withValues(alpha: 0.3),
+                width: 1.5,
+              ),
             ),
-            child: const Icon(Icons.insights_rounded, color: _blue),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            copy.t('totalSales'),
-            style: TextStyle(color: _muted, fontWeight: FontWeight.w600),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            AppFormatters.currency(data.totalSales),
-            style: _theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w900,
+            child: const Icon(
+              Icons.insights_rounded,
+              color: AppTheme.accentBlue,
+              size: 28,
             ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _hasFilters
-                ? copy.t('filtersAffectResults')
-                : copy.t('currentSnapshotSummary'),
-            style: TextStyle(color: _muted),
           ),
         ],
       ),
@@ -387,31 +476,56 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Widget _filters(List<DropdownMenuItem<String?>> productOptions, AppCopy copy) {
+    final isDark = AppTheme.isDark(context);
     return _surface(
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          DropdownButtonFormField<ReportPeriodFilter>(
-            initialValue: _periodFilter,
-            dropdownColor: AppTheme.surfaceFor(context),
-            style: TextStyle(color: _onSurface),
-            decoration: _inputDecoration(copy.t('period')),
-            items: ReportPeriodFilter.values
-                .map(
-                  (filter) => DropdownMenuItem(
-                    value: filter,
-                    child: Text(_periodLabel(filter, copy)),
-                  ),
-                )
-                .toList(),
-            onChanged: (value) {
-              if (value == null || value == _periodFilter) return;
-              setState(() {
-                _periodFilter = value;
-              });
-              _loadData();
-            },
+          Text(
+            copy.t('period'),
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            clipBehavior: Clip.none,
+            child: Row(
+              children: ReportPeriodFilter.values.map((filter) {
+                final isSelected = _periodFilter == filter;
+                return Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: ChoiceChip(
+                    label: Text(_periodLabel(filter, copy)),
+                    selected: isSelected,
+                    onSelected: (selected) {
+                      if (selected) {
+                        setState(() {
+                          _periodFilter = filter;
+                        });
+                        _loadData();
+                      }
+                    },
+                    selectedColor: AppTheme.accentBlue.withValues(alpha: 0.12),
+                    backgroundColor: isDark ? AppTheme.background : Colors.transparent,
+                    labelStyle: TextStyle(
+                      color: isSelected 
+                          ? AppTheme.accentBlue 
+                          : AppTheme.textSecondaryFor(context),
+                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontSize: 12,
+                    ),
+                    side: BorderSide(
+                      color: isSelected 
+                          ? AppTheme.accentBlue.withValues(alpha: 0.3) 
+                          : AppTheme.borderFor(context),
+                      width: 1.2,
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+          const SizedBox(height: 16),
           DropdownButtonFormField<String?>(
             initialValue: _selectedProductId,
             dropdownColor: AppTheme.surfaceFor(context),
@@ -433,7 +547,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   InputDecoration _inputDecoration(String label) => InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: _muted),
+        labelStyle: TextStyle(color: _muted, fontSize: 13),
         filled: true,
         fillColor: AppTheme.surfaceAltFor(context),
       );
@@ -445,30 +559,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
       mainAxisSpacing: 12,
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
-      childAspectRatio: 1.5,
+      childAspectRatio: 2.2,
       children: [
-        MetricCard(
+        OrbitNodeCard(
           title: copy.t('totalProducts'),
           value: AppFormatters.number(data.totalProducts),
           icon: Icons.inventory_2_rounded,
+          accentColor: AppTheme.accentBlue,
         ),
-        MetricCard(
+        OrbitNodeCard(
           title: copy.t('quantity'),
           value: AppFormatters.number(data.totalQuantity),
           icon: Icons.layers_rounded,
+          accentColor: AppTheme.accentCyan,
         ),
-        MetricCard(
+        OrbitNodeCard(
           title: copy.t('estimatedProfit'),
           value: AppFormatters.currency(data.netProfitEstimate),
           icon: Icons.trending_up_rounded,
           accentColor: AppTheme.success,
         ),
-        MetricCard(
+        OrbitNodeCard(
           title: copy.t('realizedProfit'),
           value: AppFormatters.currency(data.realizedProfit),
           icon: Icons.payments_rounded,
-          accentColor:
-              data.realizedProfit >= 0 ? AppTheme.success : AppTheme.danger,
+          accentColor: data.realizedProfit >= 0 ? AppTheme.success : AppTheme.danger,
         ),
       ],
     );
@@ -480,41 +595,46 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppSectionHeader(title: copy.t('export')),
+        AppSectionHeader(title: copy.t('export'), hasAccentLine: true),
         const SizedBox(height: 12),
-        Wrap(
-          spacing: 12,
-          runSpacing: 12,
-          children: [
-            _exportButton(copy.t('inventoryPdf'), Icons.picture_as_pdf_rounded, () {
-              return _exportService.exportInventoryPdf(
-                businessId: _businessId,
-                period: _periodFilter,
-                productId: _selectedProductId,
-              );
-            }),
-            _exportButton(copy.t('salesPdf'), Icons.picture_as_pdf_rounded, () {
-              return _exportService.exportSalesPdf(
-                businessId: _businessId,
-                period: _periodFilter,
-                productId: _selectedProductId,
-              );
-            }),
-            _exportButton(copy.t('inventoryCsv'), Icons.table_chart_rounded, () {
-              return _exportService.exportInventoryCsv(
-                businessId: _businessId,
-                period: _periodFilter,
-                productId: _selectedProductId,
-              );
-            }),
-            _exportButton(copy.t('salesCsv'), Icons.table_chart_rounded, () {
-              return _exportService.exportSalesCsv(
-                businessId: _businessId,
-                period: _periodFilter,
-                productId: _selectedProductId,
-              );
-            }),
-          ],
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          clipBehavior: Clip.none,
+          child: Row(
+            children: [
+              _exportButton(copy.t('inventoryPdf'), Icons.picture_as_pdf_rounded, () {
+                return _exportService.exportInventoryPdf(
+                  businessId: _businessId,
+                  period: _periodFilter,
+                  productId: _selectedProductId,
+                );
+              }),
+              const SizedBox(width: 8),
+              _exportButton(copy.t('salesPdf'), Icons.picture_as_pdf_rounded, () {
+                return _exportService.exportSalesPdf(
+                  businessId: _businessId,
+                  period: _periodFilter,
+                  productId: _selectedProductId,
+                );
+              }),
+              const SizedBox(width: 8),
+              _exportButton(copy.t('inventoryCsv'), Icons.table_chart_rounded, () {
+                return _exportService.exportInventoryCsv(
+                  businessId: _businessId,
+                  period: _periodFilter,
+                  productId: _selectedProductId,
+                );
+              }),
+              const SizedBox(width: 8),
+              _exportButton(copy.t('salesCsv'), Icons.table_chart_rounded, () {
+                return _exportService.exportSalesCsv(
+                  businessId: _businessId,
+                  period: _periodFilter,
+                  productId: _selectedProductId,
+                );
+              }),
+            ],
+          ),
         ),
       ],
     );
@@ -525,10 +645,37 @@ class _ReportsScreenState extends State<ReportsScreen> {
     IconData icon,
     Future<ExportResult> Function() action,
   ) {
-    return FilledButton.icon(
-      onPressed: () => _handleExport(action),
-      icon: Icon(icon),
-      label: Text(title),
+    final isDark = AppTheme.isDark(context);
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? AppTheme.surfaceSecondary : Colors.white,
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+        border: Border.all(
+          color: isDark ? AppTheme.accentBlue.withValues(alpha: 0.15) : AppTheme.lightBorder,
+          width: 1.2,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+          onTap: () => _handleExport(action),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, size: 16, color: AppTheme.accentBlue),
+                const SizedBox(width: 8),
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -536,7 +683,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AppSectionHeader(title: copy.t('reportsTitle')),
+        AppSectionHeader(title: copy.t('reportsTitle'), hasAccentLine: true),
         const SizedBox(height: 12),
         _chartCard(copy.t('salesAcrossTime'), _lineChart(data.salesTrend, _blue, copy)),
         const SizedBox(height: 16),

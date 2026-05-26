@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_copy.dart';
-import '../core/app_theme.dart';
+import '../widgets/command_dock.dart';
 import 'add_product_screen.dart';
 import 'customers_screen.dart';
 import 'dashboard_screen.dart';
@@ -93,7 +93,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final copy = AppCopy.of(context);
     final localeKey = Localizations.localeOf(context).languageCode;
     final screens = <Widget>[
       const DashboardScreen(),
@@ -114,62 +113,9 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
         bottomNavigationBar: SafeArea(
           minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: Container(
-            height: 72,
-            decoration: BoxDecoration(
-              color: AppTheme.background.withValues(alpha: 0.95),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppTheme.border, width: 1),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.15),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
-                ),
-              ],
-            ),
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(16),
-              child: NavigationBar(
-                backgroundColor: Colors.transparent,
-                indicatorColor: AppTheme.accentBlue.withValues(alpha: 0.1),
-                selectedIndex: _index,
-                onDestinationSelected: _onDestinationSelected,
-                labelBehavior: NavigationDestinationLabelBehavior.onlyShowSelected,
-                destinations: [
-                  NavigationDestination(
-                    icon: const Icon(Icons.dashboard_outlined, size: 20),
-                    selectedIcon: const Icon(Icons.dashboard, color: AppTheme.accentBlue),
-                    label: copy.t('navDashboard'),
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.inventory_2_outlined, size: 20),
-                    selectedIcon: const Icon(Icons.inventory_2, color: AppTheme.accentBlue),
-                    label: copy.t('navInventory'),
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.add_circle_outline, size: 20),
-                    selectedIcon: const Icon(Icons.add_circle, color: AppTheme.accentBlue),
-                    label: copy.t('navAdd'),
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.receipt_long_outlined, size: 20),
-                    selectedIcon: const Icon(Icons.receipt_long, color: AppTheme.accentBlue),
-                    label: copy.t('navTransactions'),
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.auto_awesome_outlined, size: 20),
-                    selectedIcon: const Icon(Icons.auto_awesome, color: AppTheme.accentBlue),
-                    label: copy.isEnglish ? 'Smart' : 'ذكي', // Smart Calculator
-                  ),
-                  NavigationDestination(
-                    icon: const Icon(Icons.analytics_outlined, size: 20),
-                    selectedIcon: const Icon(Icons.analytics, color: AppTheme.accentBlue),
-                    label: copy.t('navReports'),
-                  ),
-                ],
-              ),
-            ),
+          child: CommandDock(
+            selectedIndex: _index,
+            onDestinationSelected: _onDestinationSelected,
           ),
         ),
       ),

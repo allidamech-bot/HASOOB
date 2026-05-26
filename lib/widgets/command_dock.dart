@@ -1,0 +1,189 @@
+import 'package:flutter/material.dart';
+import '../core/app_copy.dart';
+import '../core/app_theme.dart';
+
+class CommandDock extends StatelessWidget {
+  final int selectedIndex;
+  final ValueChanged<int> onDestinationSelected;
+
+  const CommandDock({
+    super.key,
+    required this.selectedIndex,
+    required this.onDestinationSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final copy = AppCopy.of(context);
+
+    // List of items in the bottom navigation dock
+    final items = [
+      _DockItemData(
+        index: 0,
+        icon: Icons.dashboard_outlined,
+        selectedIcon: Icons.dashboard,
+        label: copy.t('navDashboard'),
+      ),
+      _DockItemData(
+        index: 1,
+        icon: Icons.inventory_2_outlined,
+        selectedIcon: Icons.inventory_2,
+        label: copy.t('navInventory'),
+      ),
+      _DockItemData(
+        index: 2,
+        icon: Icons.add,
+        selectedIcon: Icons.add,
+        label: copy.t('navAdd'),
+        isCenter: true,
+      ),
+      _DockItemData(
+        index: 3,
+        icon: Icons.receipt_long_outlined,
+        selectedIcon: Icons.receipt_long,
+        label: copy.t('navTransactions'),
+      ),
+      _DockItemData(
+        index: 4,
+        icon: Icons.auto_awesome_outlined,
+        selectedIcon: Icons.auto_awesome,
+        label: copy.isEnglish ? 'Smart' : 'ذكي',
+      ),
+      _DockItemData(
+        index: 5,
+        icon: Icons.analytics_outlined,
+        selectedIcon: Icons.analytics,
+        label: copy.t('navReports'),
+      ),
+    ];
+
+    return Container(
+      height: 84,
+      decoration: BoxDecoration(
+        color: AppTheme.navBarBackground(context).withValues(alpha: 0.96),
+        borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
+        border: Border.all(
+          color: AppTheme.borderFor(context),
+          width: 1.5,
+        ),
+        boxShadow: AppTheme.shadowStrong(context),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: items.map((item) {
+            if (item.isCenter) {
+              return _buildCenterButton(context, item);
+            }
+            return _buildNormalItem(context, item);
+          }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCenterButton(BuildContext context, _DockItemData item) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 4),
+      height: 52,
+      width: 52,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: const LinearGradient(
+          colors: [AppTheme.accentBlue, AppTheme.accentCyan],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.accentBlue.withValues(alpha: 0.4),
+            blurRadius: 16,
+            spreadRadius: 2,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          customBorder: const CircleBorder(),
+          onTap: () => onDestinationSelected(item.index),
+          child: Icon(
+            item.icon,
+            color: Colors.white,
+            size: 26,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNormalItem(BuildContext context, _DockItemData item) {
+    final isSelected = selectedIndex == item.index;
+    final theme = Theme.of(context);
+    const activeColor = AppTheme.accentBlue;
+    final inactiveColor = AppTheme.textSecondaryFor(context);
+
+    return Expanded(
+      child: Tooltip(
+        message: item.label,
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+            onTap: () => onDestinationSelected(item.index),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? AppTheme.accentBlue.withValues(alpha: 0.12)
+                        : Colors.transparent,
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                  ),
+                  child: Icon(
+                    isSelected ? item.selectedIcon : item.icon,
+                    color: isSelected ? activeColor : inactiveColor,
+                    size: 22,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: isSelected ? activeColor : inactiveColor,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    fontSize: 9,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _DockItemData {
+  final int index;
+  final IconData icon;
+  final IconData selectedIcon;
+  final String label;
+  final bool isCenter;
+
+  _DockItemData({
+    required this.index,
+    required this.icon,
+    required this.selectedIcon,
+    required this.label,
+    this.isCenter = false,
+  });
+}

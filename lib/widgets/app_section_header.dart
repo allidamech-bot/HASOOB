@@ -8,11 +8,13 @@ class AppSectionHeader extends StatelessWidget {
     required this.title,
     this.subtitle,
     this.trailing,
+    this.hasAccentLine = false,
   });
 
   final String title;
   final String? subtitle;
   final Widget? trailing;
+  final bool hasAccentLine;
 
   @override
   Widget build(BuildContext context) {
@@ -25,14 +27,36 @@ class AppSectionHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                title,
-                style: GoogleFonts.inter(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: -0.5,
-                  color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (hasAccentLine) ...[
+                    Container(
+                      width: 4,
+                      height: 18,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: [AppTheme.accentBlue, AppTheme.accentCyan],
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                        ),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                  ],
+                  Expanded(
+                    child: Text(
+                      title,
+                      style: GoogleFonts.inter(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.2,
+                        color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               if (subtitle != null) ...[
                 const SizedBox(height: 4),

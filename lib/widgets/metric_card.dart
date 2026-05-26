@@ -42,20 +42,9 @@ class MetricCard extends StatelessWidget {
                 ],
               )
             : null,
-        boxShadow: [
-          if (isDark)
-            BoxShadow(
-              color: color.withValues(alpha: 0.03),
-              blurRadius: 20,
-              offset: const Offset(0, 10),
-            )
-          else
-            BoxShadow(
-              color: color.withValues(alpha: 0.05),
-              blurRadius: 15,
-              offset: const Offset(0, 8),
-            ),
-        ],
+        boxShadow: isDark
+            ? AppTheme.haloShadow(color)
+            : AppTheme.softShadow(context),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
@@ -66,7 +55,7 @@ class MetricCard extends StatelessWidget {
               top: 0,
               left: 0,
               right: 0,
-              height: 2,
+              height: 3,
               child: Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
