@@ -131,7 +131,7 @@ class _PremiumSplashScreenState extends State<PremiumSplashScreen> with SingleTi
           ),
           
           // 5. Signature Accent
-          Positioned(
+          const Positioned(
             bottom: 60,
             left: 0,
             right: 0,

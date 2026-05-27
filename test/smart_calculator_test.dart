@@ -143,8 +143,8 @@ void main() {
         customerRepository: _FakeCustomerRepository(),
       );
 
-      final preview = SmartAssistantPreview(
-        parse: const SmartAssistantParseResult(
+      const preview = SmartAssistantPreview(
+        parse: SmartAssistantParseResult(
           userInput: 'Buy something',
           intent: SmartAssistantIntent.addProductDraft,
           extracted: {},
@@ -152,7 +152,7 @@ void main() {
           warnings: [],
           confidence: 0.5,
         ),
-        calculation: const SmartCalculationResult(values: {}, summary: ''),
+        calculation: SmartCalculationResult(values: {}, summary: ''),
         fields: [],
       );
 
@@ -169,8 +169,8 @@ void main() {
         customerRepository: _FakeCustomerRepository(),
       );
 
-      final preview = SmartAssistantPreview(
-        parse: const SmartAssistantParseResult(
+      const preview = SmartAssistantPreview(
+        parse: SmartAssistantParseResult(
           userInput: 'Bought -3 units',
           intent: SmartAssistantIntent.addProductDraft,
           extracted: {
@@ -183,7 +183,7 @@ void main() {
           warnings: [],
           confidence: 0.9,
         ),
-        calculation: const SmartCalculationResult(values: {}, summary: ''),
+        calculation: SmartCalculationResult(values: {}, summary: ''),
         fields: [],
       );
 
@@ -201,8 +201,8 @@ void main() {
         customerRepository: _FakeCustomerRepository(),
       );
 
-      final preview = SmartAssistantPreview(
-        parse: const SmartAssistantParseResult(
+      const preview = SmartAssistantPreview(
+        parse: SmartAssistantParseResult(
           userInput: 'update stock to 5',
           intent: SmartAssistantIntent.updateStockDraft,
           extracted: {
@@ -213,7 +213,7 @@ void main() {
           warnings: [],
           confidence: 0.9,
         ),
-        calculation: const SmartCalculationResult(values: {}, summary: ''),
+        calculation: SmartCalculationResult(values: {}, summary: ''),
         fields: [],
       );
 

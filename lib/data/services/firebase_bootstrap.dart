@@ -56,15 +56,7 @@ class FirebaseBootstrap {
       );
     }
 
-    if (selectedOptions == null) {
-      debugPrint('[Startup][Firebase] FATAL: selectedOptions is null');
-      return FirebaseBootstrapResult(
-        isConfigured: false,
-        message: 'Firebase initialization skipped: platform options are null',
-        selectedPlatform: selectedPlatform,
-        webConfigExists: webConfigExists,
-      );
-    }
+
 
     final missingFields =
         DefaultFirebaseOptions.missingRequiredFields(selectedOptions);

@@ -135,7 +135,7 @@ void main() {
   test('watchProducts emits updated list when deleteProduct is called', () async {
     const businessId = 'test_biz';
     
-    final product = const ProductModel(
+    const product = ProductModel(
       id: 'p2',
       businessId: businessId,
       name: 'Product 2',
