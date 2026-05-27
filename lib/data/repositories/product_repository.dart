@@ -131,7 +131,17 @@ class ProductRepository {
   }
 
   Future<void> deleteProduct(String businessId, String id) async {
-    await DBHelper.deleteProduct(businessId, id);
+    final deletedRows = await DBHelper.deleteProduct(businessId, id);
+
+    if (deletedRows == 0) {
+      debugPrint(
+        '[ProductRepository] deleteProduct failed locally: '
+        'businessId=$businessId, id=$id',
+      );
+      throw StateError(
+        '???? ??? ????? ??????. ?? ??? ?????? ??? ????? ??? ?????? ??????.',
+      );
+    }
 
     await SyncQueueService.instance.enqueue(
       entityName: 'products',

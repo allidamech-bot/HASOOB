@@ -58,7 +58,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Future<void> _delete(ProductModel product) async {
-    await _productRepository.deleteProduct(product.id, product.businessId);
+    await _productRepository.deleteProduct(product.businessId, product.id);
     if (!mounted) return;
     AppMessages.success(context, AppCopy.of(context).t('productDeleted'));
   }
