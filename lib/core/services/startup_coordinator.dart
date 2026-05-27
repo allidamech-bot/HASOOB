@@ -8,7 +8,7 @@ import 'package:hasoob_app/core/business/business_context.dart';
 import 'package:hasoob_app/core/services/branch_context.dart';
 import 'package:hasoob_app/core/services/connectivity_service.dart';
 import 'package:hasoob_app/core/utils/web_utils.dart';
-import 'package:hasoob_app/data/services/database_initializer.dart'; // NEW: DatabaseInitializer import
+import 'package:hasoob_app/data/services/database_initializer.dart';
 
 enum StartupStatus {
   idle,

@@ -8,6 +8,7 @@ import '../core/business/business_context.dart';
 import '../data/models/smart_assistant_models.dart';
 import '../data/services/smart_calculator_service.dart';
 import '../widgets/premium/premium_card.dart';
+import '../widgets/ai_design_system.dart';
 
 class SmartCalculatorScreen extends StatefulWidget {
   const SmartCalculatorScreen({super.key, this.service});
@@ -182,7 +183,14 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
           
           CustomScrollView(
             slivers: [
-              SliverToBoxAdapter(child: _Header(isEnglish: _isEnglish)),
+              SliverToBoxAdapter(
+                child: AiPageHeader(
+                  title: _isEnglish ? 'Smart Financial Advisor' : 'المستشار المالي الذكي',
+                  subtitle: _isEnglish
+                      ? 'AI-powered local financial assistant'
+                      : 'مركز التحكم الذكي في أعمالك التجارية.',
+                ),
+              ),
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(24, 0, 24, 140),
                 sliver: SliverToBoxAdapter(
@@ -442,44 +450,44 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
   }
 
   Widget _emptyState() {
-    return PremiumCard(
-      padding: const EdgeInsets.symmetric(vertical: 60, horizontal: 40),
+    return AiGlassCard(
+      borderColor: AppTheme.aiGold.withValues(alpha: 0.2),
+      glowColor: AppTheme.aiGold,
       child: Column(
         children: [
+          AiEmptyState(
+            icon: Icons.psychology_rounded,
+            title: _text('Financial AI Advisor Ready', 'المستشار المالي الذكي جاهز لمساعدتك'),
+            subtitle: _text(
+                'Describe any business or financial transaction naturally in Arabic. The AI advisor will parse metrics, verify margins, and calculate cash flows in real-time.',
+                'اكتب عمليتك المالية أو التجارية باللغة العربية (مثال: اشتريت 10 قطع بسعر 50 وبعت 5 بسعر 100). سيقوم المستشار الذكي بتحليلها وحساب التدفق والربح فوراً.'),
+          ),
+          const SizedBox(height: 12),
           Container(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: AppTheme.accentBlue.withValues(alpha: 0.05),
-              shape: BoxShape.circle,
+              color: AppTheme.aiGold.withValues(alpha: 0.05),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.15)),
             ),
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: AppTheme.accentBlue.withValues(alpha: 0.12),
-                shape: BoxShape.circle,
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.accentBlue.withValues(alpha: 0.2),
-                    blurRadius: 20,
-                    spreadRadius: 2,
+            child: Row(
+              children: [
+                const Icon(Icons.bolt, color: AppTheme.aiGold, size: 18),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    _text(
+                        'AI Engine: Local parser is active and offline-ready. Your calculations are fully secure.',
+                        'الذكاء الاصطناعي: محرك التحليل فوري ويعمل بالكامل محلياً وبأمان تام دون مشاركة بياناتك.'),
+                    style: const TextStyle(
+                      color: AppTheme.aiGold,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ],
-              ),
-              child: const Icon(Icons.bolt, size: 36, color: AppTheme.accentBlue),
+                ),
+              ],
             ),
-          ),
-          const SizedBox(height: 32),
-          Text(
-            _text('Ready to Assist', 'جاهز للمساعدة'),
-            style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            _text(
-                'Type your business operations naturally. I\'ll parse the data and calculate the results instantly.',
-                'اكتب عملياتك التجارية بشكل طبيعي. سأقوم بتحليل البيانات وحساب النتائج فوراً.'),
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.textSecondaryFor(context), height: 1.5, fontSize: 13),
           ),
         ],
       ),

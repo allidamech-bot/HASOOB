@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 
@@ -22,26 +23,22 @@ class AiRobotAdvisor extends StatefulWidget {
 class _AiRobotAdvisorState extends State<AiRobotAdvisor>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
-  late Animation<double> _pulseAnimation;
   late Animation<double> _glowAnimation;
-  late Animation<double> _floatAnimation;
+  late Animation<double> _rotateAnimation;
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(seconds: 4),
-    )..repeat(reverse: true);
+      duration: const Duration(seconds: 6),
+    )..repeat();
 
-    _pulseAnimation = Tween<double>(begin: 0.95, end: 1.05).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine),
+    _glowAnimation = Tween<double>(begin: 0.4, end: 1.0).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
     );
-    _glowAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine),
-    );
-    _floatAnimation = Tween<double>(begin: -8.0, end: 8.0).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOutSine),
+    _rotateAnimation = Tween<double>(begin: 0, end: 2 * math.pi).animate(
+      CurvedAnimation(parent: _controller, curve: Curves.linear),
     );
   }
 
@@ -57,54 +54,82 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isDesktop = constraints.maxWidth > 800;
+        final isDesktop = constraints.maxWidth > 850;
+        
         return Container(
           width: double.infinity,
-          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
               colors: [
-                Color(0xFF0D1526),
-                Color(0xFF0A1020),
-                Color(0xFF060912),
+                Color(0xFF0F1322),
+                Color(0xFF090B13),
+                Color(0xFF0C0E1B),
               ],
             ),
             borderRadius: BorderRadius.circular(32),
             border: Border.all(
-              color: AppTheme.aiBlue.withValues(alpha: 0.2),
-              width: 1,
+              color: AppTheme.aiGold.withValues(alpha: 0.25),
+              width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
-                color: AppTheme.aiBlue.withValues(alpha: 0.1),
+                color: AppTheme.aiGold.withValues(alpha: 0.08),
                 blurRadius: 40,
+                spreadRadius: 2,
+              ),
+              BoxShadow(
+                color: AppTheme.aiBlue.withValues(alpha: 0.04),
+                blurRadius: 60,
                 spreadRadius: -10,
-                offset: const Offset(0, 20),
               ),
             ],
           ),
-          child: isDesktop
-              ? Row(
-                  children: [
-                    Expanded(
-                      flex: 3,
-                      child: _buildTextContent(isDesktop: true),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(30),
+            child: Stack(
+              children: [
+                Positioned(
+                  right: -100,
+                  top: -100,
+                  child: Container(
+                    width: 300,
+                    height: 300,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppTheme.aiGold.withValues(alpha: 0.08),
                     ),
-                    Expanded(
-                      flex: 2,
-                      child: _buildAnimatedRobot(size: 200),
-                    ),
-                  ],
-                )
-              : Column(
-                  children: [
-                    _buildAnimatedRobot(size: 160),
-                    const SizedBox(height: 32),
-                    _buildTextContent(isDesktop: false),
-                  ],
+                  ),
                 ),
+                
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+                  child: isDesktop
+                      ? Row(
+                          children: [
+                            Expanded(
+                              flex: 4,
+                              child: _buildTextContent(isDesktop: true),
+                            ),
+                            const SizedBox(width: 32),
+                            Expanded(
+                              flex: 3,
+                              child: _buildAnimatedRobot(size: 260),
+                            ),
+                          ],
+                        )
+                      : Column(
+                          children: [
+                            _buildAnimatedRobot(size: 200),
+                            const SizedBox(height: 40),
+                            _buildTextContent(isDesktop: false),
+                          ],
+                        ),
+                ),
+              ],
+            ),
+          ),
         );
       }
     );
@@ -114,12 +139,16 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
     return Column(
       crossAxisAlignment: isDesktop ? CrossAxisAlignment.start : CrossAxisAlignment.center,
       children: [
+        // Premium status chip
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: AppTheme.aiBlue.withValues(alpha: 0.1),
-            borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppTheme.aiBlue.withValues(alpha: 0.3)),
+            color: AppTheme.aiGold.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: AppTheme.aiGold.withValues(alpha: 0.35),
+              width: 1.2,
+            ),
           ),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -127,12 +156,12 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
               Container(
                 width: 8,
                 height: 8,
-                decoration: const BoxDecoration(
-                  color: AppTheme.aiGreen,
+                decoration: BoxDecoration(
+                  color: AppTheme.aiGold,
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: Color(0x9910B981),
+                      color: AppTheme.aiGold.withValues(alpha: 0.6),
                       blurRadius: 8,
                       spreadRadius: 2,
                     ),
@@ -141,28 +170,39 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
               ),
               const SizedBox(width: 10),
               Text(
-                widget.advisorTitle,
+                widget.advisorTitle.toUpperCase(),
                 style: const TextStyle(
-                  color: AppTheme.aiBlue,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w700,
+                  color: AppTheme.aiGold,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
                   letterSpacing: 1.5,
                 ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 28),
+        
+        // Large title
         Text(
           widget.greeting,
           textAlign: isDesktop ? TextAlign.start : TextAlign.center,
           style: TextStyle(
             color: AppTheme.aiTextPrimary,
-            fontSize: isDesktop ? 36 : 28,
+            fontSize: isDesktop ? 36 : 26,
             fontWeight: FontWeight.w900,
-            height: 1.2,
+            height: 1.3,
+            shadows: [
+              Shadow(
+                color: Colors.black.withValues(alpha: 0.4),
+                offset: const Offset(0, 4),
+                blurRadius: 10,
+              ),
+            ],
           ),
         ),
+        
+        // Subtitle suggestion
         if (widget.suggestion != null) ...[
           const SizedBox(height: 16),
           Text(
@@ -170,29 +210,39 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
             textAlign: isDesktop ? TextAlign.start : TextAlign.center,
             style: TextStyle(
               color: AppTheme.aiTextSecondary,
-              fontSize: isDesktop ? 18 : 16,
+              fontSize: isDesktop ? 16 : 14,
               height: 1.6,
+              fontWeight: FontWeight.w500,
             ),
           ),
         ],
-        const SizedBox(height: 32),
-        ElevatedButton(
-          onPressed: () {},
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppTheme.aiBlue,
-            foregroundColor: AppTheme.aiDeep,
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 16),
-            shape: RoundedRectangleBorder(
+        
+        const SizedBox(height: 36),
+        
+        // Premium Golden CTA button
+        InkWell(
+          onTap: () {},
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 36, vertical: 16),
+            decoration: BoxDecoration(
+              gradient: AppTheme.aiGoldGradient,
               borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: AppTheme.aiGold.withValues(alpha: 0.35),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-            elevation: 8,
-            shadowColor: AppTheme.aiBlue.withValues(alpha: 0.5),
-          ),
-          child: const Text(
-            'عرض ملخص اليوم',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w800,
+            child: const Text(
+              'عرض ملخص اليوم',
+              style: TextStyle(
+                color: Colors.black,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
             ),
           ),
         ),
@@ -204,52 +254,160 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) {
+        // Floating up and down
+        final floatOffset = math.sin(_controller.value * 2 * math.pi) * 10;
+        
         return Transform.translate(
-          offset: Offset(0, _floatAnimation.value),
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              // Massive outer glow
-              Container(
-                width: size * 1.5,
-                height: size * 1.5,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.aiBlue.withValues(
-                          alpha: 0.15 * _glowAnimation.value),
-                      blurRadius: size * 0.8,
-                      spreadRadius: size * 0.2,
-                    ),
-                  ],
-                ),
-              ),
-              // Inner energy ring
-              Transform.scale(
-                scale: _pulseAnimation.value,
-                child: Container(
-                  width: size * 1.2,
-                  height: size * 1.2,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    gradient: RadialGradient(
-                      colors: [
-                        AppTheme.aiBlue.withValues(alpha: 0.2),
-                        AppTheme.aiBlue.withValues(alpha: 0.0),
-                      ],
-                    ),
-                    border: Border.all(
-                      color: AppTheme.aiBlue.withValues(
-                          alpha: 0.4 * _glowAnimation.value),
-                      width: 2,
+          offset: Offset(0, floatOffset),
+          child: SizedBox(
+            width: size,
+            height: size,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                // 1. Aura Outer Gold Ring
+                Transform.rotate(
+                  angle: _rotateAnimation.value,
+                  child: Container(
+                    width: size * 0.95,
+                    height: size * 0.95,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppTheme.aiGold.withValues(alpha: 0.15),
+                        width: 1.5,
+                        style: BorderStyle.solid,
+                      ),
                     ),
                   ),
                 ),
-              ),
-              // Robot Head
-              _RobotFaceIcon(size: size),
-            ],
+                
+                // 2. Rotating Aura Inner Blue Ring
+                Transform.rotate(
+                  angle: -_rotateAnimation.value * 1.5,
+                  child: Container(
+                    width: size * 0.82,
+                    height: size * 0.82,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppTheme.aiBlue.withValues(alpha: 0.2),
+                        width: 2,
+                        style: BorderStyle.solid,
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // 3. Gold Energy Orbit Dot
+                Transform.rotate(
+                  angle: _rotateAnimation.value * 2,
+                  child: Align(
+                    alignment: Alignment.topCenter,
+                    child: Container(
+                      width: 12,
+                      height: 12,
+                      decoration: const BoxDecoration(
+                        color: AppTheme.aiGold,
+                        shape: BoxShape.circle,
+                        boxShadow: [
+                          BoxShadow(
+                            color: AppTheme.aiGold,
+                            blurRadius: 10,
+                            spreadRadius: 2,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                
+                // 4. Large Soft Outer Glow Layer
+                Container(
+                  width: size * 0.75,
+                  height: size * 0.75,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppTheme.aiGold.withValues(alpha: 0.08 * _glowAnimation.value),
+                        blurRadius: size * 0.4,
+                        spreadRadius: 10,
+                      ),
+                      BoxShadow(
+                        color: AppTheme.aiBlue.withValues(alpha: 0.08),
+                        blurRadius: size * 0.5,
+                        spreadRadius: -10,
+                      ),
+                    ],
+                  ),
+                ),
+
+                // 5. Sleek Robot Body / Base (Hologram pedestal)
+                Positioned(
+                  bottom: size * 0.05,
+                  child: SizedBox(
+                    width: size * 0.6,
+                    height: size * 0.25,
+                    child: CustomPaint(
+                      painter: _PedestalPainter(),
+                    ),
+                  ),
+                ),
+
+                // 6. Glowing Energy Orb/Visor Center
+                Transform.scale(
+                  scale: 1.0 + (math.sin(_controller.value * 2 * math.pi) * 0.03),
+                  child: Container(
+                    width: size * 0.62,
+                    height: size * 0.62,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: RadialGradient(
+                        colors: [
+                          const Color(0xFF141F3D),
+                          const Color(0xFF0A0E1A).withValues(alpha: 0.9),
+                        ],
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.aiGold.withValues(alpha: 0.15),
+                          blurRadius: 20,
+                          spreadRadius: 2,
+                        ),
+                        BoxShadow(
+                          color: AppTheme.aiBlue.withValues(alpha: 0.2),
+                          blurRadius: 30,
+                          spreadRadius: -5,
+                          offset: const Offset(0, 10),
+                        ),
+                      ],
+                      border: Border.all(
+                        color: AppTheme.aiGold.withValues(alpha: 0.4),
+                        width: 2,
+                      ),
+                    ),
+                    child: ClipOval(
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          // Rotating Matrix Core
+                          Transform.rotate(
+                            angle: _rotateAnimation.value * 0.2,
+                            child: CustomPaint(
+                              size: Size(size * 0.6, size * 0.6),
+                              painter: _RobotCorePainter(controllerValue: _controller.value),
+                            ),
+                          ),
+                          // Premium Visor Glass
+                          _VisorWidget(size: size * 0.6),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
@@ -263,23 +421,40 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
         return Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
           decoration: BoxDecoration(
-            color: AppTheme.aiBlue.withValues(alpha: 0.1),
+            color: AppTheme.aiGold.withValues(alpha: 0.08),
             borderRadius: BorderRadius.circular(30),
             border: Border.all(
-              color: AppTheme.aiBlue
-                  .withValues(alpha: 0.3 * _glowAnimation.value),
+              color: AppTheme.aiGold.withValues(alpha: 0.3 * _glowAnimation.value),
             ),
           ),
-          child: const Row(
+          child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
-              _RobotFaceIcon(size: 28),
-              SizedBox(width: 12),
-              Text(
+              Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: AppTheme.aiGoldGradient,
+                  boxShadow: [
+                    BoxShadow(
+                      color: AppTheme.aiGold.withValues(alpha: 0.4),
+                      blurRadius: 8,
+                    ),
+                  ],
+                ),
+                child: const Icon(
+                  Icons.psychology_rounded,
+                  size: 12,
+                  color: Colors.black,
+                ),
+              ),
+              const SizedBox(width: 10),
+              const Text(
                 'المستشار نشط',
                 style: TextStyle(
-                  color: AppTheme.aiBlue,
-                  fontSize: 14,
+                  color: AppTheme.aiGold,
+                  fontSize: 13,
                   fontWeight: FontWeight.w800,
                 ),
               ),
@@ -291,9 +466,9 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
   }
 }
 
-class _RobotFaceIcon extends StatelessWidget {
+class _VisorWidget extends StatelessWidget {
   final double size;
-  const _RobotFaceIcon({required this.size});
+  const _VisorWidget({required this.size});
 
   @override
   Widget build(BuildContext context) {
@@ -301,77 +476,236 @@ class _RobotFaceIcon extends StatelessWidget {
       width: size,
       height: size,
       child: CustomPaint(
-        painter: _RobotPainter(),
+        painter: _VisorPainter(),
       ),
     );
   }
 }
 
-class _RobotPainter extends CustomPainter {
+class _VisorPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final w = size.width;
     final h = size.height;
 
-    // Dark sleek head
-    final headPaint = Paint()
-      ..color = const Color(0xFF0F182B)
-      ..style = PaintingStyle.fill;
-    final headRect = RRect.fromRectAndRadius(
-      Rect.fromLTWH(w * 0.1, h * 0.1, w * 0.8, h * 0.7),
-      Radius.circular(w * 0.2),
+    // Glowing metallic visor background with radial reflection
+    final visorRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(w * 0.1, h * 0.35, w * 0.8, h * 0.3),
+      Radius.circular(w * 0.08),
     );
-    canvas.drawRRect(headRect, headPaint);
 
-    // Head border with neon glow
-    final borderPaint = Paint()
-      ..color = AppTheme.aiBlue.withValues(alpha: 0.8)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * 0.02;
-    canvas.drawRRect(headRect, borderPaint);
-    
-    // Visor background
-    final visorPaint = Paint()
-      ..color = const Color(0xFF050810)
+    // Visor dark background (cyber tech deep black)
+    final visorBg = Paint()
+      ..shader = const RadialGradient(
+        colors: [Color(0xFF0F1A30), Color(0xFF020408)],
+        center: Alignment(0, -0.3),
+      ).createShader(Rect.fromLTWH(w * 0.1, h * 0.35, w * 0.8, h * 0.3))
       ..style = PaintingStyle.fill;
+    canvas.drawRRect(visorRect, visorBg);
+
+    // Multiple concentric glowing visor borders (Gold/Blue)
+    final visorBorderGold = Paint()
+      ..color = AppTheme.aiGold.withValues(alpha: 0.8)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+    canvas.drawRRect(visorRect, visorBorderGold);
+
+    final visorBorderBlue = Paint()
+      ..color = AppTheme.aiBlue.withValues(alpha: 0.4)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
     canvas.drawRRect(
       RRect.fromRectAndRadius(
-        Rect.fromLTWH(w * 0.2, h * 0.3, w * 0.6, h * 0.25),
-        Radius.circular(w * 0.1),
+        Rect.fromLTWH(w * 0.12, h * 0.37, w * 0.76, h * 0.26),
+        Radius.circular(w * 0.06),
       ),
-      visorPaint,
+      visorBorderBlue,
     );
 
-    // Eyes glow
-    final eyeGlowPaint = Paint()
-      ..color = AppTheme.aiBlue.withValues(alpha: 0.6)
+    // Dynamic grid pattern inside visor
+    final gridPaint = Paint()
+      ..color = AppTheme.aiBlue.withValues(alpha: 0.15)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 0.5;
+    for (double x = w * 0.15; x < w * 0.85; x += w * 0.05) {
+      canvas.drawLine(Offset(x, h * 0.38), Offset(x, h * 0.62), gridPaint);
+    }
+    for (double y = h * 0.38; y < h * 0.62; y += h * 0.05) {
+      canvas.drawLine(Offset(w * 0.15, y), Offset(w * 0.85, y), gridPaint);
+    }
+
+    // Visor reflection (top gradient light)
+    final reflectionPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Colors.white.withValues(alpha: 0.25),
+          Colors.white.withValues(alpha: 0.0),
+        ],
+      ).createShader(Rect.fromLTWH(w * 0.1, h * 0.35, w * 0.8, h * 0.15));
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(w * 0.11, h * 0.36, w * 0.78, h * 0.12),
+        Radius.circular(w * 0.07),
+      ),
+      reflectionPaint,
+    );
+
+    // AI Glowing Digital Lenses/Eyes (Dual high-tech gold circles with circular cyan crosshairs)
+    final eyeOuter = Paint()
+      ..color = AppTheme.aiGold.withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+
+    final eyeInner = Paint()
+      ..color = AppTheme.aiGold
       ..style = PaintingStyle.fill
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 8);
+      ..maskFilter = const MaskFilter.blur(BlurStyle.solid, 4);
 
-    canvas.drawCircle(Offset(w * 0.35, h * 0.42), w * 0.08, eyeGlowPaint);
-    canvas.drawCircle(Offset(w * 0.65, h * 0.42), w * 0.08, eyeGlowPaint);
+    final eyeGlow = Paint()
+      ..color = AppTheme.aiGold.withValues(alpha: 0.5)
+      ..style = PaintingStyle.fill
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 15);
 
-    // Eyes
-    final eyePaint = Paint()
-      ..color = const Color(0xFF80E5FF)
-      ..style = PaintingStyle.fill;
+    // Draw Left Eye
+    final leftCenter = Offset(w * 0.35, h * 0.5);
+    canvas.drawCircle(leftCenter, w * 0.08, eyeOuter);
+    canvas.drawCircle(leftCenter, w * 0.04, eyeInner);
+    canvas.drawCircle(leftCenter, w * 0.12, eyeGlow);
 
-    canvas.drawCircle(Offset(w * 0.35, h * 0.42), w * 0.05, eyePaint);
-    canvas.drawCircle(Offset(w * 0.65, h * 0.42), w * 0.05, eyePaint);
-
-    // Antenna
-    final antennaPaint = Paint()
+    // Left Eye crosshair ticks
+    final tickPaint = Paint()
       ..color = AppTheme.aiBlue
-      ..strokeWidth = w * 0.02
-      ..strokeCap = StrokeCap.round;
-    canvas.drawLine(
-      Offset(w * 0.5, h * 0.1),
-      Offset(w * 0.5, 0),
-      antennaPaint,
-    );
-    canvas.drawCircle(Offset(w * 0.5, 0), w * 0.04, Paint()..color = AppTheme.aiBlue);
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    canvas.drawLine(Offset(leftCenter.dx - w * 0.1, leftCenter.dy), Offset(leftCenter.dx - w * 0.06, leftCenter.dy), tickPaint);
+    canvas.drawLine(Offset(leftCenter.dx + w * 0.06, leftCenter.dy), Offset(leftCenter.dx + w * 0.1, leftCenter.dy), tickPaint);
+    canvas.drawLine(Offset(leftCenter.dx, leftCenter.dy - h * 0.1), Offset(leftCenter.dx, leftCenter.dy - h * 0.06), tickPaint);
+    canvas.drawLine(Offset(leftCenter.dx, leftCenter.dy + h * 0.06), Offset(leftCenter.dx, leftCenter.dy + h * 0.1), tickPaint);
+
+    // Draw Right Eye
+    final rightCenter = Offset(w * 0.65, h * 0.5);
+    canvas.drawCircle(rightCenter, w * 0.08, eyeOuter);
+    canvas.drawCircle(rightCenter, w * 0.04, eyeInner);
+    canvas.drawCircle(rightCenter, w * 0.12, eyeGlow);
+
+    // Right Eye crosshair ticks
+    canvas.drawLine(Offset(rightCenter.dx - w * 0.1, rightCenter.dy), Offset(rightCenter.dx - w * 0.06, rightCenter.dy), tickPaint);
+    canvas.drawLine(Offset(rightCenter.dx + w * 0.06, rightCenter.dy), Offset(rightCenter.dx + w * 0.1, rightCenter.dy), tickPaint);
+    canvas.drawLine(Offset(rightCenter.dx, rightCenter.dy - h * 0.1), Offset(rightCenter.dx, rightCenter.dy - h * 0.06), tickPaint);
+    canvas.drawLine(Offset(rightCenter.dx, rightCenter.dy + h * 0.06), Offset(rightCenter.dx, rightCenter.dy + h * 0.1), tickPaint);
   }
 
   @override
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
+
+class _RobotCorePainter extends CustomPainter {
+  final double controllerValue;
+  _RobotCorePainter({required this.controllerValue});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+    final center = Offset(w / 2, h / 2);
+
+    // Glowing tech background lines
+    final paint = Paint()
+      ..color = AppTheme.aiBlue.withValues(alpha: 0.15)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+
+    canvas.drawCircle(center, w * 0.42, paint);
+    canvas.drawCircle(center, w * 0.32, paint);
+
+    // High tech dashed circular arc
+    final dashPaint = Paint()
+      ..color = AppTheme.aiGold.withValues(alpha: 0.25)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5;
+    
+    // Draw 8 HUD style segmented arcs around the circle
+    final rect = Rect.fromCircle(center: center, radius: w * 0.36);
+    for (double i = 0; i < 2 * math.pi; i += math.pi / 4) {
+      canvas.drawArc(
+        rect,
+        i + (controllerValue * 2 * math.pi * 0.15),
+        math.pi / 8,
+        false,
+        dashPaint,
+      );
+    }
+
+    // Technology crosshair pointers
+    final linePaint = Paint()
+      ..color = AppTheme.aiBlue.withValues(alpha: 0.35)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.2;
+
+    canvas.drawLine(Offset(w * 0.05, h / 2), Offset(w * 0.18, h / 2), linePaint);
+    canvas.drawLine(Offset(w * 0.82, h / 2), Offset(w * 0.95, h / 2), linePaint);
+    canvas.drawLine(Offset(w / 2, h * 0.05), Offset(w / 2, h * 0.18), linePaint);
+    canvas.drawLine(Offset(w / 2, h * 0.82), Offset(w / 2, h * 0.95), linePaint);
+
+    // Pulsing energy wave
+    final waveRadius = w * 0.28 + (math.sin(controllerValue * 2 * math.pi) * w * 0.08);
+    final wavePaint = Paint()
+      ..color = AppTheme.aiGold.withValues(alpha: 0.22)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 6);
+    canvas.drawCircle(center, waveRadius, wavePaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _RobotCorePainter oldDelegate) =>
+      oldDelegate.controllerValue != controllerValue;
+}
+
+class _PedestalPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
+
+    // Draw a futuristic metal pedestal curve at the bottom
+    final path = Path()
+      ..moveTo(w * 0.2, h)
+      ..quadraticBezierTo(w * 0.3, h * 0.1, w * 0.5, h * 0.1)
+      ..quadraticBezierTo(w * 0.7, h * 0.1, w * 0.8, h)
+      ..lineTo(w * 0.7, h)
+      ..quadraticBezierTo(w * 0.5, h * 0.4, w * 0.3, h)
+      ..close();
+
+    final paint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          AppTheme.aiGold.withValues(alpha: 0.3),
+          AppTheme.aiGold.withValues(alpha: 0.01),
+        ],
+      ).createShader(Rect.fromLTWH(0, 0, w, h))
+      ..style = PaintingStyle.fill;
+
+    canvas.drawPath(path, paint);
+
+    // Laser neon accent line on pedestal top
+    final borderPath = Path()
+      ..moveTo(w * 0.3, h * 0.16)
+      ..quadraticBezierTo(w * 0.5, h * 0.1, w * 0.7, h * 0.16);
+
+    final borderPaint = Paint()
+      ..color = AppTheme.aiGold.withValues(alpha: 0.6)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.0;
+
+    canvas.drawPath(borderPath, borderPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+

@@ -86,56 +86,84 @@ class AiPageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final topPadding = MediaQuery.of(context).padding.top;
     return Container(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-      decoration: const BoxDecoration(
+      decoration: BoxDecoration(
         color: AppTheme.aiNavy,
-        border: Border(
+        border: const Border(
           bottom: BorderSide(
             color: AppTheme.aiCardBorder,
             width: 1,
           ),
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.3),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          if (showBackButton) ...[
-            IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: const Icon(Icons.arrow_back_ios_rounded,
-                  color: AppTheme.aiTextPrimary, size: 18),
+          // Gold accent line at top
+          Container(
+            height: 2,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                colors: [
+                  Colors.transparent,
+                  AppTheme.aiGold,
+                  Colors.transparent,
+                ],
+              ),
             ),
-            const SizedBox(width: 4),
-          ],
-          if (leading != null) ...[
-            leading!,
-            const SizedBox(width: 12),
-          ],
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(20, topPadding + 10, 20, 14),
+            child: Row(
               children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    color: AppTheme.aiTextPrimary,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w800,
+                if (showBackButton) ...[
+                  IconButton(
+                    onPressed: () => Navigator.pop(context),
+                    icon: const Icon(Icons.arrow_back_ios_rounded,
+                        color: AppTheme.aiTextPrimary, size: 18),
+                  ),
+                  const SizedBox(width: 4),
+                ],
+                if (leading != null) ...[
+                  leading!,
+                  const SizedBox(width: 12),
+                ],
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        title,
+                        style: const TextStyle(
+                          color: AppTheme.aiTextPrimary,
+                          fontSize: 18,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      if (subtitle != null)
+                        Text(
+                          subtitle!,
+                          style: const TextStyle(
+                            color: AppTheme.aiTextSecondary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                    ],
                   ),
                 ),
-                if (subtitle != null)
-                  Text(
-                    subtitle!,
-                    style: const TextStyle(
-                      color: AppTheme.aiTextSecondary,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                if (actions != null) ...actions!,
               ],
             ),
           ),
-          if (actions != null) ...actions!,
         ],
       ),
     );

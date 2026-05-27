@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../core/app_copy.dart';
+import '../screens/settings_screen.dart';
 
 class DesktopSidebar extends StatelessWidget {
   final int selectedIndex;
@@ -15,98 +16,201 @@ class DesktopSidebar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
-    
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+
     return Container(
-      width: 280,
+      width: 300,
       decoration: BoxDecoration(
         color: AppTheme.aiNavy,
         border: Border(
-          left: BorderSide(
-            color: AppTheme.aiCardBorder,
-            width: 1,
-          ),
+          left: isRtl
+              ? BorderSide.none
+              : const BorderSide(color: AppTheme.aiCardBorder, width: 1.5),
+          right: isRtl
+              ? const BorderSide(color: AppTheme.aiCardBorder, width: 1.5)
+              : BorderSide.none,
         ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 0),
+          ),
+          BoxShadow(
+            color: AppTheme.aiGold.withValues(alpha: 0.02),
+            blurRadius: 30,
+            spreadRadius: 2,
+          ),
+        ],
       ),
       child: Column(
         children: [
-          // Logo Area
-          Padding(
-            padding: const EdgeInsets.all(32.0),
-            child: Row(
-              children: [
-                Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    gradient: AppTheme.aiBlueGradient,
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                        color: AppTheme.aiBlue.withValues(alpha: 0.3),
-                        blurRadius: 12,
-                        offset: const Offset(0, 4),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(Icons.account_balance_wallet, color: Colors.white),
-                ),
-                const SizedBox(width: 16),
-                const Text(
-                  'HASOOB',
-                  style: TextStyle(
-                    color: AppTheme.aiTextPrimary,
-                    fontSize: 24,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 2,
-                  ),
-                ),
-              ],
+          // Gold top accent line
+          Container(
+            height: 2,
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.centerLeft,
+                end: Alignment.centerRight,
+                colors: [
+                  Colors.transparent,
+                  AppTheme.aiGold,
+                  Colors.transparent,
+                ],
+              ),
             ),
           ),
-          
+          // Luxury Gold Logo Area
+          SafeArea(
+            bottom: false,
+            child: Padding(
+            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppTheme.aiGold.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: AppTheme.aiGold.withValues(alpha: 0.15),
+                  width: 1.5,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.aiGold.withValues(alpha: 0.05),
+                    blurRadius: 15,
+                    spreadRadius: -5,
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: 48,
+                    height: 48,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.aiGoldGradient,
+                      borderRadius: BorderRadius.circular(14),
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.aiGold.withValues(alpha: 0.35),
+                          blurRadius: 12,
+                          offset: const Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: const Icon(
+                      Icons.account_balance_rounded,
+                      color: Colors.black,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          copy.isEnglish ? 'HASOOB' : 'حسوب AI',
+                          style: const TextStyle(
+                            color: AppTheme.aiGold,
+                            fontSize: 20,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          copy.isEnglish
+                              ? 'AI Financial OS'
+                              : 'نظام الذكاء المالي',
+                          style: TextStyle(
+                            color: AppTheme.aiTextSecondary.withValues(alpha: 0.7),
+                            fontSize: 10,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          ),  // end SafeArea logo
+
+          // Divider
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24),
+            child: Divider(
+              color: AppTheme.aiCardBorder.withValues(alpha: 0.5),
+              thickness: 1.2,
+            ),
+          ),
+          const SizedBox(height: 16),
+
+          // Navigation List
           Expanded(
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
                 _SidebarItem(
-                  icon: Icons.dashboard_rounded,
-                  label: copy.t('dashboard'),
+                  icon: Icons.grid_view_rounded,
+                  label: 'الرئيسية',
                   isSelected: selectedIndex == 0,
                   onTap: () => onDestinationSelected(0),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 _SidebarItem(
-                  icon: Icons.inventory_2_rounded,
-                  label: copy.t('inventory'),
-                  isSelected: selectedIndex == 1,
-                  onTap: () => onDestinationSelected(1),
-                ),
-                const SizedBox(height: 8),
-                _SidebarItem(
-                  icon: Icons.receipt_long_rounded,
-                  label: copy.t('sales'),
-                  isSelected: selectedIndex == 3,
-                  onTap: () => onDestinationSelected(3),
-                ),
-                const SizedBox(height: 8),
-                _SidebarItem(
-                  icon: Icons.calculate_rounded,
-                  label: copy.t('smartCalculator'),
+                  icon: Icons.psychology_rounded,
+                  label: 'المستشار المالي',
                   isSelected: selectedIndex == 4,
                   onTap: () => onDestinationSelected(4),
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 _SidebarItem(
-                  icon: Icons.bar_chart_rounded,
-                  label: copy.t('reports'),
+                  icon: Icons.swap_horizontal_circle_rounded,
+                  label: 'التدفق النقدي',
+                  isSelected: false, // Prevents duplicate highlight with Smart Reports
+                  onTap: () => onDestinationSelected(5),
+                ),
+                const SizedBox(height: 10),
+                _SidebarItem(
+                  icon: Icons.people_alt_rounded,
+                  label: 'العملاء والفواتير',
+                  isSelected: selectedIndex == 3,
+                  onTap: () => onDestinationSelected(3),
+                ),
+                const SizedBox(height: 10),
+                _SidebarItem(
+                  icon: Icons.inventory_2_rounded,
+                  label: 'المخزون والمشتريات',
+                  isSelected: selectedIndex == 1,
+                  onTap: () => onDestinationSelected(1),
+                ),
+                const SizedBox(height: 10),
+                _SidebarItem(
+                  icon: Icons.analytics_rounded,
+                  label: 'التقارير الذكية',
                   isSelected: selectedIndex == 5,
                   onTap: () => onDestinationSelected(5),
+                ),
+                const SizedBox(height: 10),
+                _SidebarItem(
+                  icon: Icons.settings_suggest_rounded,
+                  label: 'الإعدادات',
+                  isSelected: false,
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                    );
+                  },
                 ),
               ],
             ),
           ),
-          
-          // Quick Add Button
+
+          // Quick Add Floating CTA
           Padding(
             padding: const EdgeInsets.all(24.0),
             child: InkWell(
@@ -115,27 +219,27 @@ class DesktopSidebar extends StatelessWidget {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 decoration: BoxDecoration(
-                  gradient: AppTheme.aiBlueGradient,
+                  gradient: AppTheme.aiGoldGradient,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
-                      color: AppTheme.aiBlue.withValues(alpha: 0.3),
+                      color: AppTheme.aiGold.withValues(alpha: 0.35),
                       blurRadius: 16,
                       offset: const Offset(0, 8),
                     ),
                   ],
                 ),
-                child: Row(
+                child: const Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.add_circle_outline, color: Colors.white),
-                    const SizedBox(width: 8),
+                    Icon(Icons.add_circle_rounded, color: Colors.black, size: 20),
+                    SizedBox(width: 10),
                     Text(
-                      copy.isEnglish ? 'Quick Add' : 'إضافة سريعة',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
+                      'عملية سريعة',
+                      style: TextStyle(
+                        color: Colors.black,
+                        fontSize: 15,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
                   ],
@@ -164,37 +268,85 @@ class _SidebarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(14),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: isSelected ? AppTheme.aiBlue.withValues(alpha: 0.1) : Colors.transparent,
-            borderRadius: BorderRadius.circular(12),
+            gradient: isSelected
+                ? LinearGradient(
+                    colors: [
+                      AppTheme.aiGold.withValues(alpha: 0.18),
+                      AppTheme.aiGold.withValues(alpha: 0.04),
+                    ],
+                    begin: isRtl ? Alignment.centerRight : Alignment.centerLeft,
+                    end: isRtl ? Alignment.centerLeft : Alignment.centerRight,
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: isSelected ? AppTheme.aiBlue.withValues(alpha: 0.3) : Colors.transparent,
+              color: isSelected ? AppTheme.aiGold.withValues(alpha: 0.45) : Colors.transparent,
+              width: 1.5,
             ),
+            boxShadow: isSelected
+                ? [
+                    BoxShadow(
+                      color: AppTheme.aiGold.withValues(alpha: 0.08),
+                      blurRadius: 12,
+                      spreadRadius: 1,
+                    )
+                  ]
+                : null,
           ),
-          child: Row(
+          child: Stack(
+            clipBehavior: Clip.none,
             children: [
-              Icon(
-                icon,
-                color: isSelected ? AppTheme.aiBlue : AppTheme.aiTextSecondary,
-                size: 22,
+              Row(
+                children: [
+                  Icon(
+                    icon,
+                    color: isSelected ? AppTheme.aiGold : AppTheme.aiTextSecondary,
+                    size: 22,
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: TextStyle(
+                        color: isSelected ? AppTheme.aiGold : AppTheme.aiTextSecondary,
+                        fontSize: 14,
+                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              Text(
-                label,
-                style: TextStyle(
-                  color: isSelected ? AppTheme.aiBlue : AppTheme.aiTextSecondary,
-                  fontSize: 16,
-                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+              // Golden edge line for selected item
+              if (isSelected)
+                Positioned(
+                  top: -4,
+                  bottom: -4,
+                  left: isRtl ? -16 : null,
+                  right: isRtl ? null : -16,
+                  child: Container(
+                    width: 4,
+                    decoration: BoxDecoration(
+                      gradient: AppTheme.aiGoldGradient,
+                      borderRadius: BorderRadius.only(
+                        topLeft: Radius.circular(isRtl ? 4 : 0),
+                        bottomLeft: Radius.circular(isRtl ? 4 : 0),
+                        topRight: Radius.circular(isRtl ? 0 : 4),
+                        bottomRight: Radius.circular(isRtl ? 0 : 4),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
@@ -202,3 +354,4 @@ class _SidebarItem extends StatelessWidget {
     );
   }
 }
+
