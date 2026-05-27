@@ -70,18 +70,18 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
     if (healthScore >= 90) {
       statusText = isAr ? "كل الأنظمة تعمل بكفاءة" : "All Systems Nominal";
       subtitleText = isAr ? "حالة العمل ممتازة" : "Excellent performance";
-      healthColor = AppTheme.success;
-      glowColor = AppTheme.success.withValues(alpha: 0.3);
+      healthColor = AppTheme.aiGreen;
+      glowColor = AppTheme.aiGreen.withValues(alpha: 0.3);
     } else if (healthScore >= 75) {
       statusText = isAr ? "حالة العمل مستقرة" : "Business State Stable";
       subtitleText = isAr ? "انتباه بسيط مطلوب" : "Minor attention requested";
-      healthColor = AppTheme.warning;
-      glowColor = AppTheme.warning.withValues(alpha: 0.3);
+      healthColor = AppTheme.aiGold;
+      glowColor = AppTheme.aiGold.withValues(alpha: 0.3);
     } else {
       statusText = isAr ? "يحتاج انتباهك" : "Needs Attention";
       subtitleText = isAr ? "مطلوب إجراء فوري" : "Immediate action required";
-      healthColor = AppTheme.danger;
-      glowColor = AppTheme.danger.withValues(alpha: 0.3);
+      healthColor = AppTheme.aiRed;
+      glowColor = AppTheme.aiRed.withValues(alpha: 0.3);
     }
 
     return Container(
@@ -91,16 +91,16 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
         border: Border.all(
           color: AppTheme.isDark(context)
-              ? AppTheme.accentBlue.withValues(alpha: 0.25)
+              ? AppTheme.aiBlue.withValues(alpha: 0.2)
               : AppTheme.borderFor(context),
-          width: 1.5,
+          width: 1,
         ),
         boxShadow: AppTheme.isDark(context)
             ? [
                 BoxShadow(
-                  color: AppTheme.accentBlue.withValues(alpha: 0.08),
-                  blurRadius: 20,
-                  spreadRadius: 2,
+                  color: AppTheme.aiBlue.withValues(alpha: 0.07),
+                  blurRadius: 24,
+                  spreadRadius: 0,
                 )
               ]
             : AppTheme.softShadow(context),
@@ -118,7 +118,7 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
                 height: 120,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppTheme.accentBlue.withValues(alpha: 0.03),
+                  color: AppTheme.aiBlue.withValues(alpha: 0.04),
                 ),
               ),
             ),
@@ -130,7 +130,7 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
                 height: 160,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: AppTheme.accentCyan.withValues(alpha: 0.03),
+                  color: AppTheme.aiGold.withValues(alpha: 0.03),
                 ),
               ),
             ),
@@ -147,7 +147,7 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
                       decoration: BoxDecoration(
                         shape: BoxShape.circle,
                         color: AppTheme.isDark(context)
-                            ? AppTheme.backgroundDeep
+                            ? AppTheme.aiCard
                             : Colors.white,
                         boxShadow: [
                           BoxShadow(
@@ -195,11 +195,11 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          isAr ? "مركز قيادة الأعمال" : "Business Orbit Core",
+                          isAr ? "مركز قيادة الأعمال" : "AI Business Core",
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
-                            color: AppTheme.accentCyan,
+                            color: AppTheme.aiBlue,
                             letterSpacing: 1.0,
                           ),
                         ),
@@ -236,7 +236,7 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
                       _buildMiniKpi(
                         context,
                         icon: Icons.trending_up,
-                        iconColor: AppTheme.accentBlue,
+                        iconColor: AppTheme.aiBlue,
                         label: isAr ? "المبيعات" : "Sales",
                         value: AppFormatters.currency(widget.snapshot.totalSales),
                       ),
@@ -244,7 +244,7 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
                       _buildMiniKpi(
                         context,
                         icon: Icons.warning_amber_rounded,
-                        iconColor: lowStockCount > 0 ? AppTheme.danger : AppTheme.success,
+                        iconColor: lowStockCount > 0 ? AppTheme.aiRed : AppTheme.aiGreen,
                         label: isAr ? "نواقص المخزون" : "Low Stock",
                         value: isAr ? "$lowStockCount مواد" : "$lowStockCount items",
                       ),
@@ -252,7 +252,7 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
                       _buildMiniKpi(
                         context,
                         icon: Icons.sync,
-                        iconColor: AppTheme.accentCyan,
+                        iconColor: AppTheme.aiGreen,
                         label: isAr ? "المزامنة" : "Sync",
                         value: isAr ? "مستقرة" : "Stable",
                       ),

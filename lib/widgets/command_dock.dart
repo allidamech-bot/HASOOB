@@ -60,13 +60,24 @@ class CommandDock extends StatelessWidget {
     return Container(
       height: 84,
       decoration: BoxDecoration(
-        color: AppTheme.navBarBackground(context).withValues(alpha: 0.96),
+        color: AppTheme.aiNavy.withValues(alpha: 0.97),
         borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
         border: Border.all(
-          color: AppTheme.borderFor(context),
+          color: AppTheme.aiCardBorder,
           width: 1.5,
         ),
-        boxShadow: AppTheme.shadowStrong(context),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.4),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+          BoxShadow(
+            color: AppTheme.aiBlue.withValues(alpha: 0.05),
+            blurRadius: 40,
+            spreadRadius: 0,
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -90,15 +101,11 @@ class CommandDock extends StatelessWidget {
       width: 52,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [AppTheme.accentBlue, AppTheme.accentCyan],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: AppTheme.aiBlueGradient,
         boxShadow: [
           BoxShadow(
-            color: AppTheme.accentBlue.withValues(alpha: 0.4),
-            blurRadius: 16,
+            color: AppTheme.aiBlue.withValues(alpha: 0.45),
+            blurRadius: 18,
             spreadRadius: 2,
             offset: const Offset(0, 4),
           ),
@@ -121,9 +128,8 @@ class CommandDock extends StatelessWidget {
 
   Widget _buildNormalItem(BuildContext context, _DockItemData item) {
     final isSelected = selectedIndex == item.index;
-    final theme = Theme.of(context);
-    const activeColor = AppTheme.accentBlue;
-    final inactiveColor = AppTheme.textSecondaryFor(context);
+    const activeColor = AppTheme.aiBlue;
+    const inactiveColor = AppTheme.aiTextMuted;
 
     return Expanded(
       child: Tooltip(
@@ -139,12 +145,22 @@ class CommandDock extends StatelessWidget {
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: isSelected
-                        ? AppTheme.accentBlue.withValues(alpha: 0.12)
+                        ? AppTheme.aiBlue.withValues(alpha: 0.12)
                         : Colors.transparent,
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                    borderRadius:
+                        BorderRadius.circular(AppTheme.radiusMedium),
+                    boxShadow: isSelected
+                        ? [
+                            BoxShadow(
+                              color: AppTheme.aiBlue.withValues(alpha: 0.15),
+                              blurRadius: 8,
+                            ),
+                          ]
+                        : null,
                   ),
                   child: Icon(
                     isSelected ? item.selectedIcon : item.icon,
@@ -157,9 +173,11 @@ class CommandDock extends StatelessWidget {
                   item.label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
+                  style: TextStyle(
                     color: isSelected ? activeColor : inactiveColor,
-                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    fontWeight: isSelected
+                        ? FontWeight.w700
+                        : FontWeight.w500,
                     fontSize: 9,
                   ),
                 ),

@@ -25,10 +25,10 @@ class MetricCard extends StatelessWidget {
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.surfaceSecondary : Colors.white,
+        color: isDark ? AppTheme.aiCard : Colors.white,
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
         border: Border.all(
-          color: isDark ? color.withValues(alpha: 0.15) : AppTheme.lightBorder,
+          color: isDark ? color.withValues(alpha: 0.18) : AppTheme.lightBorder,
           width: 1,
         ),
         gradient: isDark
@@ -36,9 +36,9 @@ class MetricCard extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  color.withValues(alpha: 0.05),
-                  AppTheme.surfaceSecondary,
-                  AppTheme.surfaceSecondary.withValues(alpha: 0.8),
+                  color.withValues(alpha: 0.07),
+                  AppTheme.aiCard,
+                  AppTheme.aiCard.withValues(alpha: 0.9),
                 ],
               )
             : null,
@@ -129,7 +129,7 @@ class MetricCard extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: isDark ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
+                      color: isDark ? AppTheme.aiTextSecondary : AppTheme.lightTextSecondary,
                     ),
                   ),
                   const SizedBox(height: 2),

@@ -44,6 +44,97 @@ class AppTheme {
   static const Color lightTextPrimary = Color(0xFF0F172A);
   static const Color lightTextSecondary = Color(0xFF64748B);
 
+  // ─────────────────────────────────────────────
+  // AI System Colors
+  // ─────────────────────────────────────────────
+  static const Color aiDeep = Color(0xFF080B14);
+  static const Color aiNavy = Color(0xFF0A0D1A);
+  static const Color aiCard = Color(0xFF0F1629);
+  static const Color aiCardElevated = Color(0xFF141D35);
+  static const Color aiCardBorder = Color(0xFF1E2D50);
+
+  static const Color aiBlue = Color(0xFF00D4FF);
+  static const Color aiBlueGlow = Color(0x2500D4FF);
+  static const Color aiBlueGlowStrong = Color(0x4000D4FF);
+  static const Color aiGold = Color(0xFFD4AF37);
+  static const Color aiGoldGlow = Color(0x25D4AF37);
+  static const Color aiGreen = Color(0xFF10B981);
+  static const Color aiGreenGlow = Color(0x2510B981);
+  static const Color aiRed = Color(0xFFEF4444);
+
+  static const Color aiTextPrimary = Color(0xFFE8F4FD);
+  static const Color aiTextSecondary = Color(0xFF6B8AAD);
+  static const Color aiTextMuted = Color(0xFF3D5273);
+
+  // ─────────────────────────────────────────────
+  // AI Gradients
+  // ─────────────────────────────────────────────
+  static const LinearGradient aiHeroGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [
+      Color(0xFF080B14),
+      Color(0xFF0A0D1A),
+      Color(0xFF060810),
+    ],
+  );
+
+  static const LinearGradient aiBlueGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFF00D4FF), Color(0xFF3B82F6)],
+  );
+
+  static const LinearGradient aiGoldGradient = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xFFD4AF37), Color(0xFFF59E0B)],
+  );
+
+  // ─────────────────────────────────────────────
+  // AI Helper Methods
+  // ─────────────────────────────────────────────
+  static BoxDecoration glassCard({Color? borderColor, Color? glowColor}) {
+    return BoxDecoration(
+      color: const Color(0xFF0F1629).withValues(alpha: 0.85),
+      borderRadius: BorderRadius.circular(16),
+      border: Border.all(
+        color: borderColor ?? const Color(0xFF1E2D50),
+        width: 1,
+      ),
+      boxShadow: glowColor != null
+          ? [
+              BoxShadow(
+                color: glowColor.withValues(alpha: 0.15),
+                blurRadius: 20,
+                spreadRadius: 0,
+              ),
+            ]
+          : null,
+    );
+  }
+
+  static BoxDecoration aiButtonDecoration({required Color color}) {
+    return BoxDecoration(
+      gradient: LinearGradient(
+        colors: [color, color.withValues(alpha: 0.7)],
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+      ),
+      borderRadius: BorderRadius.circular(12),
+      boxShadow: [
+        BoxShadow(
+          color: color.withValues(alpha: 0.3),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ],
+    );
+  }
+
+  // ─────────────────────────────────────────────
+  // Legacy gradient (kept for compatibility)
+  // ─────────────────────────────────────────────
   static LinearGradient premiumGradient = const LinearGradient(
     begin: Alignment.topLeft,
     end: Alignment.bottomRight,
@@ -55,72 +146,72 @@ class AppTheme {
 
   static ThemeData darkTheme() {
     const colorScheme = ColorScheme.dark(
-      primary: accentBlue,
+      primary: aiBlue,
       secondary: accentCyan,
-      surface: surfaceSecondary,
-      onSurface: textPrimary,
-      error: danger,
-      outline: border,
+      surface: aiCard,
+      onSurface: aiTextPrimary,
+      error: aiRed,
+      outline: aiCardBorder,
     );
 
     final theme = ThemeData(
       useMaterial3: true,
       brightness: Brightness.dark,
       colorScheme: colorScheme,
-      scaffoldBackgroundColor: background,
-      canvasColor: background,
-      primaryColor: accentBlue,
+      scaffoldBackgroundColor: aiDeep,
+      canvasColor: aiDeep,
+      primaryColor: aiBlue,
       fontFamily: fontFamilyArabic, // Base for Arabic, Inter for English via textTheme
       
       appBarTheme: AppBarTheme(
         centerTitle: false,
         backgroundColor: Colors.transparent,
-        foregroundColor: textPrimary,
+        foregroundColor: aiTextPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
         titleTextStyle: GoogleFonts.inter(
           fontSize: 20,
           fontWeight: FontWeight.w700,
-          color: textPrimary,
+          color: aiTextPrimary,
         ),
       ),
 
       cardTheme: CardThemeData(
         elevation: 0,
-        color: surfaceSecondary,
+        color: aiCard,
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusLarge),
-          side: const BorderSide(color: border, width: 1),
+          side: const BorderSide(color: aiCardBorder, width: 1),
         ),
       ),
 
       inputDecorationTheme: _inputThemeDark(),
       
       chipTheme: ChipThemeData(
-        backgroundColor: surfaceElevated,
-        selectedColor: accentBlue.withValues(alpha: 0.2),
-        secondarySelectedColor: accentBlue,
+        backgroundColor: aiCardElevated,
+        selectedColor: aiBlue.withValues(alpha: 0.2),
+        secondarySelectedColor: aiBlue,
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(radiusSmall),
         ),
-        side: const BorderSide(color: border),
+        side: const BorderSide(color: aiCardBorder),
         labelStyle: GoogleFonts.inter(
-          color: textPrimary,
+          color: aiTextPrimary,
           fontWeight: FontWeight.w600,
           fontSize: 13,
         ),
       ),
 
       dividerTheme: const DividerThemeData(
-        color: border,
+        color: aiCardBorder,
         thickness: 1,
         space: 1,
       ),
 
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: accentBlue,
+          backgroundColor: aiBlue,
           foregroundColor: Colors.white,
           elevation: 0,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
@@ -133,8 +224,8 @@ class AppTheme {
 
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          foregroundColor: textPrimary,
-          side: const BorderSide(color: border),
+          foregroundColor: aiTextPrimary,
+          side: const BorderSide(color: aiCardBorder),
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMedium),
@@ -145,20 +236,20 @@ class AppTheme {
 
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          backgroundColor: surfaceElevated,
-          foregroundColor: textPrimary,
+          backgroundColor: aiCardElevated,
+          foregroundColor: aiTextPrimary,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMedium),
           ),
-          side: const BorderSide(color: border),
+          side: const BorderSide(color: aiCardBorder),
           textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
         ),
       ),
 
       navigationBarTheme: NavigationBarThemeData(
-        backgroundColor: background,
-        indicatorColor: accentBlue.withValues(alpha: 0.1),
+        backgroundColor: aiNavy,
+        indicatorColor: aiBlue.withValues(alpha: 0.1),
         height: 80,
         surfaceTintColor: Colors.transparent,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
@@ -166,13 +257,13 @@ class AppTheme {
           return GoogleFonts.inter(
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected ? textPrimary : textSecondary,
+            color: isSelected ? aiTextPrimary : aiTextSecondary,
           );
         }),
       ),
     );
 
-    return _applyTypography(theme, textPrimary, textSecondary);
+    return _applyTypography(theme, aiTextPrimary, aiTextSecondary);
   }
 
   static ThemeData lightTheme() {
@@ -268,25 +359,27 @@ class AppTheme {
 
   static InputDecorationTheme _inputThemeDark() => InputDecorationTheme(
     filled: true,
-    fillColor: surfaceSecondary,
+    fillColor: aiCardElevated,
     contentPadding: const EdgeInsets.all(20),
-    hintStyle: GoogleFonts.inter(color: textSecondary, fontWeight: FontWeight.w400),
-    labelStyle: GoogleFonts.inter(color: textSecondary, fontWeight: FontWeight.w500),
+    hintStyle: GoogleFonts.inter(color: aiTextMuted, fontWeight: FontWeight.w400),
+    labelStyle: GoogleFonts.inter(color: aiTextSecondary, fontWeight: FontWeight.w500),
     border: OutlineInputBorder(
       borderRadius: BorderRadius.circular(radiusMedium),
-      borderSide: const BorderSide(color: border),
+      borderSide: const BorderSide(color: aiCardBorder),
     ),
     enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(radiusMedium),
-      borderSide: const BorderSide(color: border),
+      borderSide: const BorderSide(color: aiCardBorder),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(radiusMedium),
-      borderSide: const BorderSide(color: accentBlue, width: 2),
+      borderSide: const BorderSide(color: aiBlue, width: 2),
     ),
   );
 
-  // Compatibility Layer (Restored for Phase 25C Compatibility)
+  // ─────────────────────────────────────────────
+  // Compatibility Layer (Maintained for existing screens)
+  // ─────────────────────────────────────────────
   static const Color accent = accentBlue;
   static const Color accentSoft = accentCyan;
   static const Color surface = surfaceSecondary;
@@ -300,17 +393,17 @@ class AppTheme {
   static const Color lightSurfaceMuted = Color(0xFFF1F5F9);
   static const String fontFamily = 'Inter';
 
-  // Helper Methods (Restored/Maintained for legacy screens)
+  // Helper Methods (Maintained for legacy screens)
   static bool isDark(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
-  static Color surfaceFor(BuildContext context) => isDark(context) ? surfaceSecondary : lightSurface;
-  static Color surfaceAltFor(BuildContext context) => isDark(context) ? surfaceElevated : lightSurfaceMuted;
-  static Color backgroundFor(BuildContext context) => isDark(context) ? background : lightBackground;
-  static Color borderFor(BuildContext context) => isDark(context) ? border : lightBorder;
-  static Color textSecondaryFor(BuildContext context) => isDark(context) ? textSecondary : lightTextSecondary;
+  static Color surfaceFor(BuildContext context) => isDark(context) ? aiCard : lightSurface;
+  static Color surfaceAltFor(BuildContext context) => isDark(context) ? aiCardElevated : lightSurfaceMuted;
+  static Color backgroundFor(BuildContext context) => isDark(context) ? aiDeep : lightBackground;
+  static Color borderFor(BuildContext context) => isDark(context) ? aiCardBorder : lightBorder;
+  static Color textSecondaryFor(BuildContext context) => isDark(context) ? aiTextSecondary : lightTextSecondary;
 
   static List<BoxShadow> softShadow(BuildContext context) => [
     BoxShadow(
-      color: isDark(context) ? Colors.black.withValues(alpha: 0.15) : accentBlue.withValues(alpha: 0.04),
+      color: isDark(context) ? Colors.black.withValues(alpha: 0.3) : accentBlue.withValues(alpha: 0.04),
       blurRadius: 12,
       offset: const Offset(0, 4),
     ),
@@ -322,8 +415,8 @@ class AppTheme {
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
             colors: [
-              Color(0xFF1E1B4B), // very deep indigo/navy
-              Color(0xFF0F172A), // slate background
+              Color(0xFF0D1526),
+              Color(0xFF0A0D1A),
             ],
           )
         : const LinearGradient(
@@ -336,7 +429,7 @@ class AppTheme {
           );
   }
 
-  static Color navBarBackground(BuildContext context) => isDark(context) ? backgroundDeep : lightBackgroundDeep;
+  static Color navBarBackground(BuildContext context) => isDark(context) ? aiNavy : lightBackgroundDeep;
 
   static List<BoxShadow> shadowStrong(BuildContext context) => [
     BoxShadow(

@@ -71,13 +71,13 @@ class _PremiumSplashScreenState extends State<PremiumSplashScreen> with SingleTi
 
           // 2. Mid Layer: Animated Glows (Blobs) for depth
           _AnimatedGlowBlob(
-            color: AppTheme.accentBlue.withValues(alpha: 0.08),
+            color: AppTheme.aiBlue.withValues(alpha: 0.07),
             size: 400,
             offset: const Offset(-100, -100),
             duration: const Duration(seconds: 8),
           ),
           _AnimatedGlowBlob(
-            color: AppTheme.accentGold.withValues(alpha: 0.05),
+            color: AppTheme.aiGold.withValues(alpha: 0.05),
             size: 500,
             offset: const Offset(100, 200),
             duration: const Duration(seconds: 12),
@@ -130,21 +130,20 @@ class _PremiumSplashScreenState extends State<PremiumSplashScreen> with SingleTi
             ),
           ),
           
-          // 5. Signature Accent
           const Positioned(
             bottom: 60,
             left: 0,
             right: 0,
             child: Center(
               child: Opacity(
-                opacity: 0.4,
+                opacity: 0.5,
                 child: Text(
-                  'HASOOB ERP SYSTEM',
+                  'HASOOB AI FINANCIAL SYSTEM',
                   style: TextStyle(
-                    color: AppTheme.accentGold,
+                    color: AppTheme.aiGold,
                     fontSize: 10,
                     fontWeight: FontWeight.w900,
-                    letterSpacing: 8,
+                    letterSpacing: 6,
                   ),
                 ),
               ),
@@ -283,11 +282,11 @@ class _PremiumLoader extends StatelessWidget {
         children: [
           CircularProgressIndicator(
             strokeWidth: 1,
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentGold.withValues(alpha: 0.1)),
+            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.aiBlue.withValues(alpha: 0.2)),
           ),
           const CircularProgressIndicator(
             strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.accentGold),
+            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.aiBlue),
           ),
         ],
       ),

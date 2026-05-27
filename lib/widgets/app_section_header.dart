@@ -19,7 +19,7 @@ class AppSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = AppTheme.isDark(context);
-    
+
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
@@ -32,27 +32,25 @@ class AppSectionHeader extends StatelessWidget {
                 children: [
                   if (hasAccentLine) ...[
                     Container(
-                      width: 4,
-                      height: 18,
+                      width: 3,
+                      height: 20,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [AppTheme.accentBlue, AppTheme.accentCyan],
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                        ),
+                        gradient: AppTheme.aiBlueGradient,
                         borderRadius: BorderRadius.circular(2),
                       ),
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 10),
                   ],
                   Expanded(
                     child: Text(
                       title,
                       style: GoogleFonts.inter(
-                        fontSize: 20,
+                        fontSize: 18,
                         fontWeight: FontWeight.w900,
                         letterSpacing: -0.2,
-                        color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                        color: isDark
+                            ? AppTheme.aiTextPrimary
+                            : AppTheme.lightTextPrimary,
                       ),
                     ),
                   ),
@@ -63,9 +61,11 @@ class AppSectionHeader extends StatelessWidget {
                 Text(
                   subtitle!,
                   style: GoogleFonts.inter(
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w500,
-                    color: isDark ? AppTheme.textSecondary : AppTheme.lightTextSecondary,
+                    color: isDark
+                        ? AppTheme.aiTextSecondary
+                        : AppTheme.lightTextSecondary,
                   ),
                 ),
               ],
@@ -80,4 +80,3 @@ class AppSectionHeader extends StatelessWidget {
     );
   }
 }
-

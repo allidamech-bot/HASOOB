@@ -22,35 +22,35 @@ class OrbitNodeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = accentColor ?? AppTheme.accentBlue;
+    final color = accentColor ?? AppTheme.aiBlue;
     final isDark = AppTheme.isDark(context);
 
     return Container(
       decoration: BoxDecoration(
-        color: isDark ? AppTheme.surfaceSecondary : Colors.white,
+        color: isDark ? AppTheme.aiCard : Colors.white,
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
         border: Border.all(
-          color: isDark ? color.withValues(alpha: 0.18) : AppTheme.lightBorder,
-          width: 1.5,
+          color: isDark ? color.withValues(alpha: 0.2) : AppTheme.lightBorder,
+          width: 1,
         ),
         gradient: isDark
             ? LinearGradient(
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  color.withValues(alpha: 0.08),
-                  AppTheme.surfaceSecondary,
-                  AppTheme.surfaceSecondary.withValues(alpha: 0.9),
+                  color.withValues(alpha: 0.07),
+                  AppTheme.aiCard,
+                  AppTheme.aiCard.withValues(alpha: 0.95),
                 ],
               )
             : null,
         boxShadow: isDark
             ? [
                 BoxShadow(
-                  color: color.withValues(alpha: 0.04),
-                  blurRadius: 16,
-                  offset: const Offset(0, 8),
-                )
+                  color: color.withValues(alpha: 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 6),
+                ),
               ]
             : AppTheme.softShadow(context),
       ),
@@ -63,48 +63,49 @@ class OrbitNodeCard extends StatelessWidget {
               right: -10,
               top: -10,
               child: Container(
-                width: 50,
-                height: 50,
+                width: 55,
+                height: 55,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: color.withValues(alpha: 0.06),
+                  color: color.withValues(alpha: 0.07),
                 ),
               ),
             ),
-            // Top mini rail to ground the design
+            // Top accent rail
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              height: 3,
               child: Container(
-                color: color.withValues(alpha: 0.7),
+                height: 2,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [
+                      color.withValues(alpha: 0.8),
+                      color.withValues(alpha: 0.2),
+                    ],
+                  ),
+                ),
               ),
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
               child: Row(
                 children: [
-                  // Icon Capsule
+                  // Icon capsule
                   Container(
-                    width: 44,
-                    height: 44,
+                    width: 42,
+                    height: 42,
                     decoration: BoxDecoration(
-                      color: isDark
-                          ? color.withValues(alpha: 0.15)
-                          : color.withValues(alpha: 0.1),
+                      color: color.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                       border: Border.all(
-                        color: color.withValues(alpha: 0.3),
-                        width: 1.5,
+                        color: color.withValues(alpha: 0.25),
+                        width: 1,
                       ),
                     ),
                     child: Center(
-                      child: Icon(
-                        icon,
-                        color: color,
-                        size: 22,
-                      ),
+                      child: Icon(icon, color: color, size: 20),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -119,20 +120,24 @@ class OrbitNodeCard extends StatelessWidget {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: TextStyle(
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: FontWeight.w600,
-                            color: AppTheme.textSecondaryFor(context),
+                            color: isDark
+                                ? AppTheme.aiTextSecondary
+                                : AppTheme.lightTextSecondary,
                           ),
                         ),
-                        const SizedBox(height: 2),
+                        const SizedBox(height: 3),
                         FittedBox(
                           fit: BoxFit.scaleDown,
                           child: Text(
                             value,
                             style: GoogleFonts.inter(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w800,
-                              color: isDark ? Colors.white : AppTheme.lightTextPrimary,
+                              fontSize: 17,
+                              fontWeight: FontWeight.w900,
+                              color: isDark
+                                  ? AppTheme.aiTextPrimary
+                                  : AppTheme.lightTextPrimary,
                               letterSpacing: -0.5,
                             ),
                           ),
@@ -140,23 +145,29 @@ class OrbitNodeCard extends StatelessWidget {
                       ],
                     ),
                   ),
-                  // Trend Badge (Optional)
+                  // Trend badge (optional)
                   if (trendText != null && trendText!.isNotEmpty)
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 3),
                       decoration: BoxDecoration(
                         color: isTrendUp == true
-                            ? AppTheme.success.withValues(alpha: 0.1)
-                            : AppTheme.danger.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
+                            ? AppTheme.aiGreen.withValues(alpha: 0.12)
+                            : AppTheme.aiRed.withValues(alpha: 0.12),
+                        borderRadius:
+                            BorderRadius.circular(AppTheme.radiusSmall),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           Icon(
-                            isTrendUp == true ? Icons.arrow_upward : Icons.arrow_downward,
-                            size: 10,
-                            color: isTrendUp == true ? AppTheme.success : AppTheme.danger,
+                            isTrendUp == true
+                                ? Icons.arrow_upward
+                                : Icons.arrow_downward,
+                            size: 9,
+                            color: isTrendUp == true
+                                ? AppTheme.aiGreen
+                                : AppTheme.aiRed,
                           ),
                           const SizedBox(width: 2),
                           Text(
@@ -164,7 +175,9 @@ class OrbitNodeCard extends StatelessWidget {
                             style: GoogleFonts.inter(
                               fontSize: 9,
                               fontWeight: FontWeight.bold,
-                              color: isTrendUp == true ? AppTheme.success : AppTheme.danger,
+                              color: isTrendUp == true
+                                  ? AppTheme.aiGreen
+                                  : AppTheme.aiRed,
                             ),
                           ),
                         ],

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../core/app_copy.dart';
+import '../core/app_theme.dart';
 import '../widgets/command_dock.dart';
 import 'add_product_screen.dart';
 import 'customers_screen.dart';
@@ -26,7 +27,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       _openAddMenu();
       return;
     }
-
     setState(() {
       _index = index;
     });
@@ -37,57 +37,141 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
     showModalBottomSheet(
       context: context,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
+      backgroundColor: AppTheme.aiCard,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        side: BorderSide(color: AppTheme.aiCardBorder, width: 1),
       ),
       builder: (sheetContext) {
         return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: const Icon(Icons.inventory),
-                title: Text(copy.t('addProduct')),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const AddProductScreen(),
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.receipt_long),
-                title: Text(copy.t('createInvoice')),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const InvoiceFormScreen(),
-                    ),
-                  );
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.person_add),
-                title: Text(copy.t('addCustomer')),
-                onTap: () {
-                  Navigator.pop(sheetContext);
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (_) => const CustomersScreen(),
-                    ),
-                  );
-                },
-              ),
-            ],
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Handle bar
+                Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: AppTheme.aiCardBorder,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+                // Header
+                Padding(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.add_circle_outline_rounded,
+                          color: AppTheme.aiBlue, size: 20),
+                      const SizedBox(width: 10),
+                      Text(
+                        copy.isEnglish ? 'Quick Add' : 'إضافة سريعة',
+                        style: const TextStyle(
+                          color: AppTheme.aiTextPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _aiListTile(
+                  sheetContext: sheetContext,
+                  icon: Icons.inventory_2_rounded,
+                  iconColor: AppTheme.aiBlue,
+                  label: copy.t('addProduct'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const AddProductScreen()),
+                    );
+                  },
+                ),
+                _aiListTile(
+                  sheetContext: sheetContext,
+                  icon: Icons.receipt_long_rounded,
+                  iconColor: AppTheme.aiGold,
+                  label: copy.t('createInvoice'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const InvoiceFormScreen()),
+                    );
+                  },
+                ),
+                _aiListTile(
+                  sheetContext: sheetContext,
+                  icon: Icons.person_add_rounded,
+                  iconColor: AppTheme.aiGreen,
+                  label: copy.t('addCustomer'),
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const CustomersScreen()),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
+              ],
+            ),
           ),
         );
       },
+    );
+  }
+
+  Widget _aiListTile({
+    required BuildContext sheetContext,
+    required IconData icon,
+    required Color iconColor,
+    required String label,
+    required VoidCallback onTap,
+  }) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: iconColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border:
+                      Border.all(color: iconColor.withValues(alpha: 0.2)),
+                ),
+                child: Icon(icon, color: iconColor, size: 18),
+              ),
+              const SizedBox(width: 14),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: AppTheme.aiTextPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const Spacer(),
+              const Icon(Icons.arrow_forward_ios_rounded,
+                  color: AppTheme.aiTextMuted, size: 14),
+            ],
+          ),
+        ),
+      ),
     );
   }
 
@@ -106,6 +190,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     return KeyedSubtree(
       key: ValueKey('main-nav-$localeKey'),
       child: Scaffold(
+        backgroundColor: AppTheme.aiDeep,
         extendBody: true,
         body: IndexedStack(
           index: _index,
@@ -120,6 +205,5 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         ),
       ),
     );
-
   }
 }
