@@ -130,21 +130,13 @@ class InvoiceRepository {
 
     final invoiceData = await DBHelper.getInvoiceById(businessId, invoiceId);
     if (invoiceData != null) {
+      final invoiceItems = await DBHelper.getInvoiceItems(businessId, invoiceId);
       await SyncQueueService.instance.enqueue(
         entityName: 'invoices',
         entityId: invoiceId,
         type: SyncOperationType.create,
-        payload: invoiceData,
-      );
-
-      final invoiceItems = await DBHelper.getInvoiceItems(businessId, invoiceId);
-      await SyncQueueService.instance.enqueue(
-        entityName: 'invoice_items',
-        entityId: invoiceId,
-        type: SyncOperationType.create,
         payload: {
-          'invoice_id': invoiceId,
-          'businessId': businessId,
+          ...invoiceData,
           'items': invoiceItems,
         },
       );
@@ -179,11 +171,15 @@ class InvoiceRepository {
 
     final invoiceData = await DBHelper.getInvoiceById(businessId, invoiceId);
     if (invoiceData != null) {
+      final invoiceItems = await DBHelper.getInvoiceItems(businessId, invoiceId);
       await SyncQueueService.instance.enqueue(
         entityName: 'invoices',
         entityId: invoiceId,
         type: SyncOperationType.update,
-        payload: invoiceData,
+        payload: {
+          ...invoiceData,
+          'items': invoiceItems,
+        },
       );
     }
 
@@ -239,11 +235,15 @@ class InvoiceRepository {
 
     final invoiceData = await DBHelper.getInvoiceById(businessId, invoiceId);
     if (invoiceData != null) {
+      final invoiceItems = await DBHelper.getInvoiceItems(businessId, invoiceId);
       await SyncQueueService.instance.enqueue(
         entityName: 'invoices',
         entityId: invoiceId,
         type: SyncOperationType.update,
-        payload: invoiceData,
+        payload: {
+          ...invoiceData,
+          'items': invoiceItems,
+        },
       );
     }
   }
