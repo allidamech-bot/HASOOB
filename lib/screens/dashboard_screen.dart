@@ -27,6 +27,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:hasoob_app/widgets/business_health_module.dart';
 import 'package:hasoob_app/widgets/orbit_node_card.dart';
 import 'package:hasoob_app/widgets/app_section_header.dart';
+import 'package:hasoob_app/widgets/ai_design_system.dart';
+import 'package:hasoob_app/widgets/ai_robot_advisor.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -382,75 +384,116 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final lowStockPreview = data.lowStockItems.take(3).toList();
     final recentSalesPreview = data.recentSales.take(3).toList();
     final isWide = MediaQuery.sizeOf(context).width >= 1000;
+    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
 
     return CustomScrollView(
       slivers: [
-        SliverToBoxAdapter(
-          child: _premiumHeader(context, copy),
-        ),
+        // Top Toolbar
         SliverToBoxAdapter(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                const SyncStatusIndicator(),
+                const SizedBox(width: 8),
+                _actionCapsule(
+                  context,
+                  icon: Icons.apartment_rounded,
+                  tooltip: copy.t('businessProfile'),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const BusinessProfileScreen()),
+                  ),
+                  accentColor: AppTheme.aiBlue,
+                ),
+                const SizedBox(width: 8),
+                _actionCapsule(
+                  context,
+                  icon: Icons.settings_outlined,
+                  tooltip: copy.t('settings'),
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                  ),
+                  accentColor: AppTheme.aiBlue,
+                ),
+                const SizedBox(width: 8),
+                _actionCapsule(
+                  context,
+                  icon: Icons.logout_rounded,
+                  tooltip: copy.t('logout'),
+                  onTap: () => AuthService.instance.signOut(),
+                  accentColor: AppTheme.aiRed,
+                ),
+              ],
+            ),
+          ),
+        ),
+        // AI Hero
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: AiRobotAdvisor(
+              greeting: copy.isEnglish ? "What is the best financial decision today?" : "ما القرار المالي الأفضل اليوم؟",
+              advisorTitle: copy.isEnglish ? "FINANCIAL ADVISOR ACTIVE" : "المستشار المالي نشط",
+              suggestion: copy.isEnglish ? "Analyzing cash flow, obligations, inventory, and sales..." : "يتم تحليل التدفق النقدي، الالتزامات، المخزون، والمبيعات...",
+            ),
+          ),
+        ),
+        // KPIs Grid
+        SliverPadding(
+          padding: const EdgeInsets.symmetric(horizontal: 24.0),
+          sliver: SliverGrid(
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: isWide ? 4 : (isDesktop ? 2 : 2),
+              crossAxisSpacing: 16,
+              mainAxisSpacing: 16,
+              childAspectRatio: isWide ? 1.8 : 2.0,
+            ),
+            delegate: SliverChildListDelegate([
+              OrbitNodeCard(
+                title: copy.t('totalProducts'),
+                value: AppFormatters.number(data.totalProducts),
+                icon: Icons.inventory_2_rounded,
+                accentColor: AppTheme.aiBlue,
+              ),
+              OrbitNodeCard(
+                title: copy.t('totalSales'),
+                value: AppFormatters.currency(data.totalSales),
+                icon: Icons.point_of_sale_rounded,
+                accentColor: AppTheme.aiGold,
+              ),
+              OrbitNodeCard(
+                title: copy.t('estimatedProfit'),
+                value: AppFormatters.currency(data.netProfitEstimate),
+                icon: Icons.trending_up_rounded,
+                accentColor: AppTheme.aiGreen,
+              ),
+              OrbitNodeCard(
+                title: copy.t('lowStockCount'),
+                value: AppFormatters.number(data.lowStockItems.length),
+                icon: Icons.warning_amber_rounded,
+                accentColor: AppTheme.aiRed,
+                trendText: data.lowStockItems.isEmpty ? null : "${data.lowStockItems.length}",
+                isTrendUp: false,
+              ),
+            ]),
+          ),
+        ),
+        // Additional Content
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                BusinessHealthModule(snapshot: data),
-                const SizedBox(height: 24),
                 if (Firebase.apps.isEmpty) ...[
                   const LocalModeStatusCard(),
                   const SizedBox(height: 16),
                 ],
                 const SyncHealthCard(),
                 const SizedBox(height: 24),
-                
-                AppSectionHeader(
-                  title: copy.t('overview'),
-                  hasAccentLine: true,
-                ),
-                const SizedBox(height: 12),
-                
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final crossAxisCount = constraints.maxWidth >= 900 ? 4 : 2;
-                    return GridView.count(
-                      crossAxisCount: crossAxisCount,
-                      crossAxisSpacing: 12,
-                      mainAxisSpacing: 12,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      childAspectRatio: constraints.maxWidth < 400 ? 2.0 : 2.2,
-                      children: [
-                        OrbitNodeCard(
-                          title: copy.t('totalProducts'),
-                          value: AppFormatters.number(data.totalProducts),
-                          icon: Icons.inventory_2_rounded,
-                          accentColor: AppTheme.accentBlue,
-                        ),
-                        OrbitNodeCard(
-                          title: copy.t('totalSales'),
-                          value: AppFormatters.currency(data.totalSales),
-                          icon: Icons.point_of_sale_rounded,
-                          accentColor: AppTheme.accentCyan,
-                        ),
-                        OrbitNodeCard(
-                          title: copy.t('estimatedProfit'),
-                          value: AppFormatters.currency(data.netProfitEstimate),
-                          icon: Icons.trending_up_rounded,
-                          accentColor: AppTheme.success,
-                        ),
-                        OrbitNodeCard(
-                          title: copy.t('lowStockCount'),
-                          value: AppFormatters.number(data.lowStockItems.length),
-                          icon: Icons.warning_amber_rounded,
-                          accentColor: AppTheme.warning,
-                          trendText: data.lowStockItems.isEmpty ? null : "${data.lowStockItems.length}",
-                          isTrendUp: false,
-                        ),
-                      ],
-                    );
-                  },
-                ),
-                
                 const SizedBox(height: 28),
                 AppSectionHeader(
                   title: copy.t('quickActions'),
@@ -680,18 +723,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _emptyCard(BuildContext context, {required IconData icon, required String text}) {
-    return PremiumCard(
-      padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
-      child: Center(
-        child: Column(
-          children: [
-            Icon(icon, size: 32, color: AppTheme.textSecondaryFor(context).withValues(alpha: 0.5)),
-            const SizedBox(height: 12),
-            Text(text, style: TextStyle(color: AppTheme.textSecondaryFor(context))),
-          ],
-        ),
-      ),
+  Widget _emptyCard(BuildContext context, {required IconData icon, required String text, Widget? action}) {
+    return AiEmptyState(
+      icon: icon,
+      title: text,
+      subtitle: AppCopy.of(context).isEnglish 
+          ? "Data will appear here once available" 
+          : "ستظهر البيانات هنا فور توفرها",
+      action: action,
     );
   }
 

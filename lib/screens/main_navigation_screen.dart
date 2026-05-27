@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../core/app_copy.dart';
 import '../core/app_theme.dart';
 import '../widgets/command_dock.dart';
+import '../widgets/desktop_sidebar.dart';
 import 'add_product_screen.dart';
 import 'customers_screen.dart';
 import 'dashboard_screen.dart';
@@ -192,16 +193,48 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       child: Scaffold(
         backgroundColor: AppTheme.aiDeep,
         extendBody: true,
-        body: IndexedStack(
-          index: _index,
-          children: screens,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final isDesktop = constraints.maxWidth >= 800;
+            if (isDesktop) {
+              return Directionality(
+                textDirection: localeKey == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+                child: Row(
+                  children: [
+                    DesktopSidebar(
+                      selectedIndex: _index,
+                      onDestinationSelected: _onDestinationSelected,
+                    ),
+                    Expanded(
+                      child: IndexedStack(
+                        index: _index,
+                        children: screens,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }
+
+            return IndexedStack(
+              index: _index,
+              children: screens,
+            );
+          },
         ),
-        bottomNavigationBar: SafeArea(
-          minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-          child: CommandDock(
-            selectedIndex: _index,
-            onDestinationSelected: _onDestinationSelected,
-          ),
+        bottomNavigationBar: LayoutBuilder(
+          builder: (context, constraints) {
+            final isDesktop = constraints.maxWidth >= 800;
+            if (isDesktop) return const SizedBox.shrink();
+
+            return SafeArea(
+              minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              child: CommandDock(
+                selectedIndex: _index,
+                onDestinationSelected: _onDestinationSelected,
+              ),
+            );
+          },
         ),
       ),
     );
