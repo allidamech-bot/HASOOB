@@ -153,14 +153,35 @@ void main() {
     });
 
     test('deleteProduct should enqueue delete operation', () async {
+      final db = await DBHelper.database();
+      await db.insert('products', {
+        'id': 'p3',
+        'businessId': 'b1',
+        'name': 'P3',
+        'unit': 'pcs',
+        'purchase_price': 10,
+        'selling_price': 15,
+      });
+
       try {
         await productRepository.deleteProduct('b1', 'p3');
-      } catch (_) {
+      } catch (e) {
+        if (e is StateError) rethrow;
         // Expected potential legacy Firebase sync failure in local-only test.
       }
 
       final pending = await SyncQueueService.instance.getPending();
       expect(pending.any((op) => op.type == SyncOperationType.delete && op.entityId == 'p3'), isTrue);
+    });
+
+    test('deleteProduct should throw StateError and not enqueue if local row does not exist', () async {
+      await expectLater(
+        () => productRepository.deleteProduct('b1', 'non_existing_p'),
+        throwsA(isA<StateError>()),
+      );
+
+      final pending = await SyncQueueService.instance.getPending();
+      expect(pending.any((op) => op.type == SyncOperationType.delete && op.entityId == 'non_existing_p'), isFalse);
     });
   });
 
