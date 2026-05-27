@@ -162,6 +162,14 @@ void main() {
         'purchase_price': 10,
         'selling_price': 15,
       });
+      await db.insert('products', {
+        'id': 'p_keep',
+        'businessId': 'b1',
+        'name': 'Keep Me',
+        'unit': 'pcs',
+        'purchase_price': 20,
+        'selling_price': 25,
+      });
 
       try {
         await productRepository.deleteProduct('b1', 'p3');
@@ -170,8 +178,16 @@ void main() {
         // Expected potential legacy Firebase sync failure in local-only test.
       }
 
+      final p3Result = await db.query('products', where: 'id = ? AND businessId = ?', whereArgs: ['p3', 'b1']);
+      expect(p3Result, isEmpty);
+
+      final keepResult = await db.query('products', where: 'id = ? AND businessId = ?', whereArgs: ['p_keep', 'b1']);
+      expect(keepResult, isNotEmpty);
+      expect(keepResult.first['id'], 'p_keep');
+
       final pending = await SyncQueueService.instance.getPending();
       expect(pending.any((op) => op.type == SyncOperationType.delete && op.entityId == 'p3'), isTrue);
+      expect(pending.any((op) => op.type == SyncOperationType.delete && op.entityId == 'p_keep'), isFalse);
     });
 
     test('deleteProduct should throw StateError and not enqueue if local row does not exist', () async {
