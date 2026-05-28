@@ -23,6 +23,7 @@ import 'package:hasoob_app/screens/business_profile_screen.dart';
 import 'package:hasoob_app/screens/customers_screen.dart';
 import 'package:hasoob_app/screens/documents_screen.dart';
 import 'package:hasoob_app/screens/settings_screen.dart';
+import 'package:hasoob_app/screens/_dashboard_dock_spacer.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -421,6 +422,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
 
               const SizedBox(height: 120),
+              // Reserve space for the mobile CommandDock so it never overlaps content.
+              // CommandDock height: 84px
+              // CommandDock is wrapped with SafeArea(minimum: EdgeInsets.fromLTRB(..., 16))
+              // On narrow screens (< 800px), MainNavigationScreen shows the dock.
+              if (!isDesktop)
+                SizedBox(height: DashboardDockSpacer.bottomReservedSpace(context)),
             ]),
           ),
         ),
