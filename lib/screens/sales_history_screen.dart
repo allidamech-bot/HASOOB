@@ -4,11 +4,10 @@ import 'package:flutter/material.dart';
 
 import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
-import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
-import '../data/repositories/product_repository.dart';
 import '../core/utils/perf_logger.dart';
+import '../data/repositories/product_repository.dart';
 import '../widgets/premium/premium_card.dart';
 import '../widgets/sync_status_indicator.dart';
 import '../widgets/ai_design_system.dart';
@@ -60,19 +59,6 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         _searchQuery = nextQuery;
       });
     });
-  }
-
-  Future<void> _reloadSales({bool showError = false}) async {
-    try {
-      final businessId = BusinessContext.businessId;
-      await _productRepository.getSalesRecords(businessId);
-    } catch (error) {
-      if (!mounted || !showError) return;
-      AppMessages.error(
-        context,
-        '${AppCopy.of(context).t('loadSalesHistoryError')}\n$error',
-      );
-    }
   }
 
   List<Map<String, dynamic>> _applyFilters(List<Map<String, dynamic>> rows) {
@@ -131,24 +117,25 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           final totalProfitVal = originalRows.fold<double>(0, (sum, item) => sum + _toDouble(item['total_profit']));
           final transactionCount = filteredRows.length;
 
-          return Column(
-            children: [
-              AiPageHeader(
-                title: copy.isEnglish ? 'Sales & Invoices' : 'العملاء والفواتير',
-                subtitle: copy.isEnglish 
-                    ? 'Track sales operations, profit margins, and customer accounts.'
-                    : 'تتبع المبيعات المباشرة، فواتير العملاء، الأرباح المحققة والمدفوعات.',
-                actions: const [SyncStatusIndicator()],
+          return CustomScrollView(
+            slivers: [
+              SliverToBoxAdapter(
+                child: AiPageHeader(
+                  title: copy.isEnglish ? 'Sales & Invoices' : 'العملاء والفواتير',
+                  subtitle: copy.isEnglish 
+                      ? 'Track sales operations, profit margins, and customer accounts.'
+                      : 'تتبع المبيعات المباشرة، فواتير العملاء، الأرباح المحققة والمدفوعات.',
+                  actions: const [SyncStatusIndicator()],
+                ),
               ),
 
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: () => _reloadSales(showError: true),
-                  backgroundColor: AppTheme.aiCard,
-                  color: AppTheme.aiGold,
-                  child: ListView(
-                    padding: const EdgeInsets.all(24),
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+                sliver: SliverToBoxAdapter(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Summary KPI Cards
                       GridView.count(
                         shrinkWrap: true,
                         physics: const NeverScrollableScrollPhysics(),
@@ -179,9 +166,13 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                       ),
                       const SizedBox(height: 24),
 
-                      AiGlassCard(
+                      // Search & Filter Panel
+                      PremiumCard(
                         padding: const EdgeInsets.all(20),
-                        borderColor: AppTheme.aiGold.withValues(alpha: 0.15),
+                        border: Border.all(
+                          color: AppTheme.aiGold.withValues(alpha: 0.15),
+                          width: 1,
+                        ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
@@ -254,7 +245,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                       else if (originalRows.isEmpty)
                         _buildEmptyState(context, copy)
                       else if (filteredRows.isEmpty)
-                        AiGlassCard(
+                        PremiumCard(
                           padding: const EdgeInsets.all(32),
                           child: Center(
                             child: Text(
@@ -278,6 +269,10 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                             padding: const EdgeInsets.only(bottom: 12),
                             child: PremiumCard(
                               padding: const EdgeInsets.all(20),
+                              border: Border.all(
+                                color: AppTheme.aiGold.withValues(alpha: 0.15),
+                                width: 1,
+                              ),
                               child: Row(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
@@ -428,8 +423,6 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     );
   }
 
-
-
   Widget _buildErrorState(BuildContext context, AppCopy copy, Object? error) {
     return Center(
       child: Padding(
@@ -440,7 +433,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
             const Icon(Icons.error_outline_rounded, color: AppTheme.aiRed, size: 48),
             const SizedBox(height: 16),
             Text(
-              copy.isEnglish ? 'Error loading sales' : 'حدث خطأ أثناء تحميل سجل المبيعات والفواتير.',
+              copy.isEnglish ? 'Error loading sales history' : 'فشل تحميل بيانات المبيعات من الخادم.',
               style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.w800, fontSize: 15),
               textAlign: TextAlign.center,
             ),
@@ -457,54 +450,26 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context, AppCopy copy) {
-    return AiGlassCard(
-      borderColor: AppTheme.aiGold.withValues(alpha: 0.15),
+    return PremiumCard(
+      padding: const EdgeInsets.all(40),
+      border: Border.all(
+        color: AppTheme.aiGold.withValues(alpha: 0.15),
+        width: 1,
+      ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          AiEmptyState(
-            icon: Icons.point_of_sale_rounded,
-            title: copy.isEnglish ? 'No sales transactions recorded yet' : 'لم يتم تسجيل أي عمليات بيع بعد',
-            subtitle: copy.isEnglish
-                ? 'Create invoices, sell products, or track direct client payments instantly.'
-                : 'أنشئ أول فاتورة مبيعات، أو سجّل عملية بيع سريعة للبدء في تتبع التدفقات والأرباح.',
-            action: AiActionButton(
-              label: copy.isEnglish ? 'Record First Sale' : 'سجّل أول عملية الآن',
-              icon: Icons.add_circle_outline_rounded,
-              color: AppTheme.aiGold,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const DocumentsScreen()),
-                );
-              },
-            ),
+          const Icon(Icons.point_of_sale_rounded, size: 64, color: AppTheme.aiGold),
+          const SizedBox(height: 24),
+          Text(
+            copy.isEnglish ? 'No sales yet' : 'لا توجد مبيعات بعد',
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.aiTextPrimary),
           ),
-          const SizedBox(height: 8),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.aiGold.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.15)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.psychology_rounded, color: AppTheme.aiGold, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    copy.isEnglish
-                        ? 'AI Hint: The smart advisor helps you simulate profitability before recording transactions.'
-                        : 'تلميح ذكي: يساعدك المستشار المالي على فحص ومحاكاة الربحية المتوقعة قبل إتمام المعاملات.',
-                    style: const TextStyle(
-                      color: AppTheme.aiGold,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          const SizedBox(height: 12),
+          Text(
+            copy.isEnglish ? 'Start by registering your first sale.' : 'ابدأ بتسجيل أول عملية مبيعات.',
+            style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 13),
+            textAlign: TextAlign.center,
           ),
         ],
       ),

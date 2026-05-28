@@ -5,6 +5,8 @@ import '../core/app_theme.dart';
 import '../core/app_theme_controller.dart';
 import '../l10n/app_localizations.dart';
 import '../core/app_copy.dart';
+import '../widgets/premium/premium_card.dart';
+import '../widgets/ai_design_system.dart';
 import 'help_screen.dart';
 
 class SettingsScreen extends StatelessWidget {
@@ -14,315 +16,331 @@ class SettingsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final controller = AppThemeControllerScope.of(context);
     final localeController = AppLocaleControllerScope.of(context);
-    final theme = Theme.of(context);
-    final l10n = AppLocalizations.of(context)!;
+    final copy = AppCopy.of(context);
+    final isEnglish = copy.isEnglish;
+
     final selectedLocaleCode =
         (localeController.locale ?? Localizations.localeOf(context)).languageCode;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.settingsTitle)),
-      body: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-        children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
+      backgroundColor: AppTheme.aiDeep,
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: AiPageHeader(
+              title: isEnglish ? 'Settings' : 'الإعدادات',
+              subtitle: isEnglish ? 'Customize your experience' : 'تخصيص تجربتك وإعدادات التطبيق',
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
+            sliver: SliverToBoxAdapter(
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Text(
-                    l10n.appearanceSectionTitle,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                  SettingsSection(
+                    title: isEnglish ? 'Appearance' : 'المظهر',
+                    icon: Icons.palette_rounded,
+                    children: [
+                      ThemeOption(
+                        context,
+                        controller: controller,
+                        mode: ThemeMode.system,
+                        icon: Icons.brightness_auto_rounded,
+                        title: isEnglish ? 'System Theme' : 'المظهر التلقائي',
+                        subtitle: isEnglish ? 'Follow system setting' : 'يتبع إعدادات النظام',
+                      ),
+                      const SizedBox(height: 12),
+                      ThemeOption(
+                        context,
+                        controller: controller,
+                        mode: ThemeMode.light,
+                        icon: Icons.light_mode_rounded,
+                        title: isEnglish ? 'Light Mode' : 'المظهر الفاتح',
+                        subtitle: isEnglish ? 'Light background' : 'خلفية فاتحة',
+                      ),
+                      const SizedBox(height: 12),
+                      ThemeOption(
+                        context,
+                        controller: controller,
+                        mode: ThemeMode.dark,
+                        icon: Icons.dark_mode_rounded,
+                        title: isEnglish ? 'Dark Mode' : 'المظهر الداكن',
+                        subtitle: isEnglish ? 'Luxury midnight theme' : 'مظهر ليل نايت ليل',
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.appearanceSectionDescription,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSecondaryFor(context),
-                    ),
+                  const SizedBox(height: 20),
+                  SettingsSection(
+                    title: isEnglish ? 'Language' : 'اللغة',
+                    icon: Icons.language_rounded,
+                    children: [
+                      LanguageOption(
+                        context,
+                        localeController: localeController,
+                        localeCode: 'ar',
+                        currentLocaleCode: selectedLocaleCode,
+                        title: isEnglish ? 'العربية' : 'Arabic',
+                      ),
+                      const SizedBox(height: 12),
+                      LanguageOption(
+                        context,
+                        localeController: localeController,
+                        localeCode: 'en',
+                        currentLocaleCode: selectedLocaleCode,
+                        title: isEnglish ? 'English' : 'English',
+                      ),
+                    ],
                   ),
-                  const SizedBox(height: 16),
-                  _themeOption(
-                    context,
-                    controller: controller,
-                    mode: ThemeMode.system,
-                    icon: Icons.brightness_auto_rounded,
-                    title: l10n.themeSystemTitle,
-                    subtitle: l10n.themeSystemSubtitle,
-                  ),
-                  const SizedBox(height: 10),
-                  _themeOption(
-                    context,
-                    controller: controller,
-                    mode: ThemeMode.light,
-                    icon: Icons.light_mode_rounded,
-                    title: l10n.themeLightTitle,
-                    subtitle: l10n.themeLightSubtitle,
-                  ),
-                  const SizedBox(height: 10),
-                  _themeOption(
-                    context,
-                    controller: controller,
-                    mode: ThemeMode.dark,
-                    icon: Icons.dark_mode_rounded,
-                    title: l10n.themeDarkTitle,
-                    subtitle: l10n.themeDarkSubtitle,
+                  const SizedBox(height: 20),
+                  SettingsSection(
+                    title: isEnglish ? 'System' : 'النظام',
+                    icon: Icons.sync_alt_rounded,
+                    children: [
+                      AiDataRow(
+                        leading: const AiIconContainer(
+                          icon: Icons.sync_rounded,
+                          color: AppTheme.aiBlue,
+                        ),
+                        title: copy.t('syncCenter'),
+                        subtitle: copy.t('syncCenterSubtitle'),
+                        onTap: () => Navigator.pushNamed(context, '/sync'),
+                      ),
+                      const SizedBox(height: 12),
+                      AiDataRow(
+                        leading: const AiIconContainer(
+                          icon: Icons.help_outline_rounded,
+                          color: AppTheme.aiGreen,
+                        ),
+                        title: AppLocalizations.of(context)!.helpGuideTitle,
+                        subtitle: AppLocalizations.of(context)!.helpGuideSubtitle,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (_) => const HelpScreen()),
+                          );
+                        },
+                      ),
+                    ],
                   ),
                 ],
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    l10n.languageSectionTitle,
-                    style: theme.textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.languageSectionDescription,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: AppTheme.textSecondaryFor(context),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  _languageOption(
-                    context,
-                    localeController: localeController,
-                    localeCode: 'ar',
-                    currentLocaleCode: selectedLocaleCode,
-                    title: l10n.languageArabic,
-                  ),
-                  const SizedBox(height: 10),
-                  _languageOption(
-                    context,
-                    localeController: localeController,
-                    localeCode: 'en',
-                    currentLocaleCode: selectedLocaleCode,
-                    title: l10n.languageEnglish,
-                  ),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.sync_rounded),
-                  title: Text(
-                    AppCopy.of(context).t('syncCenter'),
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  subtitle: Text(
-                    AppCopy.of(context).t('syncCenterSubtitle'),
-                    style: TextStyle(color: AppTheme.textSecondaryFor(context)),
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-                  onTap: () => Navigator.pushNamed(context, '/sync'),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Card(
-            child: Column(
-              children: [
-                ListTile(
-                  leading: const Icon(Icons.help_outline_rounded),
-                  title: Text(
-                    l10n.helpGuideTitle,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  subtitle: Text(
-                    l10n.helpGuideSubtitle,
-                    style: TextStyle(color: AppTheme.textSecondaryFor(context)),
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 18),
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const HelpScreen()),
-                    );
-                  },
-                ),
-                Divider(color: AppTheme.borderFor(context), height: 1),
-                ListTile(
-                  leading: const Icon(Icons.info_outline_rounded),
-                  title: Text(
-                    l10n.aboutAppTitle,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                  subtitle: Text(
-                    l10n.aboutAppSubtitle,
-                    style: TextStyle(color: AppTheme.textSecondaryFor(context)),
-                  ),
-                ),
-              ],
             ),
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _themeOption(
-    BuildContext context, {
-    required AppThemeController controller,
-    required ThemeMode mode,
-    required IconData icon,
-    required String title,
-    required String subtitle,
-  }) {
+class SettingsSection extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final List<Widget> children;
+
+  const SettingsSection({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.children,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PremiumCard(
+      padding: const EdgeInsets.all(20),
+      border: Border.all(
+        color: AppTheme.aiGold.withValues(alpha: 0.2),
+        width: 1,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: AppTheme.aiBlue, size: 18),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppTheme.aiTextPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+class ThemeOption extends StatelessWidget {
+  final BuildContext context;
+  final AppThemeController controller;
+  final ThemeMode mode;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const ThemeOption(
+    this.context, {
+    super.key,
+    required this.controller,
+    required this.mode,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final isSelected = controller.themeMode == mode;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+      borderRadius: BorderRadius.circular(16),
       onTap: () => controller.updateThemeMode(mode),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppTheme.accent.withValues(alpha: 0.10)
-              : AppTheme.surfaceAltFor(context),
-          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+              ? AppTheme.aiGold.withValues(alpha: 0.08)
+              : AppTheme.aiCardElevated.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
-                ? AppTheme.accent.withValues(alpha: 0.35)
-                : AppTheme.borderFor(context),
+                ? AppTheme.aiGold.withValues(alpha: 0.35)
+                : AppTheme.aiCardBorder,
           ),
         ),
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.accent.withValues(alpha: 0.16)
-                    : AppTheme.surfaceFor(context),
+                    ? AppTheme.aiGold.withValues(alpha: 0.15)
+                    : AppTheme.aiCard,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 icon,
-                color: isSelected
-                    ? AppTheme.accent
-                    : Theme.of(context).iconTheme.color,
+                color: isSelected ? AppTheme.aiGold : AppTheme.aiTextSecondary,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     title,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
+                    style: TextStyle(
+                      color: isSelected ? AppTheme.aiGold : AppTheme.aiTextPrimary,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w700,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     subtitle,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: AppTheme.textSecondaryFor(context),
+                    style: const TextStyle(
+                      color: AppTheme.aiTextSecondary,
+                      fontSize: 12,
                     ),
                   ),
                 ],
               ),
             ),
-            // ignore: deprecated_member_use
-            Radio<ThemeMode>(
-              value: mode,
-              // ignore: deprecated_member_use
-              groupValue: controller.themeMode,
-              // ignore: deprecated_member_use
-              onChanged: (value) {
-                if (value != null) {
-                  controller.updateThemeMode(value);
-                }
-              },
-            ),
+            if (isSelected)
+              const Icon(Icons.check_circle_rounded, color: AppTheme.aiGold, size: 20)
+            else
+              const Icon(Icons.radio_button_unchecked_rounded, color: AppTheme.aiTextMuted, size: 20),
           ],
         ),
       ),
     );
   }
+}
 
-  Widget _languageOption(
-    BuildContext context, {
-    required AppLocaleController localeController,
-    required String localeCode,
-    required String currentLocaleCode,
-    required String title,
-  }) {
+class LanguageOption extends StatelessWidget {
+  final BuildContext context;
+  final AppLocaleController localeController;
+  final String localeCode;
+  final String currentLocaleCode;
+  final String title;
+
+  const LanguageOption(
+    this.context, {
+    super.key,
+    required this.localeController,
+    required this.localeCode,
+    required this.currentLocaleCode,
+    required this.title,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     final isSelected = currentLocaleCode == localeCode;
 
     return InkWell(
-      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+      borderRadius: BorderRadius.circular(16),
       onTap: () => localeController.updateLocale(Locale(localeCode)),
       child: Container(
-        padding: const EdgeInsets.all(14),
+        padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: isSelected
-              ? AppTheme.accent.withValues(alpha: 0.10)
-              : AppTheme.surfaceAltFor(context),
-          borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+              ? AppTheme.aiGold.withValues(alpha: 0.08)
+              : AppTheme.aiCardElevated.withValues(alpha: 0.5),
+          borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
-                ? AppTheme.accent.withValues(alpha: 0.35)
-                : AppTheme.borderFor(context),
+                ? AppTheme.aiGold.withValues(alpha: 0.35)
+                : AppTheme.aiCardBorder,
           ),
         ),
         child: Row(
           children: [
             Container(
-              width: 42,
-              height: 42,
+              width: 44,
+              height: 44,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? AppTheme.accent.withValues(alpha: 0.16)
-                    : AppTheme.surfaceFor(context),
+                    ? AppTheme.aiGold.withValues(alpha: 0.15)
+                    : AppTheme.aiCard,
                 borderRadius: BorderRadius.circular(14),
               ),
-              child: Icon(
+              child: const Icon(
                 Icons.language_rounded,
-                color: isSelected
-                    ? AppTheme.accent
-                    : Theme.of(context).iconTheme.color,
+                color: AppTheme.aiTextSecondary,
               ),
             ),
-            const SizedBox(width: 12),
+            const SizedBox(width: 14),
             Expanded(
               child: Text(
                 title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w800,
-                    ),
+                style: TextStyle(
+                  color: isSelected ? AppTheme.aiGold : AppTheme.aiTextPrimary,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
             ),
-            // ignore: deprecated_member_use
-            Radio<String>(
-              value: localeCode,
-              // ignore: deprecated_member_use
-              groupValue: currentLocaleCode,
-              // ignore: deprecated_member_use
-              onChanged: (value) {
-                if (value != null) {
-                  localeController.updateLocale(Locale(value));
-                }
-              },
-            ),
+            if (isSelected)
+              const Icon(Icons.check_circle_rounded, color: AppTheme.aiGold, size: 20)
+            else
+              const Icon(Icons.radio_button_unchecked_rounded, color: AppTheme.aiTextMuted, size: 20),
           ],
         ),
       ),

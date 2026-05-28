@@ -217,9 +217,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       const SizedBox(height: 24),
 
                       // Search & Filter Panel
-                      AiGlassCard(
+                      PremiumCard(
                         padding: const EdgeInsets.all(20),
-                        borderColor: AppTheme.aiGold.withValues(alpha: 0.15),
+                        border: Border.all(
+                          color: AppTheme.aiGold.withValues(alpha: 0.15),
+                          width: 1,
+                        ),
                         child: Column(
                           children: [
                             AiSearchField(
@@ -408,8 +411,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-
-
   Widget _buildErrorState(BuildContext context, AppCopy copy, Object? error) {
     return Center(
       child: Padding(
@@ -437,8 +438,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context, AppCopy copy) {
-    return AiGlassCard(
-      borderColor: AppTheme.aiGold.withValues(alpha: 0.15),
+    return PremiumCard(
+      border: Border.all(
+        color: AppTheme.aiGold.withValues(alpha: 0.15),
+        width: 1,
+      ),
       child: Column(
         children: [
           AiEmptyState(
@@ -495,115 +499,138 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final badge = _statusBadge(product, copy);
     return PremiumCard(
       padding: const EdgeInsets.all(20),
+      border: Border.all(
+        color: product.isOutOfStock 
+            ? AppTheme.aiRed.withValues(alpha: 0.2)
+            : (product.isLowStock 
+                ? AppTheme.aiGold.withValues(alpha: 0.2) 
+                : AppTheme.aiGreen.withValues(alpha: 0.2)),
+        width: 1,
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  radius: 24,
-                  backgroundColor: AppTheme.accent.withValues(alpha: 0.14),
-                  child: const Icon(
-                    Icons.inventory_2_rounded,
-                    color: AppTheme.accent,
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: (product.isOutOfStock 
+                      ? AppTheme.aiRed 
+                      : (product.isLowStock ? AppTheme.aiGold : AppTheme.aiGreen)).withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(
+                    color: product.isOutOfStock 
+                        ? AppTheme.aiRed 
+                        : (product.isLowStock ? AppTheme.aiGold : AppTheme.aiGreen),
                   ),
                 ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        product.name,
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w800,
-                          fontSize: 16,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        copy.inventoryUnitLine(product.unit),
-                        style: TextStyle(
-                          color: AppTheme.textSecondaryFor(context),
-                        ),
-                      ),
-                    ],
-                  ),
+                child: Icon(
+                  Icons.inventory_2_rounded,
+                  color: product.isOutOfStock 
+                      ? AppTheme.aiRed
+                      : (product.isLowStock ? AppTheme.aiGold : AppTheme.aiGreen),
                 ),
-                badge,
-              ],
-            ),
-            const SizedBox(height: 14),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _infoChip(copy.t('stock'), '${product.stockQty}'),
-                _infoChip(copy.t('minimumLimit'), '${product.lowStockThreshold}'),
-                _infoChip(copy.t('sellingPrice'), AppFormatters.currency(product.sellingPrice)),
-                _infoChip(copy.t('unitProfit'), AppFormatters.currency(product.netProfit)),
-                if ((product.barcode ?? '').isNotEmpty)
-                  _infoChip(copy.t('barcode'), product.barcode!),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                FilledButton.icon(
-                  onPressed: product.isOutOfStock
-                      ? null
-                      : () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => SellProductScreen(product: product),
-                            ),
-                          );
-                        },
-                  icon: const Icon(Icons.sell_rounded),
-                  label: Text(copy.t('quickSell')),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      product.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: AppTheme.aiTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      copy.inventoryUnitLine(product.unit),
+                      style: const TextStyle(
+                        color: AppTheme.aiTextSecondary,
+                      ),
+                    ),
+                  ],
                 ),
-                OutlinedButton(
-                  onPressed: () {
+              ),
+              badge,
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _infoChip(copy.t('stock'), '${product.stockQty}'),
+              _infoChip(copy.t('minimumLimit'), '${product.lowStockThreshold}'),
+              _infoChip(copy.t('sellingPrice'), AppFormatters.currency(product.sellingPrice)),
+              _infoChip(copy.t('unitProfit'), AppFormatters.currency(product.netProfit)),
+              if ((product.barcode ?? '').isNotEmpty)
+                _infoChip(copy.t('barcode'), product.barcode!),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              AiActionButton(
+                label: copy.t('quickSell'),
+                icon: Icons.sell_rounded,
+                color: AppTheme.aiGold,
+                isSmall: true,
+                onTap: product.isOutOfStock
+                    ? () {}
+                    : () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => SellProductScreen(product: product),
+                          ),
+                        );
+                      },
+              ),
+              AiSecondaryButton(
+                label: copy.t('details'),
+                icon: Icons.info_outlined,
+                isSmall: true,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ProductDetailsScreen(product: product),
+                    ),
+                  );
+                },
+              ),
+              if (AppPermissions.canEditProducts(BusinessContext.role))
+                AiSecondaryButton(
+                  label: copy.t('edit'),
+                  icon: Icons.edit_outlined,
+                  isSmall: true,
+                  onTap: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ProductDetailsScreen(product: product),
+                        builder: (_) => EditProductScreen(product: product),
                       ),
                     );
                   },
-                  child: Text(copy.t('details')),
                 ),
-                OutlinedButton(
-                  onPressed: !AppPermissions.canEditProducts(
-                          BusinessContext.role)
-                      ? null
-                      : () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => EditProductScreen(product: product),
-                            ),
-                          );
-                        },
-                  child: Text(copy.t('edit')),
+              if (AppPermissions.canDelete(BusinessContext.role))
+                AiSecondaryButton(
+                  label: copy.t('delete'),
+                  icon: Icons.delete_outlined,
+                  isSmall: true,
+                  onTap: () => _confirmDelete(product),
                 ),
-                OutlinedButton(
-                  onPressed: !AppPermissions.canDelete(
-                          BusinessContext.role)
-                      ? null
-                      : () => _confirmDelete(product),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.danger,
-                  ),
-                  child: Text(copy.t('delete')),
-                ),
-              ],
-            ),
-          ],
-        ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -611,11 +638,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: AppTheme.surfaceAltFor(context),
+        color: AppTheme.aiCardElevated.withValues(alpha: 0.7),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppTheme.borderFor(context)),
+        border: Border.all(color: AppTheme.aiCardBorder),
       ),
-      child: Text('$label: $value'),
+      child: Text(
+        '$label: $value',
+        style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+      ),
     );
   }
 
@@ -624,13 +654,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
     late final String text;
 
     if (product.isOutOfStock) {
-      color = AppTheme.danger;
+      color = AppTheme.aiRed;
       text = copy.t('outOfStock');
     } else if (product.isLowStock) {
-      color = AppTheme.warning;
+      color = AppTheme.aiGold;
       text = copy.t('lowStock');
     } else {
-      color = AppTheme.success;
+      color = AppTheme.aiGreen;
       text = copy.t('stable');
     }
 
@@ -638,11 +668,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontWeight: FontWeight.w800),
+        style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 10),
       ),
     );
   }

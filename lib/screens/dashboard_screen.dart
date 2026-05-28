@@ -12,18 +12,17 @@ import 'package:hasoob_app/data/services/cloud_sync_service.dart';
 import 'package:hasoob_app/data/services/reports/report_models.dart';
 import 'package:hasoob_app/data/services/reports/report_service.dart';
 import 'package:hasoob_app/core/utils/perf_logger.dart';
-import 'package:hasoob_app/widgets/skeleton_loader.dart';
-import 'package:hasoob_app/screens/add_product_screen.dart';
-import 'package:hasoob_app/screens/business_profile_screen.dart';
-import 'package:hasoob_app/screens/customers_screen.dart';
-import 'package:hasoob_app/screens/documents_screen.dart';
-import 'package:hasoob_app/screens/settings_screen.dart';
 import 'package:hasoob_app/widgets/premium/premium_card.dart';
 import 'package:hasoob_app/data/services/sync_manager.dart';
 import 'package:hasoob_app/widgets/sync_status_indicator.dart';
 import 'package:hasoob_app/widgets/app_section_header.dart';
 import 'package:hasoob_app/widgets/ai_design_system.dart';
 import 'package:hasoob_app/widgets/ai_robot_advisor.dart';
+import 'package:hasoob_app/screens/add_product_screen.dart';
+import 'package:hasoob_app/screens/business_profile_screen.dart';
+import 'package:hasoob_app/screens/customers_screen.dart';
+import 'package:hasoob_app/screens/documents_screen.dart';
+import 'package:hasoob_app/screens/settings_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -146,56 +145,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  Widget _actionCapsule(
-    BuildContext context, {
-    required IconData icon,
-    required String tooltip,
-    required VoidCallback onTap,
-    Color? accentColor,
-  }) {
-    final color = accentColor ?? AppTheme.aiGold;
-
-    return Tooltip(
-      message: tooltip,
-      child: Container(
-        height: 42,
-        width: 42,
-        decoration: BoxDecoration(
-          color: AppTheme.aiCardElevated,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: color.withValues(alpha: 0.25),
-            width: 1.2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: color.withValues(alpha: 0.05),
-              blurRadius: 8,
-            ),
-          ],
-        ),
-        child: Material(
-          color: Colors.transparent,
-          child: InkWell(
-            borderRadius: BorderRadius.circular(12),
-            onTap: onTap,
-            child: Icon(
-              icon,
-              color: color,
-              size: 20,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
 
     return Scaffold(
-      appBar: null,
+      backgroundColor: AppTheme.aiDeep,
       floatingActionButton: ListenableBuilder(
         listenable: SyncManager.instance,
         builder: (context, _) {
@@ -239,7 +194,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildBody(BuildContext context, AppCopy copy) {
     if (_isLoading && _cachedData == null) {
-      return const Center(child: SkeletonLoader());
+      return const Center(child: CircularProgressIndicator(color: AppTheme.aiGold));
     }
     
     if (_error != null && _cachedData == null) {
@@ -257,6 +212,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
     return CustomScrollView(
       slivers: [
+        // Premium Header with Actions
         SliverToBoxAdapter(
           child: Container(
             decoration: BoxDecoration(
@@ -469,6 +425,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _actionCapsule(
+    BuildContext context, {
+    required IconData icon,
+    required String tooltip,
+    required VoidCallback onTap,
+    Color? accentColor,
+  }) {
+    final color = accentColor ?? AppTheme.aiGold;
+
+    return Tooltip(
+      message: tooltip,
+      child: Container(
+        height: 42,
+        width: 42,
+        decoration: BoxDecoration(
+          color: AppTheme.aiCardElevated,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withValues(alpha: 0.25),
+            width: 1.2,
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: color.withValues(alpha: 0.05),
+              blurRadius: 8,
+            ),
+          ],
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(12),
+            onTap: onTap,
+            child: Icon(
+              icon,
+              color: color,
+              size: 20,
+            ),
+          ),
+        ),
+      ),
     );
   }
 
@@ -1078,16 +1078,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildRestoreCard(BuildContext context, AppCopy copy) {
-    return Container(
+    return PremiumCard(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-      decoration: BoxDecoration(
-        color: AppTheme.aiCard,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: AppTheme.aiCardBorder,
-          width: 1.2,
-        ),
-      ),
       child: Row(
         children: [
           const Icon(
@@ -1129,7 +1121,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Text(
                   copy.t('restore'),
                   style: const TextStyle(
-                    color: AppTheme.accentBlue,
+                    color: AppTheme.aiBlue,
                     fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
