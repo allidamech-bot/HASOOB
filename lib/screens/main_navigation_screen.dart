@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 
 import '../core/app_copy.dart';
 import '../core/app_theme.dart';
@@ -6,7 +6,7 @@ import '../widgets/command_dock.dart';
 import '../widgets/desktop_sidebar.dart';
 import 'add_product_screen.dart';
 import 'customers_screen.dart';
-import 'cockpit_dashboard_screen.dart';
+import 'dashboard_screen.dart';
 import 'inventory_screen.dart';
 import 'invoice_form_screen.dart';
 import 'reports_screen.dart';
@@ -180,7 +180,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     final localeKey = Localizations.localeOf(context).languageCode;
     final screens = <Widget>[
-      const CockpitDashboardScreen(),
+      const DashboardScreen(),
       const InventoryScreen(),
       const SizedBox(),
       const SalesHistoryScreen(),
@@ -240,5 +240,3 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
     );
   }
 }
-
-
