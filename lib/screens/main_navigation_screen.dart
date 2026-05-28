@@ -50,7 +50,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                // Handle bar
                 Container(
                   width: 40,
                   height: 4,
@@ -60,7 +59,6 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     borderRadius: BorderRadius.circular(2),
                   ),
                 ),
-                // Header
                 Padding(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
@@ -192,7 +190,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       key: ValueKey('main-nav-$localeKey'),
       child: Scaffold(
         backgroundColor: AppTheme.aiDeep,
-        extendBody: true,
+        extendBody: false,
         body: LayoutBuilder(
           builder: (context, constraints) {
             final isDesktop = constraints.maxWidth >= 800;
@@ -228,7 +226,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
             if (isDesktop) return const SizedBox.shrink();
 
             return SafeArea(
-              minimum: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              minimum: const EdgeInsets.fromLTRB(10, 0, 10, 8),
               child: CommandDock(
                 selectedIndex: _index,
                 onDestinationSelected: _onDestinationSelected,
