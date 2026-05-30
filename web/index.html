@@ -46,19 +46,6 @@
       pointer-events: none;
     }
 
-    .minimal-loader {
-      width: 24px;
-      height: 24px;
-      border: 2px solid rgba(0, 212, 255, 0.2);
-      border-top-color: #00D4FF;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    @keyframes spin {
-      to { transform: rotate(360deg); }
-    }
-
     #diagnostics {
       display: none;
       position: fixed;
@@ -156,7 +143,6 @@
 </head>
 <body>
   <div id="splash-container">
-    <div class="minimal-loader"></div>
   </div>
   <script>
     // Cache bust flutter_bootstrap.js
