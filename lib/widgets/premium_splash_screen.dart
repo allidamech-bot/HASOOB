@@ -371,49 +371,25 @@ class _BrandGate extends StatelessWidget {
           child: CustomPaint(
             painter: _HexagonBorderPainter(
               color: AppTheme.aiGold.withValues(alpha: 0.6),
-              strokeWidth: 1.5,
+              strokeWidth: 2.0,
+            ),
+          ),
+        ),
+        
+        // Inner Hexagon Border
+        SizedBox(
+          width: 260,
+          height: 278,
+          child: CustomPaint(
+            painter: _HexagonBorderPainter(
+              color: AppTheme.aiGold.withValues(alpha: 0.3),
+              strokeWidth: 1.0,
             ),
           ),
         ),
         
         // Inner Content
-        Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Image.asset(
-              'assets/images/logo.png',
-              width: 120,
-              height: 120,
-              fit: BoxFit.contain,
-              errorBuilder: (context, error, stackTrace) => const Icon(
-                Icons.account_balance,
-                size: 80,
-                color: AppTheme.aiGold,
-              ),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'بوابة القيادة المالية الذكية',
-              style: TextStyle(
-                color: AppTheme.aiGold,
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 0.5,
-                fontFamily: AppTheme.fontFamilyArabic,
-              ),
-              textDirection: TextDirection.rtl,
-            ),
-            const SizedBox(height: 12),
-            Container(
-              width: 60,
-              height: 2,
-              decoration: BoxDecoration(
-                color: AppTheme.aiBlue.withValues(alpha: 0.6),
-                borderRadius: BorderRadius.circular(1),
-              ),
-            )
-          ],
-        ),
+        const _HasoobBrandMark(),
       ],
     );
   }
@@ -694,6 +670,149 @@ class _ProgressRailState extends State<_ProgressRail> with SingleTickerProviderS
           }),
         );
       },
+    );
+  }
+}
+
+class _HasoobBrandMark extends StatelessWidget {
+  const _HasoobBrandMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Geometric Icon
+        Stack(
+          alignment: Alignment.center,
+          children: [
+            // Cyan glow
+            Container(
+              width: 50,
+              height: 50,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.aiBlue.withValues(alpha: 0.3),
+                    blurRadius: 24,
+                    spreadRadius: 2,
+                  )
+                ],
+              ),
+            ),
+            // Gold diamond
+            Transform.rotate(
+              angle: math.pi / 4,
+              child: Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFFFD700), Color(0xFFD4AF37)],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.6),
+                      offset: const Offset(2, 2),
+                      blurRadius: 4,
+                    ),
+                    BoxShadow(
+                      color: Colors.white.withValues(alpha: 0.3),
+                      offset: const Offset(-1, -1),
+                      blurRadius: 1,
+                    ),
+                  ],
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Center(
+                  child: Container(
+                    width: 16,
+                    height: 16,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF070B14),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: AppTheme.aiBlue, width: 1.5),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 16),
+        
+        // Brand Name
+        Text(
+          'حاسوب',
+          style: TextStyle(
+            fontSize: 42,
+            fontWeight: FontWeight.w900,
+            fontFamily: AppTheme.fontFamilyArabic,
+            color: AppTheme.aiGold,
+            height: 1.1,
+            shadows: [
+              Shadow(
+                color: Colors.white.withValues(alpha: 0.2),
+                offset: const Offset(-1, -1),
+                blurRadius: 1,
+              ),
+              Shadow(
+                color: Colors.black.withValues(alpha: 0.8),
+                offset: const Offset(3, 3),
+                blurRadius: 6,
+              ),
+              Shadow(
+                color: AppTheme.aiBlue.withValues(alpha: 0.5),
+                offset: const Offset(0, 0),
+                blurRadius: 16,
+              ),
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 12),
+        
+        // Cyan underline
+        Container(
+          width: 80,
+          height: 1.5,
+          decoration: const BoxDecoration(
+            color: AppTheme.aiBlue,
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.aiBlue,
+                blurRadius: 8,
+                spreadRadius: 2,
+              )
+            ],
+          ),
+        ),
+        
+        const SizedBox(height: 16),
+        
+        // Subtitle
+        const Text(
+          'بوابة القيادة المالية الذكية',
+          style: TextStyle(
+            color: AppTheme.aiGold,
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.5,
+            fontFamily: AppTheme.fontFamilyArabic,
+            shadows: [
+              Shadow(
+                color: Colors.black,
+                offset: Offset(1, 1),
+                blurRadius: 2,
+              )
+            ],
+          ),
+          textDirection: TextDirection.rtl,
+        ),
+      ],
     );
   }
 }
