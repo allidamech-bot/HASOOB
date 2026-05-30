@@ -396,7 +396,7 @@ class AiStatusChip extends StatelessWidget {
   }
 }
 
-/// Empty state widget
+/// Empty state widget (compact premium variant)
 class AiEmptyState extends StatelessWidget {
   final IconData icon;
   final String title;
@@ -413,52 +413,73 @@ class AiEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(40),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppTheme.aiBlue.withValues(alpha: 0.08),
-                shape: BoxShape.circle,
-                border: Border.all(
-                  color: AppTheme.aiBlue.withValues(alpha: 0.15),
-                  width: 1,
-                ),
+    final isSmall = MediaQuery.sizeOf(context).width < 420;
+
+    return Container(
+      width: double.infinity,
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmall ? 14 : 18,
+        vertical: isSmall ? 12 : 16,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.2)),
+        color: AppTheme.aiGold.withValues(alpha: 0.05),
+        boxShadow: [
+          BoxShadow(
+            color: AppTheme.aiGold.withValues(alpha: 0.08),
+            blurRadius: 22,
+            offset: const Offset(0, 6),
+          )
+        ],
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            padding: EdgeInsets.all(isSmall ? 14 : 16),
+            decoration: BoxDecoration(
+              color: AppTheme.aiBlue.withValues(alpha: 0.08),
+              shape: BoxShape.circle,
+              border: Border.all(
+                color: AppTheme.aiBlue.withValues(alpha: 0.16),
+                width: 1,
               ),
-              child: Icon(icon,
-                  size: 40, color: AppTheme.aiBlue.withValues(alpha: 0.6)),
             ),
-            const SizedBox(height: 20),
+            child: Icon(
+              icon,
+              size: isSmall ? 28 : 32,
+              color: AppTheme.aiBlue.withValues(alpha: 0.65),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: AppTheme.aiTextPrimary,
+              fontSize: isSmall ? 14 : 16,
+              fontWeight: FontWeight.w800,
+              height: 1.2,
+            ),
+          ),
+          if (subtitle != null) ...[
+            const SizedBox(height: 6),
             Text(
-              title,
+              subtitle!,
               textAlign: TextAlign.center,
-              style: const TextStyle(
-                color: AppTheme.aiTextPrimary,
-                fontSize: 16,
-                fontWeight: FontWeight.w700,
+              style: TextStyle(
+                color: AppTheme.aiTextSecondary,
+                fontSize: isSmall ? 11 : 13,
+                height: 1.35,
               ),
             ),
-            if (subtitle != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                subtitle!,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: AppTheme.aiTextSecondary,
-                  fontSize: 13,
-                ),
-              ),
-            ],
-            if (action != null) ...[
-              const SizedBox(height: 24),
-              action!,
-            ],
           ],
-        ),
+          if (action != null) ...[
+            const SizedBox(height: 14),
+            action!,
+          ],
+        ],
       ),
     );
   }

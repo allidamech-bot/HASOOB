@@ -327,7 +327,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: AiRobotAdvisor(
               greeting: copy.isEnglish ? "What is the best financial decision today?" : "ما القرار المالي الأفضل اليوم؟",
               advisorTitle: copy.isEnglish ? "FINANCIAL ADVISOR ACTIVE" : "المستشار المالي نشط",
-              suggestion: copy.isEnglish 
+              suggestion: copy.isEnglish
                   ? "Analyzing cash flow, outstanding invoices, obligations, and stock levels to calculate optimal steps."
                   : "يقوم المستشار المالي الآن بفحص وتحليل التدفق النقدي، الفواتير المستحقة، مستويات المخزون والمصروفات ليقترح لك أفضل خطوة تالية لعملك.",
             ),
@@ -352,59 +352,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 16),
                 _buildRecommendationCard(copy),
               ],
-              
-              const SizedBox(height: 20),
 
+              const SizedBox(height: 14),
               _buildKpiGrid(data, copy, isDesktop),
-
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               if (isDesktop)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(child: _buildCashFlowPulseCard(copy)),
-                    const SizedBox(width: 20),
+                    const SizedBox(width: 16),
                     Expanded(child: _buildDecisionSimulationCard(copy)),
                   ],
                 )
               else ...[
                 _buildCashFlowPulseCard(copy),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _buildDecisionSimulationCard(copy),
               ],
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
               if (isDesktop)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(child: _buildObligationsCard(copy)),
-                    const SizedBox(width: 20),
+                    const SizedBox(width: 16),
                     Expanded(child: _buildSmartAlerts(copy, lowStockPreview.length)),
                   ],
                 )
               else ...[
                 _buildObligationsCard(copy),
-                const SizedBox(height: 16),
+                const SizedBox(height: 12),
                 _buildSmartAlerts(copy, lowStockPreview.length),
               ],
 
-              const SizedBox(height: 28),
-
+              const SizedBox(height: 20),
               AppSectionHeader(
                 title: copy.t('quickActions'),
                 hasAccentLine: true,
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               _buildQuickActionsStrip(context, copy),
 
-              const SizedBox(height: 28),
-
+              const SizedBox(height: 20),
               _buildRestoreCard(context, copy),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
 
               if (isDesktop)
                 Row(
@@ -422,10 +418,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
 
               const SizedBox(height: 120),
-              // Reserve space for the mobile CommandDock so it never overlaps content.
-              // CommandDock height: 84px
-              // CommandDock is wrapped with SafeArea(minimum: EdgeInsets.fromLTRB(..., 16))
-              // On narrow screens (< 800px), MainNavigationScreen shows the dock.
               if (!isDesktop)
                 SizedBox(height: DashboardDockSpacer.bottomReservedSpace(context)),
             ]),
