@@ -252,7 +252,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                copy.isEnglish ? 'Financial Intelligence Cockpit' : 'لوحة القيادة والذكاء المالي',
+                                copy.t('dashboardCockpit'),
                                 style: const TextStyle(
                                   color: AppTheme.aiGold,
                                   fontWeight: FontWeight.w900,
@@ -266,7 +266,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   const Icon(Icons.verified_user_rounded, color: AppTheme.aiGreen, size: 12),
                                   const SizedBox(width: 6),
                                   Text(
-                                    copy.isEnglish ? 'Secure AI Session Active' : 'جلسة خادم الذكاء المالي آمنة ونشطة',
+                                    copy.t('dashboardSecureSession'),
                                     style: const TextStyle(
                                       color: AppTheme.aiTextSecondary,
                                       fontSize: 10,
@@ -325,11 +325,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
             child: AiRobotAdvisor(
-              greeting: copy.isEnglish ? "What is the best financial decision today?" : "ما القرار المالي الأفضل اليوم؟",
-              advisorTitle: copy.isEnglish ? "FINANCIAL ADVISOR ACTIVE" : "المستشار المالي نشط",
-              suggestion: copy.isEnglish
-                  ? "Analyzing cash flow, outstanding invoices, obligations, and stock levels to calculate optimal steps."
-                  : "يقوم المستشار المالي الآن بفحص وتحليل التدفق النقدي، الفواتير المستحقة، مستويات المخزون والمصروفات ليقترح لك أفضل خطوة تالية لعملك.",
+              greeting: copy.t('dashboardAiGreeting'),
+              advisorTitle: copy.t('dashboardAiTitle'),
+              suggestion: copy.t('dashboardAiSuggestion'),
             ),
           ),
         ),
@@ -482,7 +480,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                copy.isEnglish ? 'Financial Health Score' : 'مؤشر الصحة المالية',
+                copy.t('dashboardHealthScore'),
                 style: const TextStyle(
                   color: AppTheme.aiTextPrimary,
                   fontSize: 16,
@@ -496,7 +494,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  copy.isEnglish ? 'Excellent' : 'ممتاز جداً',
+                  copy.t('dashboardHealthExcellent'),
                   style: const TextStyle(
                     color: AppTheme.aiGreen,
                     fontSize: 10,
@@ -516,9 +514,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      copy.isEnglish 
-                          ? 'SaaS operating efficiency is optimal.'
-                          : 'الكفاءة التشغيلية والسيولة النقدية ممتازة اليوم.',
+                      copy.t('dashboardHealthDesc1'),
                       style: const TextStyle(
                         color: AppTheme.aiTextPrimary,
                         fontSize: 13,
@@ -527,9 +523,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      copy.isEnglish
-                          ? 'Cash flow cover is 85% higher than last month. Current reserves are safe.'
-                          : 'مستوى السيولة النقدية يغطي المصروفات بنسبة 85% أعلى من الشهر الماضي. الاحتياطي المالي في أمان.',
+                      copy.t('dashboardHealthDesc2'),
                       style: const TextStyle(
                         color: AppTheme.aiTextSecondary,
                         fontSize: 11,
@@ -553,7 +547,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            copy.isEnglish ? 'What should I do today?' : 'ما الخطوات الموصى بها اليوم؟',
+            copy.t('dashboardRecommendationsTitle'),
             style: const TextStyle(
               color: AppTheme.aiTextPrimary,
               fontSize: 16,
@@ -564,17 +558,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _recommendationItem(
             icon: Icons.lightbulb_rounded,
             color: AppTheme.aiGold,
-            text: copy.isEnglish 
-                ? 'Follow up invoice #1024 to secure cash reserves before next week.'
-                : 'تابع تحصيل الفاتورة المستحقة رقم #1024 لتأمين السيولة قبل الأسبوع القادم.',
+            text: copy.t('dashboardRec1'),
           ),
           const SizedBox(height: 12),
           _recommendationItem(
             icon: Icons.inventory_2_rounded,
             color: AppTheme.aiBlue,
-            text: copy.isEnglish 
-                ? 'Reorder top-selling detergent carton (stock count is below 4).'
-                : 'أعد طلب كميات إضافية من المنظفات (المخزون الحالي 3 وحدات وهو تحت الحد الأدنى).',
+            text: copy.t('dashboardRec2'),
           ),
         ],
       ),
@@ -665,7 +655,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                copy.isEnglish ? 'Cash Flow Pulse' : 'نبض التدفق النقدي',
+                copy.t('dashboardCashFlowPulse'),
                 style: const TextStyle(
                   color: AppTheme.aiTextPrimary,
                   fontSize: 15,
@@ -676,9 +666,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          _pulseBar(copy.isEnglish ? 'Cash Inflow' : 'المقبوضات النقدية', 0.85, AppTheme.aiGreen, '14,200 ر.س'),
+          _pulseBar(copy.t('dashboardCashInflow'), 0.85, AppTheme.aiGreen, '14,200 ر.س'),
           const SizedBox(height: 12),
-          _pulseBar(copy.isEnglish ? 'Cash Outflow' : 'المدفوعات والمصروفات', 0.38, AppTheme.aiGold, '5,400 ر.س'),
+          _pulseBar(copy.t('dashboardCashOutflow'), 0.38, AppTheme.aiGold, '5,400 ر.س'),
         ],
       ),
     );
@@ -719,7 +709,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                copy.isEnglish ? 'AI Decision Simulation' : 'محاكاة القرارات المالية',
+                copy.t('dashboardAiSimulation'),
                 style: const TextStyle(
                   color: AppTheme.aiTextPrimary,
                   fontSize: 15,
@@ -733,7 +723,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  copy.isEnglish ? 'Ready' : 'جاهز للمحاكاة',
+                  copy.t('dashboardSimulationReady'),
                   style: const TextStyle(color: AppTheme.aiGold, fontSize: 9, fontWeight: FontWeight.w800),
                 ),
               ),
@@ -741,16 +731,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 18),
           Text(
-            copy.isEnglish 
-                ? 'Simulation Scenario: Purchase inventory worth 5,000 SAR.'
-                : 'سيناريو المحاكاة النشط: شراء مخزون ومشتريات بقيمة 5,000 ر.س اليوم.',
+            copy.t('dashboardSimulationScenario'),
             style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(
-            copy.isEnglish
-                ? 'Result: Liquid cash decreases by 12%. Estimated net profit margin increases by 18% over 30 days.'
-                : 'الأثر المتوقع: ستنخفض السيولة النقدية المتاحة بنسبة 12%، بينما ستزداد الأرباح التشغيلية المقدرة بنسبة 18% خلال 30 يوماً.',
+            copy.t('dashboardSimulationResult'),
             style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11, height: 1.4),
           ),
         ],
@@ -764,7 +750,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            copy.isEnglish ? 'Upcoming Obligations' : 'الالتزامات والمدفوعات القادمة',
+            copy.t('dashboardObligations'),
             style: const TextStyle(
               color: AppTheme.aiTextPrimary,
               fontSize: 15,
@@ -772,9 +758,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          _obligationItem(copy.isEnglish ? 'Suppliers Invoices Due' : 'مستحقات وفواتير الموردين', '3,400 ر.س', copy.isEnglish ? 'Tomorrow' : 'غداً', AppTheme.aiGold),
+          _obligationItem(copy.t('dashboardObligation1'), '3,400 ر.س', copy.t('dashboardTomorrow'), AppTheme.aiGold),
           const Divider(height: 20),
-          _obligationItem(copy.isEnglish ? 'Employee Salaries' : 'رواتب ومستحقات الموظفين', '12,000 ر.س', copy.isEnglish ? 'In 3 Days' : 'بعد 3 أيام', AppTheme.aiBlue),
+          _obligationItem(copy.t('dashboardObligation2'), '12,000 ر.س', copy.t('dashboardIn3Days'), AppTheme.aiBlue),
         ],
       ),
     );
@@ -801,19 +787,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       children: [
         AiAlertCard(
-          message: copy.isEnglish ? 'Risk: Low stock items' : 'تنبيه ذكي: سلع مخزون منخفضة',
-          subtitle: copy.isEnglish 
-              ? '$lowStockCount products are below critical threshold.' 
-              : 'هناك $lowStockCount أصناف تحت الحد الحرج للمخزون لمنع نفاد البضاعة.',
+          message: copy.t('dashboardAlertLowStock'),
+          subtitle: copy.dashboardLowStockAlertSubtitle(lowStockCount),
           icon: Icons.warning_amber_rounded,
           severity: AiAlertSeverity.warning,
         ),
         const SizedBox(height: 12),
         AiAlertCard(
-          message: copy.isEnglish ? 'Local Mode: Offline database active' : 'التشغيل المحلي: قاعدة البيانات المحلية نشطة',
-          subtitle: copy.isEnglish 
-              ? 'All transactions persist locally first, syncing smoothly to cloud.'
-              : 'كل عملياتك وبياناتك تحفظ محلياً في خادمك بأمان تام وتتزامن تلقائياً.',
+          message: copy.t('dashboardAlertLocalMode'),
+          subtitle: copy.dashboardLocalModeSubtitle(),
           icon: Icons.cloud_done_rounded,
           severity: AiAlertSeverity.success,
         ),
@@ -830,7 +812,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _quickActionTile(
             context,
             icon: Icons.add_box_rounded,
-            title: copy.isEnglish ? 'Add Product' : 'إضافة صنف مخزون',
+            title: copy.t('dashboardAddProduct'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
             accentColor: AppTheme.aiBlue,
           ),
@@ -838,7 +820,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _quickActionTile(
             context,
             icon: Icons.receipt_long_rounded,
-            title: copy.isEnglish ? 'Create Invoice' : 'إنشاء فاتورة مبيعات',
+            title: copy.t('dashboardCreateInvoice'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen())),
             accentColor: AppTheme.aiGold,
           ),
@@ -846,7 +828,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _quickActionTile(
             context,
             icon: Icons.person_add_alt_1_rounded,
-            title: copy.isEnglish ? 'Add Customer' : 'إضافة عميل جديد',
+            title: copy.t('dashboardAddCustomer'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomersScreen())),
             accentColor: AppTheme.aiGreen,
           ),
@@ -917,10 +899,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader(copy.t('stockAlerts'), copy.isEnglish ? 'Critical Stock Thresholds' : 'الحدود الحرجة لمخزون المنتجات والأصناف'),
+        _sectionHeader(copy.t('stockAlerts'), copy.t('dashboardStockThresholds')),
         const SizedBox(height: 16),
         if (data.lowStockItems.isEmpty)
-          _emptyCard(context, icon: Icons.inventory_2_outlined, text: copy.isEnglish ? 'No Low Stock Items' : 'مستويات المخزون مستقرة بالكامل حالياً')
+          _emptyCard(context, icon: Icons.inventory_2_outlined, text: copy.t('dashboardNoLowStock'))
         else ...[
           ...preview.map((item) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -959,10 +941,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader(copy.t('recentSales'), copy.isEnglish ? 'Realtime Customer Operations' : 'العمليات والمبيعات الفورية المسجلة مؤخراً'),
+        _sectionHeader(copy.t('recentSales'), copy.t('dashboardRecentOperations')),
         const SizedBox(height: 16),
         if (data.recentSales.isEmpty)
-          _emptyCard(context, icon: Icons.sell_outlined, text: copy.isEnglish ? 'No Sales Yet' : 'لم يتم تسجيل أي عمليات بيع بعد')
+          _emptyCard(context, icon: Icons.sell_outlined, text: copy.t('dashboardNoSalesYet'))
         else ...[
           ...preview.map((row) => Padding(
             padding: const EdgeInsets.only(bottom: 12),

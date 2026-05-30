@@ -682,142 +682,64 @@ class _HasoobBrandMark extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Wordmark Container with corner accents
-        Stack(
-          clipBehavior: Clip.none,
-          alignment: Alignment.center,
-          children: [
-            // Cyan background glow
-            Container(
-              width: 140,
-              height: 60,
-              decoration: BoxDecoration(
-                boxShadow: [
-                  BoxShadow(
-                    color: AppTheme.aiBlue.withValues(alpha: 0.15),
-                    blurRadius: 40,
-                    spreadRadius: 10,
-                  )
-                ],
-              ),
-            ),
-            
-            // The hero wordmark "حاسوب"
-            ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(
-                colors: [
-                  Color(0xFFFBE4A4), 
-                  Color(0xFFD4AF37), 
-                  Color(0xFF996515)
-                ],
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-              ).createShader(bounds),
-              child: const Text(
-                'حاسوب',
-                style: TextStyle(
-                  fontSize: 60,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: 2.0,
-                  height: 1.0,
-                  fontFamily: AppTheme.fontFamilyArabic,
-                  color: Colors.white,
-                  shadows: [
-                    Shadow(
-                      color: Colors.black87,
-                      offset: Offset(2, 4),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-
-            // Top Right Corner Accent
-            const Positioned(
-              top: -5,
-              right: -15,
-              child: _CornerAccent(isTop: true, isRight: true),
-            ),
-            // Bottom Left Corner Accent
-            const Positioned(
-              bottom: -5,
-              left: -15,
-              child: _CornerAccent(isTop: false, isRight: false),
-            ),
-          ],
-        ),
-        
-        const SizedBox(height: 16),
-        
-        // Custom Circuit/Baseline Motif
+        // The Custom Geometric Wordmark
         SizedBox(
-          width: 150,
-          child: Column(
-            children: [
-              // Gold baseline
-              Container(
-                height: 1.5,
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [Colors.transparent, Color(0xFFD4AF37), Colors.transparent],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 6),
-              // Cyan circuit line with center node
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Expanded(
-                    child: Container(
-                      height: 1,
-                      color: AppTheme.aiBlue.withValues(alpha: 0.4),
-                    ),
-                  ),
-                  Container(
-                    width: 4,
-                    height: 4,
-                    margin: const EdgeInsets.symmetric(horizontal: 6),
-                    decoration: const BoxDecoration(
-                      color: AppTheme.aiBlue,
-                      boxShadow: [
-                        BoxShadow(
-                          color: AppTheme.aiBlue,
-                          blurRadius: 4,
-                          spreadRadius: 1,
-                        )
+          width: 240,
+          height: 130,
+          child: CustomPaint(
+            painter: _LuxuryWordmarkPainter(),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [
+                      Color(0xFFE8D3A2), // Soft bright gold
+                      Color(0xFFBCA663), // Muted mid gold
+                      Color(0xFF877038)  // Deep metallic gold
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ).createShader(bounds),
+                  child: const Text(
+                    'حاسوب',
+                    style: TextStyle(
+                      fontSize: 58,
+                      fontWeight: FontWeight.w300, // Elegant thin weight
+                      letterSpacing: 2.0,
+                      height: 1.0,
+                      fontFamily: AppTheme.fontFamilyArabic,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black,
+                          offset: Offset(1.5, 2.5),
+                          blurRadius: 6,
+                        ),
                       ],
                     ),
                   ),
-                  Expanded(
-                    child: Container(
-                      height: 1,
-                      color: AppTheme.aiBlue.withValues(alpha: 0.4),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ],
+            ),
           ),
         ),
         
-        const SizedBox(height: 24),
+        const SizedBox(height: 8),
         
         // Subtitle
         const Text(
           'بوابة القيادة المالية الذكية',
           style: TextStyle(
-            color: Color(0xFFD4AF37),
-            fontSize: 15,
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.5,
+            color: Color(0xFFBCA663),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 1.5,
             fontFamily: AppTheme.fontFamilyArabic,
             shadows: [
               Shadow(
-                color: Colors.black54,
-                offset: Offset(1, 1),
+                color: Colors.black87,
+                offset: Offset(0, 1),
                 blurRadius: 2,
               )
             ],
@@ -829,25 +751,112 @@ class _HasoobBrandMark extends StatelessWidget {
   }
 }
 
-class _CornerAccent extends StatelessWidget {
-  final bool isTop;
-  final bool isRight;
+class _LuxuryWordmarkPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final w = size.width;
+    final h = size.height;
 
-  const _CornerAccent({required this.isTop, required this.isRight});
+    final goldPaint = Paint()
+      ..color = const Color(0xFFBCA663)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+      
+    final thinGoldPaint = Paint()
+      ..color = const Color(0xFFE8D3A2).withValues(alpha: 0.4)
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    final cyanPaint = Paint()
+      ..color = AppTheme.aiBlue
+      ..style = PaintingStyle.fill;
+      
+    final cyanGlowPaint = Paint()
+      ..color = AppTheme.aiBlue.withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+
+    // 1. Thin elegant corner brackets (L-shapes)
+    const bracketLen = 14.0;
+    // Top Left
+    canvas.drawLine(const Offset(15, 15), const Offset(15 + bracketLen, 15), goldPaint);
+    canvas.drawLine(const Offset(15, 15), const Offset(15, 15 + bracketLen), goldPaint);
+    // Top Right
+    canvas.drawLine(Offset(w - 15, 15), Offset(w - 15 - bracketLen, 15), goldPaint);
+    canvas.drawLine(Offset(w - 15, 15), Offset(w - 15, 15 + bracketLen), goldPaint);
+    // Bottom Left
+    canvas.drawLine(Offset(15, h - 25), Offset(15 + bracketLen, h - 25), goldPaint);
+    canvas.drawLine(Offset(15, h - 25), Offset(15, h - 25 - bracketLen), goldPaint);
+    // Bottom Right
+    canvas.drawLine(Offset(w - 15, h - 25), Offset(w - 15 - bracketLen, h - 25), goldPaint);
+    canvas.drawLine(Offset(w - 15, h - 25), Offset(w - 15, h - 25 - bracketLen), goldPaint);
+
+    // 2. Angular letter-adjacent accents
+    final path = Path();
+    path.moveTo(w * 0.25, h * 0.25);
+    path.lineTo(w * 0.3, h * 0.15);
+    path.lineTo(w * 0.4, h * 0.15);
+    
+    path.moveTo(w * 0.75, h * 0.25);
+    path.lineTo(w * 0.7, h * 0.15);
+    path.lineTo(w * 0.6, h * 0.15);
+    
+    canvas.drawPath(path, thinGoldPaint);
+
+    // 3. Financial bar motif extending up
+    final barGradient = LinearGradient(
+      colors: [const Color(0xFFD4AF37).withValues(alpha: 0.6), Colors.transparent],
+      begin: Alignment.bottomCenter,
+      end: Alignment.topCenter,
+    ).createShader(Rect.fromLTRB(w * 0.58, h * 0.05, w * 0.59, h * 0.3));
+    
+    final barPaint = Paint()
+      ..shader = barGradient
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(Rect.fromLTRB(w * 0.58, h * 0.05, w * 0.59, h * 0.3), barPaint);
+    
+    // Minor accent lines
+    canvas.drawLine(Offset(w * 0.61, h * 0.15), Offset(w * 0.61, h * 0.25), thinGoldPaint);
+    canvas.drawCircle(Offset(w * 0.61, h * 0.14), 1.0, goldPaint..style = PaintingStyle.fill);
+
+    // 4. Integrated geometric baseline & cyan micro-circuit
+    final baseY = h - 15;
+    
+    // Main baseline
+    canvas.drawLine(Offset(w * 0.1, baseY), Offset(w * 0.9, baseY), thinGoldPaint);
+    
+    // Circuit dip
+    final circuitPath = Path();
+    circuitPath.moveTo(w * 0.35, baseY);
+    circuitPath.lineTo(w * 0.4, baseY + 8);
+    circuitPath.lineTo(w * 0.6, baseY + 8);
+    circuitPath.lineTo(w * 0.65, baseY);
+    
+    canvas.drawPath(circuitPath, cyanGlowPaint);
+    
+    final circuitSolid = Paint()
+      ..color = AppTheme.aiBlue.withValues(alpha: 0.9)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(circuitPath, circuitSolid);
+
+    // Micro-circuit nodes
+    canvas.drawRect(Rect.fromCenter(center: Offset(w * 0.4, baseY + 8), width: 3, height: 3), cyanPaint);
+    canvas.drawRect(Rect.fromCenter(center: Offset(w * 0.6, baseY + 8), width: 3, height: 3), cyanPaint);
+    
+    // Central gold connection
+    final goldNodePaint = Paint()
+      ..color = const Color(0xFFE8D3A2)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(w * 0.5, baseY + 8), 2.0, goldNodePaint);
+    canvas.drawLine(Offset(w * 0.5, baseY + 8), Offset(w * 0.5, baseY), thinGoldPaint);
+
+    // Side accent nodes on baseline
+    canvas.drawCircle(Offset(w * 0.2, baseY), 1.5, cyanPaint);
+    canvas.drawCircle(Offset(w * 0.8, baseY), 1.5, cyanPaint);
+  }
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 12,
-      height: 12,
-      decoration: BoxDecoration(
-        border: Border(
-          top: isTop ? const BorderSide(color: Color(0xFFD4AF37), width: 1.5) : BorderSide.none,
-          bottom: !isTop ? const BorderSide(color: Color(0xFFD4AF37), width: 1.5) : BorderSide.none,
-          right: isRight ? const BorderSide(color: Color(0xFFD4AF37), width: 1.5) : BorderSide.none,
-          left: !isRight ? const BorderSide(color: Color(0xFFD4AF37), width: 1.5) : BorderSide.none,
-        ),
-      ),
-    );
-  }
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

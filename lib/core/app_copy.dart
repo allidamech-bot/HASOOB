@@ -86,6 +86,14 @@ class AppCopy {
   String trialBalanceAccountSubtitle(String code, String category) =>
       isEnglish ? 'Code $code - $category' : 'الكود $code - $category';
 
+  String dashboardLowStockAlertSubtitle(int count) => isEnglish 
+      ? '$count products are below critical threshold.' 
+      : 'هناك $count أصناف تحت الحد الحرج للمخزون لمنع نفاد البضاعة.';
+
+  String dashboardLocalModeSubtitle() => isEnglish
+      ? 'All transactions persist locally first, syncing smoothly to cloud.'
+      : 'كل عملياتك وبياناتك تحفظ محلياً في خادمك بأمان تام وتتزامن تلقائياً.';
+
   String dashboardRestoreCount(int count) => isEnglish
       ? 'Restored $count products from the cloud backup.'
       : 'تمت استعادة $count صنفًا من النسخة السحابية.';
@@ -617,6 +625,39 @@ class AppCopy {
       'saveProduct': 'حفظ الصنف',
       'updateProduct': 'تحديث الصنف',
       'basicDetails': 'التفاصيل الأساسية',
+      'dashboardCockpit': 'لوحة القيادة والذكاء المالي',
+      'dashboardSecureSession': 'جلسة خادم الذكاء المالي آمنة ونشطة',
+      'dashboardAiGreeting': 'ما القرار المالي الأفضل اليوم؟',
+      'dashboardAiTitle': 'المستشار المالي نشط',
+      'dashboardAiSuggestion': 'يقوم المستشار المالي الآن بفحص وتحليل التدفق النقدي، الفواتير المستحقة، مستويات المخزون والمصروفات ليقترح لك أفضل خطوة تالية لعملك.',
+      'dashboardHealthScore': 'مؤشر الصحة المالية',
+      'dashboardHealthExcellent': 'ممتاز جداً',
+      'dashboardHealthDesc1': 'الكفاءة التشغيلية والسيولة النقدية ممتازة اليوم.',
+      'dashboardHealthDesc2': 'مستوى السيولة النقدية يغطي المصروفات بنسبة 85% أعلى من الشهر الماضي. الاحتياطي المالي في أمان.',
+      'dashboardRecommendationsTitle': 'ما الخطوات الموصى بها اليوم؟',
+      'dashboardRec1': 'تابع تحصيل الفاتورة المستحقة رقم #1024 لتأمين السيولة قبل الأسبوع القادم.',
+      'dashboardRec2': 'أعد طلب كميات إضافية من المنظفات (المخزون الحالي 3 وحدات وهو تحت الحد الأدنى).',
+      'dashboardCashFlowPulse': 'نبض التدفق النقدي',
+      'dashboardCashInflow': 'المقبوضات النقدية',
+      'dashboardCashOutflow': 'المدفوعات والمصروفات',
+      'dashboardAiSimulation': 'محاكاة القرارات المالية',
+      'dashboardSimulationReady': 'جاهز للمحاكاة',
+      'dashboardSimulationScenario': 'سيناريو المحاكاة النشط: شراء مخزون ومشتريات بقيمة 5,000 ر.س اليوم.',
+      'dashboardSimulationResult': 'الأثر المتوقع: ستنخفض السيولة النقدية المتاحة بنسبة 12%، بينما ستزداد الأرباح التشغيلية المقدرة بنسبة 18% خلال 30 يوماً.',
+      'dashboardObligations': 'الالتزامات والمدفوعات القادمة',
+      'dashboardObligation1': 'مستحقات وفواتير الموردين',
+      'dashboardTomorrow': 'غداً',
+      'dashboardObligation2': 'رواتب ومستحقات الموظفين',
+      'dashboardIn3Days': 'بعد 3 أيام',
+      'dashboardAlertLowStock': 'تنبيه ذكي: سلع مخزون منخفضة',
+      'dashboardAlertLocalMode': 'التشغيل المحلي: قاعدة البيانات المحلية نشطة',
+      'dashboardAddProduct': 'إضافة صنف مخزون',
+      'dashboardCreateInvoice': 'إنشاء فاتورة مبيعات',
+      'dashboardAddCustomer': 'إضافة عميل جديد',
+      'dashboardStockThresholds': 'الحدود الحرجة لمخزون المنتجات والأصناف',
+      'dashboardNoLowStock': 'مستويات المخزون مستقرة بالكامل حالياً',
+      'dashboardRecentOperations': 'العمليات والمبيعات الفورية المسجلة مؤخراً',
+      'dashboardNoSalesYet': 'لم يتم تسجيل أي عمليات بيع بعد',
     },
     'en': {
       'appTitle': 'Hasoob App',
@@ -1075,6 +1116,39 @@ class AppCopy {
       'saveProduct': 'Save Product',
       'updateProduct': 'Update Product',
       'basicDetails': 'Basic Details',
+      'dashboardCockpit': 'Financial Intelligence Cockpit',
+      'dashboardSecureSession': 'Secure AI Session Active',
+      'dashboardAiGreeting': 'What is the best financial decision today?',
+      'dashboardAiTitle': 'FINANCIAL ADVISOR ACTIVE',
+      'dashboardAiSuggestion': 'Analyzing cash flow, outstanding invoices, obligations, and stock levels to calculate optimal steps.',
+      'dashboardHealthScore': 'Financial Health Score',
+      'dashboardHealthExcellent': 'Excellent',
+      'dashboardHealthDesc1': 'SaaS operating efficiency is optimal.',
+      'dashboardHealthDesc2': 'Cash flow cover is 85% higher than last month. Current reserves are safe.',
+      'dashboardRecommendationsTitle': 'What should I do today?',
+      'dashboardRec1': 'Follow up invoice #1024 to secure cash reserves before next week.',
+      'dashboardRec2': 'Reorder top-selling detergent carton (stock count is below 4).',
+      'dashboardCashFlowPulse': 'Cash Flow Pulse',
+      'dashboardCashInflow': 'Cash Inflow',
+      'dashboardCashOutflow': 'Cash Outflow',
+      'dashboardAiSimulation': 'AI Decision Simulation',
+      'dashboardSimulationReady': 'Ready',
+      'dashboardSimulationScenario': 'Simulation Scenario: Purchase inventory worth 5,000 SAR.',
+      'dashboardSimulationResult': 'Result: Liquid cash decreases by 12%. Estimated net profit margin increases by 18% over 30 days.',
+      'dashboardObligations': 'Upcoming Obligations',
+      'dashboardObligation1': 'Suppliers Invoices Due',
+      'dashboardTomorrow': 'Tomorrow',
+      'dashboardObligation2': 'Employee Salaries',
+      'dashboardIn3Days': 'In 3 Days',
+      'dashboardAlertLowStock': 'Risk: Low stock items',
+      'dashboardAlertLocalMode': 'Local Mode: Offline database active',
+      'dashboardAddProduct': 'Add Product',
+      'dashboardCreateInvoice': 'Create Invoice',
+      'dashboardAddCustomer': 'Add Customer',
+      'dashboardStockThresholds': 'Critical Stock Thresholds',
+      'dashboardNoLowStock': 'No Low Stock Items',
+      'dashboardRecentOperations': 'Realtime Customer Operations',
+      'dashboardNoSalesYet': 'No Sales Yet',
     },
   };
 }

@@ -124,16 +124,19 @@ class _AuthShellState extends State<AuthShell> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          copy.t('appTitle'),
+                          copy.isEnglish ? 'HASOOB' : 'حاسوب',
                           style: const TextStyle(
-                            color: AppTheme.aiTextPrimary,
+                            color: AppTheme.aiGold,
                             fontSize: 24,
                             fontWeight: FontWeight.w900,
+                            letterSpacing: 1.5,
                           ),
                         ),
-                        const Text(
-                          'FINANCIAL AI SYSTEM',
-                          style: TextStyle(
+                        Text(
+                          copy.isEnglish
+                              ? 'AI Financial OS'
+                              : 'نظام الذكاء المالي',
+                          style: const TextStyle(
                             color: AppTheme.aiBlue,
                             fontSize: 10,
                             fontWeight: FontWeight.w700,
@@ -242,16 +245,19 @@ class _AuthShellState extends State<AuthShell> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      copy.t('appTitle'),
+                      copy.isEnglish ? 'HASOOB' : 'حاسوب',
                       style: const TextStyle(
-                        color: AppTheme.aiTextPrimary,
+                        color: AppTheme.aiGold,
                         fontSize: 20,
                         fontWeight: FontWeight.w900,
+                        letterSpacing: 1.5,
                       ),
                     ),
-                    const Text(
-                      'FINANCIAL AI SYSTEM',
-                      style: TextStyle(
+                    Text(
+                      copy.isEnglish
+                          ? 'AI Financial OS'
+                          : 'نظام الذكاء المالي',
+                      style: const TextStyle(
                         color: AppTheme.aiBlue,
                         fontSize: 9,
                         fontWeight: FontWeight.w700,
