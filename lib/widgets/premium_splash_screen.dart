@@ -682,129 +682,141 @@ class _HasoobBrandMark extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Geometric Icon
+        // Wordmark Container with corner accents
         Stack(
+          clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
-            // Cyan glow
+            // Cyan background glow
             Container(
-              width: 50,
-              height: 50,
+              width: 140,
+              height: 60,
               decoration: BoxDecoration(
-                shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: AppTheme.aiBlue.withValues(alpha: 0.3),
-                    blurRadius: 24,
-                    spreadRadius: 2,
+                    color: AppTheme.aiBlue.withValues(alpha: 0.15),
+                    blurRadius: 40,
+                    spreadRadius: 10,
                   )
                 ],
               ),
             ),
-            // Gold diamond
-            Transform.rotate(
-              angle: math.pi / 4,
-              child: Container(
-                width: 36,
-                height: 36,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFFFD700), Color(0xFFD4AF37)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.6),
-                      offset: const Offset(2, 2),
-                      blurRadius: 4,
-                    ),
-                    BoxShadow(
-                      color: Colors.white.withValues(alpha: 0.3),
-                      offset: const Offset(-1, -1),
-                      blurRadius: 1,
+            
+            // The hero wordmark "حاسوب"
+            ShaderMask(
+              shaderCallback: (bounds) => const LinearGradient(
+                colors: [
+                  Color(0xFFFBE4A4), 
+                  Color(0xFFD4AF37), 
+                  Color(0xFF996515)
+                ],
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+              ).createShader(bounds),
+              child: const Text(
+                'حاسوب',
+                style: TextStyle(
+                  fontSize: 60,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 2.0,
+                  height: 1.0,
+                  fontFamily: AppTheme.fontFamilyArabic,
+                  color: Colors.white,
+                  shadows: [
+                    Shadow(
+                      color: Colors.black87,
+                      offset: Offset(2, 4),
+                      blurRadius: 8,
                     ),
                   ],
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Center(
-                  child: Container(
-                    width: 16,
-                    height: 16,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF070B14),
-                      borderRadius: BorderRadius.circular(4),
-                      border: Border.all(color: AppTheme.aiBlue, width: 1.5),
-                    ),
-                  ),
                 ),
               ),
             ),
+
+            // Top Right Corner Accent
+            const Positioned(
+              top: -5,
+              right: -15,
+              child: _CornerAccent(isTop: true, isRight: true),
+            ),
+            // Bottom Left Corner Accent
+            const Positioned(
+              bottom: -5,
+              left: -15,
+              child: _CornerAccent(isTop: false, isRight: false),
+            ),
           ],
         ),
+        
         const SizedBox(height: 16),
         
-        // Brand Name
-        Text(
-          'حاسوب',
-          style: TextStyle(
-            fontSize: 42,
-            fontWeight: FontWeight.w900,
-            fontFamily: AppTheme.fontFamilyArabic,
-            color: AppTheme.aiGold,
-            height: 1.1,
-            shadows: [
-              Shadow(
-                color: Colors.white.withValues(alpha: 0.2),
-                offset: const Offset(-1, -1),
-                blurRadius: 1,
+        // Custom Circuit/Baseline Motif
+        SizedBox(
+          width: 150,
+          child: Column(
+            children: [
+              // Gold baseline
+              Container(
+                height: 1.5,
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [Colors.transparent, Color(0xFFD4AF37), Colors.transparent],
+                  ),
+                ),
               ),
-              Shadow(
-                color: Colors.black.withValues(alpha: 0.8),
-                offset: const Offset(3, 3),
-                blurRadius: 6,
-              ),
-              Shadow(
-                color: AppTheme.aiBlue.withValues(alpha: 0.5),
-                offset: const Offset(0, 0),
-                blurRadius: 16,
+              const SizedBox(height: 6),
+              // Cyan circuit line with center node
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Expanded(
+                    child: Container(
+                      height: 1,
+                      color: AppTheme.aiBlue.withValues(alpha: 0.4),
+                    ),
+                  ),
+                  Container(
+                    width: 4,
+                    height: 4,
+                    margin: const EdgeInsets.symmetric(horizontal: 6),
+                    decoration: const BoxDecoration(
+                      color: AppTheme.aiBlue,
+                      boxShadow: [
+                        BoxShadow(
+                          color: AppTheme.aiBlue,
+                          blurRadius: 4,
+                          spreadRadius: 1,
+                        )
+                      ],
+                    ),
+                  ),
+                  Expanded(
+                    child: Container(
+                      height: 1,
+                      color: AppTheme.aiBlue.withValues(alpha: 0.4),
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
         ),
         
-        const SizedBox(height: 12),
-        
-        // Cyan underline
-        Container(
-          width: 80,
-          height: 1.5,
-          decoration: const BoxDecoration(
-            color: AppTheme.aiBlue,
-            boxShadow: [
-              BoxShadow(
-                color: AppTheme.aiBlue,
-                blurRadius: 8,
-                spreadRadius: 2,
-              )
-            ],
-          ),
-        ),
-        
-        const SizedBox(height: 16),
+        const SizedBox(height: 24),
         
         // Subtitle
         const Text(
           'بوابة القيادة المالية الذكية',
           style: TextStyle(
-            color: AppTheme.aiGold,
-            fontSize: 14,
+            color: Color(0xFFD4AF37),
+            fontSize: 15,
             fontWeight: FontWeight.w700,
             letterSpacing: 0.5,
             fontFamily: AppTheme.fontFamilyArabic,
             shadows: [
               Shadow(
-                color: Colors.black,
+                color: Colors.black54,
                 offset: Offset(1, 1),
                 blurRadius: 2,
               )
@@ -813,6 +825,29 @@ class _HasoobBrandMark extends StatelessWidget {
           textDirection: TextDirection.rtl,
         ),
       ],
+    );
+  }
+}
+
+class _CornerAccent extends StatelessWidget {
+  final bool isTop;
+  final bool isRight;
+
+  const _CornerAccent({required this.isTop, required this.isRight});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 12,
+      height: 12,
+      decoration: BoxDecoration(
+        border: Border(
+          top: isTop ? const BorderSide(color: Color(0xFFD4AF37), width: 1.5) : BorderSide.none,
+          bottom: !isTop ? const BorderSide(color: Color(0xFFD4AF37), width: 1.5) : BorderSide.none,
+          right: isRight ? const BorderSide(color: Color(0xFFD4AF37), width: 1.5) : BorderSide.none,
+          left: !isRight ? const BorderSide(color: Color(0xFFD4AF37), width: 1.5) : BorderSide.none,
+        ),
+      ),
     );
   }
 }
