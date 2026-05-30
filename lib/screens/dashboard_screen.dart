@@ -24,6 +24,7 @@ import 'package:hasoob_app/screens/customers_screen.dart';
 import 'package:hasoob_app/screens/documents_screen.dart';
 import 'package:hasoob_app/screens/settings_screen.dart';
 import 'package:hasoob_app/screens/_dashboard_dock_spacer.dart';
+import 'package:hasoob_app/core/business/daily_decision_engine.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -35,6 +36,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final ReportService _reportService = const ReportService();
   ReportsSnapshot? _cachedData;
+  List<BusinessDecision>? _decisions;
   bool _isRestoring = false;
   bool _isLoading = true;
   String? _error;
@@ -62,9 +64,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .timeout(const Duration(seconds: 10)),
       ]);
 
+      final snapshot = results[0];
+      final decisions = await DailyDecisionEngine.instance.generateDecisions(businessId, snapshot);
+
       if (mounted) {
         setState(() {
-          _cachedData = results[0];
+          _cachedData = snapshot;
+          _decisions = decisions;
           _isLoading = false;
           PerfLogger.logDataLoaded('Dashboard');
         });
@@ -342,13 +348,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Expanded(flex: 3, child: _buildHealthScoreCard(copy)),
                     const SizedBox(width: 20),
-                    Expanded(flex: 4, child: _buildRecommendationCard(copy)),
+                    Expanded(flex: 4, child: _buildDecisionCommander(_decisions ?? [], copy)),
                   ],
                 )
               else ...[
                 _buildHealthScoreCard(copy),
                 const SizedBox(height: 16),
-                _buildRecommendationCard(copy),
+                _buildDecisionCommander(_decisions ?? [], copy),
               ],
 
               const SizedBox(height: 14),
@@ -539,63 +545,139 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildRecommendationCard(AppCopy copy) {
+  Widget _buildDecisionCommander(List<BusinessDecision> decisions, AppCopy copy) {
     return AiGlassCard(
-      borderColor: AppTheme.aiBlue.withValues(alpha: 0.25),
-      glowColor: AppTheme.aiBlue,
+      borderColor: AppTheme.aiGold.withValues(alpha: 0.25),
+      glowColor: AppTheme.aiGold,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            copy.t('dashboardRecommendationsTitle'),
-            style: const TextStyle(
-              color: AppTheme.aiTextPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-            ),
+          const Row(
+            children: [
+              Icon(Icons.psychology_rounded, color: AppTheme.aiGold, size: 22),
+              SizedBox(width: 8),
+              Text(
+                'ماذا أفعل اليوم؟',
+                style: TextStyle(
+                  color: AppTheme.aiTextPrimary,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 16),
-          _recommendationItem(
-            icon: Icons.lightbulb_rounded,
-            color: AppTheme.aiGold,
-            text: copy.t('dashboardRec1'),
-          ),
-          const SizedBox(height: 12),
-          _recommendationItem(
-            icon: Icons.inventory_2_rounded,
-            color: AppTheme.aiBlue,
-            text: copy.t('dashboardRec2'),
-          ),
+          if (decisions.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 16),
+              child: Text(
+                'لا توجد بيانات كافية لإصدار قرارات مالية دقيقة بعد',
+                style: TextStyle(color: AppTheme.aiTextSecondary, fontSize: 13),
+              ),
+            )
+          else
+            ...decisions.map((d) => _decisionItem(d)),
         ],
       ),
     );
   }
 
-  Widget _recommendationItem({required IconData icon, required Color color, required String text}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            shape: BoxShape.circle,
+  Widget _decisionItem(BusinessDecision decision) {
+    Color color;
+    IconData icon;
+    switch (decision.priority) {
+      case DecisionPriority.critical:
+        color = AppTheme.aiRed;
+        icon = Icons.error_outline_rounded;
+        break;
+      case DecisionPriority.warning:
+        color = AppTheme.aiGold;
+        icon = Icons.warning_amber_rounded;
+        break;
+      case DecisionPriority.opportunity:
+        color = AppTheme.aiGreen;
+        icon = Icons.trending_up_rounded;
+        break;
+      case DecisionPriority.info:
+        color = AppTheme.aiBlue;
+        icon = Icons.info_outline_rounded;
+        break;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.05),
+        border: Border.all(color: color.withValues(alpha: 0.15)),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: color, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    decision.title,
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiCard,
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Text(
+                  '${(decision.confidenceScore * 100).toInt()}% دقة',
+                  style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 10),
+                ),
+              ),
+            ],
           ),
-          child: Icon(icon, color: color, size: 14),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: AppTheme.aiTextPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              height: 1.4,
-            ),
+          const SizedBox(height: 8),
+          Text(
+            decision.explanation,
+            style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, height: 1.4),
           ),
-        ),
-      ],
+          const SizedBox(height: 6),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                decision.sourceDataSummary,
+                style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11),
+              ),
+              InkWell(
+                onTap: () {
+                  // Direct navigation based on target
+                  if (decision.navigationTarget != null) {
+                    if (decision.navigationTarget == 'invoices') {
+                      // Navigate to Invoices (Reports index for now or custom)
+                    } else if (decision.navigationTarget == 'products' || decision.navigationTarget == 'inventory') {
+                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
+                    }
+                  }
+                },
+                child: Text(
+                  decision.suggestedActionLabel,
+                  style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold, decoration: TextDecoration.underline),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
