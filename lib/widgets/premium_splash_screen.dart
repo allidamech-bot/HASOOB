@@ -522,7 +522,7 @@ class _StatusModule extends StatelessWidget {
       child: BackdropFilter(
         filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
         child: Container(
-          width: 240,
+          width: 280,
           padding: const EdgeInsets.fromLTRB(24, 14, 30, 14),
           decoration: BoxDecoration(
             color: AppTheme.aiCard.withValues(alpha: isActive ? 0.7 : 0.4),
@@ -536,15 +536,19 @@ class _StatusModule extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              Text(
-                title,
-                style: TextStyle(
-                  color: isActive ? AppTheme.aiTextPrimary : AppTheme.aiTextSecondary,
-                  fontSize: 13,
-                  fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
-                  fontFamily: AppTheme.fontFamilyArabic,
+              Expanded(
+                child: Text(
+                  title,
+                  style: TextStyle(
+                    color: isActive ? AppTheme.aiTextPrimary : AppTheme.aiTextSecondary,
+                    fontSize: 13,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                    fontFamily: AppTheme.fontFamilyArabic,
+                  ),
+                  textAlign: TextAlign.right,
+                  textDirection: TextDirection.rtl,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                textDirection: TextDirection.rtl,
               ),
               const SizedBox(width: 14),
               if (isActive)
