@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../core/app_copy.dart';
+import '../screens/collection_center_screen.dart';
 
 class DesktopSidebar extends StatelessWidget {
   final int selectedIndex;
@@ -171,6 +172,15 @@ class DesktopSidebar extends StatelessWidget {
                   label: 'العملاء والفواتير',
                   isSelected: selectedIndex == 3,
                   onTap: () => onDestinationSelected(3),
+                ),
+                const SizedBox(height: 10),
+                _SidebarItem(
+                  icon: Icons.account_balance_wallet_rounded,
+                  label: 'مركز التحصيل',
+                  isSelected: false,
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen()));
+                  },
                 ),
                 const SizedBox(height: 10),
                 _SidebarItem(

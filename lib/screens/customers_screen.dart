@@ -169,14 +169,16 @@ class _CustomersScreenState extends State<CustomersScreen> {
 
             return ListView(
               padding: const EdgeInsets.all(16),
-              children: customers.map((customer) {
-                final name = customer['name']?.toString() ?? '';
-                final phone = customer['phone']?.toString() ?? '';
-                final outstanding = _toDouble(customer['outstanding_balance']);
+              children: [
+                _buildCollectionCenterCard(context, copy),
+                ...customers.map((customer) {
+                  final name = customer['name']?.toString() ?? '';
+                  final phone = customer['phone']?.toString() ?? '';
+                  final outstanding = _toDouble(customer['outstanding_balance']);
 
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: InkWell(
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: InkWell(
                     borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
                     onTap: () {
                       Navigator.push(
@@ -239,7 +241,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
                     ),
                   ),
                 );
-              }).toList(),
+              }),
+              ],
             );
           },
         ),
@@ -309,5 +312,67 @@ class _CustomersScreenState extends State<CustomersScreen> {
   double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  Widget _buildCollectionCenterCard(BuildContext context, AppCopy copy) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: InkWell(
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen()));
+        },
+        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        child: Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [
+                AppTheme.aiNavy,
+                AppTheme.aiDeep,
+              ],
+            ),
+            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+            border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.3)),
+          ),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiGold.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.aiGold, size: 28),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      copy.t('collectionCenterTitle'),
+                      style: const TextStyle(
+                        color: AppTheme.aiGold,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'تابع الفواتير المتأخرة ومخاطر العملاء ورسائل التذكير',
+                      style: TextStyle(
+                        color: AppTheme.aiTextSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.aiGold, size: 16),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }

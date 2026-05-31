@@ -206,11 +206,29 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                         PremiumCard(
                           padding: const EdgeInsets.all(32),
                           border: Border.all(color: AppTheme.aiCardBorder),
-                          child: Center(
-                            child: Text(
-                              copy.t('noOverdueInvoices'),
-                              style: const TextStyle(color: AppTheme.aiTextSecondary, fontWeight: FontWeight.bold),
-                            ),
+                          child: Column(
+                            children: [
+                              const Icon(Icons.check_circle_outline_rounded, color: AppTheme.aiGreen, size: 64),
+                              const SizedBox(height: 16),
+                              Text(
+                                copy.t('noOverdueInvoices'),
+                                style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 16, fontWeight: FontWeight.w900),
+                              ),
+                              const SizedBox(height: 8),
+                              const Text(
+                                'السيولة النقدية ممتازة، لا توجد أي متأخرات حالياً.',
+                                style: TextStyle(color: AppTheme.aiTextSecondary, fontSize: 13),
+                              ),
+                              const SizedBox(height: 24),
+                              FilledButton.icon(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                icon: const Icon(Icons.arrow_back_rounded),
+                                label: const Text('العودة للعملاء'),
+                                style: FilledButton.styleFrom(backgroundColor: AppTheme.aiNavy),
+                              ),
+                            ],
                           ),
                         )
                       else
