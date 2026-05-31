@@ -167,6 +167,10 @@ class AppCopy {
   String fieldCannotBeNegative(String field) =>
       isEnglish ? '$field cannot be negative.' : '$field لا يمكن أن يكون سالبًا.';
 
+  String whatsappReminderTemplate(String name, String amount) => isEnglish
+      ? 'Hello $name, a friendly reminder of an outstanding balance of $amount. Please arrange payment at your earliest convenience.'
+      : 'مرحباً $name، تذكير ودي بوجود مبلغ مستحق بقيمة $amount. يرجى السداد في أقرب وقت ممكن. شكراً لك.';
+
   static const Map<String, Map<String, String>> _map = {
     'ar': {
       'appTitle': 'Hasoob App',
@@ -659,6 +663,28 @@ class AppCopy {
       'dashboardNoLowStock': 'مستويات المخزون مستقرة بالكامل حالياً',
       'dashboardRecentOperations': 'العمليات والمبيعات الفورية المسجلة مؤخراً',
       'dashboardNoSalesYet': 'لم يتم تسجيل أي عمليات بيع بعد',
+      'collectionCenterTitle': 'مركز التحصيل والمتأخرات',
+      'overdueSummary': 'ملخص المتأخرات',
+      'totalOverdue': 'إجمالي المتأخرات',
+      'overdueInvoicesCount': 'عدد الفواتير المتأخرة',
+      'customersWithOverdue': 'عملاء بمتأخرات',
+      'agingBuckets': 'أعمار الديون',
+      'agingCurrent': 'حالي',
+      'aging1To30': '1-30 يوم',
+      'aging31To60': '31-60 يوم',
+      'aging61To90': '61-90 يوم',
+      'aging90Plus': '+90 يوم',
+      'customerRisk': 'حالة العملاء',
+      'riskLow': 'منخفضة',
+      'riskMedium': 'متوسطة',
+      'riskHigh': "عالية",
+      'riskCritical': 'حرجة',
+      'copyWhatsApp': 'نسخ تذكير واتساب',
+      'noOverdueInvoices': 'لا توجد فواتير متأخرة حالياً.',
+      'lastInvoiceDate': 'تاريخ آخر فاتورة',
+      'unpaidBalance': 'الرصيد غير المدفوع',
+      'overdueAmount': 'المبلغ المتأخر',
+      'collectionStart': 'بدء التحصيل',
     },
     'en': {
       'appTitle': 'Hasoob App',
@@ -1151,6 +1177,28 @@ class AppCopy {
       'dashboardNoLowStock': 'No Low Stock Items',
       'dashboardRecentOperations': 'Realtime Customer Operations',
       'dashboardNoSalesYet': 'No Sales Yet',
+      'collectionCenterTitle': 'Collection & Overdue Center',
+      'overdueSummary': 'Overdue Summary',
+      'totalOverdue': 'Total Overdue',
+      'overdueInvoicesCount': 'Overdue Invoices',
+      'customersWithOverdue': 'Overdue Customers',
+      'agingBuckets': 'Aging Buckets',
+      'agingCurrent': 'Current',
+      'aging1To30': '1-30 Days',
+      'aging31To60': '31-60 Days',
+      'aging61To90': '61-90 Days',
+      'aging90Plus': '90+ Days',
+      'customerRisk': 'Customer Risk',
+      'riskLow': 'Low',
+      'riskMedium': 'Medium',
+      'riskHigh': 'High',
+      'riskCritical': 'Critical',
+      'copyWhatsApp': 'Copy WhatsApp Reminder',
+      'noOverdueInvoices': 'There are no overdue invoices currently.',
+      'lastInvoiceDate': 'Last Invoice Date',
+      'unpaidBalance': 'Unpaid Balance',
+      'overdueAmount': 'Overdue Amount',
+      'collectionStart': 'Start Collection',
     },
   };
 }

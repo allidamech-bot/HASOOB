@@ -22,6 +22,7 @@ import 'package:hasoob_app/screens/add_product_screen.dart';
 import 'package:hasoob_app/screens/business_profile_screen.dart';
 import 'package:hasoob_app/screens/customers_screen.dart';
 import 'package:hasoob_app/screens/documents_screen.dart';
+import 'package:hasoob_app/screens/collection_center_screen.dart';
 import 'package:hasoob_app/screens/settings_screen.dart';
 import 'package:hasoob_app/screens/_dashboard_dock_spacer.dart';
 import 'package:hasoob_app/core/business/daily_decision_engine.dart';
@@ -776,7 +777,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             child: InkWell(
               onTap: () {
                 if (decision.navigationTarget != null) {
-                  if (decision.navigationTarget == 'invoices') {
+                  if (decision.navigationTarget == 'collection') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen()));
+                  } else if (decision.navigationTarget == 'invoices') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen()));
                   } else if (decision.navigationTarget == 'products' || decision.navigationTarget == 'inventory') {
                     Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
                   }

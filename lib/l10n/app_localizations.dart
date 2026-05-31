@@ -403,6 +403,138 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No Sales Yet'**
   String get dashboardNoSalesYet;
+
+  /// No description provided for @collectionCenterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection & Overdue Center'**
+  String get collectionCenterTitle;
+
+  /// No description provided for @overdueSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue Summary'**
+  String get overdueSummary;
+
+  /// No description provided for @totalOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Overdue'**
+  String get totalOverdue;
+
+  /// No description provided for @overdueInvoicesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue Invoices'**
+  String get overdueInvoicesCount;
+
+  /// No description provided for @customersWithOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue Customers'**
+  String get customersWithOverdue;
+
+  /// No description provided for @agingBuckets.
+  ///
+  /// In en, this message translates to:
+  /// **'Aging Buckets'**
+  String get agingBuckets;
+
+  /// No description provided for @agingCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get agingCurrent;
+
+  /// No description provided for @aging1To30.
+  ///
+  /// In en, this message translates to:
+  /// **'1-30 Days'**
+  String get aging1To30;
+
+  /// No description provided for @aging31To60.
+  ///
+  /// In en, this message translates to:
+  /// **'31-60 Days'**
+  String get aging31To60;
+
+  /// No description provided for @aging61To90.
+  ///
+  /// In en, this message translates to:
+  /// **'61-90 Days'**
+  String get aging61To90;
+
+  /// No description provided for @aging90Plus.
+  ///
+  /// In en, this message translates to:
+  /// **'90+ Days'**
+  String get aging90Plus;
+
+  /// No description provided for @customerRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Risk'**
+  String get customerRisk;
+
+  /// No description provided for @riskLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get riskLow;
+
+  /// No description provided for @riskMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get riskMedium;
+
+  /// No description provided for @riskHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get riskHigh;
+
+  /// No description provided for @riskCritical.
+  ///
+  /// In en, this message translates to:
+  /// **'Critical'**
+  String get riskCritical;
+
+  /// No description provided for @copyWhatsApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy WhatsApp Reminder'**
+  String get copyWhatsApp;
+
+  /// No description provided for @noOverdueInvoices.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no overdue invoices currently.'**
+  String get noOverdueInvoices;
+
+  /// No description provided for @lastInvoiceDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Invoice Date'**
+  String get lastInvoiceDate;
+
+  /// No description provided for @unpaidBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid Balance'**
+  String get unpaidBalance;
+
+  /// No description provided for @overdueAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue Amount'**
+  String get overdueAmount;
+
+  /// No description provided for @collectionStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Collection'**
+  String get collectionStart;
 }
 
 class _AppLocalizationsDelegate

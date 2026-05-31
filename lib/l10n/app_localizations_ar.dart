@@ -174,4 +174,70 @@ class AppLocalizationsAr extends AppLocalizations {
 
   @override
   String get dashboardNoSalesYet => 'لم يتم تسجيل أي عمليات بيع بعد';
+
+  @override
+  String get collectionCenterTitle => 'مركز التحصيل والمتأخرات';
+
+  @override
+  String get overdueSummary => 'ملخص المتأخرات';
+
+  @override
+  String get totalOverdue => 'إجمالي المتأخرات';
+
+  @override
+  String get overdueInvoicesCount => 'عدد الفواتير المتأخرة';
+
+  @override
+  String get customersWithOverdue => 'عملاء بمتأخرات';
+
+  @override
+  String get agingBuckets => 'أعمار الديون';
+
+  @override
+  String get agingCurrent => 'حالي';
+
+  @override
+  String get aging1To30 => '1-30 يوم';
+
+  @override
+  String get aging31To60 => '31-60 يوم';
+
+  @override
+  String get aging61To90 => '61-90 يوم';
+
+  @override
+  String get aging90Plus => '+90 يوم';
+
+  @override
+  String get customerRisk => 'حالة العملاء';
+
+  @override
+  String get riskLow => 'منخفضة';
+
+  @override
+  String get riskMedium => 'متوسطة';
+
+  @override
+  String get riskHigh => 'عالية';
+
+  @override
+  String get riskCritical => 'حرجة';
+
+  @override
+  String get copyWhatsApp => 'نسخ تذكير واتساب';
+
+  @override
+  String get noOverdueInvoices => 'لا توجد فواتير متأخرة حالياً.';
+
+  @override
+  String get lastInvoiceDate => 'تاريخ آخر فاتورة';
+
+  @override
+  String get unpaidBalance => 'الرصيد غير المدفوع';
+
+  @override
+  String get overdueAmount => 'المبلغ المتأخر';
+
+  @override
+  String get collectionStart => 'بدء التحصيل';
 }

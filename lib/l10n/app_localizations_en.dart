@@ -171,4 +171,70 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dashboardNoSalesYet => 'No Sales Yet';
+
+  @override
+  String get collectionCenterTitle => 'Collection & Overdue Center';
+
+  @override
+  String get overdueSummary => 'Overdue Summary';
+
+  @override
+  String get totalOverdue => 'Total Overdue';
+
+  @override
+  String get overdueInvoicesCount => 'Overdue Invoices';
+
+  @override
+  String get customersWithOverdue => 'Overdue Customers';
+
+  @override
+  String get agingBuckets => 'Aging Buckets';
+
+  @override
+  String get agingCurrent => 'Current';
+
+  @override
+  String get aging1To30 => '1-30 Days';
+
+  @override
+  String get aging31To60 => '31-60 Days';
+
+  @override
+  String get aging61To90 => '61-90 Days';
+
+  @override
+  String get aging90Plus => '90+ Days';
+
+  @override
+  String get customerRisk => 'Customer Risk';
+
+  @override
+  String get riskLow => 'Low';
+
+  @override
+  String get riskMedium => 'Medium';
+
+  @override
+  String get riskHigh => 'High';
+
+  @override
+  String get riskCritical => 'Critical';
+
+  @override
+  String get copyWhatsApp => 'Copy WhatsApp Reminder';
+
+  @override
+  String get noOverdueInvoices => 'There are no overdue invoices currently.';
+
+  @override
+  String get lastInvoiceDate => 'Last Invoice Date';
+
+  @override
+  String get unpaidBalance => 'Unpaid Balance';
+
+  @override
+  String get overdueAmount => 'Overdue Amount';
+
+  @override
+  String get collectionStart => 'Start Collection';
 }

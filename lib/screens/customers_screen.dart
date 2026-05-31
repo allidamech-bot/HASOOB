@@ -7,8 +7,9 @@ import '../core/business/business_context.dart';
 import '../data/repositories/customer_repository.dart';
 import '../core/utils/perf_logger.dart';
 import '../widgets/skeleton_loader.dart';
-import '../widgets/premium/premium_card.dart';
-import 'customer_statement_screen.dart';
+import 'package:hasoob_app/widgets/premium/premium_card.dart';
+import 'package:hasoob_app/screens/customer_statement_screen.dart';
+import 'package:hasoob_app/screens/collection_center_screen.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -123,6 +124,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
       appBar: AppBar(
         title: Text(copy.t('customersTitle')),
         actions: [
+          IconButton(
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen()));
+            },
+            icon: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.aiGold),
+            tooltip: copy.t('collectionCenterTitle'),
+          ),
           IconButton(
             onPressed: () => _openCustomerForm(),
             icon: const Icon(Icons.person_add_alt_1_rounded),

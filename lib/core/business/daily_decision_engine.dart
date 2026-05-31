@@ -69,8 +69,8 @@ class DailyDecisionEngine {
           priority: DecisionPriority.critical,
           confidenceScore: 0.95,
           sourceDataSummary: 'إجمالي المتأخرات: ${totalOverdue.toStringAsFixed(2)} ر.س',
-          suggestedActionLabel: 'مراجعة الفواتير',
-          navigationTarget: 'invoices',
+          suggestedActionLabel: 'بدء التحصيل',
+          navigationTarget: 'collection',
         ));
       }
     } catch (e) {
