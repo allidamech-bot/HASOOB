@@ -10,6 +10,8 @@ import '../widgets/skeleton_loader.dart';
 import 'package:hasoob_app/widgets/premium/premium_card.dart';
 import 'package:hasoob_app/screens/customer_statement_screen.dart';
 import 'package:hasoob_app/screens/collection_center_screen.dart';
+import 'package:hasoob_app/screens/documents_screen.dart';
+import '../core/app_formatters.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -170,6 +172,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
             return ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                _buildTopActionRow(context, copy, customers),
                 _buildCollectionCenterCard(context, copy),
                 ...customers.map((customer) {
                   final name = customer['name']?.toString() ?? '';
@@ -288,16 +291,16 @@ class _CustomersScreenState extends State<CustomersScreen> {
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(24),
       children: [
-        const SizedBox(height: 80),
-        const Icon(Icons.people_outline_rounded, size: 64, color: AppTheme.accent),
-        const SizedBox(height: 24),
+        const SizedBox(height: 40),
+        const Icon(Icons.people_outline_rounded, size: 48, color: AppTheme.accent),
+        const SizedBox(height: 16),
         Center(
           child: Text(
             copy.t('noCustomersYet'),
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
         Center(
           child: FilledButton.icon(
             onPressed: () => _openCustomerForm(),
@@ -314,6 +317,57 @@ class _CustomersScreenState extends State<CustomersScreen> {
     return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
+  Widget _buildTopActionRow(BuildContext context, AppCopy copy, List<Map<String, dynamic>> customers) {
+    final double totalOutstanding = customers.fold<double>(0.0, (sum, c) => sum + _toDouble(c['outstanding_balance']));
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.aiCardElevated,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('إجمالي المستحقات', style: TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11)),
+                  const SizedBox(height: 4),
+                  Text(AppFormatters.currency(totalOutstanding), style: const TextStyle(color: AppTheme.aiGold, fontSize: 14, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          InkWell(
+            onTap: () {
+               Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen()));
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: BoxDecoration(
+                color: AppTheme.aiBlue,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.add_shopping_cart, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Text('عملية مبيعات', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildCollectionCenterCard(BuildContext context, AppCopy copy) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
@@ -321,9 +375,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
         onTap: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen()));
         },
-        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         child: Container(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             gradient: const LinearGradient(
               colors: [
@@ -331,20 +385,20 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 AppTheme.aiDeep,
               ],
             ),
-            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
             border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.3)),
           ),
           child: Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(12),
+                padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
                   color: AppTheme.aiGold.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.aiGold, size: 28),
+                child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.aiGold, size: 22),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,22 +407,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
                       copy.t('collectionCenterTitle'),
                       style: const TextStyle(
                         color: AppTheme.aiGold,
-                        fontWeight: FontWeight.w900,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'تابع الفواتير المتأخرة ومخاطر العملاء ورسائل التذكير',
-                      style: TextStyle(
-                        color: AppTheme.aiTextSecondary,
-                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
                       ),
                     ),
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.aiGold, size: 16),
+              const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.aiGold, size: 14),
             ],
           ),
         ),

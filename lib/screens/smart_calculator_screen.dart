@@ -264,8 +264,8 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
             children: [
               TextField(
                 controller: _controller,
-                minLines: 3,
-                maxLines: 6,
+                minLines: 2,
+                maxLines: 4,
                 style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w500),
                 decoration: InputDecoration(
                   hintText: _text('What would you like to record?', 'ماذا تريد أن تسجل؟'),
@@ -308,13 +308,10 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
           ),
         ),
         const SizedBox(height: 16),
-        SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          clipBehavior: Clip.none,
-          child: Row(
-            children: suggestions.map((s) => Padding(
-              padding: const EdgeInsetsDirectional.only(end: 8),
-              child: ActionChip(
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: suggestions.map((s) => ActionChip(
                 label: Text(s),
                 onPressed: () {
                   _controller.text = s;
@@ -330,9 +327,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                   fontWeight: FontWeight.bold,
                   fontSize: 11,
                 ),
-              ),
-            )).toList(),
-          ),
+              )).toList(),
         ),
       ],
     );
@@ -450,44 +445,32 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
   }
 
   Widget _emptyState() {
-    return AiGlassCard(
-      borderColor: AppTheme.aiGold.withValues(alpha: 0.2),
-      glowColor: AppTheme.aiGold,
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppTheme.aiGold.withValues(alpha: 0.05),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.2)),
+      ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          AiEmptyState(
-            icon: Icons.psychology_rounded,
-            title: _text('Financial AI Advisor Ready', 'المستشار المالي الذكي جاهز لمساعدتك'),
-            subtitle: _text(
-                'Describe any business or financial transaction naturally in Arabic. The AI advisor will parse metrics, verify margins, and calculate cash flows in real-time.',
-                'اكتب عمليتك المالية أو التجارية باللغة العربية (مثال: اشتريت 10 قطع بسعر 50 وبعت 5 بسعر 100). سيقوم المستشار الذكي بتحليلها وحساب التدفق والربح فوراً.'),
+          Row(
+            children: [
+              const Icon(Icons.psychology_rounded, color: AppTheme.aiGold, size: 24),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  _text('Financial AI Advisor Ready', 'المستشار الذكي جاهز'),
+                  style: const TextStyle(color: AppTheme.aiGold, fontSize: 14, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 12),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: BoxDecoration(
-              color: AppTheme.aiGold.withValues(alpha: 0.05),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.15)),
-            ),
-            child: Row(
-              children: [
-                const Icon(Icons.bolt, color: AppTheme.aiGold, size: 18),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Text(
-                    _text(
-                        'AI Engine: Local parser is active and offline-ready. Your calculations are fully secure.',
-                        'الذكاء الاصطناعي: محرك التحليل فوري ويعمل بالكامل محلياً وبأمان تام دون مشاركة بياناتك.'),
-                    style: const TextStyle(
-                      color: AppTheme.aiGold,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-            ),
+          Text(
+            _text('Describe any business transaction in Arabic. The AI will parse metrics and calculate cash flows instantly.', 'اكتب عمليتك التجارية باللغة العربية (مثال: بعت 5 قطع بسعر 100). سيقوم المستشار بتحليلها وحساب الأرباح فوراً.'),
+            style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12),
           ),
         ],
       ),

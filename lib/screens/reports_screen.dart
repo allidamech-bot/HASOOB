@@ -324,9 +324,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
               const SizedBox(height: 16),
               _hero(data, copy),
               const SizedBox(height: 24),
-              _filters(productOptions, copy),
-              const SizedBox(height: 24),
               _metrics(data, copy),
+              const SizedBox(height: 24),
+              _filters(productOptions, copy),
               const SizedBox(height: 24),
               _exports(copy),
               const SizedBox(height: 24),
@@ -506,7 +506,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _metrics(ReportsSnapshot data, AppCopy copy) {
     return GridView.count(
-      crossAxisCount: MediaQuery.sizeOf(context).width < 420 ? 1 : 2,
+      crossAxisCount: MediaQuery.sizeOf(context).width < 420 ? 2 : 4,
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
       shrinkWrap: true,
@@ -651,7 +651,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         children: [
           Text(title, style: _theme.textTheme.titleMedium),
           const SizedBox(height: 16),
-          SizedBox(height: 240, child: child),
+          SizedBox(height: 180, child: child),
         ],
       ),
     );

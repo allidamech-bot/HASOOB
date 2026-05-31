@@ -186,13 +186,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     padding: const EdgeInsets.all(24),
                     children: [
                       // Summary Cards Row
-                      GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: isDesktop ? 3 : 3,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: isDesktop ? 2.5 : 1.5,
+                        GridView.count(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisCount: 3,
+                          crossAxisSpacing: 8,
+                          mainAxisSpacing: 8,
+                          childAspectRatio: isDesktop ? 2.5 : 2.2,
                         children: [
                           AiKpiCard(
                             label: copy.isEnglish ? 'Total Items' : 'إجمالي الأصناف',
@@ -218,7 +218,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
                       // Search & Filter Panel
                       PremiumCard(
-                        padding: const EdgeInsets.all(20),
+                        padding: const EdgeInsets.all(16),
                         border: Border.all(
                           color: AppTheme.aiGold.withValues(alpha: 0.15),
                           width: 1,
@@ -439,6 +439,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
   Widget _buildEmptyState(BuildContext context, AppCopy copy) {
     return PremiumCard(
+      padding: const EdgeInsets.all(16),
       border: Border.all(
         color: AppTheme.aiGold.withValues(alpha: 0.15),
         width: 1,

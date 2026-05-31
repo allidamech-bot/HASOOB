@@ -204,7 +204,7 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                       const SizedBox(height: 16),
                       if (_customerRisks.isEmpty)
                         PremiumCard(
-                          padding: const EdgeInsets.all(32),
+                          padding: const EdgeInsets.all(24),
                           border: Border.all(color: AppTheme.aiCardBorder),
                           child: Column(
                             children: [
@@ -240,21 +240,24 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
   }
 
   Widget _buildExecutiveSummary(AppCopy copy, bool isDesktop) {
-    return Wrap(
-      spacing: 16,
-      runSpacing: 16,
+    return GridView.count(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      crossAxisCount: isDesktop ? 3 : 2,
+      crossAxisSpacing: 12,
+      mainAxisSpacing: 12,
+      childAspectRatio: 1.5,
       children: [
-        _buildSummaryCard(copy.t('totalOverdue'), AppFormatters.currency(_totalOverdue), AppTheme.aiRed, isDesktop),
-        _buildSummaryCard(copy.t('overdueInvoicesCount'), '$_overdueInvoicesCount', AppTheme.aiGold, isDesktop),
-        _buildSummaryCard(copy.t('customersWithOverdue'), '$_customersWithOverdue', AppTheme.aiBlue, isDesktop),
+        _buildSummaryCard(copy.t('totalOverdue'), AppFormatters.currency(_totalOverdue), AppTheme.aiRed),
+        _buildSummaryCard(copy.t('overdueInvoicesCount'), '$_overdueInvoicesCount', AppTheme.aiGold),
+        _buildSummaryCard(copy.t('customersWithOverdue'), '$_customersWithOverdue', AppTheme.aiBlue),
       ],
     );
   }
 
-  Widget _buildSummaryCard(String title, String value, Color color, bool isDesktop) {
+  Widget _buildSummaryCard(String title, String value, Color color) {
     return Container(
-      width: isDesktop ? 240 : double.infinity,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: AppTheme.aiCardElevated,
         borderRadius: BorderRadius.circular(16),
@@ -262,10 +265,11 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(title, style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 14, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 8),
-          Text(value, style: TextStyle(color: color, fontSize: 24, fontWeight: FontWeight.w900)),
+          Text(title, style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          FittedBox(child: Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w900))),
         ],
       ),
     );
@@ -292,8 +296,8 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
 
   Widget _buildAgingBucket(String label, double amount, Color color) {
     return Container(
-      width: 140,
-      padding: const EdgeInsets.all(16),
+      width: 120,
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),

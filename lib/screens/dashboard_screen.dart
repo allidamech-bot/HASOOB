@@ -330,7 +330,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
         SliverToBoxAdapter(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
             child: AiRobotAdvisor(
               greeting: copy.t('dashboardAiGreeting'),
               advisorTitle: copy.t('dashboardAiTitle'),
@@ -353,9 +353,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   ],
                 )
               else ...[
-                _buildHealthScoreCard(data, copy),
-                const SizedBox(height: 16),
                 _buildDecisionCommander(_decisions ?? [], copy),
+                const SizedBox(height: 12),
+                _buildHealthScoreCard(data, copy),
               ],
 
               const SizedBox(height: 14),
@@ -539,8 +539,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 24),
           Row(
             children: [
-              AiHealthScore(score: score.toDouble(), size: 84),
-              const SizedBox(width: 20),
+              AiHealthScore(score: score.toDouble(), size: 64),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -815,9 +815,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: isDesktop ? 4 : 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: isDesktop ? 1.7 : 1.9,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: isDesktop ? 1.7 : 2.2,
           children: [
             AiKpiCard(
               label: copy.t('totalProducts'),
