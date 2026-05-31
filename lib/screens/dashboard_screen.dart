@@ -191,7 +191,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
-        displacement: 100,
+        displacement: 40,
         backgroundColor: AppTheme.aiCard,
         color: AppTheme.aiGold,
         child: _buildBody(context, copy),
@@ -346,13 +346,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(flex: 3, child: _buildHealthScoreCard(copy)),
+                    Expanded(flex: 3, child: _buildHealthScoreCard(data, copy)),
                     const SizedBox(width: 20),
                     Expanded(flex: 4, child: _buildDecisionCommander(_decisions ?? [], copy)),
                   ],
                 )
               else ...[
-                _buildHealthScoreCard(copy),
+                _buildHealthScoreCard(data, copy),
                 const SizedBox(height: 16),
                 _buildDecisionCommander(_decisions ?? [], copy),
               ],
@@ -475,10 +475,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildHealthScoreCard(AppCopy copy) {
+  Widget _buildHealthScoreCard(ReportsSnapshot? data, AppCopy copy) {
+    int score = 0;
+    String scoreLabel = copy.isEnglish ? 'Awaiting Data' : 'بانتظار البيانات';
+    Color scoreColor = AppTheme.aiTextSecondary;
+    String desc1 = copy.isEnglish ? 'Not enough data.' : 'لا توجد بيانات كافية لقياس كفاءة التشغيل حالياً.';
+    String desc2 = copy.isEnglish ? 'Add items to start.' : 'ابدأ بإضافة منتجاتك ومبيعاتك الأولى لتفعيل مؤشر الصحة.';
+
+    if (data != null && (data.totalProducts > 0 || data.salesRecords.isNotEmpty)) {
+      score = 85;
+      scoreLabel = copy.isEnglish ? 'Excellent' : 'ممتاز جداً';
+      scoreColor = AppTheme.aiGreen;
+
+      if (data.lowStockItems.length > 5) {
+        score = 65;
+        scoreLabel = copy.isEnglish ? 'Needs Attention' : 'يحتاج انتباه';
+        scoreColor = AppTheme.aiGold;
+      }
+
+      desc1 = copy.isEnglish 
+          ? 'You have ${data.totalProducts} active products.' 
+          : 'الكفاءة التشغيلية ممتازة، لديك ${data.totalProducts} صنف نشط.';
+      desc2 = copy.isEnglish
+          ? 'Total sales recorded is ${data.totalSales.toStringAsFixed(2)}.'
+          : 'إجمالي المبيعات يبلغ ${data.totalSales.toStringAsFixed(2)} ر.س، السيولة مستقرة وآمنة.';
+    }
+
     return AiGlassCard(
-      borderColor: AppTheme.aiGold.withValues(alpha: 0.25),
-      glowColor: AppTheme.aiGold,
+      borderColor: scoreColor.withValues(alpha: 0.25),
+      glowColor: scoreColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -486,7 +511,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                copy.t('dashboardHealthScore'),
+                copy.isEnglish ? 'Financial Health Score' : 'مؤشر الصحة المالية',
                 style: const TextStyle(
                   color: AppTheme.aiTextPrimary,
                   fontSize: 16,
@@ -496,13 +521,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppTheme.aiGreen.withValues(alpha: 0.12),
+                  color: scoreColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  copy.t('dashboardHealthExcellent'),
-                  style: const TextStyle(
-                    color: AppTheme.aiGreen,
+                  scoreLabel,
+                  style: TextStyle(
+                    color: scoreColor,
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                   ),
@@ -513,14 +538,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 24),
           Row(
             children: [
-              const AiHealthScore(score: 88, size: 84),
+              AiHealthScore(score: score.toDouble(), size: 84),
               const SizedBox(width: 20),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      copy.t('dashboardHealthDesc1'),
+                      desc1,
                       style: const TextStyle(
                         color: AppTheme.aiTextPrimary,
                         fontSize: 13,
@@ -529,10 +554,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      copy.t('dashboardHealthDesc2'),
+                      desc2,
                       style: const TextStyle(
                         color: AppTheme.aiTextSecondary,
                         fontSize: 11,
+                        height: 1.5,
                       ),
                     ),
                   ],
@@ -547,37 +573,104 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildDecisionCommander(List<BusinessDecision> decisions, AppCopy copy) {
     return AiGlassCard(
-      borderColor: AppTheme.aiGold.withValues(alpha: 0.25),
+      borderColor: AppTheme.aiGold.withValues(alpha: 0.4),
       glowColor: AppTheme.aiGold,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(Icons.psychology_rounded, color: AppTheme.aiGold, size: 22),
-              SizedBox(width: 8),
-              Text(
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiGold.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.psychology_rounded, color: AppTheme.aiGold, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Text(
                 'ماذا أفعل اليوم؟',
                 style: TextStyle(
                   color: AppTheme.aiTextPrimary,
-                  fontSize: 16,
+                  fontSize: 18,
                   fontWeight: FontWeight.w900,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 16),
-          if (decisions.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Text(
-                'لا توجد بيانات كافية لإصدار قرارات مالية دقيقة بعد',
-                style: TextStyle(color: AppTheme.aiTextSecondary, fontSize: 13),
-              ),
-            )
+          const SizedBox(height: 20),
+          if (decisions.isEmpty || decisions.any((d) => d.priority == DecisionPriority.info && d.title == 'إعداد بيانات النشاط التجاري'))
+            _buildEmptyDecisionState(copy)
           else
             ...decisions.map((d) => _decisionItem(d)),
         ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyDecisionState(AppCopy copy) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.aiCardElevated,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.aiCardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Icon(Icons.analytics_outlined, color: AppTheme.aiTextSecondary, size: 48),
+          const SizedBox(height: 16),
+          const Text(
+            'لا توجد بيانات كافية لإصدار قرارات مالية دقيقة بعد',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppTheme.aiTextPrimary, fontSize: 15, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'أضف بياناتك الأولى ليقوم الذكاء المالي بتحليلها واقتراح أفضل الخطوات لك.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppTheme.aiTextSecondary, fontSize: 13, height: 1.5),
+          ),
+          const SizedBox(height: 24),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
+            children: [
+              _setupActionButton('إضافة منتج', Icons.inventory_2_outlined, () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
+              }),
+              _setupActionButton('إنشاء فاتورة', Icons.receipt_long_outlined, () {}),
+              _setupActionButton('إضافة عميل', Icons.person_add_outlined, () {}),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _setupActionButton(String label, IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.aiBlue.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.aiBlue.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: AppTheme.aiBlue, size: 18),
+            const SizedBox(width: 8),
+            Text(label, style: const TextStyle(color: AppTheme.aiBlue, fontSize: 13, fontWeight: FontWeight.bold)),
+          ],
+        ),
       ),
     );
   }
@@ -605,12 +698,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
-        border: Border.all(color: color.withValues(alpha: 0.15)),
-        borderRadius: BorderRadius.circular(12),
+        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -620,61 +713,91 @@ class _DashboardScreenState extends State<DashboardScreen> {
             children: [
               Row(
                 children: [
-                  Icon(icon, color: color, size: 16),
+                  Icon(icon, color: color, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     decision.title,
                     style: TextStyle(
                       color: color,
                       fontWeight: FontWeight.bold,
-                      fontSize: 13,
+                      fontSize: 15,
                     ),
                   ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppTheme.aiCard,
-                  borderRadius: BorderRadius.circular(4),
+                  color: AppTheme.aiDeep,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
                 ),
-                child: Text(
-                  '${(decision.confidenceScore * 100).toInt()}% دقة',
-                  style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 10),
+                child: Row(
+                  children: [
+                    Icon(Icons.radar, color: color, size: 12),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${(decision.confidenceScore * 100).toInt()}% دقة',
+                      style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ],
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 12),
           Text(
             decision.explanation,
-            style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, height: 1.4),
+            style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 13, height: 1.5),
           ),
-          const SizedBox(height: 6),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                decision.sourceDataSummary,
-                style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11),
-              ),
-              InkWell(
-                onTap: () {
-                  // Direct navigation based on target
-                  if (decision.navigationTarget != null) {
-                    if (decision.navigationTarget == 'invoices') {
-                      // Navigate to Invoices (Reports index for now or custom)
-                    } else if (decision.navigationTarget == 'products' || decision.navigationTarget == 'inventory') {
-                      Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
-                    }
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.aiCardElevated.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.data_usage_rounded, color: AppTheme.aiTextSecondary, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    decision.sourceDataSummary,
+                    style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: InkWell(
+              onTap: () {
+                if (decision.navigationTarget != null) {
+                  if (decision.navigationTarget == 'invoices') {
+                  } else if (decision.navigationTarget == 'products' || decision.navigationTarget == 'inventory') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
                   }
-                },
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2)),
+                  ],
+                ),
                 child: Text(
                   decision.suggestedActionLabel,
-                  style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.bold, decoration: TextDecoration.underline),
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
                 ),
               ),
-            ],
+            ),
           ),
         ],
       ),

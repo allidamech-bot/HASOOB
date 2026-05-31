@@ -47,7 +47,7 @@ class CommandDock extends StatelessWidget {
         index: 4,
         icon: Icons.auto_awesome_outlined,
         selectedIcon: Icons.auto_awesome,
-        label: copy.isEnglish ? 'Smart' : 'ذكي',
+        label: copy.t('navSmart'),
       ),
       _DockItemData(
         index: 5,
