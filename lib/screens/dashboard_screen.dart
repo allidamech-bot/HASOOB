@@ -259,11 +259,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                copy.t('dashboardCockpit'),
+                                copy.isEnglish ? 'Hasoob' : 'حاسوب',
                                 style: const TextStyle(
                                   color: AppTheme.aiGold,
                                   fontWeight: FontWeight.w900,
-                                  fontSize: 20,
+                                  fontSize: 22,
                                   letterSpacing: 0.5,
                                 ),
                               ),
@@ -328,16 +328,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
 
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
-            child: AiRobotAdvisor(
-              greeting: copy.t('dashboardAiGreeting'),
-              advisorTitle: copy.t('dashboardAiTitle'),
-              suggestion: copy.t('dashboardAiSuggestion'),
+        if (isDesktop)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: AiRobotAdvisor(
+                greeting: copy.t('dashboardAiGreeting'),
+                advisorTitle: copy.t('dashboardAiTitle'),
+                suggestion: copy.t('dashboardAiSuggestion'),
+              ),
             ),
           ),
-        ),
 
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
@@ -355,12 +356,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               else ...[
                 _buildDecisionCommander(_decisions ?? [], copy),
                 const SizedBox(height: 12),
-                _buildHealthScoreCard(data, copy),
+                _buildMobileStatusStrip(data, copy),
+                const SizedBox(height: 12),
+                AiRobotAdvisor(
+                  greeting: copy.t('dashboardAiGreeting'),
+                  advisorTitle: copy.t('dashboardAiTitle'),
+                  suggestion: copy.t('dashboardAiSuggestion'),
+                  isCompact: true,
+                ),
               ],
 
               const SizedBox(height: 14),
-              _buildKpiGrid(data, copy, isDesktop),
-              const SizedBox(height: 16),
+              if (isDesktop) _buildKpiGrid(data, copy, isDesktop),
+              if (isDesktop) const SizedBox(height: 16),
 
               if (isDesktop)
                 Row(
@@ -566,6 +574,49 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileStatusStrip(ReportsSnapshot data, AppCopy copy) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: Row(
+        children: [
+          _statusChip(Icons.health_and_safety_rounded, copy.isEnglish ? 'Health' : 'الصحة المالية', AppTheme.aiGreen),
+          const SizedBox(width: 8),
+          _statusChip(Icons.attach_money_rounded, copy.isEnglish ? 'Cash/Sales' : 'النقد/المبيعات', AppTheme.aiGold),
+          const SizedBox(width: 8),
+          _statusChip(Icons.inventory_2_rounded, copy.isEnglish ? 'Inventory' : 'المخزون', AppTheme.aiBlue),
+          const SizedBox(width: 8),
+          _statusChip(Icons.receipt_long_rounded, copy.isEnglish ? 'Invoices' : 'الفواتير', Colors.orange),
+        ],
+      ),
+    );
+  }
+
+  Widget _statusChip(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.aiCardElevated,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: AppTheme.aiTextPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ],
       ),
@@ -1040,6 +1091,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             title: copy.t('dashboardAddCustomer'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomersScreen())),
             accentColor: AppTheme.aiGreen,
+          ),
+          const SizedBox(width: 14),
+          _quickActionTile(
+            context,
+            icon: Icons.account_balance_wallet_rounded,
+            title: copy.isEnglish ? 'Collection Center' : 'مركز التحصيل',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen())),
+            accentColor: AppTheme.aiRed,
           ),
         ],
       ),
