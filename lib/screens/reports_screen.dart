@@ -341,6 +341,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               _recentSales(data, copy),
               const SizedBox(height: 24),
               _accounting(data, copy),
+              const SizedBox(height: 120),
             ],
           ),
         ),
@@ -350,8 +351,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _surface({required Widget child}) {
     return PremiumCard(
-      padding: const EdgeInsets.all(16),
-      radius: 18,
+      padding: const EdgeInsets.all(12),
+      radius: 16,
       child: child,
     );
   }
@@ -359,9 +360,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _hero(ReportsSnapshot data, AppCopy copy) {
     final isDark = AppTheme.isDark(context);
     return PremiumCard(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       gradient: AppTheme.commandGradient(context),
-      radius: 20,
+      radius: 16,
       border: Border.all(
         color: isDark
             ? AppTheme.accentBlue.withValues(alpha: 0.25)
@@ -437,7 +438,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             copy.t('period'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
@@ -477,7 +478,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               }).toList(),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           DropdownButtonFormField<String?>(
             initialValue: _selectedProductId,
             dropdownColor: AppTheme.surfaceFor(context),

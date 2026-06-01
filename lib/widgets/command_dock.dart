@@ -58,7 +58,7 @@ class CommandDock extends StatelessWidget {
     ];
 
     return Container(
-      height: 84,
+      height: 72,
       decoration: BoxDecoration(
         color: AppTheme.aiNavy.withValues(alpha: 0.97),
         borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),

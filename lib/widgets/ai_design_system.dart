@@ -418,8 +418,8 @@ class AiEmptyState extends StatelessWidget {
     return Container(
       width: double.infinity,
       padding: EdgeInsets.symmetric(
-        horizontal: isSmall ? 14 : 18,
-        vertical: isSmall ? 12 : 16,
+        horizontal: isSmall ? 12 : 18,
+        vertical: isSmall ? 10 : 16,
       ),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(18),
@@ -437,7 +437,7 @@ class AiEmptyState extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: EdgeInsets.all(isSmall ? 14 : 16),
+            padding: EdgeInsets.all(isSmall ? 10 : 16),
             decoration: BoxDecoration(
               color: AppTheme.aiBlue.withValues(alpha: 0.08),
               shape: BoxShape.circle,
@@ -448,7 +448,7 @@ class AiEmptyState extends StatelessWidget {
             ),
             child: Icon(
               icon,
-              size: isSmall ? 28 : 32,
+              size: isSmall ? 24 : 32,
               color: AppTheme.aiBlue.withValues(alpha: 0.65),
             ),
           ),

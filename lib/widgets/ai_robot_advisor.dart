@@ -104,7 +104,7 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
                 ),
                 
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+                  padding: EdgeInsets.symmetric(horizontal: isDesktop ? 32 : 16, vertical: isDesktop ? 48 : 24),
                   child: isDesktop
                       ? Row(
                           children: [
@@ -121,8 +121,8 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
                         )
                       : Column(
                           children: [
-                            _buildAnimatedRobot(size: 200),
-                            const SizedBox(height: 40),
+                            _buildAnimatedRobot(size: 120),
+                            const SizedBox(height: 24),
                             _buildTextContent(isDesktop: false),
                           ],
                         ),
@@ -189,7 +189,7 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
           textAlign: isDesktop ? TextAlign.start : TextAlign.center,
           style: TextStyle(
             color: AppTheme.aiTextPrimary,
-            fontSize: isDesktop ? 36 : 26,
+            fontSize: isDesktop ? 36 : 22,
             fontWeight: FontWeight.w900,
             height: 1.3,
             shadows: [

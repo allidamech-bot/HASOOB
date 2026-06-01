@@ -233,6 +233,7 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                         )
                       else
                         ..._customerRisks.map((c) => _buildCustomerCard(c, copy)),
+                      const SizedBox(height: 120),
                     ],
                   ),
                 ),
@@ -244,9 +245,9 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       crossAxisCount: isDesktop ? 3 : 2,
-      crossAxisSpacing: 12,
-      mainAxisSpacing: 12,
-      childAspectRatio: 1.5,
+      crossAxisSpacing: 8,
+      mainAxisSpacing: 8,
+      childAspectRatio: 1.6,
       children: [
         _buildSummaryCard(copy.t('totalOverdue'), AppFormatters.currency(_totalOverdue), AppTheme.aiRed),
         _buildSummaryCard(copy.t('overdueInvoicesCount'), '$_overdueInvoicesCount', AppTheme.aiGold),
@@ -257,7 +258,7 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
 
   Widget _buildSummaryCard(String title, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppTheme.aiCardElevated,
         borderRadius: BorderRadius.circular(16),
@@ -276,28 +277,23 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
   }
 
   Widget _buildAgingBucketsRow(AppCopy copy) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _buildAgingBucket(copy.t('agingCurrent'), _agingCurrent, AppTheme.aiGreen),
-          const SizedBox(width: 12),
-          _buildAgingBucket(copy.t('aging1To30'), _aging1to30, AppTheme.aiGold),
-          const SizedBox(width: 12),
-          _buildAgingBucket(copy.t('aging31To60'), _aging31to60, Colors.orange),
-          const SizedBox(width: 12),
-          _buildAgingBucket(copy.t('aging61To90'), _aging61to90, AppTheme.aiRed.withValues(alpha: 0.8)),
-          const SizedBox(width: 12),
-          _buildAgingBucket(copy.t('aging90Plus'), _aging90Plus, AppTheme.aiRed),
-        ],
-      ),
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _buildAgingBucket(copy.t('agingCurrent'), _agingCurrent, AppTheme.aiGreen),
+        _buildAgingBucket(copy.t('aging1To30'), _aging1to30, AppTheme.aiGold),
+        _buildAgingBucket(copy.t('aging31To60'), _aging31to60, Colors.orange),
+        _buildAgingBucket(copy.t('aging61To90'), _aging61to90, AppTheme.aiRed.withValues(alpha: 0.8)),
+        _buildAgingBucket(copy.t('aging90Plus'), _aging90Plus, AppTheme.aiRed),
+      ],
     );
   }
 
   Widget _buildAgingBucket(String label, double amount, Color color) {
     return Container(
-      width: 120,
-      padding: const EdgeInsets.all(12),
+      width: 105,
+      padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(12),

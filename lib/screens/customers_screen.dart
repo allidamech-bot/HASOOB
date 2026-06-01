@@ -12,6 +12,7 @@ import 'package:hasoob_app/screens/customer_statement_screen.dart';
 import 'package:hasoob_app/screens/collection_center_screen.dart';
 import 'package:hasoob_app/screens/documents_screen.dart';
 import '../core/app_formatters.dart';
+import '../widgets/ai_design_system.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -245,6 +246,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
                   ),
                 );
               }),
+              const SizedBox(height: 120),
               ],
             );
           },
@@ -371,52 +373,50 @@ class _CustomersScreenState extends State<CustomersScreen> {
   Widget _buildCollectionCenterCard(BuildContext context, AppCopy copy) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 16),
-      child: InkWell(
+      child: AiGlassCard(
+        padding: const EdgeInsets.all(16),
+        borderColor: AppTheme.aiGold.withValues(alpha: 0.4),
+        glowColor: AppTheme.aiGold,
         onTap: () {
           Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen()));
         },
-        borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            gradient: const LinearGradient(
-              colors: [
-                AppTheme.aiNavy,
-                AppTheme.aiDeep,
-              ],
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.aiGold.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.aiGold, size: 24),
             ),
-            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-            border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.3)),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: AppTheme.aiGold.withValues(alpha: 0.15),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.aiGold, size: 22),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      copy.t('collectionCenterTitle'),
-                      style: const TextStyle(
-                        color: AppTheme.aiGold,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 14,
-                      ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    copy.t('collectionCenterTitle'),
+                    style: const TextStyle(
+                      color: AppTheme.aiTextPrimary,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
                     ),
-                  ],
-                ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'تابع الفواتير المتأخرة ومخاطر العملاء ورسائل التذكير',
+                    style: TextStyle(
+                      color: AppTheme.aiTextSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
               ),
-              const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.aiGold, size: 14),
-            ],
-          ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.aiGold, size: 16),
+          ],
         ),
       ),
     );

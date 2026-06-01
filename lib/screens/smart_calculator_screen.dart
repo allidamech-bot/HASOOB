@@ -264,8 +264,8 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
             children: [
               TextField(
                 controller: _controller,
-                minLines: 2,
-                maxLines: 4,
+                minLines: 1,
+                maxLines: 3,
                 style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w500),
                 decoration: InputDecoration(
                   hintText: _text('What would you like to record?', 'ماذا تريد أن تسجل؟'),
@@ -273,7 +273,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
-                  contentPadding: const EdgeInsets.all(20),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
               Padding(
@@ -307,10 +307,10 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
             ],
           ),
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 12),
         Wrap(
-          spacing: 8,
-          runSpacing: 8,
+          spacing: 6,
+          runSpacing: 6,
           children: suggestions.map((s) => ActionChip(
                 label: Text(s),
                 onPressed: () {

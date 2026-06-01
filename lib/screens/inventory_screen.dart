@@ -218,7 +218,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
                       // Search & Filter Panel
                       PremiumCard(
-                        padding: const EdgeInsets.all(16),
+                        padding: const EdgeInsets.all(12),
                         border: Border.all(
                           color: AppTheme.aiGold.withValues(alpha: 0.15),
                           width: 1,
@@ -230,7 +230,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                               hintText: copy.isEnglish ? 'Search inventory...' : 'ابحث باسم الصنف أو الباركود...',
                               onClear: _searchController.clear,
                             ),
-                            const SizedBox(height: 16),
+                            const SizedBox(height: 12),
                             if (isDesktop)
                               Row(
                                 children: [
@@ -400,6 +400,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                             child: _productCard(product, copy),
                           ),
                         ),
+                      const SizedBox(height: 120),
                     ],
                   ),
                 ),

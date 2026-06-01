@@ -539,7 +539,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 24),
           Row(
             children: [
-              AiHealthScore(score: score.toDouble(), size: 64),
+              AiHealthScore(score: score.toDouble(), size: 48),
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
