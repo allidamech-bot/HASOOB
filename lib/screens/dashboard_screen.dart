@@ -466,63 +466,38 @@ class _DashboardScreenState extends State<DashboardScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              if (isDesktop)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(flex: 3, child: _buildHealthScoreCard(data, copy)),
-                    const SizedBox(width: 20),
-                    Expanded(flex: 4, child: _buildDecisionCommander(_decisions ?? [], copy)),
-                  ],
-                )
-              else ...[
-                _buildDecisionCommander(_decisions ?? [], copy),
-                const SizedBox(height: 12),
-                _buildMobileStatusStrip(data, copy),
-                const SizedBox(height: 12),
-                AiRobotAdvisor(
-                  greeting: copy.t('dashboardAiGreeting'),
-                  advisorTitle: copy.t('dashboardAiTitle'),
-                  suggestion: copy.t('dashboardAiSuggestion'),
-                  isCompact: true,
-                ),
-              ],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(flex: 3, child: _buildHealthScoreCard(data, copy)),
+                  const SizedBox(width: 20),
+                  Expanded(flex: 4, child: _buildDecisionCommander(_decisions ?? [], copy)),
+                ],
+              ),
 
               const SizedBox(height: 14),
-              if (isDesktop) _buildKpiGrid(data, copy, isDesktop),
-              if (isDesktop) const SizedBox(height: 16),
+              _buildKpiGrid(data, copy, true),
+              const SizedBox(height: 16),
 
-              if (isDesktop)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _buildCashFlowPulseCard(copy)),
-                    const SizedBox(width: 16),
-                    Expanded(child: _buildDecisionSimulationCard(copy)),
-                  ],
-                )
-              else ...[
-                _buildCashFlowPulseCard(copy),
-                const SizedBox(height: 12),
-                _buildDecisionSimulationCard(copy),
-              ],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildCashFlowPulseCard(copy)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _buildDecisionSimulationCard(copy)),
+                ],
+              ),
 
               const SizedBox(height: 16),
 
-              if (isDesktop)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _buildObligationsCard(copy)),
-                    const SizedBox(width: 16),
-                    Expanded(child: _buildSmartAlerts(copy, lowStockPreview.length)),
-                  ],
-                )
-              else ...[
-                _buildObligationsCard(copy),
-                const SizedBox(height: 12),
-                _buildSmartAlerts(copy, lowStockPreview.length),
-              ],
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildObligationsCard(copy)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _buildSmartAlerts(copy, lowStockPreview.length)),
+                ],
+              ),
 
               const SizedBox(height: 20),
               AppSectionHeader(
@@ -742,9 +717,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           flex: 3,
           child: Column(
             children: [
-              _buildCompactKpiRow(Icons.account_balance_wallet_rounded, AppTheme.aiGold, copy.isEnglish ? 'Sales' : 'المبيعات', AppFormatters.currency(data.monthlySales)),
+              _buildCompactKpiRow(Icons.account_balance_wallet_rounded, AppTheme.aiGold, copy.isEnglish ? 'Sales' : 'المبيعات', AppFormatters.currency(data.totalSales)),
               const SizedBox(height: 8),
-              _buildCompactKpiRow(Icons.inventory_2_rounded, AppTheme.aiBlue, copy.isEnglish ? 'Stock' : 'المخزون', AppFormatters.currency(data.inventoryValue)),
+              _buildCompactKpiRow(Icons.inventory_2_rounded, AppTheme.aiBlue, copy.isEnglish ? 'Stock' : 'المخزون', AppFormatters.currency(data.totalStockValue)),
             ],
           ),
         ),
