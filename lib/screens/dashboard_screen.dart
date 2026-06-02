@@ -214,9 +214,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildMobileHeader(BuildContext context, AppCopy copy) {
     return Container(
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: AppTheme.aiNavy,
-        border: const Border(bottom: BorderSide(color: AppTheme.aiCardBorder, width: 1)),
+        border: Border(bottom: BorderSide(color: AppTheme.aiCardBorder, width: 1)),
       ),
       child: SafeArea(
         bottom: false,
