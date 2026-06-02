@@ -211,6 +211,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final copy = AppCopy.of(context);
 
     return Scaffold(
+      backgroundColor: AppTheme.aiDeep,
       appBar: null,
       body: RefreshIndicator(
         onRefresh: () => _reload(showError: true),

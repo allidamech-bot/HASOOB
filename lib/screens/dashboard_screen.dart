@@ -308,16 +308,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
               child: _buildDecisionCommander(_decisions ?? [], copy),
             ),
             const SizedBox(height: AiMobileConfig.sectionGap),
-            _buildMobileStatusStrip(data, copy),
-            const SizedBox(height: AiMobileConfig.sectionGap),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
-              child: AiRobotAdvisor(
-                greeting: copy.t('dashboardAiGreeting'),
-                advisorTitle: copy.t('dashboardAiTitle'),
-                suggestion: copy.t('dashboardAiSuggestion'),
-                isCompact: true,
-              ),
+              child: _buildMobileFinancialHealthAndKPIs(data, copy),
             ),
             const SizedBox(height: AiMobileConfig.sectionGap),
             AiMobileSectionHeader(title: copy.t('quickActions')),
@@ -709,14 +702,71 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildMobileStatusStrip(ReportsSnapshot data, AppCopy copy) {
-    return AiMobileKpiStrip(
+  Widget _buildMobileFinancialHealthAndKPIs(ReportsSnapshot data, AppCopy copy) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        AiMobileKpiChip(icon: Icons.health_and_safety_rounded, label: copy.isEnglish ? 'Health' : 'الصحة المالية', color: AppTheme.aiGreen),
-        AiMobileKpiChip(icon: Icons.attach_money_rounded, label: copy.isEnglish ? 'Cash/Sales' : 'النقد/المبيعات', color: AppTheme.aiGold),
-        AiMobileKpiChip(icon: Icons.inventory_2_rounded, label: copy.isEnglish ? 'Inventory' : 'المخزون', color: AppTheme.aiBlue),
-        AiMobileKpiChip(icon: Icons.receipt_long_rounded, label: copy.isEnglish ? 'Invoices' : 'الفواتير', color: Colors.orange),
+        Expanded(
+          flex: 2,
+          child: PremiumCard(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.monitor_heart_rounded, color: AppTheme.aiGreen, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      copy.isEnglish ? 'Health' : 'الصحة',
+                      style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'مستقرة',
+                  style: TextStyle(color: AppTheme.aiGreen, fontSize: 16, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'أداء جيد',
+                  style: TextStyle(color: AppTheme.aiTextMuted, fontSize: 10),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 3,
+          child: Column(
+            children: [
+              _buildCompactKpiRow(Icons.account_balance_wallet_rounded, AppTheme.aiGold, copy.isEnglish ? 'Sales' : 'المبيعات', AppFormatters.currency(data.monthlySales)),
+              const SizedBox(height: 8),
+              _buildCompactKpiRow(Icons.inventory_2_rounded, AppTheme.aiBlue, copy.isEnglish ? 'Stock' : 'المخزون', AppFormatters.currency(data.inventoryValue)),
+            ],
+          ),
+        ),
       ],
+    );
+  }
+
+  Widget _buildCompactKpiRow(IconData icon, Color color, String label, String value) {
+    return PremiumCard(
+      padding: const EdgeInsets.all(8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 12),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(label, style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11))),
+          Text(value, style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+        ],
+      ),
     );
   }
 
