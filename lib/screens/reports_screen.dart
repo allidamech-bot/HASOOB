@@ -292,58 +292,109 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
     ];
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      children: [
-        _premiumHeader(context, copy),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+
+    final contentList = [
+      AppSectionHeader(
+        title: copy.t('performanceSummary'),
+        subtitle: _hasFilters
+            ? copy.t('filtersAffectResults')
+            : copy.t('currentSnapshotSummary'),
+        hasAccentLine: true,
+        trailing: _hasFilters
+            ? ActionChip(
+                label: Text(copy.t('clearFilters')),
+                onPressed: () {
+                  setState(() {
+                    _periodFilter = ReportPeriodFilter.all;
+                    _selectedProductId = null;
+                  });
+                  _loadData();
+                },
+              )
+            : null,
+      ),
+      const SizedBox(height: 16),
+      _hero(data, copy),
+      const SizedBox(height: 24),
+      isDesktop ? _metrics(data, copy) : _mobileMetrics(data, copy),
+      const SizedBox(height: 24),
+      _filters(productOptions, copy),
+      const SizedBox(height: 24),
+      _exports(copy),
+      const SizedBox(height: 24),
+      _charts(data, copy),
+      const SizedBox(height: 24),
+      _smartInsightCard(data, copy),
+      const SizedBox(height: 24),
+      _bestSelling(data, copy),
+      const SizedBox(height: 24),
+      _lowStock(data, copy),
+      const SizedBox(height: 24),
+      _recentSales(data, copy),
+      const SizedBox(height: 24),
+      _accounting(data, copy),
+      if (isDesktop) const SizedBox(height: 120),
+    ];
+
+    return isDesktop
+        ? ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
             children: [
-              AppSectionHeader(
-                title: copy.t('performanceSummary'),
-                subtitle: _hasFilters
-                    ? copy.t('filtersAffectResults')
-                    : copy.t('currentSnapshotSummary'),
-                hasAccentLine: true,
-                trailing: _hasFilters
-                    ? ActionChip(
-                        label: Text(copy.t('clearFilters')),
-                        onPressed: () {
-                          setState(() {
-                            _periodFilter = ReportPeriodFilter.all;
-                            _selectedProductId = null;
-                          });
-                          _loadData();
-                        },
-                      )
-                    : null,
+              _premiumHeader(context, copy),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: contentList,
+                ),
               ),
-              const SizedBox(height: 16),
-              _hero(data, copy),
-              const SizedBox(height: 24),
-              _metrics(data, copy),
-              const SizedBox(height: 24),
-              _filters(productOptions, copy),
-              const SizedBox(height: 24),
-              _exports(copy),
-              const SizedBox(height: 24),
-              _charts(data, copy),
-              const SizedBox(height: 24),
-              _smartInsightCard(data, copy),
-              const SizedBox(height: 24),
-              _bestSelling(data, copy),
-              const SizedBox(height: 24),
-              _lowStock(data, copy),
-              const SizedBox(height: 24),
-              _recentSales(data, copy),
-              const SizedBox(height: 24),
-              _accounting(data, copy),
-              const SizedBox(height: 120),
             ],
-          ),
+          )
+        : AiMobilePageShell(
+            child: Column(
+              children: [
+                _premiumHeader(context, copy),
+                const SizedBox(height: AiMobileConfig.sectionGap),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: contentList,
+                  ),
+                ),
+              ],
+            ),
+          );
+  }
+
+  Widget _mobileMetrics(ReportsSnapshot data, AppCopy copy) {
+    return Column(
+      children: [
+        AiMobileKpiStrip(
+          children: [
+            AiMobileKpiChip(
+              label: '${copy.t('totalProducts')}: ${AppFormatters.number(data.totalProducts)}',
+              icon: Icons.inventory_2_rounded,
+              color: AppTheme.accentBlue,
+            ),
+            AiMobileKpiChip(
+              label: '${copy.t('quantity')}: ${AppFormatters.number(data.totalQuantity)}',
+              icon: Icons.layers_rounded,
+              color: AppTheme.accentCyan,
+            ),
+          ],
+        ),
+        const SizedBox(height: AiMobileConfig.sectionGap),
+        AiMobileKpiStrip(
+          children: [
+            AiMobileKpiChip(
+              label: '${copy.t('realizedProfit')}: ${AppFormatters.currency(data.realizedProfit)}',
+              icon: Icons.payments_rounded,
+              color: data.realizedProfit >= 0 ? AppTheme.success : AppTheme.danger,
+            ),
+          ],
         ),
       ],
     );

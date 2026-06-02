@@ -58,7 +58,7 @@ class CommandDock extends StatelessWidget {
     ];
 
     return Container(
-      height: 72,
+      height: 60,
       decoration: BoxDecoration(
         color: AppTheme.aiNavy.withValues(alpha: 0.97),
         borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
@@ -97,8 +97,8 @@ class CommandDock extends StatelessWidget {
   Widget _buildCenterButton(BuildContext context, _DockItemData item) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
-      height: 52,
-      width: 52,
+      height: 46,
+      width: 46,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: AppTheme.aiBlueGradient,
@@ -146,7 +146,7 @@ class CommandDock extends StatelessWidget {
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
                   padding: const EdgeInsets.symmetric(
-                      horizontal: 10, vertical: 6),
+                      horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppTheme.aiBlue.withValues(alpha: 0.12)
@@ -165,7 +165,7 @@ class CommandDock extends StatelessWidget {
                   child: Icon(
                     isSelected ? item.selectedIcon : item.icon,
                     color: isSelected ? activeColor : inactiveColor,
-                    size: 22,
+                    size: 20,
                   ),
                 ),
                 const SizedBox(height: 4),

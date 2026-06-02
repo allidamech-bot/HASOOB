@@ -161,7 +161,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isWide = MediaQuery.sizeOf(context).width >= 1000;
+    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
     
     return Scaffold(
       extendBody: true,
@@ -181,41 +181,57 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
             ),
           ),
           
-          CustomScrollView(
-            slivers: [
-              SliverToBoxAdapter(
-                child: AiPageHeader(
-                  title: _isEnglish ? 'Smart Financial Advisor' : 'المستشار المالي الذكي',
-                  subtitle: _isEnglish
-                      ? 'AI-powered local financial assistant'
-                      : 'مركز التحكم الذكي في أعمالك التجارية.',
-                ),
+          if (!isDesktop)
+            AiMobilePageShell(
+              child: Column(
+                children: [
+                  AiPageHeader(
+                    title: _isEnglish ? 'Smart Financial Advisor' : 'المستشار المالي الذكي',
+                    subtitle: _isEnglish
+                        ? 'AI-powered local financial assistant'
+                        : 'مركز التحكم الذكي في أعمالك التجارية.',
+                  ),
+                  const SizedBox(height: AiMobileConfig.sectionGap),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+                    child: _mainColumn(),
+                  ),
+                  const SizedBox(height: AiMobileConfig.sectionGap),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+                    child: _historyColumn(),
+                  ),
+                ],
               ),
-              SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 140),
-                sliver: SliverToBoxAdapter(
-                  child: isWide
-                      ? Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(flex: 2, child: _mainColumn()),
-                            const SizedBox(width: 32),
-                            Expanded(flex: 1, child: _historyColumn()),
-                          ],
-                        )
-                      : Column(
-                          children: [
-                            _mainColumn(),
-                            const SizedBox(height: 32),
-                            _historyColumn(),
-                          ],
-                        ),
+            )
+          else
+            CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: AiPageHeader(
+                    title: _isEnglish ? 'Smart Financial Advisor' : 'المستشار المالي الذكي',
+                    subtitle: _isEnglish
+                        ? 'AI-powered local financial assistant'
+                        : 'مركز التحكم الذكي في أعمالك التجارية.',
+                  ),
                 ),
-              ),
-            ],
-          ),
+                SliverPadding(
+                  padding: const EdgeInsets.fromLTRB(24, 0, 24, 140),
+                  sliver: SliverToBoxAdapter(
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Expanded(flex: 2, child: _mainColumn()),
+                        const SizedBox(width: 32),
+                        Expanded(flex: 1, child: _historyColumn()),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           
-          if (_preview != null) _floatingActionBar(),
+          if (_preview != null) _floatingActionBar(isDesktop: isDesktop),
         ],
       ),
     );
@@ -477,11 +493,11 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
     );
   }
 
-  Widget _floatingActionBar() {
+  Widget _floatingActionBar({required bool isDesktop}) {
     return Positioned(
-      left: 24,
-      right: 24,
-      bottom: 24,
+      left: isDesktop ? 24 : AiMobileConfig.horizontalPadding,
+      right: isDesktop ? 24 : AiMobileConfig.horizontalPadding,
+      bottom: isDesktop ? 24 : AiMobileConfig.bottomClearance + 24,
       child: SafeArea(
         child: Container(
           decoration: BoxDecoration(

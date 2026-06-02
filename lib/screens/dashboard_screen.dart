@@ -212,11 +212,140 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return _buildContent(context, copy);
   }
 
+  Widget _buildMobileHeader(BuildContext context, AppCopy copy) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppTheme.aiNavy,
+        border: const Border(bottom: BorderSide(color: AppTheme.aiCardBorder, width: 1)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(AiMobileConfig.horizontalPadding, 12, AiMobileConfig.horizontalPadding, 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.psychology_rounded, color: AppTheme.aiGold, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    copy.isEnglish ? 'Hasoob' : 'حاسوب',
+                    style: AiMobileConfig.pageTitle.copyWith(color: AppTheme.aiGold),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SyncStatusIndicator(),
+                  const SizedBox(width: 12),
+                  InkWell(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                    child: const Icon(Icons.settings_outlined, color: AppTheme.aiTextSecondary, size: 24),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileQuickActions(BuildContext context, AppCopy copy) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+      child: Row(
+        children: [
+          AiMobileActionCard(
+            title: copy.t('dashboardAddProduct'),
+            icon: Icons.add_box_rounded,
+            color: AppTheme.aiBlue,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
+          ),
+          const SizedBox(width: 12),
+          AiMobileActionCard(
+            title: copy.t('dashboardCreateInvoice'),
+            icon: Icons.receipt_long_rounded,
+            color: AppTheme.aiGold,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen())),
+          ),
+          const SizedBox(width: 12),
+          AiMobileActionCard(
+            title: copy.t('dashboardAddCustomer'),
+            icon: Icons.person_add_alt_1_rounded,
+            color: AppTheme.aiGreen,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomersScreen())),
+          ),
+          const SizedBox(width: 12),
+          AiMobileActionCard(
+            title: copy.isEnglish ? 'Collection Center' : 'مركز التحصيل',
+            icon: Icons.account_balance_wallet_rounded,
+            color: AppTheme.aiRed,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen())),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildContent(BuildContext context, AppCopy copy) {
     final data = _cachedData ?? ReportsSnapshot.empty();
     final lowStockPreview = data.lowStockItems.take(3).toList();
     final recentSalesPreview = data.recentSales.take(3).toList();
     final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+
+    if (!isDesktop) {
+      return AiMobilePageShell(
+        child: Column(
+          children: [
+            _buildMobileHeader(context, copy),
+            const SizedBox(height: AiMobileConfig.sectionGap),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+              child: _buildDecisionCommander(_decisions ?? [], copy),
+            ),
+            const SizedBox(height: AiMobileConfig.sectionGap),
+            _buildMobileStatusStrip(data, copy),
+            const SizedBox(height: AiMobileConfig.sectionGap),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+              child: AiRobotAdvisor(
+                greeting: copy.t('dashboardAiGreeting'),
+                advisorTitle: copy.t('dashboardAiTitle'),
+                suggestion: copy.t('dashboardAiSuggestion'),
+                isCompact: true,
+              ),
+            ),
+            const SizedBox(height: AiMobileConfig.sectionGap),
+            AiMobileSectionHeader(title: copy.t('quickActions')),
+            const SizedBox(height: 12),
+            _buildMobileQuickActions(context, copy),
+            const SizedBox(height: AiMobileConfig.sectionGap),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+              child: Column(
+                children: [
+                  _buildCashFlowPulseCard(copy),
+                  const SizedBox(height: AiMobileConfig.sectionGap),
+                  _buildDecisionSimulationCard(copy),
+                  const SizedBox(height: AiMobileConfig.sectionGap),
+                  _buildObligationsCard(copy),
+                  const SizedBox(height: AiMobileConfig.sectionGap),
+                  _buildSmartAlerts(copy, lowStockPreview.length),
+                  const SizedBox(height: AiMobileConfig.sectionGap),
+                  _stockSection(context, copy, data, lowStockPreview),
+                  const SizedBox(height: AiMobileConfig.sectionGap),
+                  _salesSection(context, copy, data, recentSalesPreview),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return CustomScrollView(
       slivers: [
@@ -581,45 +710,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _buildMobileStatusStrip(ReportsSnapshot data, AppCopy copy) {
-    return SingleChildScrollView(
-      scrollDirection: Axis.horizontal,
-      child: Row(
-        children: [
-          _statusChip(Icons.health_and_safety_rounded, copy.isEnglish ? 'Health' : 'الصحة المالية', AppTheme.aiGreen),
-          const SizedBox(width: 8),
-          _statusChip(Icons.attach_money_rounded, copy.isEnglish ? 'Cash/Sales' : 'النقد/المبيعات', AppTheme.aiGold),
-          const SizedBox(width: 8),
-          _statusChip(Icons.inventory_2_rounded, copy.isEnglish ? 'Inventory' : 'المخزون', AppTheme.aiBlue),
-          const SizedBox(width: 8),
-          _statusChip(Icons.receipt_long_rounded, copy.isEnglish ? 'Invoices' : 'الفواتير', Colors.orange),
-        ],
-      ),
-    );
-  }
-
-  Widget _statusChip(IconData icon, String label, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: AppTheme.aiCardElevated,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: color.withValues(alpha: 0.3)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, color: color, size: 14),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              color: AppTheme.aiTextPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-        ],
-      ),
+    return AiMobileKpiStrip(
+      children: [
+        AiMobileKpiChip(icon: Icons.health_and_safety_rounded, label: copy.isEnglish ? 'Health' : 'الصحة المالية', color: AppTheme.aiGreen),
+        AiMobileKpiChip(icon: Icons.attach_money_rounded, label: copy.isEnglish ? 'Cash/Sales' : 'النقد/المبيعات', color: AppTheme.aiGold),
+        AiMobileKpiChip(icon: Icons.inventory_2_rounded, label: copy.isEnglish ? 'Inventory' : 'المخزون', color: AppTheme.aiBlue),
+        AiMobileKpiChip(icon: Icons.receipt_long_rounded, label: copy.isEnglish ? 'Invoices' : 'الفواتير', color: Colors.orange),
+      ],
     );
   }
 

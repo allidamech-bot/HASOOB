@@ -957,3 +957,171 @@ class AiIconContainer extends StatelessWidget {
     );
   }
 }
+
+// ─────────────────────────────────────────────
+// MOBILE DESIGN SYSTEM
+// ─────────────────────────────────────────────
+class AiMobileConfig {
+  static const double horizontalPadding = 16.0;
+  static const double sectionGap = 16.0;
+  static const double cardPadding = 16.0;
+  static const double cardRadius = 20.0;
+  static const double bottomClearance = 100.0;
+
+  static const TextStyle pageTitle = TextStyle(color: AppTheme.aiTextPrimary, fontSize: 24, fontWeight: FontWeight.w800);
+  static const TextStyle sectionTitle = TextStyle(color: AppTheme.aiTextPrimary, fontSize: 20, fontWeight: FontWeight.w700);
+  static const TextStyle cardTitle = TextStyle(color: AppTheme.aiTextPrimary, fontSize: 16, fontWeight: FontWeight.w700);
+  static const TextStyle body = TextStyle(color: AppTheme.aiTextSecondary, fontSize: 13, fontWeight: FontWeight.w500);
+  static const TextStyle caption = TextStyle(color: AppTheme.aiTextMuted, fontSize: 12, fontWeight: FontWeight.w500);
+}
+
+class AiMobilePageShell extends StatelessWidget {
+  final Widget child;
+  const AiMobilePageShell({super.key, required this.child});
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      physics: const BouncingScrollPhysics(),
+      child: Padding(
+        padding: const EdgeInsets.only(bottom: AiMobileConfig.bottomClearance),
+        child: child,
+      ),
+    );
+  }
+}
+
+class AiMobileSectionHeader extends StatelessWidget {
+  final String title;
+  final Widget? trailing;
+  const AiMobileSectionHeader({super.key, required this.title, this.trailing});
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(title, style: AiMobileConfig.sectionTitle),
+          if (trailing != null) trailing!,
+        ],
+      ),
+    );
+  }
+}
+
+class AiMobileKpiStrip extends StatelessWidget {
+  final List<Widget> children;
+  const AiMobileKpiStrip({super.key, required this.children});
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      physics: const BouncingScrollPhysics(),
+      padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+      child: Row(children: children),
+    );
+  }
+}
+
+class AiMobileKpiChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final Color color;
+  const AiMobileKpiChip({super.key, required this.label, required this.icon, required this.color});
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(right: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: AppTheme.aiCardElevated,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 16),
+          const SizedBox(width: 8),
+          Text(label, style: AiMobileConfig.body.copyWith(fontWeight: FontWeight.w700, color: AppTheme.aiTextPrimary)),
+        ],
+      ),
+    );
+  }
+}
+
+class AiMobileActionCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color color;
+  final VoidCallback onTap;
+  const AiMobileActionCard({super.key, required this.title, required this.icon, required this.color, required this.onTap});
+  @override
+  Widget build(BuildContext context) {
+    return AiGlassCard(
+      borderRadius: AiMobileConfig.cardRadius,
+      padding: const EdgeInsets.all(AiMobileConfig.cardPadding),
+      borderColor: color.withValues(alpha: 0.3),
+      onTap: onTap,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: color, size: 20),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(title, style: AiMobileConfig.cardTitle.copyWith(fontSize: 14)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AiMobileEmptyState extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final String actionLabel;
+  final VoidCallback onAction;
+  const AiMobileEmptyState({super.key, required this.title, required this.subtitle, required this.icon, required this.actionLabel, required this.onAction});
+  @override
+  Widget build(BuildContext context) {
+    return AiGlassCard(
+      borderRadius: AiMobileConfig.cardRadius,
+      padding: const EdgeInsets.all(AiMobileConfig.cardPadding),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppTheme.aiGold, size: 48),
+          const SizedBox(height: 16),
+          Text(title, style: AiMobileConfig.cardTitle, textAlign: TextAlign.center),
+          const SizedBox(height: 8),
+          Text(subtitle, style: AiMobileConfig.body, textAlign: TextAlign.center),
+          const SizedBox(height: 16),
+          FilledButton.icon(
+            onPressed: onAction,
+            icon: const Icon(Icons.add_rounded, size: 16),
+            label: Text(actionLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
+            style: FilledButton.styleFrom(backgroundColor: AppTheme.aiGold, foregroundColor: Colors.black),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class AiMobileFilterPanel extends StatelessWidget {
+  final Widget child;
+  const AiMobileFilterPanel({super.key, required this.child});
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+      child: AiGlassCard(
+        borderRadius: AiMobileConfig.cardRadius,
+        padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.cardPadding, vertical: 12),
+        child: child,
+      ),
+    );
+  }
+}

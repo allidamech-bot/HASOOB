@@ -8,6 +8,7 @@ import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
 import '../data/repositories/invoice_repository.dart';
 import '../widgets/premium/premium_card.dart';
+import '../widgets/ai_design_system.dart';
 import 'customer_statement_screen.dart';
 
 class CollectionCenterScreen extends StatefulWidget {
@@ -185,60 +186,81 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                   onRefresh: _loadData,
                   color: AppTheme.aiGold,
                   backgroundColor: AppTheme.aiCard,
-                  child: ListView(
-                    padding: const EdgeInsets.all(24),
-                    children: [
-                      _buildExecutiveSummary(copy, isDesktop),
-                      const SizedBox(height: 32),
-                      Text(
-                        copy.t('agingBuckets'),
-                        style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 18, fontWeight: FontWeight.w900),
+                  child: isDesktop 
+                    ? ListView(
+                        padding: const EdgeInsets.all(24),
+                        children: _buildContentList(copy, isDesktop, context),
+                      )
+                    : AiMobilePageShell(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const SizedBox(height: AiMobileConfig.sectionGap),
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: _buildContentList(copy, isDesktop, context),
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      const SizedBox(height: 16),
-                      _buildAgingBucketsRow(copy),
-                      const SizedBox(height: 32),
-                      Text(
-                        copy.t('customerRisk'),
-                        style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 18, fontWeight: FontWeight.w900),
-                      ),
-                      const SizedBox(height: 16),
-                      if (_customerRisks.isEmpty)
-                        PremiumCard(
-                          padding: const EdgeInsets.all(24),
-                          border: Border.all(color: AppTheme.aiCardBorder),
-                          child: Column(
-                            children: [
-                              const Icon(Icons.check_circle_outline_rounded, color: AppTheme.aiGreen, size: 64),
-                              const SizedBox(height: 16),
-                              Text(
-                                copy.t('noOverdueInvoices'),
-                                style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 16, fontWeight: FontWeight.w900),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                'السيولة النقدية ممتازة، لا توجد أي متأخرات حالياً.',
-                                style: TextStyle(color: AppTheme.aiTextSecondary, fontSize: 13),
-                              ),
-                              const SizedBox(height: 24),
-                              FilledButton.icon(
-                                onPressed: () {
-                                  Navigator.pop(context);
-                                },
-                                icon: const Icon(Icons.arrow_back_rounded),
-                                label: const Text('العودة للعملاء'),
-                                style: FilledButton.styleFrom(backgroundColor: AppTheme.aiNavy),
-                              ),
-                            ],
-                          ),
-                        )
-                      else
-                        ..._customerRisks.map((c) => _buildCustomerCard(c, copy)),
-                      const SizedBox(height: 120),
-                    ],
-                  ),
                 ),
     );
   }
+
+  List<Widget> _buildContentList(AppCopy copy, bool isDesktop, BuildContext context) {
+    return [
+      _buildExecutiveSummary(copy, isDesktop),
+      const SizedBox(height: 32),
+      Text(
+        copy.t('agingBuckets'),
+        style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 18, fontWeight: FontWeight.w900),
+      ),
+      const SizedBox(height: 16),
+      _buildAgingBucketsRow(copy),
+      const SizedBox(height: 32),
+      Text(
+        copy.t('customerRisk'),
+        style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 18, fontWeight: FontWeight.w900),
+      ),
+      const SizedBox(height: 16),
+      if (_customerRisks.isEmpty)
+        PremiumCard(
+          padding: const EdgeInsets.all(24),
+          border: Border.all(color: AppTheme.aiCardBorder),
+          child: Column(
+            children: [
+              const Icon(Icons.check_circle_outline_rounded, color: AppTheme.aiGreen, size: 64),
+              const SizedBox(height: 16),
+              Text(
+                copy.t('noOverdueInvoices'),
+                style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 16, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'السيولة النقدية ممتازة، لا توجد أي متأخرات حالياً.',
+                style: TextStyle(color: AppTheme.aiTextSecondary, fontSize: 13),
+              ),
+              const SizedBox(height: 24),
+              FilledButton.icon(
+                onPressed: () {
+                  Navigator.pop(context);
+                },
+                icon: const Icon(Icons.arrow_back_rounded),
+                label: const Text('العودة للعملاء'),
+                style: FilledButton.styleFrom(backgroundColor: AppTheme.aiNavy),
+              ),
+            ],
+          ),
+        )
+      else
+        ..._customerRisks.map((c) => _buildCustomerCard(c, copy)),
+      if (isDesktop) const SizedBox(height: 120),
+    ];
+  }
+
 
   Widget _buildExecutiveSummary(AppCopy copy, bool isDesktop) {
     return GridView.count(
