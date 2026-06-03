@@ -1,10 +1,15 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasoob_app/widgets/premium_splash_screen.dart';
 
 void main() {
+  // NOTE: Golden screenshot tests are isolated under the 'golden' tag and run in a
+  // separate optional CI job (visual-golden-tests) due to platform rendering variances
+  // (such as default fonts on headless Ubuntu runner vs Windows host).
+  // Visual screenshots from the Mobile Visual Gate remain the primary acceptance evidence,
+  // and full golden CI stabilization remains a follow-up task.
   testWidgets('Generate Screenshots', (WidgetTester tester) async {
+
     // We will render the widget and capture it using the golden file mechanism
     
     // 1. Desktop Size
@@ -44,5 +49,5 @@ void main() {
     
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
-  }, skip: Platform.environment.containsKey('GITHUB_ACTIONS'));
+  }, tags: 'golden');
 }

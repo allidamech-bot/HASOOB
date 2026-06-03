@@ -7,3 +7,6 @@
 
 - [ ] (After verification) run Flutter web and ensure dock is visible and last cards/buttons are not obscured.
 
+## CI & Testing
+- [ ] Stabilize golden screenshot tests in CI (Ubuntu Runner) environment (currently run as an optional separate job).
+- [ ] Reference Mobile Visual Gate screenshots as the current acceptance evidence.
