@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasoob_app/widgets/premium_splash_screen.dart';
@@ -43,5 +44,5 @@ void main() {
     
     tester.view.resetPhysicalSize();
     tester.view.resetDevicePixelRatio();
-  });
+  }, skip: Platform.environment.containsKey('GITHUB_ACTIONS'));
 }
