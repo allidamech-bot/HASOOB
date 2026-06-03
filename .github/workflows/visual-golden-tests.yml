@@ -1,0 +1,23 @@
+name: Visual Golden Tests
+
+on:
+  workflow_dispatch:
+
+jobs:
+  visual-golden-tests:
+    name: Run Visual Golden Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+
+      - name: Pub get
+        run: flutter pub get
+
+      - name: Run Golden Tests
+        run: flutter test --tags=golden
