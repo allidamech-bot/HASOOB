@@ -205,6 +205,336 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hasoob App\nArabic business management for inventory, sales, and documents'**
   String get aboutAppSubtitle;
+
+  /// No description provided for @dashboardCockpit.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial Intelligence Cockpit'**
+  String get dashboardCockpit;
+
+  /// No description provided for @dashboardSecureSession.
+  ///
+  /// In en, this message translates to:
+  /// **'Secure AI Session Active'**
+  String get dashboardSecureSession;
+
+  /// No description provided for @dashboardAiGreeting.
+  ///
+  /// In en, this message translates to:
+  /// **'What is the best financial decision today?'**
+  String get dashboardAiGreeting;
+
+  /// No description provided for @dashboardAiTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'FINANCIAL ADVISOR ACTIVE'**
+  String get dashboardAiTitle;
+
+  /// No description provided for @dashboardAiSuggestion.
+  ///
+  /// In en, this message translates to:
+  /// **'Analyzing cash flow, outstanding invoices, obligations, and stock levels to calculate optimal steps.'**
+  String get dashboardAiSuggestion;
+
+  /// No description provided for @dashboardHealthScore.
+  ///
+  /// In en, this message translates to:
+  /// **'Financial Health Score'**
+  String get dashboardHealthScore;
+
+  /// No description provided for @dashboardHealthExcellent.
+  ///
+  /// In en, this message translates to:
+  /// **'Excellent'**
+  String get dashboardHealthExcellent;
+
+  /// No description provided for @dashboardHealthDesc1.
+  ///
+  /// In en, this message translates to:
+  /// **'SaaS operating efficiency is optimal.'**
+  String get dashboardHealthDesc1;
+
+  /// No description provided for @dashboardHealthDesc2.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash flow cover is 85% higher than last month. Current reserves are safe.'**
+  String get dashboardHealthDesc2;
+
+  /// No description provided for @dashboardRecommendationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'What should I do today?'**
+  String get dashboardRecommendationsTitle;
+
+  /// No description provided for @dashboardRec1.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow up invoice #1024 to secure cash reserves before next week.'**
+  String get dashboardRec1;
+
+  /// No description provided for @dashboardRec2.
+  ///
+  /// In en, this message translates to:
+  /// **'Reorder top-selling detergent carton (stock count is below 4).'**
+  String get dashboardRec2;
+
+  /// No description provided for @dashboardCashFlowPulse.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash Flow Pulse'**
+  String get dashboardCashFlowPulse;
+
+  /// No description provided for @dashboardCashInflow.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash Inflow'**
+  String get dashboardCashInflow;
+
+  /// No description provided for @dashboardCashOutflow.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash Outflow'**
+  String get dashboardCashOutflow;
+
+  /// No description provided for @dashboardAiSimulation.
+  ///
+  /// In en, this message translates to:
+  /// **'AI Decision Simulation'**
+  String get dashboardAiSimulation;
+
+  /// No description provided for @dashboardSimulationReady.
+  ///
+  /// In en, this message translates to:
+  /// **'Ready'**
+  String get dashboardSimulationReady;
+
+  /// No description provided for @dashboardSimulationScenario.
+  ///
+  /// In en, this message translates to:
+  /// **'Simulation Scenario: Purchase inventory worth 5,000 SAR.'**
+  String get dashboardSimulationScenario;
+
+  /// No description provided for @dashboardSimulationResult.
+  ///
+  /// In en, this message translates to:
+  /// **'Result: Liquid cash decreases by 12%. Estimated net profit margin increases by 18% over 30 days.'**
+  String get dashboardSimulationResult;
+
+  /// No description provided for @dashboardObligations.
+  ///
+  /// In en, this message translates to:
+  /// **'Upcoming Obligations'**
+  String get dashboardObligations;
+
+  /// No description provided for @dashboardObligation1.
+  ///
+  /// In en, this message translates to:
+  /// **'Suppliers Invoices Due'**
+  String get dashboardObligation1;
+
+  /// No description provided for @dashboardTomorrow.
+  ///
+  /// In en, this message translates to:
+  /// **'Tomorrow'**
+  String get dashboardTomorrow;
+
+  /// No description provided for @dashboardObligation2.
+  ///
+  /// In en, this message translates to:
+  /// **'Employee Salaries'**
+  String get dashboardObligation2;
+
+  /// No description provided for @dashboardIn3Days.
+  ///
+  /// In en, this message translates to:
+  /// **'In 3 Days'**
+  String get dashboardIn3Days;
+
+  /// No description provided for @dashboardAlertLowStock.
+  ///
+  /// In en, this message translates to:
+  /// **'Risk: Low stock items'**
+  String get dashboardAlertLowStock;
+
+  /// No description provided for @dashboardAlertLocalMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Local Mode: Offline database active'**
+  String get dashboardAlertLocalMode;
+
+  /// No description provided for @dashboardAddProduct.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Product'**
+  String get dashboardAddProduct;
+
+  /// No description provided for @dashboardCreateInvoice.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Invoice'**
+  String get dashboardCreateInvoice;
+
+  /// No description provided for @dashboardAddCustomer.
+  ///
+  /// In en, this message translates to:
+  /// **'Add Customer'**
+  String get dashboardAddCustomer;
+
+  /// No description provided for @dashboardStockThresholds.
+  ///
+  /// In en, this message translates to:
+  /// **'Critical Stock Thresholds'**
+  String get dashboardStockThresholds;
+
+  /// No description provided for @dashboardNoLowStock.
+  ///
+  /// In en, this message translates to:
+  /// **'No Low Stock Items'**
+  String get dashboardNoLowStock;
+
+  /// No description provided for @dashboardRecentOperations.
+  ///
+  /// In en, this message translates to:
+  /// **'Realtime Customer Operations'**
+  String get dashboardRecentOperations;
+
+  /// No description provided for @dashboardNoSalesYet.
+  ///
+  /// In en, this message translates to:
+  /// **'No Sales Yet'**
+  String get dashboardNoSalesYet;
+
+  /// No description provided for @collectionCenterTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Collection & Overdue Center'**
+  String get collectionCenterTitle;
+
+  /// No description provided for @overdueSummary.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue Summary'**
+  String get overdueSummary;
+
+  /// No description provided for @totalOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Total Overdue'**
+  String get totalOverdue;
+
+  /// No description provided for @overdueInvoicesCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue Invoices'**
+  String get overdueInvoicesCount;
+
+  /// No description provided for @customersWithOverdue.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue Customers'**
+  String get customersWithOverdue;
+
+  /// No description provided for @agingBuckets.
+  ///
+  /// In en, this message translates to:
+  /// **'Aging Buckets'**
+  String get agingBuckets;
+
+  /// No description provided for @agingCurrent.
+  ///
+  /// In en, this message translates to:
+  /// **'Current'**
+  String get agingCurrent;
+
+  /// No description provided for @aging1To30.
+  ///
+  /// In en, this message translates to:
+  /// **'1-30 Days'**
+  String get aging1To30;
+
+  /// No description provided for @aging31To60.
+  ///
+  /// In en, this message translates to:
+  /// **'31-60 Days'**
+  String get aging31To60;
+
+  /// No description provided for @aging61To90.
+  ///
+  /// In en, this message translates to:
+  /// **'61-90 Days'**
+  String get aging61To90;
+
+  /// No description provided for @aging90Plus.
+  ///
+  /// In en, this message translates to:
+  /// **'90+ Days'**
+  String get aging90Plus;
+
+  /// No description provided for @customerRisk.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer Risk'**
+  String get customerRisk;
+
+  /// No description provided for @riskLow.
+  ///
+  /// In en, this message translates to:
+  /// **'Low'**
+  String get riskLow;
+
+  /// No description provided for @riskMedium.
+  ///
+  /// In en, this message translates to:
+  /// **'Medium'**
+  String get riskMedium;
+
+  /// No description provided for @riskHigh.
+  ///
+  /// In en, this message translates to:
+  /// **'High'**
+  String get riskHigh;
+
+  /// No description provided for @riskCritical.
+  ///
+  /// In en, this message translates to:
+  /// **'Critical'**
+  String get riskCritical;
+
+  /// No description provided for @copyWhatsApp.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy WhatsApp Reminder'**
+  String get copyWhatsApp;
+
+  /// No description provided for @noOverdueInvoices.
+  ///
+  /// In en, this message translates to:
+  /// **'There are no overdue invoices currently.'**
+  String get noOverdueInvoices;
+
+  /// No description provided for @lastInvoiceDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Last Invoice Date'**
+  String get lastInvoiceDate;
+
+  /// No description provided for @unpaidBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Unpaid Balance'**
+  String get unpaidBalance;
+
+  /// No description provided for @overdueAmount.
+  ///
+  /// In en, this message translates to:
+  /// **'Overdue Amount'**
+  String get overdueAmount;
+
+  /// No description provided for @collectionStart.
+  ///
+  /// In en, this message translates to:
+  /// **'Start Collection'**
+  String get collectionStart;
 }
 
 class _AppLocalizationsDelegate

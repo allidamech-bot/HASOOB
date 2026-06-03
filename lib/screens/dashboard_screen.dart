@@ -22,7 +22,10 @@ import 'package:hasoob_app/screens/add_product_screen.dart';
 import 'package:hasoob_app/screens/business_profile_screen.dart';
 import 'package:hasoob_app/screens/customers_screen.dart';
 import 'package:hasoob_app/screens/documents_screen.dart';
+import 'package:hasoob_app/screens/collection_center_screen.dart';
 import 'package:hasoob_app/screens/settings_screen.dart';
+import 'package:hasoob_app/screens/_dashboard_dock_spacer.dart';
+import 'package:hasoob_app/core/business/daily_decision_engine.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -34,6 +37,7 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   final ReportService _reportService = const ReportService();
   ReportsSnapshot? _cachedData;
+  List<BusinessDecision>? _decisions;
   bool _isRestoring = false;
   bool _isLoading = true;
   String? _error;
@@ -61,9 +65,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .timeout(const Duration(seconds: 10)),
       ]);
 
+      final snapshot = results[0];
+      final decisions = await DailyDecisionEngine.instance.generateDecisions(businessId, snapshot);
+
       if (mounted) {
         setState(() {
-          _cachedData = results[0];
+          _cachedData = snapshot;
+          _decisions = decisions;
           _isLoading = false;
           PerfLogger.logDataLoaded('Dashboard');
         });
@@ -184,7 +192,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       body: RefreshIndicator(
         onRefresh: _refresh,
-        displacement: 100,
+        displacement: 40,
         backgroundColor: AppTheme.aiCard,
         color: AppTheme.aiGold,
         child: _buildBody(context, copy),
@@ -204,11 +212,133 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return _buildContent(context, copy);
   }
 
+  Widget _buildMobileHeader(BuildContext context, AppCopy copy) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTheme.aiNavy,
+        border: Border(bottom: BorderSide(color: AppTheme.aiCardBorder, width: 1)),
+      ),
+      child: SafeArea(
+        bottom: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(AiMobileConfig.horizontalPadding, 12, AiMobileConfig.horizontalPadding, 12),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.psychology_rounded, color: AppTheme.aiGold, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    copy.isEnglish ? 'Hasoob' : 'حاسوب',
+                    style: AiMobileConfig.pageTitle.copyWith(color: AppTheme.aiGold),
+                  ),
+                ],
+              ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const SyncStatusIndicator(),
+                  const SizedBox(width: 12),
+                  InkWell(
+                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
+                    child: const Icon(Icons.settings_outlined, color: AppTheme.aiTextSecondary, size: 24),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMobileQuickActions(BuildContext context, AppCopy copy) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+      child: Row(
+        children: [
+          AiMobileActionCard(
+            title: copy.t('dashboardAddProduct'),
+            icon: Icons.add_box_rounded,
+            color: AppTheme.aiBlue,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
+          ),
+          const SizedBox(width: 12),
+          AiMobileActionCard(
+            title: copy.t('dashboardCreateInvoice'),
+            icon: Icons.receipt_long_rounded,
+            color: AppTheme.aiGold,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen())),
+          ),
+          const SizedBox(width: 12),
+          AiMobileActionCard(
+            title: copy.t('dashboardAddCustomer'),
+            icon: Icons.person_add_alt_1_rounded,
+            color: AppTheme.aiGreen,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomersScreen())),
+          ),
+          const SizedBox(width: 12),
+          AiMobileActionCard(
+            title: copy.isEnglish ? 'Collection Center' : 'مركز التحصيل',
+            icon: Icons.account_balance_wallet_rounded,
+            color: AppTheme.aiRed,
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen())),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildContent(BuildContext context, AppCopy copy) {
     final data = _cachedData ?? ReportsSnapshot.empty();
     final lowStockPreview = data.lowStockItems.take(3).toList();
     final recentSalesPreview = data.recentSales.take(3).toList();
     final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+
+    if (!isDesktop) {
+      return AiMobilePageShell(
+        child: Column(
+          children: [
+            _buildMobileHeader(context, copy),
+            const SizedBox(height: AiMobileConfig.sectionGap),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+              child: _buildDecisionCommander(_decisions ?? [], copy),
+            ),
+            const SizedBox(height: AiMobileConfig.sectionGap),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+              child: _buildMobileFinancialHealthAndKPIs(data, copy),
+            ),
+            const SizedBox(height: AiMobileConfig.sectionGap),
+            AiMobileSectionHeader(title: copy.t('quickActions')),
+            const SizedBox(height: 12),
+            _buildMobileQuickActions(context, copy),
+            const SizedBox(height: AiMobileConfig.sectionGap),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+              child: Column(
+                children: [
+                  _buildCashFlowPulseCard(copy),
+                  const SizedBox(height: AiMobileConfig.sectionGap),
+                  _buildDecisionSimulationCard(copy),
+                  const SizedBox(height: AiMobileConfig.sectionGap),
+                  _buildObligationsCard(copy),
+                  const SizedBox(height: AiMobileConfig.sectionGap),
+                  _buildSmartAlerts(copy, lowStockPreview.length),
+                  const SizedBox(height: AiMobileConfig.sectionGap),
+                  _stockSection(context, copy, data, lowStockPreview),
+                  const SizedBox(height: AiMobileConfig.sectionGap),
+                  _salesSection(context, copy, data, recentSalesPreview),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return CustomScrollView(
       slivers: [
@@ -251,11 +381,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                copy.isEnglish ? 'Financial Intelligence Cockpit' : 'لوحة القيادة والذكاء المالي',
+                                copy.isEnglish ? 'Hasoob' : 'حاسوب',
                                 style: const TextStyle(
                                   color: AppTheme.aiGold,
                                   fontWeight: FontWeight.w900,
-                                  fontSize: 20,
+                                  fontSize: 22,
                                   letterSpacing: 0.5,
                                 ),
                               ),
@@ -265,7 +395,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   const Icon(Icons.verified_user_rounded, color: AppTheme.aiGreen, size: 12),
                                   const SizedBox(width: 6),
                                   Text(
-                                    copy.isEnglish ? 'Secure AI Session Active' : 'جلسة خادم الذكاء المالي آمنة ونشطة',
+                                    copy.t('dashboardSecureSession'),
                                     style: const TextStyle(
                                       color: AppTheme.aiTextSecondary,
                                       fontSize: 10,
@@ -320,90 +450,67 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
 
-        SliverToBoxAdapter(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: AiRobotAdvisor(
-              greeting: copy.isEnglish ? "What is the best financial decision today?" : "ما القرار المالي الأفضل اليوم؟",
-              advisorTitle: copy.isEnglish ? "FINANCIAL ADVISOR ACTIVE" : "المستشار المالي نشط",
-              suggestion: copy.isEnglish 
-                  ? "Analyzing cash flow, outstanding invoices, obligations, and stock levels to calculate optimal steps."
-                  : "يقوم المستشار المالي الآن بفحص وتحليل التدفق النقدي، الفواتير المستحقة، مستويات المخزون والمصروفات ليقترح لك أفضل خطوة تالية لعملك.",
+        if (isDesktop)
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 8),
+              child: AiRobotAdvisor(
+                greeting: copy.t('dashboardAiGreeting'),
+                advisorTitle: copy.t('dashboardAiTitle'),
+                suggestion: copy.t('dashboardAiSuggestion'),
+              ),
             ),
           ),
-        ),
 
         SliverPadding(
           padding: const EdgeInsets.symmetric(horizontal: 24),
           sliver: SliverList(
             delegate: SliverChildListDelegate([
-              if (isDesktop)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(flex: 3, child: _buildHealthScoreCard(copy)),
-                    const SizedBox(width: 20),
-                    Expanded(flex: 4, child: _buildRecommendationCard(copy)),
-                  ],
-                )
-              else ...[
-                _buildHealthScoreCard(copy),
-                const SizedBox(height: 16),
-                _buildRecommendationCard(copy),
-              ],
-              
-              const SizedBox(height: 20),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(flex: 3, child: _buildHealthScoreCard(data, copy)),
+                  const SizedBox(width: 20),
+                  Expanded(flex: 4, child: _buildDecisionCommander(_decisions ?? [], copy)),
+                ],
+              ),
 
-              _buildKpiGrid(data, copy, isDesktop),
+              const SizedBox(height: 14),
+              _buildKpiGrid(data, copy, true),
+              const SizedBox(height: 16),
 
-              const SizedBox(height: 20),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildCashFlowPulseCard(copy)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _buildDecisionSimulationCard(copy)),
+                ],
+              ),
 
-              if (isDesktop)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _buildCashFlowPulseCard(copy)),
-                    const SizedBox(width: 20),
-                    Expanded(child: _buildDecisionSimulationCard(copy)),
-                  ],
-                )
-              else ...[
-                _buildCashFlowPulseCard(copy),
-                const SizedBox(height: 16),
-                _buildDecisionSimulationCard(copy),
-              ],
+              const SizedBox(height: 16),
+
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: _buildObligationsCard(copy)),
+                  const SizedBox(width: 16),
+                  Expanded(child: _buildSmartAlerts(copy, lowStockPreview.length)),
+                ],
+              ),
 
               const SizedBox(height: 20),
-
-              if (isDesktop)
-                Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(child: _buildObligationsCard(copy)),
-                    const SizedBox(width: 20),
-                    Expanded(child: _buildSmartAlerts(copy, lowStockPreview.length)),
-                  ],
-                )
-              else ...[
-                _buildObligationsCard(copy),
-                const SizedBox(height: 16),
-                _buildSmartAlerts(copy, lowStockPreview.length),
-              ],
-
-              const SizedBox(height: 28),
-
               AppSectionHeader(
                 title: copy.t('quickActions'),
                 hasAccentLine: true,
               ),
-              const SizedBox(height: 14),
+              const SizedBox(height: 10),
               _buildQuickActionsStrip(context, copy),
 
-              const SizedBox(height: 28),
-
+              const SizedBox(height: 20),
               _buildRestoreCard(context, copy),
 
-              const SizedBox(height: 28),
+              const SizedBox(height: 20),
 
               if (isDesktop)
                 Row(
@@ -421,6 +528,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ],
 
               const SizedBox(height: 120),
+              if (!isDesktop)
+                SizedBox(height: DashboardDockSpacer.bottomReservedSpace(context)),
             ]),
           ),
         ),
@@ -472,10 +581,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildHealthScoreCard(AppCopy copy) {
+  Widget _buildHealthScoreCard(ReportsSnapshot? data, AppCopy copy) {
+    int score = 0;
+    String scoreLabel = copy.isEnglish ? 'Awaiting Data' : 'بانتظار البيانات';
+    Color scoreColor = AppTheme.aiTextSecondary;
+    String desc1 = copy.isEnglish ? 'Not enough data.' : 'لا توجد بيانات كافية لقياس كفاءة التشغيل حالياً.';
+    String desc2 = copy.isEnglish ? 'Add items to start.' : 'ابدأ بإضافة منتجاتك ومبيعاتك الأولى لتفعيل مؤشر الصحة.';
+
+    if (data != null && (data.totalProducts > 0 || data.salesRecords.isNotEmpty)) {
+      score = 85;
+      scoreLabel = copy.isEnglish ? 'Excellent' : 'ممتاز جداً';
+      scoreColor = AppTheme.aiGreen;
+
+      if (data.lowStockItems.length > 5) {
+        score = 65;
+        scoreLabel = copy.isEnglish ? 'Needs Attention' : 'يحتاج انتباه';
+        scoreColor = AppTheme.aiGold;
+      }
+
+      desc1 = copy.isEnglish 
+          ? 'You have ${data.totalProducts} active products.' 
+          : 'الكفاءة التشغيلية ممتازة، لديك ${data.totalProducts} صنف نشط.';
+      desc2 = copy.isEnglish
+          ? 'Total sales recorded is ${data.totalSales.toStringAsFixed(2)}.'
+          : 'إجمالي المبيعات يبلغ ${data.totalSales.toStringAsFixed(2)} ر.س، السيولة مستقرة وآمنة.';
+    }
+
     return AiGlassCard(
-      borderColor: AppTheme.aiGold.withValues(alpha: 0.25),
-      glowColor: AppTheme.aiGold,
+      borderColor: scoreColor.withValues(alpha: 0.25),
+      glowColor: scoreColor,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -493,13 +627,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: AppTheme.aiGreen.withValues(alpha: 0.12),
+                  color: scoreColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  copy.isEnglish ? 'Excellent' : 'ممتاز جداً',
-                  style: const TextStyle(
-                    color: AppTheme.aiGreen,
+                  scoreLabel,
+                  style: TextStyle(
+                    color: scoreColor,
                     fontSize: 10,
                     fontWeight: FontWeight.w800,
                   ),
@@ -510,16 +644,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 24),
           Row(
             children: [
-              const AiHealthScore(score: 88, size: 84),
-              const SizedBox(width: 20),
+              AiHealthScore(score: score.toDouble(), size: 48),
+              const SizedBox(width: 16),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      copy.isEnglish 
-                          ? 'SaaS operating efficiency is optimal.'
-                          : 'الكفاءة التشغيلية والسيولة النقدية ممتازة اليوم.',
+                      desc1,
                       style: const TextStyle(
                         color: AppTheme.aiTextPrimary,
                         fontSize: 13,
@@ -528,12 +660,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ),
                     const SizedBox(height: 6),
                     Text(
-                      copy.isEnglish
-                          ? 'Cash flow cover is 85% higher than last month. Current reserves are safe.'
-                          : 'مستوى السيولة النقدية يغطي المصروفات بنسبة 85% أعلى من الشهر الماضي. الاحتياطي المالي في أمان.',
+                      desc2,
                       style: const TextStyle(
                         color: AppTheme.aiTextSecondary,
                         fontSize: 11,
+                        height: 1.5,
                       ),
                     ),
                   ],
@@ -546,67 +677,307 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildRecommendationCard(AppCopy copy) {
+  Widget _buildMobileFinancialHealthAndKPIs(ReportsSnapshot data, AppCopy copy) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          flex: 2,
+          child: PremiumCard(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.monitor_heart_rounded, color: AppTheme.aiGreen, size: 16),
+                    const SizedBox(width: 4),
+                    Text(
+                      copy.isEnglish ? 'Health' : 'الصحة',
+                      style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'مستقرة',
+                  style: TextStyle(color: AppTheme.aiGreen, fontSize: 16, fontWeight: FontWeight.w900),
+                ),
+                const SizedBox(height: 4),
+                const Text(
+                  'أداء جيد',
+                  style: TextStyle(color: AppTheme.aiTextMuted, fontSize: 10),
+                ),
+              ],
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          flex: 3,
+          child: Column(
+            children: [
+              _buildCompactKpiRow(Icons.account_balance_wallet_rounded, AppTheme.aiGold, copy.isEnglish ? 'Sales' : 'المبيعات', AppFormatters.currency(data.totalSales)),
+              const SizedBox(height: 8),
+              _buildCompactKpiRow(Icons.inventory_2_rounded, AppTheme.aiBlue, copy.isEnglish ? 'Stock' : 'المخزون', AppFormatters.currency(data.totalStockValue)),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildCompactKpiRow(IconData icon, Color color, String label, String value) {
+    return PremiumCard(
+      padding: const EdgeInsets.all(8),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(4),
+            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
+            child: Icon(icon, color: color, size: 12),
+          ),
+          const SizedBox(width: 8),
+          Expanded(child: Text(label, style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11))),
+          Text(value, style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDecisionCommander(List<BusinessDecision> decisions, AppCopy copy) {
     return AiGlassCard(
-      borderColor: AppTheme.aiBlue.withValues(alpha: 0.25),
-      glowColor: AppTheme.aiBlue,
+      borderColor: AppTheme.aiGold.withValues(alpha: 0.4),
+      glowColor: AppTheme.aiGold,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            copy.isEnglish ? 'What should I do today?' : 'ما الخطوات الموصى بها اليوم؟',
-            style: const TextStyle(
-              color: AppTheme.aiTextPrimary,
-              fontSize: 16,
-              fontWeight: FontWeight.w900,
-            ),
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiGold.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.psychology_rounded, color: AppTheme.aiGold, size: 24),
+              ),
+              const SizedBox(width: 12),
+              const Text(
+                'ماذا أفعل اليوم؟',
+                style: TextStyle(
+                  color: AppTheme.aiTextPrimary,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
           ),
+          const SizedBox(height: 20),
+          if (decisions.isEmpty || decisions.any((d) => d.priority == DecisionPriority.info && d.title == 'إعداد بيانات النشاط التجاري'))
+            _buildEmptyDecisionState(copy)
+          else
+            ...decisions.map((d) => _decisionItem(d)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyDecisionState(AppCopy copy) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: AppTheme.aiCardElevated,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.aiCardBorder),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          const Icon(Icons.analytics_outlined, color: AppTheme.aiTextSecondary, size: 48),
           const SizedBox(height: 16),
-          _recommendationItem(
-            icon: Icons.lightbulb_rounded,
-            color: AppTheme.aiGold,
-            text: copy.isEnglish 
-                ? 'Follow up invoice #1024 to secure cash reserves before next week.'
-                : 'تابع تحصيل الفاتورة المستحقة رقم #1024 لتأمين السيولة قبل الأسبوع القادم.',
+          const Text(
+            'لا توجد بيانات كافية لإصدار قرارات مالية دقيقة بعد',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppTheme.aiTextPrimary, fontSize: 15, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 12),
-          _recommendationItem(
-            icon: Icons.inventory_2_rounded,
-            color: AppTheme.aiBlue,
-            text: copy.isEnglish 
-                ? 'Reorder top-selling detergent carton (stock count is below 4).'
-                : 'أعد طلب كميات إضافية من المنظفات (المخزون الحالي 3 وحدات وهو تحت الحد الأدنى).',
+          const SizedBox(height: 8),
+          const Text(
+            'أضف بياناتك الأولى ليقوم الذكاء المالي بتحليلها واقتراح أفضل الخطوات لك.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: AppTheme.aiTextSecondary, fontSize: 13, height: 1.5),
+          ),
+          const SizedBox(height: 24),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
+            children: [
+              _setupActionButton('إضافة منتج', Icons.inventory_2_outlined, () {
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
+              }),
+              _setupActionButton('إنشاء فاتورة', Icons.receipt_long_outlined, () {}),
+              _setupActionButton('إضافة عميل', Icons.person_add_outlined, () {}),
+            ],
           ),
         ],
       ),
     );
   }
 
-  Widget _recommendationItem({required IconData icon, required Color color, required String text}) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          padding: const EdgeInsets.all(6),
-          decoration: BoxDecoration(
-            color: color.withValues(alpha: 0.12),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(icon, color: color, size: 14),
+  Widget _setupActionButton(String label, IconData icon, VoidCallback onTap) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: AppTheme.aiBlue.withValues(alpha: 0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.aiBlue.withValues(alpha: 0.2)),
         ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Text(
-            text,
-            style: const TextStyle(
-              color: AppTheme.aiTextPrimary,
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              height: 1.4,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: AppTheme.aiBlue, size: 18),
+            const SizedBox(width: 8),
+            Text(label, style: const TextStyle(color: AppTheme.aiBlue, fontSize: 13, fontWeight: FontWeight.bold)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _decisionItem(BusinessDecision decision) {
+    Color color;
+    IconData icon;
+    switch (decision.priority) {
+      case DecisionPriority.critical:
+        color = AppTheme.aiRed;
+        icon = Icons.error_outline_rounded;
+        break;
+      case DecisionPriority.warning:
+        color = AppTheme.aiGold;
+        icon = Icons.warning_amber_rounded;
+        break;
+      case DecisionPriority.opportunity:
+        color = AppTheme.aiGreen;
+        icon = Icons.trending_up_rounded;
+        break;
+      case DecisionPriority.info:
+        color = AppTheme.aiBlue;
+        icon = Icons.info_outline_rounded;
+        break;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.08),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: color, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    decision.title,
+                    style: TextStyle(
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 15,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiDeep,
+                  borderRadius: BorderRadius.circular(6),
+                  border: Border.all(color: color.withValues(alpha: 0.3)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.radar, color: color, size: 12),
+                    const SizedBox(width: 4),
+                    Text(
+                      '${(decision.confidenceScore * 100).toInt()}% دقة',
+                      style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            decision.explanation,
+            style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 13, height: 1.5),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: AppTheme.aiCardElevated.withValues(alpha: 0.5),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.data_usage_rounded, color: AppTheme.aiTextSecondary, size: 16),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    decision.sourceDataSummary,
+                    style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12),
+                  ),
+                ),
+              ],
             ),
           ),
-        ),
-      ],
+          const SizedBox(height: 16),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: InkWell(
+              onTap: () {
+                if (decision.navigationTarget != null) {
+                  if (decision.navigationTarget == 'collection') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen()));
+                  } else if (decision.navigationTarget == 'invoices') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen()));
+                  } else if (decision.navigationTarget == 'products' || decision.navigationTarget == 'inventory') {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
+                  }
+                }
+              },
+              borderRadius: BorderRadius.circular(8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: color,
+                  borderRadius: BorderRadius.circular(8),
+                  boxShadow: [
+                    BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2)),
+                  ],
+                ),
+                child: Text(
+                  decision.suggestedActionLabel,
+                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -617,9 +988,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           crossAxisCount: isDesktop ? 4 : 2,
-          crossAxisSpacing: 16,
-          mainAxisSpacing: 16,
-          childAspectRatio: isDesktop ? 1.7 : 1.9,
+          crossAxisSpacing: 12,
+          mainAxisSpacing: 12,
+          childAspectRatio: isDesktop ? 1.7 : 2.2,
           children: [
             AiKpiCard(
               label: copy.t('totalProducts'),
@@ -666,7 +1037,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                copy.isEnglish ? 'Cash Flow Pulse' : 'نبض التدفق النقدي',
+                copy.t('dashboardCashFlowPulse'),
                 style: const TextStyle(
                   color: AppTheme.aiTextPrimary,
                   fontSize: 15,
@@ -677,9 +1048,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          _pulseBar(copy.isEnglish ? 'Cash Inflow' : 'المقبوضات النقدية', 0.85, AppTheme.aiGreen, '14,200 ر.س'),
+          _pulseBar(copy.t('dashboardCashInflow'), 0.85, AppTheme.aiGreen, '14,200 ر.س'),
           const SizedBox(height: 12),
-          _pulseBar(copy.isEnglish ? 'Cash Outflow' : 'المدفوعات والمصروفات', 0.38, AppTheme.aiGold, '5,400 ر.س'),
+          _pulseBar(copy.t('dashboardCashOutflow'), 0.38, AppTheme.aiGold, '5,400 ر.س'),
         ],
       ),
     );
@@ -720,7 +1091,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                copy.isEnglish ? 'AI Decision Simulation' : 'محاكاة القرارات المالية',
+                copy.t('dashboardAiSimulation'),
                 style: const TextStyle(
                   color: AppTheme.aiTextPrimary,
                   fontSize: 15,
@@ -734,7 +1105,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
-                  copy.isEnglish ? 'Ready' : 'جاهز للمحاكاة',
+                  copy.t('dashboardSimulationReady'),
                   style: const TextStyle(color: AppTheme.aiGold, fontSize: 9, fontWeight: FontWeight.w800),
                 ),
               ),
@@ -742,16 +1113,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
           const SizedBox(height: 18),
           Text(
-            copy.isEnglish 
-                ? 'Simulation Scenario: Purchase inventory worth 5,000 SAR.'
-                : 'سيناريو المحاكاة النشط: شراء مخزون ومشتريات بقيمة 5,000 ر.س اليوم.',
+            copy.t('dashboardSimulationScenario'),
             style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(
-            copy.isEnglish
-                ? 'Result: Liquid cash decreases by 12%. Estimated net profit margin increases by 18% over 30 days.'
-                : 'الأثر المتوقع: ستنخفض السيولة النقدية المتاحة بنسبة 12%، بينما ستزداد الأرباح التشغيلية المقدرة بنسبة 18% خلال 30 يوماً.',
+            copy.t('dashboardSimulationResult'),
             style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11, height: 1.4),
           ),
         ],
@@ -765,7 +1132,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            copy.isEnglish ? 'Upcoming Obligations' : 'الالتزامات والمدفوعات القادمة',
+            copy.t('dashboardObligations'),
             style: const TextStyle(
               color: AppTheme.aiTextPrimary,
               fontSize: 15,
@@ -773,9 +1140,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          _obligationItem(copy.isEnglish ? 'Suppliers Invoices Due' : 'مستحقات وفواتير الموردين', '3,400 ر.س', copy.isEnglish ? 'Tomorrow' : 'غداً', AppTheme.aiGold),
+          _obligationItem(copy.t('dashboardObligation1'), '3,400 ر.س', copy.t('dashboardTomorrow'), AppTheme.aiGold),
           const Divider(height: 20),
-          _obligationItem(copy.isEnglish ? 'Employee Salaries' : 'رواتب ومستحقات الموظفين', '12,000 ر.س', copy.isEnglish ? 'In 3 Days' : 'بعد 3 أيام', AppTheme.aiBlue),
+          _obligationItem(copy.t('dashboardObligation2'), '12,000 ر.س', copy.t('dashboardIn3Days'), AppTheme.aiBlue),
         ],
       ),
     );
@@ -802,19 +1169,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       children: [
         AiAlertCard(
-          message: copy.isEnglish ? 'Risk: Low stock items' : 'تنبيه ذكي: سلع مخزون منخفضة',
-          subtitle: copy.isEnglish 
-              ? '$lowStockCount products are below critical threshold.' 
-              : 'هناك $lowStockCount أصناف تحت الحد الحرج للمخزون لمنع نفاد البضاعة.',
+          message: copy.t('dashboardAlertLowStock'),
+          subtitle: copy.dashboardLowStockAlertSubtitle(lowStockCount),
           icon: Icons.warning_amber_rounded,
           severity: AiAlertSeverity.warning,
         ),
         const SizedBox(height: 12),
         AiAlertCard(
-          message: copy.isEnglish ? 'Local Mode: Offline database active' : 'التشغيل المحلي: قاعدة البيانات المحلية نشطة',
-          subtitle: copy.isEnglish 
-              ? 'All transactions persist locally first, syncing smoothly to cloud.'
-              : 'كل عملياتك وبياناتك تحفظ محلياً في خادمك بأمان تام وتتزامن تلقائياً.',
+          message: copy.t('dashboardAlertLocalMode'),
+          subtitle: copy.dashboardLocalModeSubtitle(),
           icon: Icons.cloud_done_rounded,
           severity: AiAlertSeverity.success,
         ),
@@ -831,7 +1194,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _quickActionTile(
             context,
             icon: Icons.add_box_rounded,
-            title: copy.isEnglish ? 'Add Product' : 'إضافة صنف مخزون',
+            title: copy.t('dashboardAddProduct'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
             accentColor: AppTheme.aiBlue,
           ),
@@ -839,7 +1202,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _quickActionTile(
             context,
             icon: Icons.receipt_long_rounded,
-            title: copy.isEnglish ? 'Create Invoice' : 'إنشاء فاتورة مبيعات',
+            title: copy.t('dashboardCreateInvoice'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen())),
             accentColor: AppTheme.aiGold,
           ),
@@ -847,9 +1210,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           _quickActionTile(
             context,
             icon: Icons.person_add_alt_1_rounded,
-            title: copy.isEnglish ? 'Add Customer' : 'إضافة عميل جديد',
+            title: copy.t('dashboardAddCustomer'),
             onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomersScreen())),
             accentColor: AppTheme.aiGreen,
+          ),
+          const SizedBox(width: 14),
+          _quickActionTile(
+            context,
+            icon: Icons.account_balance_wallet_rounded,
+            title: copy.isEnglish ? 'Collection Center' : 'مركز التحصيل',
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen())),
+            accentColor: AppTheme.aiRed,
           ),
         ],
       ),
@@ -918,10 +1289,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader(copy.t('stockAlerts'), copy.isEnglish ? 'Critical Stock Thresholds' : 'الحدود الحرجة لمخزون المنتجات والأصناف'),
+        _sectionHeader(copy.t('stockAlerts'), copy.t('dashboardStockThresholds')),
         const SizedBox(height: 16),
         if (data.lowStockItems.isEmpty)
-          _emptyCard(context, icon: Icons.inventory_2_outlined, text: copy.isEnglish ? 'No Low Stock Items' : 'مستويات المخزون مستقرة بالكامل حالياً')
+          _emptyCard(context, icon: Icons.inventory_2_outlined, text: copy.t('dashboardNoLowStock'))
         else ...[
           ...preview.map((item) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
@@ -960,10 +1331,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader(copy.t('recentSales'), copy.isEnglish ? 'Realtime Customer Operations' : 'العمليات والمبيعات الفورية المسجلة مؤخراً'),
+        _sectionHeader(copy.t('recentSales'), copy.t('dashboardRecentOperations')),
         const SizedBox(height: 16),
         if (data.recentSales.isEmpty)
-          _emptyCard(context, icon: Icons.sell_outlined, text: copy.isEnglish ? 'No Sales Yet' : 'لم يتم تسجيل أي عمليات بيع بعد')
+          _emptyCard(context, icon: Icons.sell_outlined, text: copy.t('dashboardNoSalesYet'))
         else ...[
           ...preview.map((row) => Padding(
             padding: const EdgeInsets.only(bottom: 12),

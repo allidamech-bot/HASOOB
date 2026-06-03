@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 
@@ -8,52 +10,63 @@ class PremiumSplashScreen extends StatefulWidget {
   State<PremiumSplashScreen> createState() => _PremiumSplashScreenState();
 }
 
-class _PremiumSplashScreenState extends State<PremiumSplashScreen> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
+class _PremiumSplashScreenState extends State<PremiumSplashScreen> with TickerProviderStateMixin {
+  late AnimationController _mainController;
   late Animation<double> _fadeAnimation;
   late Animation<double> _scaleAnimation;
+  late AnimationController _pulseController;
+  late AnimationController _flowController;
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
+    _mainController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 1500),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
-        parent: _controller,
+        parent: _mainController,
         curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
       ),
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.9, end: 1.0).animate(
+    _scaleAnimation = Tween<double>(begin: 0.95, end: 1.0).animate(
       CurvedAnimation(
-        parent: _controller,
+        parent: _mainController,
         curve: const Interval(0.0, 1.0, curve: Curves.elasticOut),
       ),
     );
 
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 3),
+    )..repeat(reverse: true);
 
+    _flowController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 4),
+    )..repeat();
 
-
-    _controller.forward();
+    _mainController.forward();
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _mainController.dispose();
+    _pulseController.dispose();
+    _flowController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF070B14), // Deepest navy
+      backgroundColor: const Color(0xFF070B14),
       body: Stack(
         children: [
-          // 1. Base Layer: Deep Radial Gradient
+          // Background Layer
           Positioned.fill(
             child: Container(
               decoration: const BoxDecoration(
@@ -61,253 +74,787 @@ class _PremiumSplashScreenState extends State<PremiumSplashScreen> with SingleTi
                   center: Alignment.center,
                   radius: 1.5,
                   colors: [
-                    Color(0xFF0F172A), // Lighter navy
-                    Color(0xFF070B14), // Deep navy
+                    Color(0xFF0F172A), 
+                    Color(0xFF070B14),
                   ],
                 ),
               ),
             ),
           ),
 
-          // 2. Mid Layer: Animated Glows (Blobs) for depth
-          _AnimatedGlowBlob(
-            color: AppTheme.aiBlue.withValues(alpha: 0.07),
-            size: 400,
-            offset: const Offset(-100, -100),
-            duration: const Duration(seconds: 8),
-          ),
-          _AnimatedGlowBlob(
-            color: AppTheme.aiGold.withValues(alpha: 0.05),
-            size: 500,
-            offset: const Offset(100, 200),
-            duration: const Duration(seconds: 12),
-            reverse: true,
-          ),
-
-          // 3. Pattern Layer: Subtle Finance/Business Grid
+          // Geometric Grid and Flow Lines
           Positioned.fill(
-            child: Opacity(
-              opacity: 0.03,
-              child: CustomPaint(
-                painter: _GridPainter(),
-              ),
+            child: AnimatedBuilder(
+              animation: _flowController,
+              builder: (context, child) {
+                return CustomPaint(
+                  painter: _GeometricBackgroundPainter(
+                    flowProgress: _flowController.value,
+                  ),
+                );
+              },
             ),
           ),
 
-          // 4. Central Content: Floating Logo & Loader
-          Center(
+          // Glowing Orbs
+          _AnimatedGlowOrb(
+            color: AppTheme.aiBlue.withValues(alpha: 0.08),
+            size: 500,
+            alignment: const Alignment(-0.8, -0.6),
+            pulseController: _pulseController,
+          ),
+          _AnimatedGlowOrb(
+            color: AppTheme.aiGold.withValues(alpha: 0.05),
+            size: 600,
+            alignment: const Alignment(0.8, 0.5),
+            pulseController: _pulseController,
+          ),
+
+          // Main Content
+          Positioned.fill(
             child: AnimatedBuilder(
-              animation: _controller,
+              animation: _mainController,
               builder: (context, child) {
-                // Combine entry scale/fade with a subtle continuous float
-                // Entry fade/scale is handled by _fadeAnimation and _scaleAnimation.
                 return Opacity(
                   opacity: _fadeAnimation.value,
                   child: Transform.scale(
                     scale: _scaleAnimation.value,
-                    child: Column(
-
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        // Floating Logo - No boundaries
-                        _FloatingLogo(
-                          child: Image.asset(
-                            'assets/images/logo.png',
-                            width: 180,
-                            height: 180,
-                            fit: BoxFit.contain,
-                          ),
-                        ),
-                        const SizedBox(height: 60),
-                        // Luxury Minimal Loader
-                        const _PremiumLoader(),
-
-                      ],
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        final isDesktop = constraints.maxWidth > 800;
+                        if (isDesktop) {
+                          return _buildDesktopLayout();
+                        }
+                        return _buildMobileLayout();
+                      },
                     ),
                   ),
                 );
               },
             ),
           ),
-          
-          const Positioned(
-            bottom: 60,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: Opacity(
-                opacity: 0.5,
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDesktopLayout() {
+    return const Column(
+      children: [
+        Expanded(
+          child: Row(
+            children: [
+              // Left Panel: System Signals
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      _SignalItem(title: 'حماية متقدمة', icon: Icons.security),
+                      SizedBox(height: 20),
+                      _SignalItem(title: 'مزامنة ذكية', icon: Icons.sync),
+                      SizedBox(height: 20),
+                      _SignalItem(title: 'تحليل مالي', icon: Icons.analytics),
+                    ],
+                  ),
+                ),
+              ),
+
+              // Central Gate
+              SizedBox(
+                width: 400,
+                child: Center(child: _BrandGate()),
+              ),
+
+              // Right Panel: Status Modules
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _StatusModule(title: 'تهيئة البيانات', isActive: true),
+                      SizedBox(height: 16),
+                      _StatusModule(title: 'تحميل لوحة القيادة', isActive: false),
+                      SizedBox(height: 16),
+                      _StatusModule(title: 'فحص الاتصال الآمن', isActive: false),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        // Bottom Rail
+        Padding(
+          padding: EdgeInsets.only(bottom: 40, left: 100, right: 100),
+          child: _ProgressRail(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildMobileLayout() {
+    return const Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Spacer(),
+        // Central Gate
+        _BrandGate(),
+        SizedBox(height: 50),
+        
+        // Compact Badges
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            _Badge(title: 'حماية', icon: Icons.security),
+            SizedBox(width: 12),
+            _Badge(title: 'مزامنة', icon: Icons.sync),
+            SizedBox(width: 12),
+            _Badge(title: 'تحليل', icon: Icons.analytics),
+          ],
+        ),
+        
+        Spacer(),
+        // Bottom Rail
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: 40, vertical: 30),
+          child: _ProgressRail(),
+        ),
+      ],
+    );
+  }
+}
+
+class _AnimatedGlowOrb extends StatelessWidget {
+  final Color color;
+  final double size;
+  final Alignment alignment;
+  final AnimationController pulseController;
+
+  const _AnimatedGlowOrb({
+    required this.color,
+    required this.size,
+    required this.alignment,
+    required this.pulseController,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: alignment,
+      child: AnimatedBuilder(
+        animation: pulseController,
+        builder: (context, child) {
+          final scale = 1.0 + (pulseController.value * 0.1);
+          return Transform.scale(
+            scale: scale,
+            child: Container(
+              width: size,
+              height: size,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: color,
+                    blurRadius: size / 2,
+                    spreadRadius: size / 4,
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _GeometricBackgroundPainter extends CustomPainter {
+  final double flowProgress;
+
+  _GeometricBackgroundPainter({required this.flowProgress});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // 1. Cyan technical grid
+    final gridPaint = Paint()
+      ..color = AppTheme.aiBlue.withValues(alpha: 0.03)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+
+    const step = 60.0;
+    for (double i = 0; i < size.width; i += step) {
+      canvas.drawLine(Offset(i, 0), Offset(i, size.height), gridPaint);
+    }
+    for (double j = 0; j < size.height; j += step) {
+      canvas.drawLine(Offset(0, j), Offset(size.width, j), gridPaint);
+    }
+
+    // 2. Gold Light Paths Flowing
+    final flowPaint = Paint()
+      ..color = AppTheme.aiGold.withValues(alpha: 0.15)
+      ..strokeWidth = 1.5
+      ..style = PaintingStyle.stroke;
+
+    final cx = size.width / 2;
+    final cy = size.height / 2;
+
+    _drawFlowLine(canvas, flowPaint, const Offset(0, 0), Offset(cx, cy), flowProgress);
+    _drawFlowLine(canvas, flowPaint, Offset(size.width, 0), Offset(cx, cy), flowProgress);
+    _drawFlowLine(canvas, flowPaint, Offset(0, size.height), Offset(cx, cy), flowProgress);
+    _drawFlowLine(canvas, flowPaint, Offset(size.width, size.height), Offset(cx, cy), flowProgress);
+  }
+
+  void _drawFlowLine(Canvas canvas, Paint paint, Offset start, Offset end, double progress) {
+    final path = Path();
+    path.moveTo(start.dx, start.dy);
+    
+    // Create angular paths
+    final midX = start.dx + (end.dx - start.dx) * 0.5;
+    final midY = start.dy + (end.dy - start.dy) * 0.5;
+    
+    path.lineTo(midX, start.dy);
+    path.lineTo(end.dx, midY);
+    path.lineTo(end.dx, end.dy);
+
+    final opacityModifier = 0.1 + (0.2 * math.max(0, math.sin((progress * math.pi * 2) - (start.dx + start.dy))));
+    
+    canvas.drawPath(path, paint..color = AppTheme.aiGold.withValues(alpha: opacityModifier));
+  }
+
+  @override
+  bool shouldRepaint(covariant _GeometricBackgroundPainter oldDelegate) {
+    return oldDelegate.flowProgress != flowProgress;
+  }
+}
+
+class _BrandGate extends StatelessWidget {
+  const _BrandGate();
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        // Outer glowing hex background
+        Container(
+          width: 280,
+          height: 300,
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: AppTheme.aiBlue.withValues(alpha: 0.15),
+                blurRadius: 50,
+                spreadRadius: 10,
+              )
+            ],
+          ),
+          child: ClipPath(
+            clipper: _HexagonClipper(),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppTheme.aiCard.withValues(alpha: 0.65),
+                ),
+              ),
+            ),
+          ),
+        ),
+
+        // Hexagon Border via CustomPaint
+        SizedBox(
+          width: 280,
+          height: 300,
+          child: CustomPaint(
+            painter: _HexagonBorderPainter(
+              color: AppTheme.aiGold.withValues(alpha: 0.6),
+              strokeWidth: 2.0,
+            ),
+          ),
+        ),
+        
+        // Inner Hexagon Border
+        SizedBox(
+          width: 260,
+          height: 278,
+          child: CustomPaint(
+            painter: _HexagonBorderPainter(
+              color: AppTheme.aiGold.withValues(alpha: 0.3),
+              strokeWidth: 1.0,
+            ),
+          ),
+        ),
+        
+        // Inner Content
+        const _HasoobBrandMark(),
+      ],
+    );
+  }
+}
+
+class _HexagonClipper extends CustomClipper<Path> {
+  @override
+  Path getClip(Size size) {
+    return _getHexagonPath(size);
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+class _HexagonBorderPainter extends CustomPainter {
+  final Color color;
+  final double strokeWidth;
+
+  _HexagonBorderPainter({required this.color, required this.strokeWidth});
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..strokeWidth = strokeWidth
+      ..style = PaintingStyle.stroke;
+    
+    canvas.drawPath(_getHexagonPath(size), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+Path _getHexagonPath(Size size) {
+  final path = Path();
+  final w = size.width;
+  final h = size.height;
+  
+  // Pointy top hexagon
+  path.moveTo(w / 2, 0);
+  path.lineTo(w, h * 0.25);
+  path.lineTo(w, h * 0.75);
+  path.lineTo(w / 2, h);
+  path.lineTo(0, h * 0.75);
+  path.lineTo(0, h * 0.25);
+  path.close();
+  
+  return path;
+}
+
+class _SignalItem extends StatelessWidget {
+  final String title;
+  final IconData icon;
+
+  const _SignalItem({required this.title, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipPath(
+      clipper: _AngledPanelClipper(isRightSide: true),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(30, 14, 24, 14),
+          decoration: BoxDecoration(
+            color: AppTheme.aiCard.withValues(alpha: 0.5),
+            border: const Border(
+              right: BorderSide(color: AppTheme.aiBlue, width: 3),
+            ),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  color: AppTheme.aiTextPrimary,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  fontFamily: AppTheme.fontFamilyArabic,
+                ),
+                textDirection: TextDirection.rtl,
+              ),
+              const SizedBox(width: 12),
+              Icon(icon, color: AppTheme.aiBlue, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _StatusModule extends StatelessWidget {
+  final String title;
+  final bool isActive;
+
+  const _StatusModule({required this.title, required this.isActive});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipPath(
+      clipper: _AngledPanelClipper(isRightSide: false),
+      child: BackdropFilter(
+        filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+        child: Container(
+          width: 280,
+          padding: const EdgeInsets.fromLTRB(24, 14, 30, 14),
+          decoration: BoxDecoration(
+            color: AppTheme.aiCard.withValues(alpha: isActive ? 0.7 : 0.4),
+            border: Border(
+              left: BorderSide(
+                color: isActive ? AppTheme.aiGold : AppTheme.aiCardBorder,
+                width: 3,
+              ),
+            ),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Expanded(
                 child: Text(
-                  'HASOOB AI FINANCIAL SYSTEM',
+                  title,
                   style: TextStyle(
-                    color: AppTheme.aiGold,
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    letterSpacing: 6,
+                    color: isActive ? AppTheme.aiTextPrimary : AppTheme.aiTextSecondary,
+                    fontSize: 13,
+                    fontWeight: isActive ? FontWeight.w600 : FontWeight.normal,
+                    fontFamily: AppTheme.fontFamilyArabic,
+                  ),
+                  textAlign: TextAlign.right,
+                  textDirection: TextDirection.rtl,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const SizedBox(width: 14),
+              if (isActive)
+                const SizedBox(
+                  width: 14,
+                  height: 14,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    valueColor: AlwaysStoppedAnimation<Color>(AppTheme.aiGold),
+                  ),
+                )
+              else
+                Container(
+                  width: 8,
+                  height: 8,
+                  decoration: const BoxDecoration(
+                    color: AppTheme.aiCardBorder,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _AngledPanelClipper extends CustomClipper<Path> {
+  final bool isRightSide;
+  _AngledPanelClipper({required this.isRightSide});
+
+  @override
+  Path getClip(Size size) {
+    final path = Path();
+    final w = size.width;
+    final h = size.height;
+    final offset = h * 0.4;
+    
+    if (isRightSide) {
+      // Slant on the left
+      path.moveTo(offset, 0);
+      path.lineTo(w, 0);
+      path.lineTo(w, h);
+      path.lineTo(0, h);
+      path.close();
+    } else {
+      // Slant on the right
+      path.moveTo(0, 0);
+      path.lineTo(w - offset, 0);
+      path.lineTo(w, h);
+      path.lineTo(0, h);
+      path.close();
+    }
+    
+    return path;
+  }
+
+  @override
+  bool shouldReclip(covariant CustomClipper<Path> oldClipper) => false;
+}
+
+class _Badge extends StatelessWidget {
+  final String title;
+  final IconData icon;
+
+  const _Badge({required this.title, required this.icon});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: AppTheme.aiCard.withValues(alpha: 0.6),
+        border: Border.all(color: AppTheme.aiBlue.withValues(alpha: 0.3)),
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: AppTheme.aiBlue, size: 14),
+          const SizedBox(width: 8),
+          Text(
+            title,
+            style: const TextStyle(
+              color: AppTheme.aiTextPrimary,
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              fontFamily: AppTheme.fontFamilyArabic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProgressRail extends StatefulWidget {
+  const _ProgressRail();
+
+  @override
+  State<_ProgressRail> createState() => _ProgressRailState();
+}
+
+class _ProgressRailState extends State<_ProgressRail> with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, child) {
+        return Row(
+          children: List.generate(24, (index) {
+            final delay = index / 24.0;
+            final val = (_controller.value - delay) % 1.0;
+            final opacity = val > 0 && val < 0.25 ? 1.0 : 0.15;
+            
+            return Expanded(
+              child: Container(
+                height: 3,
+                margin: const EdgeInsets.symmetric(horizontal: 2),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiBlue.withValues(alpha: opacity),
+                ),
+              ),
+            );
+          }),
+        );
+      },
+    );
+  }
+}
+
+class _HasoobBrandMark extends StatelessWidget {
+  const _HasoobBrandMark();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // The Custom Geometric Wordmark
+        SizedBox(
+          width: 240,
+          height: 130,
+          child: CustomPaint(
+            painter: _LuxuryWordmarkPainter(),
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 12.0),
+                child: ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    colors: [
+                      Color(0xFFE8D3A2), // Soft bright gold
+                      Color(0xFFBCA663), // Muted mid gold
+                      Color(0xFF877038)  // Deep metallic gold
+                    ],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ).createShader(bounds),
+                  child: const Text(
+                    'حاسوب',
+                    style: TextStyle(
+                      fontSize: 58,
+                      fontWeight: FontWeight.w300, // Elegant thin weight
+                      letterSpacing: 2.0,
+                      height: 1.0,
+                      fontFamily: AppTheme.fontFamilyArabic,
+                      color: Colors.white,
+                      shadows: [
+                        Shadow(
+                          color: Colors.black,
+                          offset: Offset(1.5, 2.5),
+                          blurRadius: 6,
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _AnimatedGlowBlob extends StatefulWidget {
-  final Color color;
-  final double size;
-  final Offset offset;
-  final Duration duration;
-  final bool reverse;
-
-  const _AnimatedGlowBlob({
-    required this.color,
-    required this.size,
-    required this.offset,
-    required this.duration,
-    this.reverse = false,
-  });
-
-  @override
-  State<_AnimatedGlowBlob> createState() => _AnimatedGlowBlobState();
-}
-
-class _AnimatedGlowBlobState extends State<_AnimatedGlowBlob> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<Offset> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: widget.duration);
-    _animation = Tween<Offset>(
-      begin: widget.offset,
-      end: Offset(widget.offset.dx + 50, widget.offset.dy + 50),
-    ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
-
-    if (widget.reverse) {
-      _controller.repeat(reverse: true);
-    } else {
-      _controller.repeat(reverse: true);
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return Positioned(
-          left: _animation.value.dx,
-          top: _animation.value.dy,
-          child: Container(
-            width: widget.size,
-            height: widget.size,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: widget.color,
-                  blurRadius: widget.size / 2,
-                  spreadRadius: widget.size / 4,
-                ),
-              ],
-            ),
+        ),
+        
+        const SizedBox(height: 8),
+        
+        // Subtitle
+        const Text(
+          'بوابة القيادة المالية الذكية',
+          style: TextStyle(
+            color: Color(0xFFBCA663),
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+            letterSpacing: 1.5,
+            fontFamily: AppTheme.fontFamilyArabic,
+            shadows: [
+              Shadow(
+                color: Colors.black87,
+                offset: Offset(0, 1),
+                blurRadius: 2,
+              )
+            ],
           ),
-        );
-      },
+          textDirection: TextDirection.rtl,
+        ),
+      ],
     );
   }
 }
 
-class _FloatingLogo extends StatefulWidget {
-  final Widget child;
-  const _FloatingLogo({required this.child});
-
-  @override
-  State<_FloatingLogo> createState() => _FloatingLogoState();
-}
-
-class _FloatingLogoState extends State<_FloatingLogo> with SingleTickerProviderStateMixin {
-  late AnimationController _controller;
-  late Animation<double> _animation;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(vsync: this, duration: const Duration(seconds: 4));
-    _animation = Tween<double>(begin: -10, end: 10).animate(
-      CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
-    );
-    _controller.repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AnimatedBuilder(
-      animation: _animation,
-      builder: (context, child) {
-        return Transform.translate(
-          offset: Offset(0, _animation.value),
-          child: widget.child,
-        );
-      },
-    );
-  }
-}
-
-class _PremiumLoader extends StatelessWidget {
-  const _PremiumLoader();
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: Stack(
-        children: [
-          CircularProgressIndicator(
-            strokeWidth: 1,
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.aiBlue.withValues(alpha: 0.2)),
-          ),
-          const CircularProgressIndicator(
-            strokeWidth: 2,
-            valueColor: AlwaysStoppedAnimation<Color>(AppTheme.aiBlue),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _GridPainter extends CustomPainter {
+class _LuxuryWordmarkPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white
-      ..strokeWidth = 0.5;
+    final w = size.width;
+    final h = size.height;
 
-    const step = 40.0;
-    for (double i = 0; i < size.width; i += step) {
-      canvas.drawLine(Offset(i, 0), Offset(i, size.height), paint);
-    }
-    for (double i = 0; i < size.height; i += step) {
-      canvas.drawLine(Offset(0, i), Offset(size.width, i), paint);
-    }
+    final goldPaint = Paint()
+      ..color = const Color(0xFFBCA663)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+      
+    final thinGoldPaint = Paint()
+      ..color = const Color(0xFFE8D3A2).withValues(alpha: 0.4)
+      ..strokeWidth = 0.5
+      ..style = PaintingStyle.stroke;
+
+    final cyanPaint = Paint()
+      ..color = AppTheme.aiBlue
+      ..style = PaintingStyle.fill;
+      
+    final cyanGlowPaint = Paint()
+      ..color = AppTheme.aiBlue.withValues(alpha: 0.3)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.5
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 3);
+
+    // 1. Thin elegant corner brackets (L-shapes)
+    const bracketLen = 14.0;
+    // Top Left
+    canvas.drawLine(const Offset(15, 15), const Offset(15 + bracketLen, 15), goldPaint);
+    canvas.drawLine(const Offset(15, 15), const Offset(15, 15 + bracketLen), goldPaint);
+    // Top Right
+    canvas.drawLine(Offset(w - 15, 15), Offset(w - 15 - bracketLen, 15), goldPaint);
+    canvas.drawLine(Offset(w - 15, 15), Offset(w - 15, 15 + bracketLen), goldPaint);
+    // Bottom Left
+    canvas.drawLine(Offset(15, h - 25), Offset(15 + bracketLen, h - 25), goldPaint);
+    canvas.drawLine(Offset(15, h - 25), Offset(15, h - 25 - bracketLen), goldPaint);
+    // Bottom Right
+    canvas.drawLine(Offset(w - 15, h - 25), Offset(w - 15 - bracketLen, h - 25), goldPaint);
+    canvas.drawLine(Offset(w - 15, h - 25), Offset(w - 15, h - 25 - bracketLen), goldPaint);
+
+    // 2. Angular letter-adjacent accents
+    final path = Path();
+    path.moveTo(w * 0.25, h * 0.25);
+    path.lineTo(w * 0.3, h * 0.15);
+    path.lineTo(w * 0.4, h * 0.15);
+    
+    path.moveTo(w * 0.75, h * 0.25);
+    path.lineTo(w * 0.7, h * 0.15);
+    path.lineTo(w * 0.6, h * 0.15);
+    
+    canvas.drawPath(path, thinGoldPaint);
+
+    // 3. Financial bar motif extending up
+    final barGradient = LinearGradient(
+      colors: [const Color(0xFFD4AF37).withValues(alpha: 0.6), Colors.transparent],
+      begin: Alignment.bottomCenter,
+      end: Alignment.topCenter,
+    ).createShader(Rect.fromLTRB(w * 0.58, h * 0.05, w * 0.59, h * 0.3));
+    
+    final barPaint = Paint()
+      ..shader = barGradient
+      ..style = PaintingStyle.fill;
+    canvas.drawRect(Rect.fromLTRB(w * 0.58, h * 0.05, w * 0.59, h * 0.3), barPaint);
+    
+    // Minor accent lines
+    canvas.drawLine(Offset(w * 0.61, h * 0.15), Offset(w * 0.61, h * 0.25), thinGoldPaint);
+    canvas.drawCircle(Offset(w * 0.61, h * 0.14), 1.0, goldPaint..style = PaintingStyle.fill);
+
+    // 4. Integrated geometric baseline & cyan micro-circuit
+    final baseY = h - 15;
+    
+    // Main baseline
+    canvas.drawLine(Offset(w * 0.1, baseY), Offset(w * 0.9, baseY), thinGoldPaint);
+    
+    // Circuit dip
+    final circuitPath = Path();
+    circuitPath.moveTo(w * 0.35, baseY);
+    circuitPath.lineTo(w * 0.4, baseY + 8);
+    circuitPath.lineTo(w * 0.6, baseY + 8);
+    circuitPath.lineTo(w * 0.65, baseY);
+    
+    canvas.drawPath(circuitPath, cyanGlowPaint);
+    
+    final circuitSolid = Paint()
+      ..color = AppTheme.aiBlue.withValues(alpha: 0.9)
+      ..strokeWidth = 1.0
+      ..style = PaintingStyle.stroke;
+    canvas.drawPath(circuitPath, circuitSolid);
+
+    // Micro-circuit nodes
+    canvas.drawRect(Rect.fromCenter(center: Offset(w * 0.4, baseY + 8), width: 3, height: 3), cyanPaint);
+    canvas.drawRect(Rect.fromCenter(center: Offset(w * 0.6, baseY + 8), width: 3, height: 3), cyanPaint);
+    
+    // Central gold connection
+    final goldNodePaint = Paint()
+      ..color = const Color(0xFFE8D3A2)
+      ..style = PaintingStyle.fill;
+    canvas.drawCircle(Offset(w * 0.5, baseY + 8), 2.0, goldNodePaint);
+    canvas.drawLine(Offset(w * 0.5, baseY + 8), Offset(w * 0.5, baseY), thinGoldPaint);
+
+    // Side accent nodes on baseline
+    canvas.drawCircle(Offset(w * 0.2, baseY), 1.5, cyanPaint);
+    canvas.drawCircle(Offset(w * 0.8, baseY), 1.5, cyanPaint);
   }
 
   @override

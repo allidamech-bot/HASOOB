@@ -104,7 +104,7 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
                 ),
                 
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 48),
+                  padding: EdgeInsets.symmetric(horizontal: isDesktop ? 32 : 16, vertical: isDesktop ? 48 : 24),
                   child: isDesktop
                       ? Row(
                           children: [
@@ -121,8 +121,8 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
                         )
                       : Column(
                           children: [
-                            _buildAnimatedRobot(size: 200),
-                            const SizedBox(height: 40),
+                            _buildAnimatedRobot(size: 120),
+                            const SizedBox(height: 24),
                             _buildTextContent(isDesktop: false),
                           ],
                         ),
@@ -132,6 +132,66 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
           ),
         );
       }
+    );
+  }
+
+  Widget _buildCompact() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        gradient: AppTheme.commandGradient(context),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.15)),
+      ),
+      child: Row(
+        children: [
+          _buildAnimatedRobot(size: 80),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: AppTheme.aiGold.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    widget.advisorTitle.toUpperCase(),
+                    style: const TextStyle(
+                      color: AppTheme.aiGold,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.greeting,
+                  style: const TextStyle(
+                    color: AppTheme.aiTextPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                if (widget.suggestion != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    widget.suggestion!,
+                    style: const TextStyle(
+                      color: AppTheme.aiTextSecondary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -189,7 +249,7 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
           textAlign: isDesktop ? TextAlign.start : TextAlign.center,
           style: TextStyle(
             color: AppTheme.aiTextPrimary,
-            fontSize: isDesktop ? 36 : 26,
+            fontSize: isDesktop ? 36 : 22,
             fontWeight: FontWeight.w900,
             height: 1.3,
             shadows: [
@@ -408,57 +468,6 @@ class _AiRobotAdvisorState extends State<AiRobotAdvisor>
                 ),
               ],
             ),
-          ),
-        );
-      },
-    );
-  }
-
-  Widget _buildCompact() {
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, child) {
-        return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-          decoration: BoxDecoration(
-            color: AppTheme.aiGold.withValues(alpha: 0.08),
-            borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: AppTheme.aiGold.withValues(alpha: 0.3 * _glowAnimation.value),
-            ),
-          ),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  gradient: AppTheme.aiGoldGradient,
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppTheme.aiGold.withValues(alpha: 0.4),
-                      blurRadius: 8,
-                    ),
-                  ],
-                ),
-                child: const Icon(
-                  Icons.psychology_rounded,
-                  size: 12,
-                  color: Colors.black,
-                ),
-              ),
-              const SizedBox(width: 10),
-              const Text(
-                'المستشار نشط',
-                style: TextStyle(
-                  color: AppTheme.aiGold,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
           ),
         );
       },

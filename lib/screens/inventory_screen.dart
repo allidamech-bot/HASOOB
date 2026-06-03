@@ -182,232 +182,176 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   onRefresh: _refresh,
                   backgroundColor: AppTheme.aiCard,
                   color: AppTheme.aiGold,
-                  child: ListView(
-                    padding: const EdgeInsets.all(24),
-                    children: [
-                      // Summary Cards Row
-                      GridView.count(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        crossAxisCount: isDesktop ? 3 : 3,
-                        crossAxisSpacing: 12,
-                        mainAxisSpacing: 12,
-                        childAspectRatio: isDesktop ? 2.5 : 1.5,
-                        children: [
-                          AiKpiCard(
-                            label: copy.isEnglish ? 'Total Items' : 'إجمالي الأصناف',
-                            value: '$totalCount',
-                            icon: Icons.inventory_2_rounded,
-                            accentColor: AppTheme.aiBlue,
-                          ),
-                          AiKpiCard(
-                            label: copy.isEnglish ? 'Low Stock' : 'مخزون منخفض',
-                            value: '$lowStockCount',
-                            icon: Icons.warning_amber_rounded,
-                            accentColor: AppTheme.aiGold,
-                          ),
-                          AiKpiCard(
-                            label: copy.isEnglish ? 'Out of Stock' : 'نفد من المخزون',
-                            value: '$outOfStockCount',
-                            icon: Icons.remove_shopping_cart_rounded,
-                            accentColor: AppTheme.aiRed,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 24),
-
-                      // Search & Filter Panel
-                      PremiumCard(
-                        padding: const EdgeInsets.all(20),
-                        border: Border.all(
-                          color: AppTheme.aiGold.withValues(alpha: 0.15),
-                          width: 1,
-                        ),
+                  child: isDesktop 
+                    ? ListView(
+                        padding: const EdgeInsets.all(24),
+                        children: _buildContentList(copy, snapshot, hasData, products, filteredProducts, totalCount, lowStockCount, outOfStockCount, isDesktop),
+                      )
+                    : AiMobilePageShell(
                         child: Column(
                           children: [
-                            AiSearchField(
-                              controller: _searchController,
-                              hintText: copy.isEnglish ? 'Search inventory...' : 'ابحث باسم الصنف أو الباركود...',
-                              onClear: _searchController.clear,
-                            ),
-                            const SizedBox(height: 16),
-                            if (isDesktop)
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: DropdownButtonFormField<InventoryFilter>(
-                                      initialValue: _selectedFilter,
-                                      dropdownColor: AppTheme.aiCardElevated,
-                                      style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.bold),
-                                      decoration: InputDecoration(
-                                        labelText: copy.isEnglish ? 'Stock Filter' : 'تصفية المخزون',
-                                        filled: true,
-                                        fillColor: AppTheme.aiCardElevated,
-                                      ),
-                                      items: InventoryFilter.values
-                                          .map(
-                                            (filter) => DropdownMenuItem(
-                                              value: filter,
-                                              child: Text(_filterLabel(filter, copy)),
-                                            ),
-                                          )
-                                          .toList(),
-                                      onChanged: (value) {
-                                        if (value == null) return;
-                                        setState(() => _selectedFilter = value);
-                                      },
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  Expanded(
-                                    child: DropdownButtonFormField<InventorySort>(
-                                      initialValue: _selectedSort,
-                                      dropdownColor: AppTheme.aiCardElevated,
-                                      style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.bold),
-                                      decoration: InputDecoration(
-                                        labelText: copy.isEnglish ? 'Sort By' : 'ترتيب حسب',
-                                        filled: true,
-                                        fillColor: AppTheme.aiCardElevated,
-                                      ),
-                                      items: InventorySort.values
-                                          .map(
-                                            (sort) => DropdownMenuItem(
-                                              value: sort,
-                                              child: Text(_sortLabel(sort, copy)),
-                                            ),
-                                          )
-                                          .toList(),
-                                      onChanged: (value) {
-                                        if (value == null) return;
-                                        setState(() => _selectedSort = value);
-                                      },
-                                    ),
-                                  ),
-                                ],
-                              )
-                            else ...[
-                              DropdownButtonFormField<InventoryFilter>(
-                                initialValue: _selectedFilter,
-                                dropdownColor: AppTheme.aiCardElevated,
-                                style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.bold),
-                                decoration: InputDecoration(
-                                  labelText: copy.isEnglish ? 'Stock Filter' : 'تصفية المخزون',
-                                  filled: true,
-                                  fillColor: AppTheme.aiCardElevated,
-                                ),
-                                items: InventoryFilter.values
-                                    .map(
-                                      (filter) => DropdownMenuItem(
-                                        value: filter,
-                                        child: Text(_filterLabel(filter, copy)),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: (value) {
-                                  if (value == null) return;
-                                  setState(() => _selectedFilter = value);
-                                },
-                              ),
-                              const SizedBox(height: 12),
-                              DropdownButtonFormField<InventorySort>(
-                                initialValue: _selectedSort,
-                                dropdownColor: AppTheme.aiCardElevated,
-                                style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.bold),
-                                decoration: InputDecoration(
-                                  labelText: copy.isEnglish ? 'Sort By' : 'ترتيب حسب',
-                                  filled: true,
-                                  fillColor: AppTheme.aiCardElevated,
-                                ),
-                                items: InventorySort.values
-                                    .map(
-                                      (sort) => DropdownMenuItem(
-                                        value: sort,
-                                        child: Text(_sortLabel(sort, copy)),
-                                      ),
-                                    )
-                                    .toList(),
-                                onChanged: (value) {
-                                  if (value == null) return;
-                                  setState(() => _selectedSort = value);
-                                },
-                              ),
-                            ],
-                            const SizedBox(height: 10),
-                            SwitchListTile(
-                              contentPadding: EdgeInsets.zero,
-                              value: _sortAscending,
-                              title: Text(
-                                copy.isEnglish ? 'Ascending Order' : 'ترتيب تصاعدي',
-                                style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 13, fontWeight: FontWeight.bold),
-                              ),
-                              onChanged: (value) =>
-                                  setState(() => _sortAscending = value),
-                            ),
+                            const SizedBox(height: AiMobileConfig.sectionGap),
+                            ..._buildContentList(copy, snapshot, hasData, products, filteredProducts, totalCount, lowStockCount, outOfStockCount, isDesktop),
                           ],
                         ),
                       ),
-                      const SizedBox(height: 24),
-
-                      // Section Title
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            copy.inventoryResultCount(filteredProducts.length),
-                            style: const TextStyle(
-                              color: AppTheme.aiGold,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 15,
-                            ),
-                          ),
-                          AiActionButton(
-                            label: copy.isEnglish ? 'Add Item' : 'إضافة صنف',
-                            icon: Icons.add_circle_rounded,
-                            color: AppTheme.aiGold,
-                            isSmall: true,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(builder: (_) => const AddProductScreen()),
-                              );
-                            },
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-
-                      // Products content list / empty state
-                      if (snapshot.hasError)
-                        _buildErrorState(context, copy, snapshot.error)
-                      else if (!hasData && snapshot.connectionState == ConnectionState.waiting)
-                        const Center(child: CircularProgressIndicator(color: AppTheme.aiGold))
-                      else if (products.isEmpty)
-                        _buildEmptyState(context, copy)
-                      else if (filteredProducts.isEmpty)
-                        AiGlassCard(
-                          padding: const EdgeInsets.all(32),
-                          child: Center(
-                            child: Text(
-                              copy.isEnglish ? 'No matching products found.' : 'لا توجد نتائج مطابقة لبحثك وتصفيتك.',
-                              style: const TextStyle(color: AppTheme.aiTextSecondary, fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                        )
-                      else
-                        ...filteredProducts.map(
-                          (product) => Padding(
-                            padding: const EdgeInsets.only(bottom: 12),
-                            child: _productCard(product, copy),
-                          ),
-                        ),
-                    ],
-                  ),
                 ),
               ),
             ],
           );
         },
       ),
+    );
+  }
+
+  List<Widget> _buildContentList(AppCopy copy, AsyncSnapshot<List<ProductModel>> snapshot, bool hasData, List<ProductModel> products, List<ProductModel> filteredProducts, int totalCount, int lowStockCount, int outOfStockCount, bool isDesktop) {
+    return [
+      // Summary Cards
+      if (isDesktop)
+        GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 3,
+          crossAxisSpacing: 8,
+          mainAxisSpacing: 8,
+          childAspectRatio: 2.5,
+          children: [
+            AiKpiCard(label: copy.isEnglish ? 'Total Items' : 'إجمالي الأصناف', value: '$totalCount', icon: Icons.inventory_2_rounded, accentColor: AppTheme.aiBlue),
+            AiKpiCard(label: copy.isEnglish ? 'Low Stock' : 'مخزون منخفض', value: '$lowStockCount', icon: Icons.warning_amber_rounded, accentColor: AppTheme.aiGold),
+            AiKpiCard(label: copy.isEnglish ? 'Out of Stock' : 'نفد من المخزون', value: '$outOfStockCount', icon: Icons.remove_shopping_cart_rounded, accentColor: AppTheme.aiRed),
+          ],
+        )
+      else
+        AiMobileKpiStrip(
+          children: [
+            AiMobileKpiChip(label: '${copy.isEnglish ? 'Total:' : 'الإجمالي:'} $totalCount', icon: Icons.inventory_2_rounded, color: AppTheme.aiBlue),
+            AiMobileKpiChip(label: '${copy.isEnglish ? 'Low:' : 'منخفض:'} $lowStockCount', icon: Icons.warning_amber_rounded, color: AppTheme.aiGold),
+            AiMobileKpiChip(label: '${copy.isEnglish ? 'Out:' : 'نفد:'} $outOfStockCount', icon: Icons.remove_shopping_cart_rounded, color: AppTheme.aiRed),
+          ],
+        ),
+      
+      SizedBox(height: isDesktop ? 24 : AiMobileConfig.sectionGap),
+
+      // Search & Filter Panel
+      if (isDesktop)
+        PremiumCard(
+          padding: const EdgeInsets.all(12),
+          border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.15), width: 1),
+          child: _buildFilterContent(copy, isDesktop),
+        )
+      else
+        AiMobileFilterPanel(
+          child: _buildFilterContent(copy, isDesktop),
+        ),
+      
+      SizedBox(height: isDesktop ? 24 : AiMobileConfig.sectionGap),
+
+      // Section Title
+      if (isDesktop)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(copy.inventoryResultCount(filteredProducts.length), style: const TextStyle(color: AppTheme.aiGold, fontWeight: FontWeight.w900, fontSize: 15)),
+            AiActionButton(label: copy.isEnglish ? 'Add Item' : 'إضافة صنف', icon: Icons.add_circle_rounded, color: AppTheme.aiGold, isSmall: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()))),
+          ],
+        )
+      else
+        AiMobileSectionHeader(
+          title: copy.inventoryResultCount(filteredProducts.length),
+          trailing: IconButton(icon: const Icon(Icons.add_circle_rounded, color: AppTheme.aiGold), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()))),
+        ),
+      
+      SizedBox(height: isDesktop ? 16 : AiMobileConfig.sectionGap),
+
+      // Products content list / empty state
+      if (snapshot.hasError)
+        _buildErrorState(context, copy, snapshot.error)
+      else if (!hasData && snapshot.connectionState == ConnectionState.waiting)
+        const Center(child: CircularProgressIndicator(color: AppTheme.aiGold))
+      else if (products.isEmpty)
+        _buildEmptyState(context, copy, isDesktop)
+      else if (filteredProducts.isEmpty)
+        Padding(
+          padding: EdgeInsets.symmetric(horizontal: isDesktop ? 0 : AiMobileConfig.horizontalPadding),
+          child: AiGlassCard(
+            padding: const EdgeInsets.all(32),
+            child: Center(
+              child: Text(copy.isEnglish ? 'No matching products found.' : 'لا توجد نتائج مطابقة لبحثك وتصفيتك.', style: const TextStyle(color: AppTheme.aiTextSecondary, fontWeight: FontWeight.bold)),
+            ),
+          ),
+        )
+      else
+        ...filteredProducts.map(
+          (product) => Padding(
+            padding: EdgeInsets.only(
+              bottom: 12, 
+              left: isDesktop ? 0 : AiMobileConfig.horizontalPadding, 
+              right: isDesktop ? 0 : AiMobileConfig.horizontalPadding
+            ),
+            child: _productCard(product, copy),
+          ),
+        ),
+      
+      if (isDesktop) const SizedBox(height: 120),
+    ];
+  }
+
+  Widget _buildFilterContent(AppCopy copy, bool isDesktop) {
+    return Column(
+      children: [
+        AiSearchField(
+          controller: _searchController,
+          hintText: copy.isEnglish ? 'Search inventory...' : 'ابحث باسم الصنف أو الباركود...',
+          onClear: _searchController.clear,
+        ),
+        const SizedBox(height: 12),
+        if (isDesktop)
+          Row(
+            children: [
+              Expanded(child: _buildFilterDropdown(copy)),
+              const SizedBox(width: 16),
+              Expanded(child: _buildSortDropdown(copy)),
+            ],
+          )
+        else ...[
+          _buildFilterDropdown(copy),
+          const SizedBox(height: 12),
+          _buildSortDropdown(copy),
+        ],
+        const SizedBox(height: 10),
+        SwitchListTile(
+          contentPadding: EdgeInsets.zero,
+          value: _sortAscending,
+          title: Text(copy.isEnglish ? 'Ascending Order' : 'ترتيب تصاعدي', style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 13, fontWeight: FontWeight.bold)),
+          onChanged: (value) => setState(() => _sortAscending = value),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterDropdown(AppCopy copy) {
+    return DropdownButtonFormField<InventoryFilter>(
+      initialValue: _selectedFilter,
+      dropdownColor: AppTheme.aiCardElevated,
+      style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.bold),
+      decoration: InputDecoration(labelText: copy.isEnglish ? 'Stock Filter' : 'تصفية المخزون', filled: true, fillColor: AppTheme.aiCardElevated),
+      items: InventoryFilter.values.map((filter) => DropdownMenuItem(value: filter, child: Text(_filterLabel(filter, copy)))).toList(),
+      onChanged: (value) {
+        if (value != null) setState(() => _selectedFilter = value);
+      },
+    );
+  }
+
+  Widget _buildSortDropdown(AppCopy copy) {
+    return DropdownButtonFormField<InventorySort>(
+      initialValue: _selectedSort,
+      dropdownColor: AppTheme.aiCardElevated,
+      style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.bold),
+      decoration: InputDecoration(labelText: copy.isEnglish ? 'Sort By' : 'ترتيب حسب', filled: true, fillColor: AppTheme.aiCardElevated),
+      items: InventorySort.values.map((sort) => DropdownMenuItem(value: sort, child: Text(_sortLabel(sort, copy)))).toList(),
+      onChanged: (value) {
+        if (value != null) setState(() => _selectedSort = value);
+      },
     );
   }
 
@@ -437,12 +381,22 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  Widget _buildEmptyState(BuildContext context, AppCopy copy) {
+  Widget _buildEmptyState(BuildContext context, AppCopy copy, bool isDesktop) {
+    if (!isDesktop) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+        child: AiMobileEmptyState(
+          title: copy.isEnglish ? 'No products yet' : 'لا توجد أصناف بعد',
+          subtitle: copy.isEnglish ? 'Add items to track stock and sales.' : 'أضف منتجاتك الأولى لبدء التتبع والمبيعات.',
+          icon: Icons.inventory_2_rounded,
+          actionLabel: copy.isEnglish ? 'Add Item' : 'إضافة صنف',
+          onAction: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
+        ),
+      );
+    }
     return PremiumCard(
-      border: Border.all(
-        color: AppTheme.aiGold.withValues(alpha: 0.15),
-        width: 1,
-      ),
+      padding: const EdgeInsets.all(16),
+      border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.15), width: 1),
       child: Column(
         children: [
           AiEmptyState(
@@ -455,12 +409,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
               label: copy.isEnglish ? 'Add Product' : 'أضف أول صنف الآن',
               icon: Icons.add_circle_outline_rounded,
               color: AppTheme.aiGold,
-              onTap: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const AddProductScreen()),
-                );
-              },
+              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
             ),
           ),
           const SizedBox(height: 8),
@@ -480,11 +429,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     copy.isEnglish 
                         ? 'AI Hint: You can sync products from the cloud sync center instantly.'
                         : 'تلميح ذكي: يمكنك استيراد ومزامنة أصنافك المسجلة سحابياً مباشرة من مركز المزامنة.',
-                    style: const TextStyle(
-                      color: AppTheme.aiGold,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: const TextStyle(color: AppTheme.aiGold, fontSize: 11, fontWeight: FontWeight.w600),
                   ),
                 ),
               ],

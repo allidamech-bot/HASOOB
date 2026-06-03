@@ -11,6 +11,7 @@ import 'inventory_screen.dart';
 import 'invoice_form_screen.dart';
 import 'reports_screen.dart';
 import 'sales_history_screen.dart';
+import 'settings_screen.dart';
 import 'smart_calculator_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
@@ -184,6 +185,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
       const SalesHistoryScreen(),
       const SmartCalculatorScreen(),
       const ReportsScreen(),
+      const SettingsScreen(),
     ];
 
     return KeyedSubtree(

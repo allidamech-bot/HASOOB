@@ -12,6 +12,7 @@ import '../widgets/premium/premium_card.dart';
 import '../widgets/sync_status_indicator.dart';
 import '../widgets/ai_design_system.dart';
 import 'documents_screen.dart';
+import 'collection_center_screen.dart' as collection;
 
 enum SalesPeriodFilter { all, today, last7Days, last30Days }
 
@@ -135,6 +136,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      _buildCollectionCenterCard(context, copy),
+                      const SizedBox(height: 16),
                       // Summary KPI Cards
                       GridView.count(
                         shrinkWrap: true,
@@ -450,28 +453,70 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context, AppCopy copy) {
-    return PremiumCard(
-      padding: const EdgeInsets.all(40),
-      border: Border.all(
-        color: AppTheme.aiGold.withValues(alpha: 0.15),
-        width: 1,
-      ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(Icons.point_of_sale_rounded, size: 64, color: AppTheme.aiGold),
-          const SizedBox(height: 24),
-          Text(
-            copy.isEnglish ? 'No sales yet' : 'لا توجد مبيعات بعد',
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16, color: AppTheme.aiTextPrimary),
+    return AiMobileEmptyState(
+      icon: Icons.point_of_sale_rounded,
+      title: copy.isEnglish ? 'No sales yet' : 'لا توجد مبيعات بعد',
+      subtitle: copy.isEnglish ? 'Start by registering your first sale.' : 'ابدأ بتسجيل أول عملية مبيعات.',
+      actionLabel: copy.isEnglish ? 'New Sale' : 'تسجيل عملية مبيعات',
+      onAction: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const DocumentsScreen()),
+        );
+      },
+    );
+  }
+
+  Widget _buildCollectionCenterCard(BuildContext context, AppCopy copy) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(context, MaterialPageRoute(builder: (_) => const collection.CollectionCenterScreen()));
+      },
+      child: PremiumCard(
+        padding: const EdgeInsets.all(0),
+        gradient: AppTheme.commandGradient(context),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiRed.withValues(alpha: 0.15),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.warning_amber_rounded, color: AppTheme.aiRed),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      copy.t('collectionCenterTitle'),
+                      style: const TextStyle(
+                        color: AppTheme.aiTextPrimary,
+                        fontWeight: FontWeight.w900,
+                        fontSize: 16,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      copy.isEnglish
+                          ? 'Manage overdue invoices and high-risk customers'
+                          : 'إدارة الفواتير المتأخرة والعملاء تحت المراقبة',
+                      style: const TextStyle(
+                        color: AppTheme.aiTextSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.aiTextMuted, size: 16),
+            ],
           ),
-          const SizedBox(height: 12),
-          Text(
-            copy.isEnglish ? 'Start by registering your first sale.' : 'ابدأ بتسجيل أول عملية مبيعات.',
-            style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 13),
-            textAlign: TextAlign.center,
-          ),
-        ],
+        ),
       ),
     );
   }

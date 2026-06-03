@@ -65,4 +65,179 @@ class AppLocalizationsAr extends AppLocalizations {
   @override
   String get aboutAppSubtitle =>
       'Hasoob App\nإدارة عربية للمخزون والمبيعات والوثائق';
+
+  @override
+  String get dashboardCockpit => 'لوحة القيادة والذكاء المالي';
+
+  @override
+  String get dashboardSecureSession => 'جلسة خادم الذكاء المالي آمنة ونشطة';
+
+  @override
+  String get dashboardAiGreeting => 'ما القرار المالي الأفضل اليوم؟';
+
+  @override
+  String get dashboardAiTitle => 'المستشار المالي نشط';
+
+  @override
+  String get dashboardAiSuggestion =>
+      'يقوم المستشار المالي الآن بفحص وتحليل التدفق النقدي، الفواتير المستحقة، مستويات المخزون والمصروفات ليقترح لك أفضل خطوة تالية لعملك.';
+
+  @override
+  String get dashboardHealthScore => 'مؤشر الصحة المالية';
+
+  @override
+  String get dashboardHealthExcellent => 'ممتاز جداً';
+
+  @override
+  String get dashboardHealthDesc1 =>
+      'الكفاءة التشغيلية والسيولة النقدية ممتازة اليوم.';
+
+  @override
+  String get dashboardHealthDesc2 =>
+      'مستوى السيولة النقدية يغطي المصروفات بنسبة 85% أعلى من الشهر الماضي. الاحتياطي المالي في أمان.';
+
+  @override
+  String get dashboardRecommendationsTitle => 'ما الخطوات الموصى بها اليوم؟';
+
+  @override
+  String get dashboardRec1 =>
+      'تابع تحصيل الفاتورة المستحقة رقم #1024 لتأمين السيولة قبل الأسبوع القادم.';
+
+  @override
+  String get dashboardRec2 =>
+      'أعد طلب كميات إضافية من المنظفات (المخزون الحالي 3 وحدات وهو تحت الحد الأدنى).';
+
+  @override
+  String get dashboardCashFlowPulse => 'نبض التدفق النقدي';
+
+  @override
+  String get dashboardCashInflow => 'المقبوضات النقدية';
+
+  @override
+  String get dashboardCashOutflow => 'المدفوعات والمصروفات';
+
+  @override
+  String get dashboardAiSimulation => 'محاكاة القرارات المالية';
+
+  @override
+  String get dashboardSimulationReady => 'جاهز للمحاكاة';
+
+  @override
+  String get dashboardSimulationScenario =>
+      'سيناريو المحاكاة النشط: شراء مخزون ومشتريات بقيمة 5,000 ر.س اليوم.';
+
+  @override
+  String get dashboardSimulationResult =>
+      'الأثر المتوقع: ستنخفض السيولة النقدية المتاحة بنسبة 12%، بينما ستزداد الأرباح التشغيلية المقدرة بنسبة 18% خلال 30 يوماً.';
+
+  @override
+  String get dashboardObligations => 'الالتزامات والمدفوعات القادمة';
+
+  @override
+  String get dashboardObligation1 => 'مستحقات وفواتير الموردين';
+
+  @override
+  String get dashboardTomorrow => 'غداً';
+
+  @override
+  String get dashboardObligation2 => 'رواتب ومستحقات الموظفين';
+
+  @override
+  String get dashboardIn3Days => 'بعد 3 أيام';
+
+  @override
+  String get dashboardAlertLowStock => 'تنبيه ذكي: سلع مخزون منخفضة';
+
+  @override
+  String get dashboardAlertLocalMode =>
+      'التشغيل المحلي: قاعدة البيانات المحلية نشطة';
+
+  @override
+  String get dashboardAddProduct => 'إضافة صنف مخزون';
+
+  @override
+  String get dashboardCreateInvoice => 'إنشاء فاتورة مبيعات';
+
+  @override
+  String get dashboardAddCustomer => 'إضافة عميل جديد';
+
+  @override
+  String get dashboardStockThresholds =>
+      'الحدود الحرجة لمخزون المنتجات والأصناف';
+
+  @override
+  String get dashboardNoLowStock => 'مستويات المخزون مستقرة بالكامل حالياً';
+
+  @override
+  String get dashboardRecentOperations =>
+      'العمليات والمبيعات الفورية المسجلة مؤخراً';
+
+  @override
+  String get dashboardNoSalesYet => 'لم يتم تسجيل أي عمليات بيع بعد';
+
+  @override
+  String get collectionCenterTitle => 'مركز التحصيل والمتأخرات';
+
+  @override
+  String get overdueSummary => 'ملخص المتأخرات';
+
+  @override
+  String get totalOverdue => 'إجمالي المتأخرات';
+
+  @override
+  String get overdueInvoicesCount => 'عدد الفواتير المتأخرة';
+
+  @override
+  String get customersWithOverdue => 'عملاء بمتأخرات';
+
+  @override
+  String get agingBuckets => 'أعمار الديون';
+
+  @override
+  String get agingCurrent => 'حالي';
+
+  @override
+  String get aging1To30 => '1-30 يوم';
+
+  @override
+  String get aging31To60 => '31-60 يوم';
+
+  @override
+  String get aging61To90 => '61-90 يوم';
+
+  @override
+  String get aging90Plus => '+90 يوم';
+
+  @override
+  String get customerRisk => 'حالة العملاء';
+
+  @override
+  String get riskLow => 'منخفضة';
+
+  @override
+  String get riskMedium => 'متوسطة';
+
+  @override
+  String get riskHigh => 'عالية';
+
+  @override
+  String get riskCritical => 'حرجة';
+
+  @override
+  String get copyWhatsApp => 'نسخ تذكير واتساب';
+
+  @override
+  String get noOverdueInvoices => 'لا توجد فواتير متأخرة حالياً.';
+
+  @override
+  String get lastInvoiceDate => 'تاريخ آخر فاتورة';
+
+  @override
+  String get unpaidBalance => 'الرصيد غير المدفوع';
+
+  @override
+  String get overdueAmount => 'المبلغ المتأخر';
+
+  @override
+  String get collectionStart => 'بدء التحصيل';
 }

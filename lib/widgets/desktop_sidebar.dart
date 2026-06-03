@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../core/app_copy.dart';
-import '../screens/settings_screen.dart';
+import '../screens/collection_center_screen.dart';
 
 class DesktopSidebar extends StatelessWidget {
   final int selectedIndex;
@@ -110,7 +110,7 @@ class DesktopSidebar extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          copy.isEnglish ? 'HASOOB' : 'حسوب AI',
+                          copy.isEnglish ? 'HASOOB' : 'حاسوب',
                           style: const TextStyle(
                             color: AppTheme.aiGold,
                             fontSize: 20,
@@ -168,17 +168,19 @@ class DesktopSidebar extends StatelessWidget {
                 ),
                 const SizedBox(height: 10),
                 _SidebarItem(
-                  icon: Icons.swap_horizontal_circle_rounded,
-                  label: 'التدفق النقدي',
-                  isSelected: false, // Prevents duplicate highlight with Smart Reports
-                  onTap: () => onDestinationSelected(5),
-                ),
-                const SizedBox(height: 10),
-                _SidebarItem(
                   icon: Icons.people_alt_rounded,
                   label: 'العملاء والفواتير',
                   isSelected: selectedIndex == 3,
                   onTap: () => onDestinationSelected(3),
+                ),
+                const SizedBox(height: 10),
+                _SidebarItem(
+                  icon: Icons.account_balance_wallet_rounded,
+                  label: 'مركز التحصيل',
+                  isSelected: false,
+                  onTap: () {
+                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen()));
+                  },
                 ),
                 const SizedBox(height: 10),
                 _SidebarItem(
@@ -198,13 +200,8 @@ class DesktopSidebar extends StatelessWidget {
                 _SidebarItem(
                   icon: Icons.settings_suggest_rounded,
                   label: 'الإعدادات',
-                  isSelected: false,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => const SettingsScreen()),
-                    );
-                  },
+                  isSelected: selectedIndex == 6,
+                  onTap: () => onDestinationSelected(6),
                 ),
               ],
             ),

@@ -7,8 +7,12 @@ import '../core/business/business_context.dart';
 import '../data/repositories/customer_repository.dart';
 import '../core/utils/perf_logger.dart';
 import '../widgets/skeleton_loader.dart';
-import '../widgets/premium/premium_card.dart';
-import 'customer_statement_screen.dart';
+import 'package:hasoob_app/widgets/premium/premium_card.dart';
+import 'package:hasoob_app/screens/customer_statement_screen.dart';
+import 'package:hasoob_app/screens/collection_center_screen.dart';
+import 'package:hasoob_app/screens/documents_screen.dart';
+import '../core/app_formatters.dart';
+import '../widgets/ai_design_system.dart';
 
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
@@ -124,6 +128,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
         title: Text(copy.t('customersTitle')),
         actions: [
           IconButton(
+            onPressed: () {
+              Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen()));
+            },
+            icon: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.aiGold),
+            tooltip: copy.t('collectionCenterTitle'),
+          ),
+          IconButton(
             onPressed: () => _openCustomerForm(),
             icon: const Icon(Icons.person_add_alt_1_rounded),
           ),
@@ -159,82 +170,163 @@ class _CustomersScreenState extends State<CustomersScreen> {
               return _buildEmptyState(context, copy);
             }
 
-            return ListView(
-              padding: const EdgeInsets.all(16),
-              children: customers.map((customer) {
-                final name = customer['name']?.toString() ?? '';
-                final phone = customer['phone']?.toString() ?? '';
-                final outstanding = _toDouble(customer['outstanding_balance']);
-
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 12),
-                  child: InkWell(
-                    borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => CustomerStatementScreen(
-                            customerId: customer['id'].toString(),
-                            customerName: name,
-                          ),
-                        ),
-                      );
-                    },
-                    child: PremiumCard(
-                      padding: const EdgeInsets.all(20),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 24,
-                            backgroundColor: AppTheme.accent.withValues(alpha: 0.14),
-                            child: Text(
-                              name.isEmpty ? '?' : name.substring(0, 1),
-                              style: const TextStyle(
-                                color: AppTheme.accent,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  name,
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w800,
-                                    fontSize: 16,
-                                  ),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  copy.customerBalanceLine(
-                                    phone,
-                                    outstanding.toStringAsFixed(2),
-                                  ),
-                                  style: TextStyle(
-                                    color: AppTheme.textSecondaryFor(context),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () => _openCustomerForm(customer),
-                            icon: const Icon(Icons.edit_outlined),
-                          ),
-                          const Icon(Icons.arrow_forward_ios_rounded, size: 16),
-                        ],
-                      ),
-                    ),
+            final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+            return isDesktop
+              ? ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: _buildContentList(context, copy, customers, isDesktop),
+                )
+              : AiMobilePageShell(
+                  child: Column(
+                    children: [
+                      const SizedBox(height: AiMobileConfig.sectionGap),
+                      ..._buildContentList(context, copy, customers, isDesktop),
+                    ],
                   ),
                 );
-              }).toList(),
-            );
           },
         ),
+      ),
+    );
+  }
+
+  List<Widget> _buildContentList(BuildContext context, AppCopy copy, List<Map<String, dynamic>> customers, bool isDesktop) {
+    return [
+      if (isDesktop) ...[
+        _buildTopActionRow(context, copy, customers),
+        _buildCollectionCenterCard(context, copy),
+      ] else ...[
+        _buildMobileTopActions(context, copy, customers),
+      ],
+      ...customers.map((customer) {
+        final name = customer['name']?.toString() ?? '';
+        final phone = customer['phone']?.toString() ?? '';
+        final outstanding = _toDouble(customer['outstanding_balance']);
+
+        return Padding(
+          padding: EdgeInsets.only(
+            bottom: 12,
+            left: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+            right: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(isDesktop ? AppTheme.radiusLarge : AiMobileConfig.cardRadius),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => CustomerStatementScreen(
+                    customerId: customer['id'].toString(),
+                    customerName: name,
+                  ),
+                ),
+              );
+            },
+            child: isDesktop
+                ? PremiumCard(
+                    padding: const EdgeInsets.all(20),
+                    child: _customerRowContent(context, copy, customer, name, phone, outstanding),
+                  )
+                : AiGlassCard(
+                    borderRadius: AiMobileConfig.cardRadius,
+                    padding: const EdgeInsets.all(AiMobileConfig.cardPadding),
+                    child: _customerRowContent(context, copy, customer, name, phone, outstanding),
+                  ),
+          ),
+        );
+      }),
+      if (isDesktop) const SizedBox(height: 120),
+    ];
+  }
+
+  Widget _customerRowContent(BuildContext context, AppCopy copy, Map<String, dynamic> customer, String name, String phone, double outstanding) {
+    return Row(
+      children: [
+        CircleAvatar(
+          radius: 24,
+          backgroundColor: AppTheme.accent.withValues(alpha: 0.14),
+          child: Text(
+            name.isEmpty ? '?' : name.substring(0, 1),
+            style: const TextStyle(
+              color: AppTheme.accent,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                name,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w800,
+                  fontSize: 16,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                copy.customerBalanceLine(
+                  phone,
+                  outstanding.toStringAsFixed(2),
+                ),
+                style: TextStyle(
+                  color: AppTheme.textSecondaryFor(context),
+                  fontSize: 13,
+                ),
+              ),
+            ],
+          ),
+        ),
+        IconButton(
+          onPressed: () => _openCustomerForm(customer),
+          icon: const Icon(Icons.edit_outlined),
+        ),
+        const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppTheme.aiTextSecondary),
+      ],
+    );
+  }
+
+  Widget _buildMobileTopActions(BuildContext context, AppCopy copy, List<Map<String, dynamic>> customers) {
+    final double totalOutstanding = customers.fold<double>(0.0, (sum, c) => sum + _toDouble(c['outstanding_balance']));
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AiMobileConfig.sectionGap),
+      child: Column(
+        children: [
+          AiMobileKpiStrip(
+            children: [
+              AiMobileKpiChip(
+                label: '${copy.isEnglish ? 'Outstanding:' : 'إجمالي المستحقات:'} ${AppFormatters.currency(totalOutstanding)}',
+                icon: Icons.account_balance_wallet_rounded,
+                color: AppTheme.aiGold,
+              ),
+            ],
+          ),
+          const SizedBox(height: AiMobileConfig.sectionGap),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+            child: Row(
+              children: [
+                AiMobileActionCard(
+                  title: copy.isEnglish ? 'Collection Center' : 'مركز التحصيل',
+                  icon: Icons.account_balance_wallet_rounded,
+                  color: AppTheme.aiRed,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen())),
+                ),
+                const SizedBox(width: 12),
+                AiMobileActionCard(
+                  title: copy.isEnglish ? 'Sales Operation' : 'عملية مبيعات',
+                  icon: Icons.add_shopping_cart,
+                  color: AppTheme.aiBlue,
+                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen())),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -273,20 +365,33 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context, AppCopy copy) {
+    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+    if (!isDesktop) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+        child: AiMobileEmptyState(
+          title: copy.t('noCustomersYet'),
+          subtitle: copy.isEnglish ? 'Start tracking your clients.' : 'لا توجد بيانات عملاء مسجلة حالياً.',
+          icon: Icons.people_outline_rounded,
+          actionLabel: copy.t('newCustomer'),
+          onAction: () => _openCustomerForm(),
+        ),
+      );
+    }
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.all(24),
       children: [
-        const SizedBox(height: 80),
-        const Icon(Icons.people_outline_rounded, size: 64, color: AppTheme.accent),
-        const SizedBox(height: 24),
+        const SizedBox(height: 40),
+        const Icon(Icons.people_outline_rounded, size: 48, color: AppTheme.accent),
+        const SizedBox(height: 16),
         Center(
           child: Text(
             copy.t('noCustomersYet'),
-            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+            style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
           ),
         ),
-        const SizedBox(height: 32),
+        const SizedBox(height: 24),
         Center(
           child: FilledButton.icon(
             onPressed: () => _openCustomerForm(),
@@ -301,5 +406,108 @@ class _CustomersScreenState extends State<CustomersScreen> {
   double _toDouble(dynamic value) {
     if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  Widget _buildTopActionRow(BuildContext context, AppCopy copy, List<Map<String, dynamic>> customers) {
+    final double totalOutstanding = customers.fold<double>(0.0, (sum, c) => sum + _toDouble(c['outstanding_balance']));
+    
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: AppTheme.aiCardElevated,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text('إجمالي المستحقات', style: TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11)),
+                  const SizedBox(height: 4),
+                  Text(AppFormatters.currency(totalOutstanding), style: const TextStyle(color: AppTheme.aiGold, fontSize: 14, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(width: 12),
+          InkWell(
+            onTap: () {
+               Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen()));
+            },
+            borderRadius: BorderRadius.circular(12),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+              decoration: BoxDecoration(
+                color: AppTheme.aiBlue,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.add_shopping_cart, color: Colors.white, size: 18),
+                  SizedBox(width: 8),
+                  Text('عملية مبيعات', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCollectionCenterCard(BuildContext context, AppCopy copy) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: AiGlassCard(
+        padding: const EdgeInsets.all(16),
+        borderColor: AppTheme.aiGold.withValues(alpha: 0.4),
+        glowColor: AppTheme.aiGold,
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen()));
+        },
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: AppTheme.aiGold.withValues(alpha: 0.15),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.aiGold, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    copy.t('collectionCenterTitle'),
+                    style: const TextStyle(
+                      color: AppTheme.aiTextPrimary,
+                      fontWeight: FontWeight.w900,
+                      fontSize: 15,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  const Text(
+                    'تابع الفواتير المتأخرة ومخاطر العملاء ورسائل التذكير',
+                    style: TextStyle(
+                      color: AppTheme.aiTextSecondary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.aiGold, size: 16),
+          ],
+        ),
+      ),
+    );
   }
 }

@@ -211,6 +211,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     final copy = AppCopy.of(context);
 
     return Scaffold(
+      backgroundColor: AppTheme.aiDeep,
       appBar: null,
       body: RefreshIndicator(
         onRefresh: () => _reload(showError: true),
@@ -292,57 +293,109 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
     ];
 
-    return ListView(
-      physics: const AlwaysScrollableScrollPhysics(),
-      padding: EdgeInsets.zero,
-      children: [
-        _premiumHeader(context, copy),
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+
+    final contentList = [
+      AppSectionHeader(
+        title: copy.t('performanceSummary'),
+        subtitle: _hasFilters
+            ? copy.t('filtersAffectResults')
+            : copy.t('currentSnapshotSummary'),
+        hasAccentLine: true,
+        trailing: _hasFilters
+            ? ActionChip(
+                label: Text(copy.t('clearFilters')),
+                onPressed: () {
+                  setState(() {
+                    _periodFilter = ReportPeriodFilter.all;
+                    _selectedProductId = null;
+                  });
+                  _loadData();
+                },
+              )
+            : null,
+      ),
+      const SizedBox(height: 16),
+      _hero(data, copy),
+      const SizedBox(height: 24),
+      isDesktop ? _metrics(data, copy) : _mobileMetrics(data, copy),
+      const SizedBox(height: 24),
+      _filters(productOptions, copy),
+      const SizedBox(height: 24),
+      _exports(copy),
+      const SizedBox(height: 24),
+      _charts(data, copy),
+      const SizedBox(height: 24),
+      _smartInsightCard(data, copy),
+      const SizedBox(height: 24),
+      _bestSelling(data, copy),
+      const SizedBox(height: 24),
+      _lowStock(data, copy),
+      const SizedBox(height: 24),
+      _recentSales(data, copy),
+      const SizedBox(height: 24),
+      _accounting(data, copy),
+      if (isDesktop) const SizedBox(height: 120),
+    ];
+
+    return isDesktop
+        ? ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.zero,
             children: [
-              AppSectionHeader(
-                title: copy.t('performanceSummary'),
-                subtitle: _hasFilters
-                    ? copy.t('filtersAffectResults')
-                    : copy.t('currentSnapshotSummary'),
-                hasAccentLine: true,
-                trailing: _hasFilters
-                    ? ActionChip(
-                        label: Text(copy.t('clearFilters')),
-                        onPressed: () {
-                          setState(() {
-                            _periodFilter = ReportPeriodFilter.all;
-                            _selectedProductId = null;
-                          });
-                          _loadData();
-                        },
-                      )
-                    : null,
+              _premiumHeader(context, copy),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: contentList,
+                ),
               ),
-              const SizedBox(height: 16),
-              _hero(data, copy),
-              const SizedBox(height: 24),
-              _filters(productOptions, copy),
-              const SizedBox(height: 24),
-              _metrics(data, copy),
-              const SizedBox(height: 24),
-              _exports(copy),
-              const SizedBox(height: 24),
-              _charts(data, copy),
-              const SizedBox(height: 24),
-              _smartInsightCard(data, copy),
-              const SizedBox(height: 24),
-              _bestSelling(data, copy),
-              const SizedBox(height: 24),
-              _lowStock(data, copy),
-              const SizedBox(height: 24),
-              _recentSales(data, copy),
-              const SizedBox(height: 24),
-              _accounting(data, copy),
             ],
-          ),
+          )
+        : AiMobilePageShell(
+            child: Column(
+              children: [
+                _premiumHeader(context, copy),
+                const SizedBox(height: AiMobileConfig.sectionGap),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: contentList,
+                  ),
+                ),
+              ],
+            ),
+          );
+  }
+
+  Widget _mobileMetrics(ReportsSnapshot data, AppCopy copy) {
+    return Column(
+      children: [
+        AiMobileKpiStrip(
+          children: [
+            AiMobileKpiChip(
+              label: '${copy.t('totalProducts')}: ${AppFormatters.number(data.totalProducts)}',
+              icon: Icons.inventory_2_rounded,
+              color: AppTheme.accentBlue,
+            ),
+            AiMobileKpiChip(
+              label: '${copy.t('quantity')}: ${AppFormatters.number(data.totalQuantity)}',
+              icon: Icons.layers_rounded,
+              color: AppTheme.accentCyan,
+            ),
+          ],
+        ),
+        const SizedBox(height: AiMobileConfig.sectionGap),
+        AiMobileKpiStrip(
+          children: [
+            AiMobileKpiChip(
+              label: '${copy.t('realizedProfit')}: ${AppFormatters.currency(data.realizedProfit)}',
+              icon: Icons.payments_rounded,
+              color: data.realizedProfit >= 0 ? AppTheme.success : AppTheme.danger,
+            ),
+          ],
         ),
       ],
     );
@@ -350,8 +403,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _surface({required Widget child}) {
     return PremiumCard(
-      padding: const EdgeInsets.all(16),
-      radius: 18,
+      padding: const EdgeInsets.all(12),
+      radius: 16,
       child: child,
     );
   }
@@ -359,9 +412,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _hero(ReportsSnapshot data, AppCopy copy) {
     final isDark = AppTheme.isDark(context);
     return PremiumCard(
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(16),
       gradient: AppTheme.commandGradient(context),
-      radius: 20,
+      radius: 16,
       border: Border.all(
         color: isDark
             ? AppTheme.accentBlue.withValues(alpha: 0.25)
@@ -437,7 +490,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             copy.t('period'),
             style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
             clipBehavior: Clip.none,
@@ -477,7 +530,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               }).toList(),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           DropdownButtonFormField<String?>(
             initialValue: _selectedProductId,
             dropdownColor: AppTheme.surfaceFor(context),
@@ -506,7 +559,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _metrics(ReportsSnapshot data, AppCopy copy) {
     return GridView.count(
-      crossAxisCount: MediaQuery.sizeOf(context).width < 420 ? 1 : 2,
+      crossAxisCount: MediaQuery.sizeOf(context).width < 420 ? 2 : 4,
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
       shrinkWrap: true,
@@ -651,7 +704,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         children: [
           Text(title, style: _theme.textTheme.titleMedium),
           const SizedBox(height: 16),
-          SizedBox(height: 240, child: child),
+          SizedBox(height: 180, child: child),
         ],
       ),
     );
