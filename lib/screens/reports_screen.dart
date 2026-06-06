@@ -22,6 +22,8 @@ import '../widgets/sync_status_indicator.dart';
 import '../widgets/orbit_node_card.dart';
 import '../widgets/ai_design_system.dart';
 import 'accounting/trial_balance_screen.dart';
+import '../features/reports/data/models/report_summary_model.dart';
+import '../features/reports/data/repositories/reports_repository_factory.dart';
 
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:io' as io;
@@ -38,6 +40,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   final ReportService _reportService = const ReportService();
   final ExportService _exportService = ExportService();
+  final _newReportsRepository = ReportsRepositoryFactory.make();
 
   ReportsSnapshot? _cachedData;
   ReportPeriodFilter _periodFilter = ReportPeriodFilter.all;
@@ -317,6 +320,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
       const SizedBox(height: 16),
       _hero(data, copy),
+      const SizedBox(height: 24),
+      _buildDomainLayerReports(copy),
       const SizedBox(height: 24),
       isDesktop ? _metrics(data, copy) : _mobileMetrics(data, copy),
       const SizedBox(height: 24),
@@ -1024,6 +1029,88 @@ class _ReportsScreenState extends State<ReportsScreen> {
       case ReportPeriodFilter.today:
         return copy.t('today');
     }
+  }
+
+  Widget _buildDomainLayerReports(AppCopy copy) {
+    return StreamBuilder<ReportSummaryModel>(
+      stream: _newReportsRepository.getFinancialSummary(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return const Center(child: Text('Error loading domain reports', style: TextStyle(color: AppTheme.aiRed)));
+        }
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator(color: AppTheme.aiBlue));
+        }
+        final summary = snapshot.data;
+        if (summary == null) return const SizedBox.shrink();
+
+        final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+        final chartPoints = summary.monthlySales.entries
+            .toList()
+            .asMap()
+            .map((index, entry) => MapEntry(index, MetricPoint(label: entry.key, value: entry.value)))
+            .values
+            .toList();
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            AppSectionHeader(title: copy.isEnglish ? 'Domain Layer KPIs' : 'مؤشرات الأداء — طبقة النطاق', hasAccentLine: true),
+            const SizedBox(height: 16),
+            GridView.count(
+              crossAxisCount: isDesktop ? 3 : (MediaQuery.sizeOf(context).width < 420 ? 1 : 2),
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              childAspectRatio: 2.2,
+              children: [
+                OrbitNodeCard(
+                  title: copy.isEnglish ? 'Total Revenue' : 'إجمالي الإيرادات',
+                  value: AppFormatters.currency(summary.totalRevenue),
+                  icon: Icons.account_balance_wallet_rounded,
+                  accentColor: AppTheme.aiBlue,
+                ),
+                OrbitNodeCard(
+                  title: copy.isEnglish ? 'Total Collected' : 'التحصيلات',
+                  value: AppFormatters.currency(summary.totalCollected),
+                  icon: Icons.payments_rounded,
+                  accentColor: AppTheme.success,
+                ),
+                OrbitNodeCard(
+                  title: copy.isEnglish ? 'Total Overdue' : 'المتأخرات',
+                  value: AppFormatters.currency(summary.totalOverdue),
+                  icon: Icons.warning_amber_rounded,
+                  accentColor: summary.totalOverdue > 0 ? AppTheme.danger : AppTheme.success,
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            _chartCard(copy.isEnglish ? 'Monthly Sales (Domain)' : 'المبيعات الشهرية', _lineChart(chartPoints, _blue, copy)),
+            const SizedBox(height: 24),
+            _listSection(
+              title: copy.isEnglish ? 'Top Customers (Domain)' : 'أفضل العملاء',
+              empty: copy.isEnglish ? 'No top customers found.' : 'لا يوجد عملاء متميزون.',
+              children: summary.topCustomers.map((c) {
+                return _ListSurface(
+                  child: ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: AppTheme.aiGold.withValues(alpha: 0.12),
+                      child: const Icon(Icons.star_rounded, color: AppTheme.aiGold),
+                    ),
+                    title: Text(c['name']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w800)),
+                    trailing: Text(
+                      AppFormatters.currency(_toDouble(c['value'])),
+                      style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.aiGold),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 
