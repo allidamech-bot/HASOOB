@@ -10,6 +10,9 @@ import '../data/repositories/invoice_repository.dart';
 import '../widgets/premium/premium_card.dart';
 import '../widgets/ai_design_system.dart';
 import 'customer_statement_screen.dart';
+import '../features/collection_center/data/models/invoice_model.dart';
+import '../features/collection_center/data/models/payment_model.dart';
+import '../features/collection_center/data/repositories/collection_repository_factory.dart';
 
 class CollectionCenterScreen extends StatefulWidget {
   const CollectionCenterScreen({super.key});
@@ -20,6 +23,7 @@ class CollectionCenterScreen extends StatefulWidget {
 
 class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
   final InvoiceRepository _invoiceRepository = InvoiceRepository();
+  final _newCollectionRepository = CollectionRepositoryFactory.make();
   bool _isLoading = true;
   String? _error;
 
@@ -257,6 +261,67 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
         )
       else
         ..._customerRisks.map((c) => _buildCustomerCard(c, copy)),
+      
+      const SizedBox(height: 32),
+
+      // ── Invoices Data Layer Section ──────────
+      Text(
+        copy.isEnglish ? 'Recent Invoices (Domain Layer)' : 'الفواتير الحديثة — طبقة النطاق',
+        style: const TextStyle(color: AppTheme.aiBlue, fontSize: 18, fontWeight: FontWeight.w900),
+      ),
+      const SizedBox(height: 16),
+      StreamBuilder<List<InvoiceModel>>(
+        stream: _newCollectionRepository.getInvoices(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text(copy.isEnglish ? 'Error loading invoices' : 'تعذر تحميل الفواتير', style: const TextStyle(color: AppTheme.aiRed)));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: AppTheme.aiBlue));
+          }
+          final invoices = snapshot.data ?? [];
+          if (invoices.isEmpty) {
+            return Center(child: Text(copy.isEnglish ? 'No invoices found.' : 'لا توجد فواتير.', style: const TextStyle(color: AppTheme.aiTextSecondary)));
+          }
+          return Column(
+            children: invoices.map((inv) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _invoiceModelCard(inv, copy),
+            )).toList(),
+          );
+        },
+      ),
+
+      const SizedBox(height: 32),
+
+      // ── Payments Data Layer Section ──────────
+      Text(
+        copy.isEnglish ? 'Recent Payments (Domain Layer)' : 'المدفوعات الحديثة — طبقة النطاق',
+        style: const TextStyle(color: AppTheme.aiGreen, fontSize: 18, fontWeight: FontWeight.w900),
+      ),
+      const SizedBox(height: 16),
+      StreamBuilder<List<PaymentModel>>(
+        stream: _newCollectionRepository.getPayments(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text(copy.isEnglish ? 'Error loading payments' : 'تعذر تحميل المدفوعات', style: const TextStyle(color: AppTheme.aiRed)));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: AppTheme.aiGreen));
+          }
+          final payments = snapshot.data ?? [];
+          if (payments.isEmpty) {
+            return Center(child: Text(copy.isEnglish ? 'No payments found.' : 'لا توجد مدفوعات.', style: const TextStyle(color: AppTheme.aiTextSecondary)));
+          }
+          return Column(
+            children: payments.map((pay) => Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _paymentModelCard(pay, copy),
+            )).toList(),
+          );
+        },
+      ),
+
       if (isDesktop) const SizedBox(height: 120),
     ];
   }
@@ -428,6 +493,212 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _invoiceModelCard(InvoiceModel invoice, AppCopy copy) {
+    Color statusColor;
+    String statusLabel;
+    switch (invoice.status) {
+      case 'paid':
+        statusColor = AppTheme.aiGreen;
+        statusLabel = copy.isEnglish ? 'Paid' : 'مدفوع';
+        break;
+      case 'overdue':
+        statusColor = AppTheme.aiRed;
+        statusLabel = copy.isEnglish ? 'Overdue' : 'متأخر';
+        break;
+      case 'sent':
+        statusColor = AppTheme.aiGold;
+        statusLabel = copy.isEnglish ? 'Sent' : 'مرسل';
+        break;
+      default:
+        statusColor = AppTheme.aiBlue;
+        statusLabel = copy.isEnglish ? 'Draft' : 'مسودة';
+    }
+
+    return PremiumCard(
+      padding: const EdgeInsets.all(20),
+      border: Border.all(color: statusColor.withValues(alpha: 0.2), width: 1),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: statusColor),
+                ),
+                child: Icon(Icons.receipt_long_rounded, color: statusColor),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      invoice.customerName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: AppTheme.aiTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      invoice.dueDate != null 
+                        ? '${copy.isEnglish ? 'Due' : 'تستحق'}: ${AppFormatters.dateString(invoice.dueDate!)}' 
+                        : (copy.isEnglish ? 'No due date' : 'لا يوجد تاريخ استحقاق'),
+                      style: const TextStyle(
+                        color: AppTheme.aiTextSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.25)),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiCardElevated.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppTheme.aiCardBorder),
+                ),
+                child: Text(
+                  '${copy.isEnglish ? 'Total' : 'المجموع'}: ${AppFormatters.currency(invoice.total)}',
+                  style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiCardElevated.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppTheme.aiCardBorder),
+                ),
+                child: Text(
+                  '${copy.isEnglish ? 'Items' : 'الأصناف'}: ${invoice.items.length}',
+                  style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _paymentModelCard(PaymentModel payment, AppCopy copy) {
+    return PremiumCard(
+      padding: const EdgeInsets.all(20),
+      border: Border.all(color: AppTheme.aiGreen.withValues(alpha: 0.2), width: 1),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: AppTheme.aiGreen.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppTheme.aiGreen),
+                ),
+                child: const Icon(Icons.payments_rounded, color: AppTheme.aiGreen),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      payment.customerName,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: AppTheme.aiTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      payment.createdAt != null 
+                        ? AppFormatters.dateString(payment.createdAt!) 
+                        : '',
+                      style: const TextStyle(
+                        color: AppTheme.aiTextSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiGreen.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppTheme.aiGreen.withValues(alpha: 0.25)),
+                ),
+                child: Text(
+                  payment.method == 'bank' ? (copy.isEnglish ? 'Bank' : 'تحويل بنكي') : (copy.isEnglish ? 'Cash' : 'نقدي'),
+                  style: const TextStyle(
+                    color: AppTheme.aiGreen,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiCardElevated.withValues(alpha: 0.7),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppTheme.aiCardBorder),
+                ),
+                child: Text(
+                  '${copy.isEnglish ? 'Amount' : 'المبلغ'}: ${AppFormatters.currency(payment.amount)}',
+                  style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
