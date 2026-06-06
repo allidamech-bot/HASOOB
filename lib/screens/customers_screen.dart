@@ -13,7 +13,8 @@ import 'package:hasoob_app/screens/collection_center_screen.dart';
 import 'package:hasoob_app/screens/documents_screen.dart';
 import '../core/app_formatters.dart';
 import '../widgets/ai_design_system.dart';
-
+import '../features/customers/data/models/customer_model.dart';
+import '../features/customers/data/repositories/customer_repository_factory.dart';
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
 
@@ -23,6 +24,7 @@ class CustomersScreen extends StatefulWidget {
 
 class _CustomersScreenState extends State<CustomersScreen> {
   final CustomerRepository _customerRepository = CustomerRepository();
+  final _newCustomerRepository = CustomerRepositoryFactory.make();
 
   String get _businessId => BusinessContext.businessId;
 
@@ -235,6 +237,77 @@ class _CustomersScreenState extends State<CustomersScreen> {
           ),
         );
       }),
+      if (isDesktop) const SizedBox(height: 24),
+
+      // ── Customers Data Layer Section (CustomerRepositoryFactory) ──────────
+      if (isDesktop)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              copy.isEnglish
+                  ? 'Customer Directory (Domain Layer)'
+                  : 'دليل العملاء — طبقة النطاق',
+              style: const TextStyle(
+                color: AppTheme.aiBlue,
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        )
+      else
+        AiMobileSectionHeader(
+          title: copy.isEnglish ? 'Customer Directory' : 'دليل العملاء',
+        ),
+
+      SizedBox(height: isDesktop ? 16 : AiMobileConfig.sectionGap),
+
+      StreamBuilder<List<CustomerModel>>(
+        stream: _newCustomerRepository.getCustomers(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return _buildErrorState(context, copy, snapshot.error);
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(child: CircularProgressIndicator(color: AppTheme.aiBlue)),
+            );
+          }
+          final customers = snapshot.data ?? const <CustomerModel>[];
+          if (customers.isEmpty) {
+            return Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+              ),
+              child: AiGlassCard(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Text(
+                    copy.isEnglish ? 'No customers found.' : 'لا يوجد عملاء.',
+                    style: const TextStyle(
+                      color: AppTheme.aiTextSecondary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+          return Column(
+            children: customers.map((c) => Padding(
+              padding: EdgeInsets.only(
+                bottom: 12,
+                left: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+                right: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+              ),
+              child: _customerModelCard(c, copy, isDesktop),
+            )).toList(),
+          );
+        },
+      ),
+
       if (isDesktop) const SizedBox(height: 120),
     ];
   }
@@ -507,6 +580,121 @@ class _CustomersScreenState extends State<CustomersScreen> {
             const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.aiGold, size: 16),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _customerModelCard(CustomerModel customer, AppCopy copy, bool isDesktop) {
+    final isActive = customer.status == 'active';
+    final statusColor = isActive ? AppTheme.aiGreen : AppTheme.aiRed;
+    final statusLabel = isActive ? (copy.isEnglish ? 'Active' : 'نشط') : (copy.isEnglish ? 'Inactive' : 'غير نشط');
+
+    return PremiumCard(
+      padding: const EdgeInsets.all(20),
+      border: Border.all(
+        color: statusColor.withValues(alpha: 0.2),
+        width: 1,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundColor: statusColor.withValues(alpha: 0.14),
+                child: Text(
+                  customer.name.isEmpty ? '?' : customer.name.substring(0, 1),
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      customer.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: AppTheme.aiTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      customer.phone.isNotEmpty ? customer.phone : (copy.isEnglish ? 'No phone' : 'بدون رقم'),
+                      style: const TextStyle(
+                        color: AppTheme.aiTextSecondary,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: statusColor.withValues(alpha: 0.25)),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          if (customer.email.isNotEmpty || customer.address.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            if (customer.email.isNotEmpty)
+              Row(
+                children: [
+                  const Icon(Icons.email_outlined, size: 14, color: AppTheme.aiTextSecondary),
+                  const SizedBox(width: 8),
+                  Text(customer.email, style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12)),
+                ],
+              ),
+            if (customer.address.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.location_on_outlined, size: 14, color: AppTheme.aiTextSecondary),
+                    const SizedBox(width: 8),
+                    Expanded(child: Text(customer.address, style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12))),
+                  ],
+                ),
+              ),
+          ],
+          if (customer.tags.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: customer.tags.map((tag) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: AppTheme.aiBlue.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppTheme.aiBlue.withValues(alpha: 0.2)),
+                ),
+                child: Text(
+                  '#$tag',
+                  style: const TextStyle(color: AppTheme.aiBlue, fontSize: 11, fontWeight: FontWeight.bold),
+                ),
+              )).toList(),
+            ),
+          ],
+        ],
       ),
     );
   }

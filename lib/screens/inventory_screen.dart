@@ -16,6 +16,9 @@ import 'add_product_screen.dart';
 import 'edit_product_screen.dart';
 import 'product_details_screen.dart';
 import 'sell_product_screen.dart';
+import '../features/inventory/data/models/inventory_item.dart';
+import '../features/inventory/domain/repositories/inventory_repository.dart';
+import '../features/inventory/data/repositories/inventory_repository_factory.dart';
 
 enum InventoryFilter { all, lowStock, outOfStock, profitable, loss }
 
@@ -31,6 +34,11 @@ class InventoryScreen extends StatefulWidget {
 class _InventoryScreenState extends State<InventoryScreen> {
   final TextEditingController _searchController = TextEditingController();
   final ProductRepository _productRepository = ProductRepository();
+
+  /// New inventory data layer — switches between Mock and Firestore
+  /// based on [AppConfig.isTestingMode] via [InventoryRepositoryFactory].
+  final InventoryRepository _inventoryRepository =
+      InventoryRepositoryFactory.make();
 
   InventoryFilter _selectedFilter = InventoryFilter.all;
   InventorySort _selectedSort = InventorySort.name;
@@ -292,6 +300,107 @@ class _InventoryScreenState extends State<InventoryScreen> {
           ),
         ),
       
+      if (isDesktop) const SizedBox(height: 24),
+
+      // ── Inventory Data Layer Section (InventoryRepositoryFactory) ──────────
+      // Driven by MockInventoryRepository (isTestingMode=true) or
+      // FirestoreInventoryRepository when isTestingMode=false.
+      if (isDesktop)
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              copy.isEnglish
+                  ? 'Product Catalog (Inventory Layer)'
+                  : 'كتالوج المنتجات — طبقة المخزون',
+              style: const TextStyle(
+                color: AppTheme.aiBlue,
+                fontWeight: FontWeight.w900,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        )
+      else
+        AiMobileSectionHeader(
+          title: copy.isEnglish
+              ? 'Product Catalog'
+              : 'كتالوج المنتجات',
+        ),
+
+      SizedBox(height: isDesktop ? 16 : AiMobileConfig.sectionGap),
+
+      StreamBuilder<List<InventoryItem>>(
+        stream: _inventoryRepository.getInventoryItems(),
+        builder: (context, invSnap) {
+          if (invSnap.hasError) {
+            return Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+              ),
+              child: AiGlassCard(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Text(
+                    copy.isEnglish
+                        ? 'Error loading catalog items.'
+                        : 'تعذّر تحميل بنود الكتالوج.',
+                    style: const TextStyle(
+                      color: AppTheme.aiRed,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+          if (invSnap.connectionState == ConnectionState.waiting) {
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: Center(
+                child: CircularProgressIndicator(color: AppTheme.aiBlue),
+              ),
+            );
+          }
+          final invItems = invSnap.data ?? const <InventoryItem>[];
+          if (invItems.isEmpty) {
+            return Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+              ),
+              child: AiGlassCard(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: Text(
+                    copy.isEnglish
+                        ? 'No catalog items found.'
+                        : 'لا توجد بنود في الكتالوج.',
+                    style: const TextStyle(
+                      color: AppTheme.aiTextSecondary,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            );
+          }
+          return Column(
+            children: invItems
+                .map(
+                  (item) => Padding(
+                    padding: EdgeInsets.only(
+                      bottom: 12,
+                      left: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+                      right: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+                    ),
+                    child: _inventoryItemCard(item, copy, isDesktop),
+                  ),
+                )
+                .toList(),
+          );
+        },
+      ),
+
       if (isDesktop) const SizedBox(height: 120),
     ];
   }
@@ -572,6 +681,112 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   isSmall: true,
                   onTap: () => _confirmDelete(product),
                 ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Card for [InventoryItem] objects from [InventoryRepositoryFactory].
+  /// Maps: item.name → title, item.sku → subtitle badge,
+  ///       item.quantity → stock chip, item.price → price chip.
+  Widget _inventoryItemCard(
+      InventoryItem item, AppCopy copy, bool isDesktop) {
+    final isOut = item.quantity == 0;
+    final isLow = !isOut && item.quantity <= 5;
+    final statusColor =
+        isOut ? AppTheme.aiRed : (isLow ? AppTheme.aiGold : AppTheme.aiBlue);
+    final statusLabel = isOut
+        ? copy.t('outOfStock')
+        : (isLow ? copy.t('lowStock') : (copy.isEnglish ? 'In Stock' : 'متوفر'));
+
+    return PremiumCard(
+      padding: const EdgeInsets.all(20),
+      border: Border.all(
+        color: statusColor.withValues(alpha: 0.2),
+        width: 1,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              // Icon avatar
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: statusColor),
+                ),
+                child: Icon(Icons.inventory_2_rounded, color: statusColor),
+              ),
+              const SizedBox(width: 12),
+              // Name + SKU
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      item.name,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 16,
+                        color: AppTheme.aiTextPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'SKU: ${item.sku}',
+                      style: const TextStyle(
+                        color: AppTheme.aiTextSecondary,
+                        fontSize: 12,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              // Status badge
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: statusColor.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(20),
+                  border:
+                      Border.all(color: statusColor.withValues(alpha: 0.25)),
+                ),
+                child: Text(
+                  statusLabel,
+                  style: TextStyle(
+                    color: statusColor,
+                    fontWeight: FontWeight.w800,
+                    fontSize: 10,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          // Info chips: quantity, category, price
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _infoChip(
+                copy.t('stock'),
+                '${item.quantity}',
+              ),
+              _infoChip(
+                copy.isEnglish ? 'Category' : 'الفئة',
+                item.category,
+              ),
+              _infoChip(
+                copy.t('sellingPrice'),
+                AppFormatters.currency(item.price),
+              ),
             ],
           ),
         ],
