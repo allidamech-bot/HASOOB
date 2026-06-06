@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../core/app_copy.dart';
 import '../core/app_theme.dart';
@@ -13,6 +14,7 @@ import 'reports_screen.dart';
 import 'sales_history_screen.dart';
 import 'settings_screen.dart';
 import 'smart_calculator_screen.dart';
+import '../features/command_dock/presentation/widgets/command_search_overlay.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -190,7 +192,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
 
     return KeyedSubtree(
       key: ValueKey('main-nav-$localeKey'),
-      child: Scaffold(
+      child: KeyboardListener(
+        focusNode: FocusNode(),
+        autofocus: true,
+        onKeyEvent: (event) {
+          if (event is KeyDownEvent && 
+              event.logicalKey == LogicalKeyboardKey.keyK && 
+              HardwareKeyboard.instance.isControlPressed) {
+            CommandSearchOverlay.show(context);
+          }
+        },
+        child: Scaffold(
         backgroundColor: AppTheme.aiDeep,
         extendBody: false,
         body: LayoutBuilder(
@@ -235,6 +247,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               ),
             );
           },
+        ),
         ),
       ),
     );
