@@ -26,6 +26,8 @@ import 'package:hasoob_app/screens/collection_center_screen.dart';
 import 'package:hasoob_app/screens/settings_screen.dart';
 import 'package:hasoob_app/screens/_dashboard_dock_spacer.dart';
 import 'package:hasoob_app/core/business/daily_decision_engine.dart';
+import 'package:hasoob_app/features/dashboard/data/models/dashboard_summary_model.dart';
+import 'package:hasoob_app/features/dashboard/data/repositories/dashboard_repository_factory.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -36,6 +38,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   final ReportService _reportService = const ReportService();
+  final _dashboardRepository = DashboardRepositoryFactory.make();
   ReportsSnapshot? _cachedData;
   List<BusinessDecision>? _decisions;
   bool _isRestoring = false;
@@ -209,7 +212,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
       return _buildErrorState(context, copy, _error);
     }
 
-    return _buildContent(context, copy);
+    return StreamBuilder<DashboardSummaryModel>(
+      stream: _dashboardRepository.getDashboardSummary(),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: AppTheme.aiRed)));
+        }
+        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator(color: AppTheme.aiGold));
+        }
+        final summary = snapshot.data;
+        if (summary == null) return const SizedBox.shrink();
+
+        return _buildContent(context, copy, summary);
+      },
+    );
   }
 
   Widget _buildMobileHeader(BuildContext context, AppCopy copy) {
@@ -291,10 +308,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildContent(BuildContext context, AppCopy copy) {
+  Widget _buildContent(BuildContext context, AppCopy copy, DashboardSummaryModel summary) {
     final data = _cachedData ?? ReportsSnapshot.empty();
     final lowStockPreview = data.lowStockItems.take(3).toList();
-    final recentSalesPreview = data.recentSales.take(3).toList();
     final isDesktop = MediaQuery.sizeOf(context).width >= 800;
 
     if (!isDesktop) {
@@ -310,7 +326,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: AiMobileConfig.sectionGap),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
-              child: _buildMobileFinancialHealthAndKPIs(data, copy),
+              child: _buildMobileFinancialHealthAndKPIs(summary, copy),
             ),
             const SizedBox(height: AiMobileConfig.sectionGap),
             AiMobileSectionHeader(title: copy.t('quickActions')),
@@ -331,7 +347,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SizedBox(height: AiMobileConfig.sectionGap),
                   _stockSection(context, copy, data, lowStockPreview),
                   const SizedBox(height: AiMobileConfig.sectionGap),
-                  _salesSection(context, copy, data, recentSalesPreview),
+                  _recentActivitiesSection(context, copy, summary),
                 ],
               ),
             ),
@@ -476,7 +492,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
 
               const SizedBox(height: 14),
-              _buildKpiGrid(data, copy, true),
+              _buildKpiGrid(summary, copy, true),
               const SizedBox(height: 16),
 
               Row(
@@ -518,13 +534,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   children: [
                     Expanded(child: _stockSection(context, copy, data, lowStockPreview)),
                     const SizedBox(width: 24),
-                    Expanded(child: _salesSection(context, copy, data, recentSalesPreview)),
+                    Expanded(child: _recentActivitiesSection(context, copy, summary)),
                   ],
                 )
               else ...[
                 _stockSection(context, copy, data, lowStockPreview),
                 const SizedBox(height: 28),
-                _salesSection(context, copy, data, recentSalesPreview),
+                _recentActivitiesSection(context, copy, summary),
               ],
 
               const SizedBox(height: 120),
@@ -677,7 +693,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildMobileFinancialHealthAndKPIs(ReportsSnapshot data, AppCopy copy) {
+  Widget _buildMobileFinancialHealthAndKPIs(DashboardSummaryModel summary, AppCopy copy) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -717,9 +733,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
           flex: 3,
           child: Column(
             children: [
-              _buildCompactKpiRow(Icons.account_balance_wallet_rounded, AppTheme.aiGold, copy.isEnglish ? 'Sales' : 'المبيعات', AppFormatters.currency(data.totalSales)),
+              _buildCompactKpiRow(Icons.point_of_sale_rounded, AppTheme.aiGold, copy.isEnglish ? 'Sales' : 'المبيعات', AppFormatters.currency(summary.totalSalesVolume)),
               const SizedBox(height: 8),
-              _buildCompactKpiRow(Icons.inventory_2_rounded, AppTheme.aiBlue, copy.isEnglish ? 'Stock' : 'المخزون', AppFormatters.currency(data.totalStockValue)),
+              _buildCompactKpiRow(Icons.people_alt_rounded, AppTheme.aiBlue, copy.isEnglish ? 'Customers' : 'العملاء', summary.activeCustomersCount.toString()),
             ],
           ),
         ),
@@ -981,7 +997,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildKpiGrid(ReportsSnapshot data, AppCopy copy, bool isDesktop) {
+  Widget _buildKpiGrid(DashboardSummaryModel summary, AppCopy copy, bool isDesktop) {
     return LayoutBuilder(
       builder: (context, constraints) {
         return GridView.count(
@@ -993,34 +1009,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
           childAspectRatio: isDesktop ? 1.7 : 2.2,
           children: [
             AiKpiCard(
-              label: copy.t('totalProducts'),
-              value: AppFormatters.number(data.totalProducts),
-              icon: Icons.inventory_2_rounded,
+              label: copy.isEnglish ? 'Sales Volume' : 'حجم المبيعات',
+              value: AppFormatters.currency(summary.totalSalesVolume),
+              icon: Icons.point_of_sale_rounded,
               accentColor: AppTheme.aiBlue,
             ),
             AiKpiCard(
-              label: copy.t('totalSales'),
-              value: AppFormatters.currency(data.totalSales),
-              icon: Icons.point_of_sale_rounded,
+              label: copy.isEnglish ? 'Active Customers' : 'العملاء النشطون',
+              value: summary.activeCustomersCount.toString(),
+              icon: Icons.people_alt_rounded,
               accentColor: AppTheme.aiGold,
-              trendText: "+14.8%",
-              isTrendUp: true,
             ),
             AiKpiCard(
-              label: copy.t('estimatedProfit'),
-              value: AppFormatters.currency(data.netProfitEstimate),
-              icon: Icons.trending_up_rounded,
-              accentColor: AppTheme.aiGreen,
-              trendText: "+8.2%",
-              isTrendUp: true,
-            ),
-            AiKpiCard(
-              label: copy.t('lowStockCount'),
-              value: AppFormatters.number(data.lowStockItems.length),
+              label: copy.isEnglish ? 'Low Stock Alerts' : 'تنبيهات المخزون',
+              value: summary.lowStockItemsCount.toString(),
               icon: Icons.warning_amber_rounded,
-              accentColor: AppTheme.aiRed,
-              trendText: data.lowStockItems.isEmpty ? null : "${data.lowStockItems.length}",
-              isTrendUp: false,
+              accentColor: summary.lowStockItemsCount > 0 ? AppTheme.aiRed : AppTheme.aiGreen,
+            ),
+            AiKpiCard(
+              label: copy.isEnglish ? 'Recovery Rate' : 'معدل التحصيل',
+              value: '${summary.recoveryRate.toStringAsFixed(2)}%',
+              icon: Icons.trending_up_rounded,
+              accentColor: AppTheme.success,
             ),
           ],
         );
@@ -1327,43 +1337,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _salesSection(BuildContext context, AppCopy copy, ReportsSnapshot data, List<dynamic> preview) {
+  Widget _recentActivitiesSection(BuildContext context, AppCopy copy, DashboardSummaryModel summary) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader(copy.t('recentSales'), copy.t('dashboardRecentOperations')),
+        _sectionHeader(copy.isEnglish ? 'Recent Activities' : 'النشاطات الأخيرة', copy.isEnglish ? 'Latest system events' : 'أحدث عمليات النظام'),
         const SizedBox(height: 16),
-        if (data.recentSales.isEmpty)
-          _emptyCard(context, icon: Icons.sell_outlined, text: copy.t('dashboardNoSalesYet'))
+        if (summary.recentActivities.isEmpty)
+          _emptyCard(context, icon: Icons.history_rounded, text: copy.isEnglish ? 'No recent activities' : 'لا توجد نشاطات حديثة')
         else ...[
-          ...preview.map((row) => Padding(
+          ...summary.recentActivities.map((row) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: PremiumCard(
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  _iconBox(Icons.sell_rounded, AppTheme.aiGold),
+                  _iconBox(Icons.notifications_active_rounded, AppTheme.aiGold),
                   const SizedBox(width: 16),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(row['product_name']?.toString() ?? '', style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.w800, fontSize: 14)),
+                        Text(row['title']?.toString() ?? '', style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.w800, fontSize: 14)),
                         const SizedBox(height: 4),
                         Text(
-                          copy.dashboardRecentSaleSubtitle(
-                            customerName: row['customer_name']?.toString() ?? '',
-                            qty: row['qty'],
-                            date: AppFormatters.dateTimeString(row['date']?.toString()),
-                          ),
+                          row['subtitle']?.toString() ?? '',
                           style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12),
                         ),
                       ],
                     ),
                   ),
                   Text(
-                    AppFormatters.currency(_toDouble(row['total_sale'])),
-                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: AppTheme.aiGold),
+                    row['time']?.toString() ?? '',
+                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.aiTextSecondary),
                   ),
                 ],
               ),
@@ -1508,10 +1514,5 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ],
       ),
     );
-  }
-
-  double _toDouble(dynamic value) {
-    if (value is num) return value.toDouble();
-    return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 }
