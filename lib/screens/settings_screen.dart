@@ -8,6 +8,7 @@ import '../core/app_copy.dart';
 import '../widgets/premium/premium_card.dart';
 import '../widgets/ai_design_system.dart';
 import 'help_screen.dart';
+import '../features/settings/presentation/widgets/roles_permissions_section.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -123,6 +124,8 @@ class SettingsScreen extends StatelessWidget {
                       ),
                     ],
                   ),
+                  const SizedBox(height: 20),
+                  const RolesPermissionsSection(),
                 ],
               ),
             ),
