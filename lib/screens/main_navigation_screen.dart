@@ -15,6 +15,7 @@ import 'sales_history_screen.dart';
 import 'settings_screen.dart';
 import 'smart_calculator_screen.dart';
 import '../features/command_dock/presentation/widgets/command_search_overlay.dart';
+import '../features/ai_accountant/presentation/screens/ai_accountant_screen.dart';
 
 class MainNavigationScreen extends StatefulWidget {
   const MainNavigationScreen({super.key});
@@ -121,6 +122,20 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                       context,
                       MaterialPageRoute(
                           builder: (_) => const CustomersScreen()),
+                    );
+                  },
+                ),
+                _aiListTile(
+                  sheetContext: sheetContext,
+                  icon: Icons.psychology_outlined,
+                  iconColor: const Color(0xFFD4AF37),
+                  label: copy.isEnglish ? 'AI Accountant' : 'المحاسب الذكي',
+                  onTap: () {
+                    Navigator.pop(sheetContext);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const AiAccountantScreen()),
                     );
                   },
                 ),
