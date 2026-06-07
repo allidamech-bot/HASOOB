@@ -10,37 +10,60 @@ class MockAiAccountantRepository implements AiAccountantRepository {
     if (text.contains('شراء') || text.contains('اشتريت')) {
       return AiProposalModel(
         actionType: 'purchase',
-        explanation: 'مقترح إضافة مخزون وتوثيق توريد بضاعة بناءً على مدخلاتك.',
-        confidenceScore: 0.95,
+        explanation: 'تم تحليل النص: عملية شراء وتوريد بضاعة للمستودع المالي من مورد جهة اتصال.',
+        confidenceScore: 0.98,
         inventoryPayload: {
-          'name': 'شوكولاتة فاخرة - كرتون التوريد',
-          'quantity': 50,
-          'costPrice': 180.0,
+          'name': 'حاسوب محمول عالي الأداء Pro',
+          'quantity': 15,
+          'costPrice': 3200.0,
           'currency': 'SAR',
-          'sku': 'MOCK-AI-SKU'
+          'sku': 'AI-LAP-PRO'
         },
         customerPayload: {
-          'name': 'شركة التوريد العالمية',
-          'city': 'جدة'
+          'name': 'مؤسسة ميم للاستيراد والتوريد',
+          'city': 'الرياض'
         },
         financialPayload: {
-          'totalAmount': 9000.0,
-          'amountPaid': 9000.0,
+          'totalAmount': 48000.0,
+          'amountPaid': 48000.0,
           'isFullyPaid': true,
+        }
+      );
+    } else if (text.contains('بيع') || text.contains('بعت')) {
+      return AiProposalModel(
+        actionType: 'sale',
+        explanation: 'تم تحليل النص: إصدار فاتورة مبيعات جديدة لعميل مع ترحيل قيم التخفيض المخزني.',
+        confidenceScore: 0.96,
+        inventoryPayload: {
+          'name': 'حاسوب محمول عالي الأداء Pro',
+          'quantity': -2, // Decrement stock on sale
+          'costPrice': 4000.0,
+          'currency': 'SAR',
+          'sku': 'AI-LAP-PRO'
+        },
+        customerPayload: {
+          'name': 'مؤسسة أحمد التجارية',
+          'city': 'الرياض'
+        },
+        financialPayload: {
+          'totalAmount': 8000.0,
+          'amountPaid': 4000.0,
+          'isFullyPaid': false,
         }
       );
     }
 
     return AiProposalModel(
       actionType: 'unknown',
-      explanation: 'لم يتمكن المحرك الذكي من تحديد طبيعة العملية المحاسبية بدقة، يرجى المحاولة بصياغة أخرى.',
-      confidenceScore: 0.30,
+      explanation: 'لم يتمكن المحرك الذكي من استخراج قيود محاسبية مهيكلة متوازنة، يرجى إعادة صياغة النص بوضوح أكثر (مثال: اشتريت/بعت مادة كذا بقيمة كذا).',
+      confidenceScore: 0.35,
     );
   }
 
   @override
   Future<bool> executeProposal(AiProposalModel proposal) async {
-    await Future.delayed(const Duration(milliseconds: 400));
+    await Future.delayed(const Duration(milliseconds: 500));
+    // Simulate global success across mock data state boundaries
     return true;
   }
 }
