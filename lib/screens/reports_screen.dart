@@ -24,6 +24,7 @@ import '../widgets/ai_design_system.dart';
 import 'accounting/trial_balance_screen.dart';
 import '../features/reports/data/models/report_summary_model.dart';
 import '../features/reports/data/repositories/reports_repository_factory.dart';
+import '../features/analytics/presentation/widgets/predictive_runway_widget.dart';
 
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:io' as io;
@@ -323,6 +324,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       const SizedBox(height: 24),
       _buildDomainLayerReports(copy),
       const SizedBox(height: 24),
+      const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16),
+        child: PredictiveRunwayWidget(),
+      ),
       isDesktop ? _metrics(data, copy) : _mobileMetrics(data, copy),
       const SizedBox(height: 24),
       _filters(productOptions, copy),
