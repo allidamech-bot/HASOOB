@@ -38,6 +38,7 @@ dependencies:
   web: ^1.1.1
   provider: ^6.1.2
   async: ^2.11.0
+  google_generative_ai: ^0.4.7
 
 dev_dependencies:
   flutter_test:
