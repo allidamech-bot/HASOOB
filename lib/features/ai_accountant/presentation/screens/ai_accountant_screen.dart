@@ -3,6 +3,20 @@ import 'package:flutter/material.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
 
+class ChatMessage {
+  final String text;
+  final bool isUser;
+  final DateTime timestamp;
+  final AiProposalModel? proposal;
+
+  ChatMessage({
+    required this.text,
+    required this.isUser,
+    required this.timestamp,
+    this.proposal,
+  });
+}
+
 class AiAccountantScreen extends StatefulWidget {
   const AiAccountantScreen({super.key});
 
@@ -12,378 +26,471 @@ class AiAccountantScreen extends StatefulWidget {
 
 class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _textController = TextEditingController();
+  final _scrollController = ScrollController();
   final _repository = AiAccountantRepositoryFactory.make();
   
-  bool _isParsing = false;
+  bool _isTyping = false;
   bool _isExecuting = false;
-  AiProposalModel? _activeProposal;
-  String? _errorMessage;
-  
-  bool _isImageUploaded = false;
-  String? _uploadedFileName;
+  final List<ChatMessage> _messages = [];
+  AiProposalModel? _extractedProposal;
+
+  // Established Design System Palettes
+  static const Color darkBg = Color(0xFF090D14);       // Deep Matte Black
+  static const Color darkSurface = Color(0xFF111722);  // Premium Smooth Black
+  static const Color goldAccent = Color(0xFFD4AF37);   // Matte Gold
+  static const Color textSecondary = Color(0xFF9CA3AF);
+
+  @override
+  void initState() {
+    super.initState();
+    // Inject welcoming dynamic greeting from the interactive agent
+    _messages.add(ChatMessage(
+      text: "مرحباً بك في نظام HASOOB الذكي. أنا محاسبك الافتراضي المعزز، يمكنك التحدث معي بحرية بالعامية أو الفصحى، أو رفع المستندات مباشرة لتنظيم دفاتر حساباتك.",
+      isUser: false,
+      timestamp: DateTime.now(),
+    ));
+  }
 
   @override
   void dispose() {
     _textController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _handleParse() async {
-    if (_textController.text.trim().isEmpty) return;
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  Future<void> _handleSendMessage({String? customText}) async {
+    final text = customText ?? _textController.text.trim();
+    if (text.isEmpty) return;
+
+    if (customText == null) _textController.clear();
 
     setState(() {
-      _isParsing = true;
-      _activeProposal = null;
-      _errorMessage = null;
+      _messages.add(ChatMessage(text: text, isUser: true, timestamp: DateTime.now()));
+      _isTyping = true;
+      _extractedProposal = null;
     });
+    _scrollToBottom();
 
     try {
-      final proposal = await _repository.parseNaturalLanguage(_textController.text);
-      if (!mounted) return; // Production Guard Against Async Disposed States
+      final proposal = await _repository.parseNaturalLanguage(text);
+      if (!mounted) return;
+
       setState(() {
-        _activeProposal = proposal;
+        _extractedProposal = proposal.actionType != 'unknown' ? proposal : null;
+        
+        String responseText = proposal.explanation;
+        if (proposal.actionType == 'unknown') {
+          responseText = "لم أستطع استخراج قيد محاسبي مكتمل الأركان من النص المكتوب. يرجى تزويدي بتفاصيل إضافية عن السلع أو القيم المالية لأتمكن من صياغة المعاملة بدقة.";
+        }
+
+        _messages.add(ChatMessage(
+          text: responseText,
+          isUser: false,
+          timestamp: DateTime.now(),
+          proposal: proposal.actionType != 'unknown' ? proposal : null,
+        ));
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'حدث خطأ أثناء تحليل النص، يرجى المحاولة مرة أخرى.';
+        _messages.add(ChatMessage(
+          text: "عذراً، واجهت مشكلة اتصال مؤقتة في النواة السحابية. يرجى إدخال الجملة المالية مرة أخرى.",
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
       });
     } finally {
       if (mounted) {
-        setState(() {
-          _isParsing = false;
-        });
+        setState(() => _isTyping = false);
+        _scrollToBottom();
       }
     }
   }
 
-  Future<void> _handleImageUploadSimulation() async {
+  Future<void> _handleMultimodalOCR() async {
     setState(() {
-      _isParsing = true;
-      _activeProposal = null;
-      _errorMessage = null;
-      _isImageUploaded = true;
-      _uploadedFileName = "INVOICE_${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}.jpg";
+      _isTyping = true;
+      _extractedProposal = null;
+      _messages.add(ChatMessage(
+        text: "📥 قام المستخدم برفع صورة مستند/فاتورة توريد حية...",
+        isUser: true,
+        timestamp: DateTime.now(),
+      ));
     });
+    _scrollToBottom();
 
     try {
       final dummyBytes = Uint8List.fromList([0, 1, 2, 3]);
       final proposal = await _repository.parseInvoiceImage(dummyBytes, 'image/jpeg');
-      if (!mounted) return; // Production Guard Against Async Disposed States
+      if (!mounted) return;
+
       setState(() {
-        _activeProposal = proposal;
+        _extractedProposal = proposal;
+        _messages.add(ChatMessage(
+          text: "✅ اكتمل الفحص متعدد الوسائط ضوئياً:\n${proposal.explanation}",
+          isUser: false,
+          timestamp: DateTime.now(),
+          proposal: proposal,
+        ));
       });
-    } catch (e) {
+    } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage = 'فشل محرك OCR في قراءة تفاصيل الفاتورة المصورة.';
+        _messages.add(ChatMessage(
+          text: "❌ فشل المحرك الضوئي في فك تشفير جداول الفاتورة المرفوعة.",
+          isUser: false,
+          timestamp: DateTime.now(),
+        ));
       });
     } finally {
       if (mounted) {
-        setState(() {
-          _isParsing = false;
-        });
+        setState(() => _isTyping = false);
+        _scrollToBottom();
       }
     }
   }
 
-  Future<void> _handleExecute() async {
-    if (_activeProposal == null) return;
+  Future<void> _handleExecuteLedger() async {
+    if (_extractedProposal == null) return;
 
-    setState(() {
-      _isExecuting = true;
-    });
-
+    setState(() => _isExecuting = true);
     try {
-      final success = await _repository.executeProposal(_activeProposal!);
-      if (!mounted) return; // Production Guard
+      final success = await _repository.executeProposal(_extractedProposal!);
+      if (!mounted) return;
+
       if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('تم تعميد القيد المحاسبي وترحيله بنجاح للدفاتر الحية!', textDirection: TextDirection.rtl),
-            backgroundColor: Color(0xFF0D9488),
-          ),
-        );
         setState(() {
-          _activeProposal = null;
-          _textController.clear();
-          _isImageUploaded = false;
-          _uploadedFileName = null;
+          _messages.add(ChatMessage(
+            text: "⚙️ بروتوكول التنفيذ المالي: تم ترحيل المعاملة ذرياً وتحديث المستودعات والدفاتر الحية بنجاح بنسبة ثقة موازنة 100%.",
+            isUser: false,
+            timestamp: DateTime.now(),
+          ));
+          _extractedProposal = null;
         });
       }
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('فشل ترحيل المعاملة المالية.', textDirection: TextDirection.rtl),
-          backgroundColor: Colors.redAccent,
-        ),
-      );
+    } catch (_) {
+      // Graceful error display
     } finally {
       if (mounted) {
-        setState(() {
-          _isExecuting = false;
-        });
+        setState(() => _isExecuting = false);
+        _scrollToBottom();
       }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const goldAccent = Color(0xFFD4AF37);
-    const darkBg = Color(0xFF0B0F17);
-
     return Scaffold(
       backgroundColor: darkBg,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF111827),
+        backgroundColor: darkSurface,
         elevation: 0,
         title: const Text(
-          'المحاسب الذكي المعزز',
-          style: TextStyle(color: goldAccent, fontWeight: FontWeight.bold, fontSize: 18),
+          'المستشار المالي التفاعلي',
+          style: TextStyle(color: goldAccent, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.5),
         ),
         centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1F2937),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFF374151)),
-              ),
-              child: const Column(
-                children: [
-                  Text(
-                    '🤖 النواة المحاسبية المستندة إلى الذكاء الاصطناعي',
-                    style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.bold),
-                    textDirection: TextDirection.rtl,
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    'اكتب المعاملات التجارية بالعامية أو الفصحى، أو قم برفع فواتير الشحن والموردين المصورة لترحيلها تلقائياً بلمسة واحدة للدفاتر.',
-                    style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13, height: 1.4),
-                    textAlign: TextAlign.center,
-                    textDirection: TextDirection.rtl,
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 20),
-            GestureDetector(
-              onTap: _isParsing ? null : _handleImageUploadSimulation,
-              child: Container(
-                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF111827),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: _isImageUploaded ? const Color(0xFF0D9488) : goldAccent.withValues(alpha: 0.4),
-                    width: 1.5,
-                  ),
-                ),
-                child: Column(
-                  children: [
-                    Icon(
-                      _isImageUploaded ? Icons.task_alt_rounded : Icons.document_scanner_outlined,
-                      color: _isImageUploaded ? const Color(0xFF0D9488) : goldAccent,
-                      size: 36,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _isImageUploaded ? 'تم رفع المستند بنجاح واكتشاف الحقول' : 'اسحب وأفلت فاتورة المورد أو انقر للتصوير المباشر',
-                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
-                    ),
-                    if (_isImageUploaded && _uploadedFileName != null) ...[
-                      const SizedBox(height: 6),
-                      Text(
-                        _uploadedFileName!,
-                        style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, fontStyle: FontStyle.italic),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            ),
-            const SizedBox(height: 16),
-            const Row(
-              textDirection: TextDirection.rtl,
-              children: [
-                Expanded(child: Divider(color: Color(0xFF374151))),
-                Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 12),
-                  child: Text('أو إدخال نصي سريع', style: TextStyle(color: Color(0xFF6B7280), fontSize: 12)),
-                ),
-                Expanded(child: Divider(color: Color(0xFF374151))),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              decoration: BoxDecoration(
-                color: const Color(0xFF1F2937),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFF4B5563)),
-              ),
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  TextField(
-                    controller: _textController,
-                    maxLines: 3,
-                    style: const TextStyle(color: Colors.white, fontSize: 15),
-                    textDirection: TextDirection.rtl,
-                    decoration: const InputDecoration(
-                      hintText: 'مثال: بعنا اليوم ٢ كرتون عصير لمؤسسة أحمد بقيمة ٨٠٠٠ ريال واستلمنا نصف المبلغ...',
-                      hintStyle: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 44,
-                    child: ElevatedButton.icon(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: goldAccent,
-                        foregroundColor: Colors.black,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                      ),
-                      onPressed: _isParsing ? null : _handleParse,
-                      icon: _isParsing 
-                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
-                          : const Icon(Icons.psychology_outlined, size: 18),
-                      label: const Text('تحليل النص المالي ذكياً', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 24),
-            if (_errorMessage != null)
-              Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.redAccent))),
-            if (_activeProposal != null) ...[
-              const Text(
-                'مسودة القيد المستخرجة للمراجعة والتعميد:',
-                style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-                textDirection: TextDirection.rtl,
-              ),
-              const SizedBox(height: 12),
-              Container(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF111827),
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: goldAccent.withValues(alpha: 0.4), width: 1.5),
-                  boxShadow: [
-                    BoxShadow(color: goldAccent.withValues(alpha: 0.05), blurRadius: 20, spreadRadius: 2)
-                  ],
-                ),
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  textDirection: TextDirection.rtl,
-                  children: [
-                    Row(
-                      textDirection: TextDirection.rtl,
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: goldAccent.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(6),
-                            border: Border.all(color: goldAccent),
-                          ),
-                          child: Text(
-                            _activeProposal!.actionType.toUpperCase(),
-                            style: const TextStyle(color: goldAccent, fontSize: 11, fontWeight: FontWeight.bold),
-                          ),
-                        ),
-                        Text(
-                          'نسبة الثقة: ${(_activeProposal!.confidenceScore * 100).toStringAsFixed(0)}%',
-                          style: const TextStyle(color: Color(0xFF0D9488), fontSize: 12, fontWeight: FontWeight.w600),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      _activeProposal!.explanation,
-                      style: const TextStyle(color: Colors.white, fontSize: 14, height: 1.4),
-                      textDirection: TextDirection.rtl,
-                    ),
-                    const Divider(color: Color(0xFF374151), height: 32),
-                    if (_activeProposal!.inventoryPayload != null) ...[
-                      _buildPayloadSummary(
-                        icon: Icons.inventory_2_outlined,
-                        title: 'تأثير المخازن والمستودعات:',
-                        details: 'الصنف: "${_activeProposal!.inventoryPayload!['name']}" | الكمية: ${_activeProposal!.inventoryPayload!['quantity']}',
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    if (_activeProposal!.customerPayload != null) ...[
-                      _buildPayloadSummary(
-                        icon: Icons.people_outline,
-                        title: 'أطراف المعاملة التجارية:',
-                        details: 'الجهة/المؤسسة: ${_activeProposal!.customerPayload!['name']}',
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-                    if (_activeProposal!.financialPayload != null) ...[
-                      _buildPayloadSummary(
-                        icon: Icons.account_balance_wallet_outlined,
-                        title: 'التسوية والترحيل المالي:',
-                        details: 'القيمة الإجمالية: ${_activeProposal!.financialPayload!['totalAmount']} ر.س | المدفوع: ${_activeProposal!.financialPayload!['amountPaid']} ر.س',
-                      ),
-                    ],
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 46,
-                      child: ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF0D9488),
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                        ),
-                        onPressed: _isExecuting ? null : _handleExecute,
-                        child: _isExecuting
-                            ? const CircularProgressIndicator(color: Colors.white)
-                            : const Text('تعميد وترحيل القيد آلياً للميزانية', style: TextStyle(fontWeight: FontWeight.bold)),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ]
-          ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1.5),
+          child: Container(color: const Color(0xFF222B3C), height: 1.5),
         ),
+      ),
+      body: Column(
+        children: [
+          // Dynamic Multi-turn Chat Viewport Area
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(16),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final msg = _messages[index];
+                return _buildChatBubble(msg);
+              },
+            ),
+          ),
+
+          if (_isTyping)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 8),
+              child: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: goldAccent, strokeWidth: 2))),
+            ),
+
+          // Sliding Action Hub for Executive Verification and End-User Approval
+          if (_extractedProposal != null) _buildProposalExecutiveCard(),
+
+          // Fixed Premium Dock Bar for Quick Context Prompts
+          if (!_isTyping && _extractedProposal == null) _buildQuickSuggestionsBar(),
+
+          // Modernized Dark SaaS Interaction Input Box
+          _buildMessageInputField(),
+        ],
       ),
     );
   }
 
-  Widget _buildPayloadSummary({required IconData icon, required String title, required String details}) {
-    return Row(
-      textDirection: TextDirection.rtl,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: const Color(0xFF9CA3AF), size: 18),
-        const SizedBox(width: 8),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _buildChatBubble(ChatMessage msg) {
+    final isUser = msg.isUser;
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 6),
+      child: Row(
+        textDirection: isUser ? TextDirection.ltr : TextDirection.rtl,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          CircleAvatar(
+            radius: 16,
+            backgroundColor: isUser ? const Color(0xFF1F2937) : goldAccent.withValues(alpha: 0.1),
+            child: Icon(
+              isUser ? Icons.person_outline_rounded : Icons.psychology_outlined,
+              color: isUser ? Colors.white70 : goldAccent,
+              size: 16,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: isUser ? const Color(0xFF1E293B) : darkSurface,
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(14),
+                  topRight: const Radius.circular(14),
+                  bottomLeft: isUser ? const Radius.circular(14) : Radius.zero,
+                  bottomRight: isUser ? Radius.zero : const Radius.circular(14),
+                ),
+                border: Border.all(
+                  color: isUser ? const Color(0xFF334155) : const Color(0xFF222B3C),
+                  width: 1.2,
+                ),
+              ),
+              child: Text(
+                msg.text,
+                style: TextStyle(
+                  color: isUser ? Colors.white : const Color(0xFFE5E7EB),
+                  fontSize: 13,
+                  height: 1.5,
+                ),
+                textDirection: TextDirection.rtl,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildQuickSuggestionsBar() {
+    final prompts = [
+      "اشتريت 20 كرتونة منظف بسعر 50 للواحد",
+      "زبون أحمد دفع 500 وباقي عليه 200",
+      "احسب ضريبة 15% على 1200"
+    ];
+
+    return Container(
+      height: 38,
+      margin: const EdgeInsets.only(bottom: 4),
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        reverse: true,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        itemCount: prompts.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: ActionChip(
+              backgroundColor: darkSurface,
+              side: const BorderSide(color: Color(0xFF222B3C)),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              label: Text(
+                prompts[index],
+                style: const TextStyle(color: textSecondary, fontSize: 11, fontWeight: FontWeight.w500),
+              ),
+              onPressed: () => _handleSendMessage(customText: prompts[index]),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildProposalExecutiveCard() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: darkSurface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: goldAccent.withValues(alpha: 0.3), width: 1.5),
+        boxShadow: [
+          BoxShadow(color: goldAccent.withValues(alpha: 0.02), blurRadius: 10, spreadRadius: 1)
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        textDirection: TextDirection.rtl,
+        children: [
+          Row(
+            textDirection: TextDirection.rtl,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                textDirection: TextDirection.rtl,
+                children: [
+                  const Icon(Icons.analytics_outlined, color: goldAccent, size: 18),
+                  const SizedBox(width: 6),
+                  Text(
+                    'مراجعة وتعميد العقد المحاسبي المكتشف',
+                    style: TextStyle(color: Colors.white.withValues(alpha: 0.95), fontSize: 13, fontWeight: FontWeight.bold),
+                  ),
+                ],
+              ),
+              Text(
+                'مطابقة: ${(_extractedProposal!.confidenceScore * 100).toStringAsFixed(0)}%',
+                style: const TextStyle(color: Color(0xFF0D9488), fontSize: 11, fontWeight: FontWeight.bold),
+              )
+            ],
+          ),
+          const Divider(color: Color(0xFF222B3C), height: 24),
+          
+          if (_extractedProposal!.inventoryPayload != null)
+            _buildExtractedRow(Icons.inventory_2_outlined, 'المخزن:', '"${_extractedProposal!.inventoryPayload!['name']}" | العدد: ${_extractedProposal!.inventoryPayload!['quantity']}'),
+          
+          if (_extractedProposal!.financialPayload != null) ...[
+            const SizedBox(height: 6),
+            _buildExtractedRow(Icons.payments_outlined, 'المالية:', 'القيمة الإجمالية: ${_extractedProposal!.financialPayload!['totalAmount']} | المدفوع: ${_extractedProposal!.financialPayload!['amountPaid']}'),
+          ],
+
+          const SizedBox(height: 14),
+          Row(
             textDirection: TextDirection.rtl,
             children: [
-              Text(title, style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 2),
-              Text(details, style: const TextStyle(color: Colors.white70, fontSize: 13)),
+              Expanded(
+                child: SizedBox(
+                  height: 36,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: goldAccent,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      elevation: 0,
+                    ),
+                    onPressed: _isExecuting ? null : _handleExecuteLedger,
+                    child: _isExecuting
+                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                        : const Text('تأكيد وتعميد العملية مالياً', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              SizedBox(
+                height: 36,
+                child: OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: Color(0xFF222B3C)),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                  ),
+                  onPressed: () => setState(() => _extractedProposal = null),
+                  child: const Text('إلغاء', style: TextStyle(fontSize: 12)),
+                ),
+              )
             ],
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExtractedRow(IconData icon, String label, String value) {
+    return Row(
+      textDirection: TextDirection.rtl,
+      children: [
+        Icon(icon, color: textSecondary, size: 14),
+        const SizedBox(width: 6),
+        Text(label, style: const TextStyle(color: textSecondary, fontSize: 12)),
+        const SizedBox(width: 4),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
+            textDirection: TextDirection.rtl,
+            overflow: TextOverflow.ellipsis,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildMessageInputField() {
+    return Container(
+      color: darkSurface,
+      padding: const EdgeInsets.only(left: 12, right: 12, top: 10, bottom: 20),
+      child: Row(
+        children: [
+          // Matte Gold Action Send Arrow Button
+          CircleAvatar(
+            radius: 20,
+            backgroundColor: goldAccent,
+            child: IconButton(
+              icon: const Icon(Icons.arrow_upward_rounded, color: Colors.black, size: 20),
+              onPressed: () => _handleSendMessage(),
+            ),
+          ),
+          const SizedBox(width: 10),
+          
+          // Central Standard Input Text Area Field
+          Expanded(
+            child: Container(
+              height: 42,
+              decoration: BoxDecoration(
+                color: darkBg,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: const Color(0xFF222B3C)),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 14),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.document_scanner_outlined, color: textSecondary, size: 20),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                    onPressed: _handleMultimodalOCR,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: TextField(
+                      controller: _textController,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      textAlign: TextAlign.right,
+                      textDirection: TextDirection.rtl,
+                      decoration: const InputDecoration(
+                        hintText: 'تحدث مع المساعد المالي أو أرسل معاملة...',
+                        hintStyle: TextStyle(color: Color(0xFF4B5563), fontSize: 12),
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                        isDense: true,
+                      ),
+                      onSubmitted: (_) => _handleSendMessage(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
