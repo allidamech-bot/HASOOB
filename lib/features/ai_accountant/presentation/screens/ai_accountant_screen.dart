@@ -19,7 +19,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   AiProposalModel? _activeProposal;
   String? _errorMessage;
   
-  // Track visual states for image processing simulation
   bool _isImageUploaded = false;
   String? _uploadedFileName;
 
@@ -40,21 +39,24 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
     try {
       final proposal = await _repository.parseNaturalLanguage(_textController.text);
+      if (!mounted) return; // Production Guard Against Async Disposed States
       setState(() {
         _activeProposal = proposal;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'حدث خطأ أثناء تحليل النص، يرجى المحاولة مرة أخرى.';
       });
     } finally {
-      setState(() {
-        _isParsing = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isParsing = false;
+        });
+      }
     }
   }
 
-  // Trigger Multimodal Image OCR analysis pipeline
   Future<void> _handleImageUploadSimulation() async {
     setState(() {
       _isParsing = true;
@@ -65,20 +67,23 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     });
 
     try {
-      // Simulate reading dummy byte data array into production contract
       final dummyBytes = Uint8List.fromList([0, 1, 2, 3]);
       final proposal = await _repository.parseInvoiceImage(dummyBytes, 'image/jpeg');
+      if (!mounted) return; // Production Guard Against Async Disposed States
       setState(() {
         _activeProposal = proposal;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _errorMessage = 'فشل محرك OCR في قراءة تفاصيل الفاتورة المصورة.';
       });
     } finally {
-      setState(() {
-        _isParsing = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isParsing = false;
+        });
+      }
     }
   }
 
@@ -91,7 +96,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
     try {
       final success = await _repository.executeProposal(_activeProposal!);
-      if (!mounted) return;
+      if (!mounted) return; // Production Guard
       if (success) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -115,16 +120,18 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         ),
       );
     } finally {
-      setState(() {
-        _isExecuting = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isExecuting = false;
+        });
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    const goldAccent = Color(0xFFD4AF37); // Matte Gold
-    const darkBg = Color(0xFF0B0F17); // Matte Black base
+    const goldAccent = Color(0xFFD4AF37);
+    const darkBg = Color(0xFF0B0F17);
 
     return Scaffold(
       backgroundColor: darkBg,
@@ -142,7 +149,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            // Head Description
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
@@ -168,8 +174,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
             const SizedBox(height: 20),
-
-            // Multimodal OCR Document Scanner Zone
             GestureDetector(
               onTap: _isParsing ? null : _handleImageUploadSimulation,
               child: Container(
@@ -180,7 +184,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                   border: Border.all(
                     color: _isImageUploaded ? const Color(0xFF0D9488) : goldAccent.withValues(alpha: 0.4),
                     width: 1.5,
-                    style: BorderStyle.solid,
                   ),
                 ),
                 child: Column(
@@ -207,8 +210,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
             const SizedBox(height: 16),
-
-            // Text Input Entry Divider
             const Row(
               textDirection: TextDirection.rtl,
               children: [
@@ -221,8 +222,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ],
             ),
             const SizedBox(height: 16),
-
-            // Input Text Field Box
             Container(
               decoration: BoxDecoration(
                 color: const Color(0xFF1F2937),
@@ -265,11 +264,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
             const SizedBox(height: 24),
-
             if (_errorMessage != null)
               Center(child: Text(_errorMessage!, style: const TextStyle(color: Colors.redAccent))),
-
-            // Executive Proposal Review Card (Matte Black and Gold Accent)
             if (_activeProposal != null) ...[
               const Text(
                 'مسودة القيد المستخرجة للمراجعة والتعميد:',
@@ -320,7 +316,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                       textDirection: TextDirection.rtl,
                     ),
                     const Divider(color: Color(0xFF374151), height: 32),
-
                     if (_activeProposal!.inventoryPayload != null) ...[
                       _buildPayloadSummary(
                         icon: Icons.inventory_2_outlined,
@@ -329,7 +324,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                       ),
                       const SizedBox(height: 12),
                     ],
-
                     if (_activeProposal!.customerPayload != null) ...[
                       _buildPayloadSummary(
                         icon: Icons.people_outline,
@@ -338,7 +332,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                       ),
                       const SizedBox(height: 12),
                     ],
-
                     if (_activeProposal!.financialPayload != null) ...[
                       _buildPayloadSummary(
                         icon: Icons.account_balance_wallet_outlined,
@@ -346,7 +339,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                         details: 'القيمة الإجمالية: ${_activeProposal!.financialPayload!['totalAmount']} ر.س | المدفوع: ${_activeProposal!.financialPayload!['amountPaid']} ر.س',
                       ),
                     ],
-
                     const SizedBox(height: 24),
                     SizedBox(
                       width: double.infinity,
