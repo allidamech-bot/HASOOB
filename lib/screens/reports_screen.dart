@@ -25,6 +25,7 @@ import 'accounting/trial_balance_screen.dart';
 import '../features/reports/data/models/report_summary_model.dart';
 import '../features/reports/data/repositories/reports_repository_factory.dart';
 import '../features/analytics/presentation/widgets/predictive_runway_widget.dart';
+import '../features/shipping_logistics/presentation/widgets/container_simulation_widget.dart';
 
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:io' as io;
@@ -327,6 +328,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       const Padding(
         padding: EdgeInsets.symmetric(vertical: 16),
         child: PredictiveRunwayWidget(),
+      ),
+      const Padding(
+        padding: EdgeInsets.only(top: 16),
+        child: ContainerSimulationWidget(),
       ),
       isDesktop ? _metrics(data, copy) : _mobileMetrics(data, copy),
       const SizedBox(height: 24),
