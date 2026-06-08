@@ -326,15 +326,17 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   Widget _buildProposalExecutiveCard() {
+    final isPricing = _extractedProposal!.actionType == 'pricing_simulation';
+    
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: darkSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: goldAccent.withValues(alpha: 0.3), width: 1.5),
+        border: Border.all(color: isPricing ? const Color(0xFF0D9488) : goldAccent.withValues(alpha: 0.3), width: 1.5),
         boxShadow: [
-          BoxShadow(color: goldAccent.withValues(alpha: 0.02), blurRadius: 10, spreadRadius: 1)
+          BoxShadow(color: isPricing ? const Color(0xFF0D9488).withValues(alpha: 0.02) : goldAccent.withValues(alpha: 0.02), blurRadius: 10, spreadRadius: 1)
         ],
       ),
       child: Column(
@@ -348,28 +350,44 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               Row(
                 textDirection: TextDirection.rtl,
                 children: [
-                  const Icon(Icons.analytics_outlined, color: goldAccent, size: 18),
+                  Icon(isPricing ? Icons.calculate_outlined : Icons.analytics_outlined, color: isPricing ? const Color(0xFF0D9488) : goldAccent, size: 18),
                   const SizedBox(width: 6),
                   Text(
-                    'مراجعة وتعميد العقد المحاسبي المكتشف',
+                    isPricing ? 'محاكاة الأسعار وهامش الربح اللوجستي المستهدف' : 'مراجعة وتعميد العقد المحاسبي المكتشف',
                     style: TextStyle(color: Colors.white.withValues(alpha: 0.95), fontSize: 13, fontWeight: FontWeight.bold),
                   ),
                 ],
               ),
               Text(
-                'مطابقة: ${(_extractedProposal!.confidenceScore * 100).toStringAsFixed(0)}%',
-                style: const TextStyle(color: Color(0xFF0D9488), fontSize: 11, fontWeight: FontWeight.bold),
+                'تحليل دقيق',
+                style: TextStyle(color: isPricing ? const Color(0xFF0D9488) : goldAccent, fontSize: 11, fontWeight: FontWeight.bold),
               )
             ],
           ),
           const Divider(color: Color(0xFF222B3C), height: 24),
           
-          if (_extractedProposal!.inventoryPayload != null)
-            _buildExtractedRow(Icons.inventory_2_outlined, 'المخزن:', '"${_extractedProposal!.inventoryPayload!['name']}" | العدد: ${_extractedProposal!.inventoryPayload!['quantity']}'),
-          
-          if (_extractedProposal!.financialPayload != null) ...[
+          if (isPricing && _extractedProposal!.pricingPayload != null) ...[
+            _buildExtractedRow(Icons.place_outlined, 'وجهة الشحن الدولي:', _extractedProposal!.pricingPayload!['destination']),
             const SizedBox(height: 6),
-            _buildExtractedRow(Icons.payments_outlined, 'المالية:', 'القيمة الإجمالية: ${_extractedProposal!.financialPayload!['totalAmount']} | المدفوع: ${_extractedProposal!.financialPayload!['amountPaid']}'),
+            _buildExtractedRow(Icons.inventory_2_outlined, 'السعة المقدرة للحاوية:', '${_extractedProposal!.pricingPayload!['estimatedTotalBoxes']} كرتون (سعة كاملة)'),
+            const SizedBox(height: 6),
+            _buildExtractedRow(Icons.trending_up_outlined, 'الهامش المستهدف للربح:', '${_extractedProposal!.pricingPayload!['targetMarginPercentage']}% صافي'),
+            const Divider(color: Color(0xFF222B3C), height: 20),
+            Row(
+              textDirection: TextDirection.rtl,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildMetricBlock('التكلفة الفعلية للكرتون (Landed)', '${_extractedProposal!.pricingPayload!['landedCostPerUnit']} \$', goldAccent),
+                _buildMetricBlock('سعر البيع المقترح لضمان الربح', '${_extractedProposal!.pricingPayload!['suggestedPricePerUnit']} \$', const Color(0xFF0D9488)),
+              ],
+            )
+          ] else ...[
+            if (_extractedProposal!.inventoryPayload != null)
+              _buildExtractedRow(Icons.inventory_2_outlined, 'المخزن:', '"${_extractedProposal!.inventoryPayload!['name']}" | العدد: ${_extractedProposal!.inventoryPayload!['quantity']}'),
+            if (_extractedProposal!.financialPayload != null) ...[
+              const SizedBox(height: 6),
+              _buildExtractedRow(Icons.payments_outlined, 'المالية:', 'القيمة الإجمالية: ${_extractedProposal!.financialPayload!['totalAmount']} | المدفوع: ${_extractedProposal!.financialPayload!['amountPaid']}'),
+            ],
           ],
 
           const SizedBox(height: 14),
@@ -381,15 +399,27 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                   height: 36,
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: goldAccent,
-                      foregroundColor: Colors.black,
+                      backgroundColor: isPricing ? const Color(0xFF0D9488) : goldAccent,
+                      foregroundColor: isPricing ? Colors.white : Colors.black,
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                      elevation: 0,
                     ),
-                    onPressed: _isExecuting ? null : _handleExecuteLedger,
-                    child: _isExecuting
+                    onPressed: _isExecuting ? null : () {
+                      if (isPricing) {
+                        setState(() {
+                          _messages.add(ChatMessage(
+                            text: "💡 تم اعتماد دراسة التسعير اللوجستية وحفظ المعطيات بنجاح لجدولة الصفقات القادمة نحو ${_extractedProposal!.pricingPayload!['destination']}.",
+                            isUser: false,
+                            timestamp: DateTime.now(),
+                          ));
+                          _extractedProposal = null;
+                        });
+                      } else {
+                        _handleExecuteLedger();
+                      }
+                    },
+                    child: _isExecuting 
                         ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
-                        : const Text('تأكيد وتعميد العملية مالياً', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                        : Text(isPricing ? 'حفظ دراسة الجدوى اللوجستية' : 'تأكيد وتعميد العملية مالياً', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ),
@@ -410,6 +440,18 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           )
         ],
       ),
+    );
+  }
+
+  Widget _buildMetricBlock(String title, String val, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      textDirection: TextDirection.rtl,
+      children: [
+        Text(title, style: const TextStyle(color: textSecondary, fontSize: 10)),
+        const SizedBox(height: 2),
+        Text(val, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.bold)),
+      ],
     );
   }
 

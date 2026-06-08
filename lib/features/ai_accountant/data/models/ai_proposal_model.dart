@@ -1,10 +1,11 @@
 class AiProposalModel {
-  final String actionType; // 'purchase' | 'sale' | 'payment_receipt' | 'unknown'
+  final String actionType; // 'purchase' | 'sale' | 'pricing_simulation' | 'unknown'
   final String explanation; 
   final double confidenceScore; 
   final Map<String, dynamic>? inventoryPayload; 
   final Map<String, dynamic>? customerPayload;
   final Map<String, dynamic>? financialPayload;
+  final Map<String, dynamic>? pricingPayload; // New premium expansion for dynamic pricing simulations
 
   AiProposalModel({
     required this.actionType,
@@ -13,10 +14,10 @@ class AiProposalModel {
     this.inventoryPayload,
     this.customerPayload,
     this.financialPayload,
+    this.pricingPayload,
   });
 
   factory AiProposalModel.fromMap(Map<String, dynamic> map) {
-    // Defensive normalization for inventory payload nested elements
     Map<String, dynamic>? sanitizedInventory;
     if (map['inventoryPayload'] != null) {
       final inv = Map<String, dynamic>.from(map['inventoryPayload']);
@@ -27,7 +28,6 @@ class AiProposalModel {
       };
     }
 
-    // Defensive normalization for financial payload nested elements
     Map<String, dynamic>? sanitizedFinancial;
     if (map['financialPayload'] != null) {
       final fin = Map<String, dynamic>.from(map['financialPayload']);
@@ -39,6 +39,19 @@ class AiProposalModel {
       };
     }
 
+    // Secure extraction for the predictive pricing metrics
+    Map<String, dynamic>? sanitizedPricing;
+    if (map['pricingPayload'] != null) {
+      final prc = Map<String, dynamic>.from(map['pricingPayload']);
+      sanitizedPricing = {
+        'suggestedPricePerUnit': prc['suggestedPricePerUnit'] != null ? (prc['suggestedPricePerUnit'] as num).toDouble() : 0.0,
+        'landedCostPerUnit': prc['landedCostPerUnit'] != null ? (prc['landedCostPerUnit'] as num).toDouble() : 0.0,
+        'targetMarginPercentage': prc['targetMarginPercentage'] != null ? (prc['targetMarginPercentage'] as num).toDouble() : 0.0,
+        'estimatedTotalBoxes': prc['estimatedTotalBoxes'] != null ? (prc['estimatedTotalBoxes'] as num).toInt() : 0,
+        'destination': prc['destination'] ?? '',
+      };
+    }
+
     return AiProposalModel(
       actionType: map['actionType'] ?? 'unknown',
       explanation: map['explanation'] ?? '',
@@ -46,6 +59,7 @@ class AiProposalModel {
       inventoryPayload: sanitizedInventory,
       customerPayload: map['customerPayload'] != null ? Map<String, dynamic>.from(map['customerPayload']) : null,
       financialPayload: sanitizedFinancial,
+      pricingPayload: sanitizedPricing,
     );
   }
 
@@ -57,6 +71,7 @@ class AiProposalModel {
       'inventoryPayload': inventoryPayload,
       'customerPayload': customerPayload,
       'financialPayload': financialPayload,
+      'pricingPayload': pricingPayload,
     };
   }
 }
