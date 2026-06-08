@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
@@ -17,6 +18,10 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   bool _isExecuting = false;
   AiProposalModel? _activeProposal;
   String? _errorMessage;
+  
+  // Track visual states for image processing simulation
+  bool _isImageUploaded = false;
+  String? _uploadedFileName;
 
   @override
   void dispose() {
@@ -49,6 +54,34 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     }
   }
 
+  // Trigger Multimodal Image OCR analysis pipeline
+  Future<void> _handleImageUploadSimulation() async {
+    setState(() {
+      _isParsing = true;
+      _activeProposal = null;
+      _errorMessage = null;
+      _isImageUploaded = true;
+      _uploadedFileName = "INVOICE_${DateTime.now().millisecondsSinceEpoch.toString().substring(8)}.jpg";
+    });
+
+    try {
+      // Simulate reading dummy byte data array into production contract
+      final dummyBytes = Uint8List.fromList([0, 1, 2, 3]);
+      final proposal = await _repository.parseInvoiceImage(dummyBytes, 'image/jpeg');
+      setState(() {
+        _activeProposal = proposal;
+      });
+    } catch (e) {
+      setState(() {
+        _errorMessage = 'فشل محرك OCR في قراءة تفاصيل الفاتورة المصورة.';
+      });
+    } finally {
+      setState(() {
+        _isParsing = false;
+      });
+    }
+  }
+
   Future<void> _handleExecute() async {
     if (_activeProposal == null) return;
 
@@ -58,29 +91,29 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
     try {
       final success = await _repository.executeProposal(_activeProposal!);
+      if (!mounted) return;
       if (success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('تم تعميد القيد المحاسبي وترحيله بنجاح للدفاتر الحية!', textDirection: TextDirection.rtl),
-              backgroundColor: Color(0xFF0D9488),
-            ),
-          );
-        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('تم تعميد القيد المحاسبي وترحيله بنجاح للدفاتر الحية!', textDirection: TextDirection.rtl),
+            backgroundColor: Color(0xFF0D9488),
+          ),
+        );
         setState(() {
           _activeProposal = null;
           _textController.clear();
+          _isImageUploaded = false;
+          _uploadedFileName = null;
         });
       }
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('فشل ترحيل المعاملة المالية.', textDirection: TextDirection.rtl),
-            backgroundColor: Colors.redAccent,
-          ),
-        );
-      }
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('فشل ترحيل المعاملة المالية.', textDirection: TextDirection.rtl),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
     } finally {
       setState(() {
         _isExecuting = false;
@@ -126,7 +159,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                   ),
                   SizedBox(height: 6),
                   Text(
-                    'اكتب المعاملات التجارية بالعامية أو الفصحى، وسيقوم النظام بتفكيكها برمجياً وترحيلها تلقائياً للمخازن، العملاء، والمالية.',
+                    'اكتب المعاملات التجارية بالعامية أو الفصحى، أو قم برفع فواتير الشحن والموردين المصورة لترحيلها تلقائياً بلمسة واحدة للدفاتر.',
                     style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 13, height: 1.4),
                     textAlign: TextAlign.center,
                     textDirection: TextDirection.rtl,
@@ -135,6 +168,59 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
             const SizedBox(height: 20),
+
+            // Multimodal OCR Document Scanner Zone
+            GestureDetector(
+              onTap: _isParsing ? null : _handleImageUploadSimulation,
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF111827),
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(
+                    color: _isImageUploaded ? const Color(0xFF0D9488) : goldAccent.withValues(alpha: 0.4),
+                    width: 1.5,
+                    style: BorderStyle.solid,
+                  ),
+                ),
+                child: Column(
+                  children: [
+                    Icon(
+                      _isImageUploaded ? Icons.task_alt_rounded : Icons.document_scanner_outlined,
+                      color: _isImageUploaded ? const Color(0xFF0D9488) : goldAccent,
+                      size: 36,
+                    ),
+                    const SizedBox(height: 10),
+                    Text(
+                      _isImageUploaded ? 'تم رفع المستند بنجاح واكتشاف الحقول' : 'اسحب وأفلت فاتورة المورد أو انقر للتصوير المباشر',
+                      style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                    ),
+                    if (_isImageUploaded && _uploadedFileName != null) ...[
+                      const SizedBox(height: 6),
+                      Text(
+                        _uploadedFileName!,
+                        style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 11, fontStyle: FontStyle.italic),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // Text Input Entry Divider
+            const Row(
+              textDirection: TextDirection.rtl,
+              children: [
+                Expanded(child: Divider(color: Color(0xFF374151))),
+                Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 12),
+                  child: Text('أو إدخال نصي سريع', style: TextStyle(color: Color(0xFF6B7280), fontSize: 12)),
+                ),
+                Expanded(child: Divider(color: Color(0xFF374151))),
+              ],
+            ),
+            const SizedBox(height: 16),
 
             // Input Text Field Box
             Container(
@@ -149,11 +235,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 children: [
                   TextField(
                     controller: _textController,
-                    maxLines: 4,
+                    maxLines: 3,
                     style: const TextStyle(color: Colors.white, fontSize: 15),
                     textDirection: TextDirection.rtl,
                     decoration: const InputDecoration(
-                      hintText: 'مثال: اشتريت اليوم 50 كرتون شوكولاتة فاخرة بسعر 180 ريال من شركة التوريد العالمية ودفعناها كاش...',
+                      hintText: 'مثال: بعنا اليوم ٢ كرتون عصير لمؤسسة أحمد بقيمة ٨٠٠٠ ريال واستلمنا نصف المبلغ...',
                       hintStyle: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
                       border: InputBorder.none,
                     ),
@@ -161,7 +247,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
-                    height: 48,
+                    height: 44,
                     child: ElevatedButton.icon(
                       style: ElevatedButton.styleFrom(
                         backgroundColor: goldAccent,
@@ -170,9 +256,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                       ),
                       onPressed: _isParsing ? null : _handleParse,
                       icon: _isParsing 
-                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
-                          : const Icon(Icons.psychology_outlined),
-                      label: const Text('تحليل المعاملة ذكياً', style: TextStyle(fontWeight: FontWeight.bold)),
+                          ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                          : const Icon(Icons.psychology_outlined, size: 18),
+                      label: const Text('تحليل النص المالي ذكياً', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
                     ),
                   ),
                 ],
@@ -186,7 +272,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             // Executive Proposal Review Card (Matte Black and Gold Accent)
             if (_activeProposal != null) ...[
               const Text(
-                'مسودة القيد المقترح للمراجعة:',
+                'مسودة القيد المستخرجة للمراجعة والتعميد:',
                 style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
                 textDirection: TextDirection.rtl,
               ),
@@ -238,8 +324,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                     if (_activeProposal!.inventoryPayload != null) ...[
                       _buildPayloadSummary(
                         icon: Icons.inventory_2_outlined,
-                        title: 'تأثير المخازن المتوقع:',
-                        details: 'إضافة عنصر "${_activeProposal!.inventoryPayload!['name']}" | كمية: ${_activeProposal!.inventoryPayload!['quantity']}',
+                        title: 'تأثير المخازن والمستودعات:',
+                        details: 'الصنف: "${_activeProposal!.inventoryPayload!['name']}" | الكمية: ${_activeProposal!.inventoryPayload!['quantity']}',
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -247,8 +333,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                     if (_activeProposal!.customerPayload != null) ...[
                       _buildPayloadSummary(
                         icon: Icons.people_outline,
-                        title: 'تأثير جهات الاتصال والعملاء:',
-                        details: 'الجهة والمورد: ${_activeProposal!.customerPayload!['name']}',
+                        title: 'أطراف المعاملة التجارية:',
+                        details: 'الجهة/المؤسسة: ${_activeProposal!.customerPayload!['name']}',
                       ),
                       const SizedBox(height: 12),
                     ],
@@ -256,8 +342,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                     if (_activeProposal!.financialPayload != null) ...[
                       _buildPayloadSummary(
                         icon: Icons.account_balance_wallet_outlined,
-                        title: 'التسوية المالية:',
-                        details: 'القيمة الإجمالية للدفاتر: ${_activeProposal!.financialPayload!['totalAmount']} ر.س',
+                        title: 'التسوية والترحيل المالي:',
+                        details: 'القيمة الإجمالية: ${_activeProposal!.financialPayload!['totalAmount']} ر.س | المدفوع: ${_activeProposal!.financialPayload!['amountPaid']} ر.س',
                       ),
                     ],
 
@@ -273,8 +359,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                         ),
                         onPressed: _isExecuting ? null : _handleExecute,
                         child: _isExecuting
-                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                            : const Text('تعميد وترحيل القيد آلياً', style: TextStyle(fontWeight: FontWeight.bold)),
+                            ? const CircularProgressIndicator(color: Colors.white)
+                            : const Text('تعميد وترحيل القيد آلياً للميزانية', style: TextStyle(fontWeight: FontWeight.bold)),
                       ),
                     ),
                   ],
