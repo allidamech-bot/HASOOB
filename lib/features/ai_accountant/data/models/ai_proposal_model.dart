@@ -48,6 +48,8 @@ class AiProposalModel {
         'landedCostPerUnit': prc['landedCostPerUnit'] != null ? (prc['landedCostPerUnit'] as num).toDouble() : 0.0,
         'targetMarginPercentage': prc['targetMarginPercentage'] != null ? (prc['targetMarginPercentage'] as num).toDouble() : 0.0,
         'estimatedTotalBoxes': prc['estimatedTotalBoxes'] != null ? (prc['estimatedTotalBoxes'] as num).toInt() : 0,
+        'shippingCost': prc['shippingCost'] != null ? (prc['shippingCost'] as num).toDouble() : 0.0,
+        'customsCost': prc['customsCost'] != null ? (prc['customsCost'] as num).toDouble() : 0.0,
         'destination': prc['destination'] ?? '',
       };
     }

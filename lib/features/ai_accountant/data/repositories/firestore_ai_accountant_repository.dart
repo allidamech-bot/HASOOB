@@ -21,6 +21,9 @@ MATHEMATICAL CONTAINER LOGISTICS RULE SHEET FOR "pricing_simulation":
 - Max full load boxes count estimate = 33.2 / 0.045 ≈ 737 boxes.
 - Landed Cost Per Unit calculation formula: Base Item Price + ((Total Shipping Cost + Total Customs) / Estimated Total Boxes).
 - Suggested Selling Price formula to meet Target Margin M%: Landed Cost Per Unit / (1 - (M% / 100)).
+- When the user mentions shipping, customs, or freight, map these to the 'logisticsCosts' object. Do not map them to 'purchasePrice'.
+- When the user mentions 'profit margin' or 'profit percentage', map this to 'targetMarginPercentage'.
+- Only map 'purchasePrice' when the user explicitly mentions the unit cost of the item.
 
 JSON CONTRACT SCHEMA REQUIRED:
 {
@@ -32,6 +35,8 @@ JSON CONTRACT SCHEMA REQUIRED:
     "landedCostPerUnit": double,
     "targetMarginPercentage": double,
     "estimatedTotalBoxes": integer,
+    "shippingCost": double,
+    "customsCost": double,
     "destination": "Country or city name"
   }
 }
