@@ -95,6 +95,66 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     }
   }
 
+  String _buildCfoReviewSummary(AiProposalModel proposal) {
+    final pricing = proposal.pricingPayload ?? {};
+    final targetMargin = (pricing['targetMarginPercentage'] as num?)?.toDouble() ?? 0.0;
+    final landedCost = (pricing['landedCostPerUnit'] as num?)?.toDouble() ?? 0.0;
+    final suggestedPrice = (pricing['suggestedPricePerUnit'] as num?)?.toDouble() ?? 0.0;
+    final estimatedBoxes = (pricing['estimatedTotalBoxes'] as num?)?.toDouble() ?? 0.0;
+    final totalAmount = suggestedPrice * estimatedBoxes;
+    final cashFlowImpact = totalAmount > 0 ? (suggestedPrice / (landedCost + 1)) * 100 : 0.0;
+
+    return 'Impact on Margin: ${targetMargin.toStringAsFixed(1)}% | Impact on Cash Flow: ${cashFlowImpact.toStringAsFixed(1)}% | التقدير: ${totalAmount.toStringAsFixed(2)} USD';
+  }
+
+  String _buildCfoInsight(AiProposalModel proposal) {
+    final pricing = proposal.pricingPayload ?? {};
+    final targetMargin = (pricing['targetMarginPercentage'] as num?)?.toDouble() ?? 0.0;
+    final landedCost = (pricing['landedCostPerUnit'] as num?)?.toDouble() ?? 0.0;
+    final suggestedPrice = (pricing['suggestedPricePerUnit'] as num?)?.toDouble() ?? 0.0;
+
+    if (suggestedPrice <= landedCost) {
+      return 'تنبيه مالي: السعر المقترح لا يغطي التكلفة الواصلة؛ نوصي بمراجعة الهامش قبل أي اعتماد.';
+    }
+    if (targetMargin >= 25.0) {
+      return 'إشارة CFO: هذا الهامش قوي ومقبول فوق متوسط السوق؛ استمر مع التحقق من التكلفة النهائية.';
+    }
+    return 'إشارة CFO: الهامش الحالي يحتاج مراجعة لأن التكلفة الواصلة تقترب من السعر المقترح.';
+  }
+
+  void _confirmPricingSimulation() {
+    if (_activeProposal == null) return;
+
+    final summary = _buildCfoReviewSummary(_activeProposal!);
+    final insight = _buildCfoInsight(_activeProposal!);
+
+    setState(() => _isCommitting = true);
+
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (!mounted) return;
+      setState(() {
+        _ledgerRows.insert(0, LedgerEntry(
+          code: 'PROCESS-PRICING',
+          account: 'دراسة تسعير لوجستي محققة',
+          debit: 0.0,
+          credit: (_activeProposal!.pricingPayload?['suggestedPricePerUnit'] ?? 0.0) * (_activeProposal!.pricingPayload?['estimatedTotalBoxes'] ?? 0.0),
+          description: '$summary | $insight',
+          date: 'تأكيد CFO',
+          isUncommitted: false,
+        ));
+        _activeProposal = null;
+        _isCommitting = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('تمت مراجعة التأثير المالي وتأكيده: $summary', textDirection: TextDirection.rtl),
+          backgroundColor: tealSuccess,
+        ),
+      );
+    });
+  }
+
   void _commitProposalToLedger() {
     if (_activeProposal == null) return;
     
@@ -382,6 +442,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             const SizedBox(height: 16),
 
             if (isPricing && pricingPayload != null) ...[
+              const Text('📋 Review Card — CFO Persona', style: TextStyle(color: goldAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 6),
+              Text(_buildCfoReviewSummary(_activeProposal!), style: const TextStyle(color: Colors.white, fontSize: 11, height: 1.4), textDirection: TextDirection.rtl),
+              const SizedBox(height: 4),
+              Text(_buildCfoInsight(_activeProposal!), style: const TextStyle(color: Color(0xFFBFDBFE), fontSize: 11, height: 1.4), textDirection: TextDirection.rtl),
+              const SizedBox(height: 10),
               _buildFormRow(Icons.location_on_outlined, 'الوجهة الدولية:', pricingPayload['destination'].toString()),
               _buildFormRow(Icons.inventory_2_outlined, 'سعة تعبئة الحاوية 20ft:', '${pricingPayload['estimatedTotalBoxes']} كرتون عيار قياسي'),
               _buildFormRow(Icons.trending_up_rounded, 'هامش الربح المستهدف:', '${pricingPayload['targetMarginPercentage']}% صافي من المبيعات'),
@@ -420,10 +486,10 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
                         elevation: 0,
                       ),
-                      onPressed: _isCommitting ? null : (isPricing ? () => setState(() => _activeProposal = null) : _commitProposalToLedger),
+                      onPressed: _isCommitting ? null : (isPricing ? _confirmPricingSimulation : _commitProposalToLedger),
                       child: _isCommitting 
                           ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
-                          : Text(isPricing ? 'حفظ وإيداع دراسة الجدوى' : 'توقيع وتعميد السند رسمياً', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                          : Text(isPricing ? 'تأكيد | مراجعة CFO' : 'توقيع وتعميد السند رسمياً', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                     ),
                   ),
                 ),
