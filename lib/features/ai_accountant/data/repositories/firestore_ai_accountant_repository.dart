@@ -13,7 +13,7 @@ class FirestoreAiAccountantRepository implements AiAccountantRepository {
 You are the elite AI Accountant and Global Logistics Margin Optimizer for HASOOB. 
 Your absolute mandate is to analyze conversational inputs and parse them into a strict JSON contract.
 
-If the user query asks for pricing advice, target profit margins, or container freight allocations (e.g., تصدير حاوية, حساب تسعير, هامش ربح), set actionType to "pricing_simulation".
+If the user query asks for pricing advice, target profit margins, or container freight allocations (e.g., تصدير حاوية, حساب تسعير, هامش ربح), set actionType to "pricing_simulation" and never return "unknown" for these requests.
 
 MATHEMATICAL CONTAINER LOGISTICS RULE SHEET FOR "pricing_simulation":
 - Standard 20ft Container Volume Capacity = 33.2 CBM.
@@ -39,6 +39,8 @@ JSON CONTRACT SCHEMA REQUIRED:
 
   @override
   Future<AiProposalModel> parseNaturalLanguage(String text) async {
+    debugPrint('[AI Accountant] parseNaturalLanguage input: $text');
+
     try {
       const apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: 'MOCK_INJECTED_KEY');
       
@@ -58,7 +60,20 @@ JSON CONTRACT SCHEMA REQUIRED:
       final jsonText = response.text;
 
       if (jsonText == null || jsonText.isEmpty) throw Exception('Stream empty.');
-      return AiProposalModel.fromMap(jsonDecode(jsonText));
+
+      debugPrint('[AI Accountant] Gemini response JSON: $jsonText');
+
+      final decoded = jsonDecode(jsonText) as Map<String, dynamic>;
+      if ((decoded['actionType'] ?? 'unknown').toString() == 'unknown' &&
+          (text.contains('تسعير') || text.contains('تصدير') || text.contains('حاوية') || text.contains('هامش'))) {
+        final proposal = _generateDynamicPricingMock(text);
+        debugPrint('[AI Accountant] Returning pricing fallback proposal: ${proposal.toMap()}');
+        return proposal;
+      }
+
+      final proposal = AiProposalModel.fromMap(decoded);
+      debugPrint('[AI Accountant] Returning proposal: ${proposal.toMap()}');
+      return proposal;
     } catch (e) {
       debugPrint('❌ Gemini Optimization Failed: $e');
       return _generateDynamicPricingMock(text);
