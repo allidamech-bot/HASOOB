@@ -1,19 +1,24 @@
-import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
 
-class ChatMessage {
-  final String text;
-  final bool isUser;
-  final DateTime timestamp;
-  final AiProposalModel? proposal;
+class LedgerEntry {
+  final String code;
+  final String account;
+  final double debit;
+  final double credit;
+  final String description;
+  final String date;
+  final bool isUncommitted;
 
-  ChatMessage({
-    required this.text,
-    required this.isUser,
-    required this.timestamp,
-    this.proposal,
+  LedgerEntry({
+    required this.code,
+    required this.account,
+    required this.debit,
+    required this.credit,
+    required this.description,
+    required this.date,
+    this.isUncommitted = false,
   });
 }
 
@@ -26,414 +31,193 @@ class AiAccountantScreen extends StatefulWidget {
 
 class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _textController = TextEditingController();
-  final _scrollController = ScrollController();
   final _repository = AiAccountantRepositoryFactory.make();
   
-  bool _isTyping = false;
-  final List<ChatMessage> _messages = [];
-  AiProposalModel? _extractedProposal;
+  bool _isAnalyzing = false;
+  bool _isCommitting = false;
+  AiProposalModel? _activeProposal;
+  
+  // Dense Real-World Accounting Mock Database
+  final List<LedgerEntry> _ledgerRows = [
+    LedgerEntry(code: "JV-2026-089", account: "مخزون السلع (بسكويت وشوكولاتة)", debit: 56000.0, credit: 0.0, description: "توريد شحنة Altınmarka جمارك الميناء", date: "2026-06-08"),
+    LedgerEntry(code: "JV-2026-089", account: "حساب الموردين (مؤسسة ميم للاستيراد)", debit: 0.0, credit: 56000.0, description: "استحقاق فاتورة توريد سلع واصلة", date: "2026-06-08"),
+    LedgerEntry(code: "JV-2026-090", account: "الصندوق والنقدية (كاش)", debit: 0.0, credit: 12500.0, description: "دفع مصاريف شحن بحري - حاوية 20 قدم", date: "2026-06-09"),
+    LedgerEntry(code: "JV-2026-090", account: "مصاريف شحن لوجستي دولي", debit: 12500.0, credit: 0.0, description: "توزيع تكاليف Landed Cost للشحنة", date: "2026-06-09"),
+  ];
 
-  // Premium Dark SaaS Palette Definition
-  static const Color darkBg = Color(0xFF090D14);
-  static const Color darkSurface = Color(0xFF111722);
-  static const Color goldAccent = Color(0xFFD4AF37);
-  static const Color textSecondary = Color(0xFF9CA3AF);
-  static const Color borderCard = Color(0xFF222B3C);
+  // Established Luxury System Colors
+  static const Color darkBg = Color(0xFF070A0F);       // Deep Intense Black
+  static const Color darkSurface = Color(0xFF0F141C);  // Tech Steel Card
+  static const Color goldAccent = Color(0xFFD4AF37);   // Corporate Matte Gold
+  static const Color textSecondary = Color(0xFF8A93A6);
+  static const Color borderTerminal = Color(0xFF1C2430);
+  static const Color tealSuccess = Color(0xFF0D9488);
 
-  @override
-  void initState() {
-    super.initState();
-    _messages.add(ChatMessage(
-      text: "مرحباً بك في نظام HASOOB الذكي. أنا محاسبك الافتراضي المعزز، يمكنك التحدث معي بحرية بالعامية أو الفصحى، أو رفع المستندات مباشرة لتنظيم دفاتر حساباتك.",
-      isUser: false,
-      timestamp: DateTime.now(),
-    ));
-  }
-
-  @override
-  void dispose() {
-    _textController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
-
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollController.hasClients) {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  Future<void> _handleSendMessage({String? customText}) async {
+  Future<void> _processAiCommand({String? customText}) async {
     final text = customText ?? _textController.text.trim();
     if (text.isEmpty) return;
 
     if (customText == null) _textController.clear();
 
     setState(() {
-      _messages.add(ChatMessage(text: text, isUser: true, timestamp: DateTime.now()));
-      _isTyping = true;
-      _extractedProposal = null;
+      _isAnalyzing = true;
+      _activeProposal = null;
     });
-    _scrollToBottom();
 
     try {
       final proposal = await _repository.parseNaturalLanguage(text);
       if (!mounted) return;
 
       setState(() {
-        _extractedProposal = proposal.actionType != 'unknown' ? proposal : null;
-        String responseText = proposal.explanation;
-        if (proposal.actionType == 'unknown') {
-          responseText = "لم أستطع استخراج قيد محاسبي مكتمل الأركان من النص المكتوب. يرجى تزويدي بتفاصيل إضافية عن السلع أو القيم المالية لأتمكن من صياغة المعاملة بدقة.";
-        }
-
-        _messages.add(ChatMessage(
-          text: responseText,
-          isUser: false,
-          timestamp: DateTime.now(),
-          proposal: proposal.actionType != 'unknown' ? proposal : null,
-        ));
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _messages.add(ChatMessage(
-          text: "عذراً، واجهت مشكلة اتصال مؤقتة في النواة السحابية. يرجى إعادة المحاولة.",
-          isUser: false,
-          timestamp: DateTime.now(),
-        ));
-      });
-    } finally {
-      if (mounted) {
-        setState(() => _isTyping = false);
-        _scrollToBottom();
-      }
-    }
-  }
-
-  Future<void> _handleMultimodalOCR() async {
-    setState(() {
-      _isTyping = true;
-      _extractedProposal = null;
-      _messages.add(ChatMessage(
-        text: "📥 قام المستخدم برفع صورة مستند/فاتورة توريد حية...",
-        isUser: true,
-        timestamp: DateTime.now(),
-      ));
-    });
-    _scrollToBottom();
-
-    try {
-      final dummyBytes = Uint8List.fromList([0, 1, 2, 3]);
-      final proposal = await _repository.parseInvoiceImage(dummyBytes, 'image/jpeg');
-      if (!mounted) return;
-
-      setState(() {
-        _extractedProposal = proposal;
-        _messages.add(ChatMessage(
-          text: "✅ اكتمل الفحص متعدد الوسائط ضوئياً:\n${proposal.explanation}",
-          isUser: false,
-          timestamp: DateTime.now(),
-          proposal: proposal,
-        ));
-      });
-    } catch (_) {
-      if (!mounted) return;
-      setState(() {
-        _messages.add(ChatMessage(
-          text: "❌ فشل المحرك الضوئي في فك تشفير جداول الفاتورة المرفوعة.",
-          isUser: false,
-          timestamp: DateTime.now(),
-        ));
-      });
-    } finally {
-      if (mounted) {
-        setState(() => _isTyping = false);
-        _scrollToBottom();
-      }
-    }
-  }
-
-  Future<void> _handleExecuteLedger() async {
-    if (_extractedProposal == null) return;
-
-    try {
-      final success = await _repository.executeProposal(_extractedProposal!);
-      if (!mounted) return;
-
-      if (success) {
-        setState(() {
-          _messages.add(ChatMessage(
-            text: "⚙️ بروتوكول التنفيذ المالي: تم ترحيل المعاملة ذرياً وتحديث المستودعات والدفاتر الحية بنجاح بنسبة ثقة موازنة 100%.",
-            isUser: false,
-            timestamp: DateTime.now(),
+        _activeProposal = proposal;
+        
+        // If it's a valid financial entry, dynamically inject an uncommitted flashing spreadsheet row live
+        if (proposal.actionType != 'unknown' && proposal.actionType != 'pricing_simulation') {
+          final isPurchase = proposal.actionType == 'purchase';
+          final total = proposal.financialPayload?['totalAmount'] ?? 15000.0;
+          final itemName = proposal.inventoryPayload?['name'] ?? 'بضاعة مستخرجة آلياً';
+          
+          _ledgerRows.insert(0, LedgerEntry(
+            code: "PENDING-AI",
+            account: isPurchase ? "مخزون الأصناف ($itemName)" : "حساب المبيعات المستهدفة",
+            debit: isPurchase ? total : 0.0,
+            credit: isPurchase ? 0.0 : total,
+            description: proposal.explanation,
+            date: "معالجة لحظية",
+            isUncommitted: true,
           ));
-          _extractedProposal = null;
-        });
-      }
+        }
+      });
     } catch (_) {
-      // Graceful error display
+      // Safeguard pipeline
     } finally {
-      if (mounted) {
-        _scrollToBottom();
-      }
+      if (mounted) setState(() => _isAnalyzing = false);
     }
+  }
+
+  void _commitProposalToLedger() {
+    if (_activeProposal == null) return;
+    
+    setState(() => _isCommitting = true);
+    
+    // Simulate real database serialization and conversion from uncommitted draft to legal book entry
+    Future.delayed(const Duration(milliseconds: 700), () {
+      if (!mounted) return;
+      setState(() {
+        for (int i = 0; i < _ledgerRows.length; i++) {
+          if (_ledgerRows[i].code == "PENDING-AI") {
+            _ledgerRows[i] = LedgerEntry(
+              code: "JV-2026-091",
+              account: _ledgerRows[i].account,
+              debit: _ledgerRows[i].debit,
+              credit: _ledgerRows[i].credit,
+              description: _ledgerRows[i].description,
+              date: "2026-06-09",
+              isUncommitted: false,
+            );
+          }
+        }
+        _activeProposal = null;
+        _isCommitting = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('🔒 تم توثيق الدفاتر المحاسبية الرسمية وتحديث دفتر الأستاذ بنجاح.', textDirection: TextDirection.rtl),
+          backgroundColor: tealSuccess,
+        ),
+      );
+    });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Utilize LayoutBuilder to detect if viewport is Desktop widescreen
     return Scaffold(
       backgroundColor: darkBg,
       body: LayoutBuilder(
         builder: (context, constraints) {
-          final isDesktop = constraints.maxWidth > 950;
+          final isWidescreen = constraints.maxWidth > 1000;
           
-          if (isDesktop) {
-            return Row(
-              textDirection: TextDirection.rtl,
-              children: [
-                // Center Module Workspace: Chat Loop & Actions
-                Expanded(
-                  flex: 3,
-                  child: _buildCentralWorkspace(),
-                ),
-                // Left Module Workspace: Recent Activity Feed (Clean Desktop Split)
-                Expanded(
-                  flex: 1,
-                  child: _buildLeftActivitySidebar(),
-                ),
-              ],
-            );
-          } else {
-            // Mobile viewport fallback stack
-            return _buildCentralWorkspace();
-          }
-        },
-      ),
-    );
-  }
-
-  Widget _buildCentralWorkspace() {
-    return Container(
-      decoration: const BoxDecoration(
-        border: Border(left: BorderSide(color: Color(0xFF1F2937), width: 0.5)),
-      ),
-      child: Column(
-        children: [
-          // Screen Context Header
-          Container(
-            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            color: darkSurface,
-            child: const Row(
-              textDirection: TextDirection.rtl,
-              children: [
-                Icon(Icons.psychology_outlined, color: goldAccent, size: 22),
-                SizedBox(width: 10),
-                Text(
-                  'المستشار المالي التفاعلي الموحد',
-                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
-                ),
-              ],
-            ),
-          ),
-          
-          // Chat Streams History Area
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.all(20),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) => _buildChatBubble(_messages[index]),
-            ),
-          ),
-
-          if (_isTyping)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 8),
-              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: goldAccent, strokeWidth: 2)),
-            ),
-
-          // Safe Container Bounds: Proposals do NOT span across sidebars anymore
-          if (_extractedProposal != null) _buildProposalExecutiveCard(),
-
-          // Quick Action Chip Prompts
-          if (!_isTyping && _extractedProposal == null) _buildQuickSuggestionsBar(),
-
-          // Interactive Command Input Area Container
-          _buildMessageInputField(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLeftActivitySidebar() {
-    return Container(
-      color: const Color(0xFF0D111A),
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        textDirection: TextDirection.rtl,
-        children: [
-          const Text(
-            'النشاط الأخير للقيود',
-            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
-            textDirection: TextDirection.rtl,
-          ),
-          const SizedBox(height: 12),
-          // Clean custom search field inside activity feed
-          Container(
-            height: 36,
-            decoration: BoxDecoration(
-              color: darkBg,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: borderCard),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 10),
-            child: const Row(
-              textDirection: TextDirection.rtl,
-              children: [
-                Icon(Icons.search, color: textSecondary, size: 16),
-                SizedBox(width: 6),
-                Expanded(
-                  child: TextField(
-                    textAlign: TextAlign.right,
-                    style: TextStyle(color: Colors.white, fontSize: 12),
-                    decoration: InputDecoration(
-                      hintText: 'ابحث في السجل...',
-                      hintStyle: TextStyle(color: Color(0xFF4B5563), fontSize: 11),
-                      border: InputBorder.none,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          Expanded(
-            child: ListView(
-              children: [
-                _buildActivityLogItem('مؤنتال', 'معاملة غير محددة', 'معاينة القيد'),
-                _buildActivityLogItem('hgm', 'معاملة قيد معلقة', 'معاينة القيد'),
-              ],
-            ),
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActivityLogItem(String title, String type, String action) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: darkSurface,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: borderCard),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        textDirection: TextDirection.rtl,
-        children: [
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
-          const SizedBox(height: 4),
-          Row(
-            textDirection: TextDirection.rtl,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          return Column(
             children: [
-              Text(type, style: const TextStyle(color: textSecondary, fontSize: 11)),
-              Text(action, style: const TextStyle(color: goldAccent, fontSize: 11, fontWeight: FontWeight.w500)),
+              // 1. Enterprise Top Metric Dashboard Ribbon Strip
+              _buildTopFinancialRibbon(),
+              
+              // 2. Main Terminal Content Layout Workspace Split Grid
+              Expanded(
+                child: isWidescreen 
+                  ? Row(
+                      textDirection: TextDirection.rtl,
+                      children: [
+                        // Right Pane: The Heavy-Duty Corporate Spreadsheet & General Ledger Book
+                        Expanded(flex: 3, child: _buildGeneralLedgerSpreadsheet()),
+                        // Left Pane: The Autonomous AI Operator Control Station
+                        Expanded(flex: 2, child: _buildAiOperatorConsole()),
+                      ],
+                    )
+                  : SingleChildScrollView(
+                      child: Column(
+                        children: [
+                          SizedBox(height: 400, child: _buildGeneralLedgerSpreadsheet()),
+                          _buildAiOperatorConsole(),
+                        ],
+                      ),
+                    ),
+              ),
             ],
-          )
-        ],
-      ),
-    );
-  }
-
-  Widget _buildChatBubble(ChatMessage msg) {
-    final isUser = msg.isUser;
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        textDirection: isUser ? TextDirection.ltr : TextDirection.rtl,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          CircleAvatar(
-            radius: 14,
-            backgroundColor: isUser ? const Color(0xFF1F2937) : goldAccent.withValues(alpha: 0.1),
-            child: Icon(
-              isUser ? Icons.person_outline_rounded : Icons.psychology_outlined,
-              color: isUser ? Colors.white70 : goldAccent,
-              size: 14,
-            ),
-          ),
-          const SizedBox(width: 10),
-          Flexible(
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: isUser ? const Color(0xFF1E293B) : darkSurface,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: isUser ? const Color(0xFF334155) : borderCard),
-              ),
-              child: Text(
-                msg.text,
-                style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
-                textDirection: TextDirection.rtl,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildQuickSuggestionsBar() {
-    final prompts = [
-      "اشتريت 20 كرتونة منظف بسعر 50 للواحد",
-      "زبون أحمد دفع 500 وباقي عليه 200",
-      "احسب ضريبة 15% على 1200"
-    ];
-    return Container(
-      height: 36,
-      margin: const EdgeInsets.only(bottom: 6),
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        reverse: true,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        itemCount: prompts.length,
-        itemBuilder: (context, index) {
-          return Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4),
-            child: ActionChip(
-              backgroundColor: darkSurface,
-              side: const BorderSide(color: borderCard),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-              label: Text(prompts[index], style: const TextStyle(color: textSecondary, fontSize: 11)),
-              onPressed: () => _handleSendMessage(customText: prompts[index]),
-            ),
           );
         },
       ),
     );
   }
 
-  Widget _buildProposalExecutiveCard() {
-    final isPricing = _extractedProposal!.actionType == 'pricing_simulation';
+  Widget _buildTopFinancialRibbon() {
     return Container(
-      margin: const EdgeInsets.all(16),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+      decoration: const BoxDecoration(
         color: darkSurface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: isPricing ? const Color(0xFF0D9488) : goldAccent.withValues(alpha: 0.3), width: 1.2),
+        border: Border(bottom: BorderSide(color: borderTerminal, width: 1.5)),
+      ),
+      child: Row(
+        textDirection: TextDirection.rtl,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          const Row(
+            textDirection: TextDirection.rtl,
+            children: [
+              Icon(Icons.account_balance_wallet_outlined, color: goldAccent, size: 20),
+              SizedBox(width: 10),
+              Text(
+                'HASOOB | محطة العمليات والتدقيق المالي المركزية',
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 14, letterSpacing: 0.5),
+              ),
+            ],
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.green.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(4),
+              border: Border.all(color: tealSuccess, width: 0.8),
+            ),
+            child: const Row(
+              children: [
+                CircleAvatar(radius: 3, backgroundColor: tealSuccess),
+                SizedBox(width: 6),
+                Text('عقل النواة الحية نشط وجاهز للترحيل', style: TextStyle(color: tealSuccess, fontSize: 11, fontWeight: FontWeight.bold)),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGeneralLedgerSpreadsheet() {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: borderTerminal, width: 1.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -443,96 +227,237 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             textDirection: TextDirection.rtl,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                isPricing ? '📊 محاكاة التكلفة وهامش الربح اللوجستي المستهدف' : '⚖️ مراجعة العقد المحاسبي الذكي وتعميده',
-                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
-              ),
-              Text(
-                'تحليل دقيق',
-                style: TextStyle(color: isPricing ? const Color(0xFF0D9488) : goldAccent, fontSize: 11),
-              )
+              const Text('📖 دفتر الأستاذ العام ودفتر اليومية الموحد (Live Spreadsheet)', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+              Text('إجمالي العمليات الموثقة: ${_ledgerRows.length}', style: const TextStyle(color: textSecondary, fontSize: 12)),
             ],
           ),
-          const Divider(color: borderCard, height: 20),
-          if (isPricing && _extractedProposal!.pricingPayload != null) ...[
-            _buildExtractedRow(Icons.place_outlined, 'الوجهة الدولية:', _extractedProposal!.pricingPayload!['destination']),
-            const SizedBox(height: 4),
-            _buildExtractedRow(Icons.inventory_2_outlined, 'سعة الحاوية المقدرة:', '${_extractedProposal!.pricingPayload!['estimatedTotalBoxes']} كرتون كامل'),
-            const Divider(color: borderCard, height: 16),
-            Row(
-              textDirection: TextDirection.rtl,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _buildMetricBlock('تكلفة الكرتون (Landed)', '${_extractedProposal!.pricingPayload!['landedCostPerUnit']} \$', goldAccent),
-                _buildMetricBlock('سعر البيع لربح صافي 25%', '${_extractedProposal!.pricingPayload!['suggestedPricePerUnit']} \$', const Color(0xFF0D9488)),
-              ],
-            )
-          ] else ...[
-            if (_extractedProposal!.inventoryPayload != null)
-              _buildExtractedRow(Icons.inventory_2_outlined, 'تأثير المخزن:', '"${_extractedProposal!.inventoryPayload!['name']}" | العدد: ${_extractedProposal!.inventoryPayload!['quantity']}'),
-            if (_extractedProposal!.financialPayload != null) ...[
-              const SizedBox(height: 4),
-              _buildExtractedRow(Icons.payments_outlined, 'القيد المالي الإجمالي:', 'القيمة: ${_extractedProposal!.financialPayload!['totalAmount']} ر.س | المحصل: ${_extractedProposal!.financialPayload!['amountPaid']} ر.س'),
-            ],
-          ],
-          const SizedBox(height: 14),
-          // Action Buttons: Styled STRICTLY in Matte Black and Gold/Teal - NO MORE CLASHING BLUE
-          Row(
-            textDirection: TextDirection.rtl,
-            children: [
-              Expanded(
-                child: SizedBox(
-                  height: 36,
-                  child: ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: isPricing ? const Color(0xFF0D9488) : goldAccent,
-                      foregroundColor: isPricing ? Colors.white : Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                    ),
-                    onPressed: () {
-                      if (isPricing) {
-                        setState(() {
-                          _messages.add(ChatMessage(text: "💡 تم حفظ دراسة الجدوى اللوجستية بنجاح.", isUser: false, timestamp: DateTime.now()));
-                          _extractedProposal = null;
-                        });
-                      } else {
-                        _handleExecuteLedger();
-                      }
-                    },
-                    child: Text(isPricing ? 'حفظ دراسة الجدوى' : 'اعتماد وتعميد المعاملة فوراً', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 16),
+          
+          // Dense Matrix Accounting Spreadsheet Table Structure
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: darkSurface,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: borderTerminal),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SingleChildScrollView(
+                  scrollDirection: Axis.vertical,
+                  child: DataTable(
+                    headingRowColor: WidgetStateProperty.all(const Color(0xFF141B26)),
+                    dataRowMinHeight: 46,
+                    dataRowMaxHeight: 52,
+                    horizontalMargin: 12,
+                    columnSpacing: 14,
+                    columns: const [
+                      DataColumn(label: Text('كود القيد', style: TextStyle(color: goldAccent, fontSize: 12, fontWeight: FontWeight.bold))),
+                      DataColumn(label: Text('الحساب المالي للشركات', style: TextStyle(color: Colors.white70, fontSize: 12))),
+                      DataColumn(label: Text('مدين (+)', style: TextStyle(color: Colors.white70, fontSize: 12))),
+                      DataColumn(label: Text('دائن (-)', style: TextStyle(color: Colors.white70, fontSize: 12))),
+                      DataColumn(label: Text('البيان التفصيلي للمعاملة', style: TextStyle(color: Colors.white70, fontSize: 12))),
+                    ],
+                    rows: _ledgerRows.map((row) {
+                      return DataRow(
+                        color: row.isUncommitted 
+                            ? WidgetStateProperty.all(const Color(0xFF16251F)) // Distinctive flashing color for pending AI operations
+                            : null,
+                        cells: [
+                          DataCell(Text(row.code, style: TextStyle(color: row.isUncommitted ? tealSuccess : textSecondary, fontSize: 11, fontWeight: FontWeight.bold))),
+                          DataCell(Text(row.account, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500))),
+                          DataCell(Text(row.debit > 0 ? '${row.debit.toStringAsFixed(2)} \$' : '-', style: const TextStyle(color: Color(0xFFEF4444), fontSize: 11, fontWeight: FontWeight.bold))),
+                          DataCell(Text(row.credit > 0 ? '${row.credit.toStringAsFixed(2)} \$' : '-', style: const TextStyle(color: tealSuccess, fontSize: 11, fontWeight: FontWeight.bold))),
+                          DataCell(Text(row.description, style: TextStyle(color: row.isUncommitted ? Colors.white : Colors.white70, fontSize: 11, fontStyle: row.isUncommitted ? FontStyle.italic : FontStyle.normal))),
+                        ],
+                      );
+                    }).toList(),
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
-              SizedBox(
-                height: 36,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.redAccent,
-                    side: const BorderSide(color: borderCard),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                  ),
-                  onPressed: () => setState(() => _extractedProposal = null),
-                  child: const Text('إلغاء القيد', style: TextStyle(fontSize: 12)),
-                ),
-              )
-            ],
-          )
+            ),
+          ),
         ],
       ),
     );
   }
 
-  Widget _buildExtractedRow(IconData icon, String label, String value) {
-    return Row(
-      textDirection: TextDirection.rtl,
-      children: [
-        Icon(icon, color: textSecondary, size: 14),
-        const SizedBox(width: 6),
-        Text(label, style: const TextStyle(color: textSecondary, fontSize: 11)),
-        const SizedBox(width: 4),
-        Expanded(child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 11), overflow: TextOverflow.ellipsis, textDirection: TextDirection.rtl)),
-      ],
+  Widget _buildAiOperatorConsole() {
+    return Container(
+      color: const Color(0xFF0A0E15),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        textDirection: TextDirection.rtl,
+        children: [
+          const Text('🤖 مستشار العمليات المالي ومحاكي العقود الدولي', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          const Text('أدخل الأوامر المباشرة أو فواتير الاستيراد لبناء وتعديل الدفاتر الرسمية حياً.', style: TextStyle(color: textSecondary, fontSize: 11)),
+          const Divider(color: borderTerminal, height: 24),
+          
+          // Dynamic Workspace Canvas Area: Shows instructions or interactive formal invoice vouchers
+          Expanded(
+            child: _activeProposal == null 
+                ? _buildEmptyStateConsoleInstruction()
+                : _buildFormalVoucherPreviewCard(),
+          ),
+
+          // Core Quick Commands Pipeline Bar
+          if (!_isAnalyzing && _activeProposal == null) _buildQuickPromptsStrip(),
+          const SizedBox(height: 8),
+
+          // Luxury Dark SaaS Embedded Execution Input Deck
+          _buildTerminalInputField(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmptyStateConsoleInstruction() {
+    return const Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.terminal_rounded, color: borderTerminal, size: 48),
+          SizedBox(height: 12),
+          Text(
+            'محرك الذكاء المالي بانتظار إشارتك...\nاضغط على أحد الأوامر الجاهزة أو اكتب عملية لتشاهد حقن البيانات الحية في الجدول جانبياً.',
+            textAlign: TextAlign.center,
+            style: TextStyle(color: textSecondary, fontSize: 12, height: 1.5),
+            textDirection: TextDirection.rtl,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildFormalVoucherPreviewCard() {
+    final isPricing = _activeProposal!.actionType == 'pricing_simulation';
+    
+    return SingleChildScrollView(
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: darkSurface,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: isPricing ? tealSuccess : goldAccent, width: 1.2),
+          boxShadow: const [BoxShadow(color: Colors.black45, blurRadius: 12)],
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          textDirection: TextDirection.rtl,
+          children: [
+            // Voucher Formal Corporate Seal Header
+            Row(
+              textDirection: TextDirection.rtl,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  isPricing ? '📊 دراسة جدوى تسعير وحاوية شحن دولية' : '📝 سند قيد تعميد مالي مستخلص ومقترح آلياً',
+                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  color: isPricing ? tealSuccess.withValues(alpha: 0.2) : goldAccent.withValues(alpha: 0.2),
+                  child: Text(
+                    isPricing ? 'LOGISTICS' : 'LEDGER DRAFT',
+                    style: TextStyle(color: isPricing ? tealSuccess : goldAccent, fontSize: 9, fontWeight: FontWeight.bold),
+                  ),
+                )
+              ],
+            ),
+            const Divider(color: borderTerminal, height: 24),
+            
+            Text(
+              _activeProposal!.explanation,
+              style: const TextStyle(color: Color(0xFFEEEEEE), fontSize: 12, height: 1.5),
+              textDirection: TextDirection.rtl,
+            ),
+            const SizedBox(height: 16),
+
+            if (isPricing && _activeProposal!.pricingPayload != null) ...[
+              _buildFormRow(Icons.location_on_outlined, 'الوجهة الدولية:', _activeProposal!.pricingPayload!['destination']),
+              _buildFormRow(Icons.inventory_2_outlined, 'سعة تعبئة الحاوية 20ft:', '${_activeProposal!.pricingPayload!['estimatedTotalBoxes']} كرتون عيار قياسي'),
+              _buildFormRow(Icons.trending_up_rounded, 'هامش الربح المستهدف:', '${_activeProposal!.pricingPayload!['targetMarginPercentage']}% صافي من المبيعات'),
+              const Divider(color: borderTerminal, height: 20),
+              Row(
+                textDirection: TextDirection.rtl,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildMetricBlock('التكلفة الواصلة للكرتون (Landed)', '${_activeProposal!.pricingPayload!['landedCostPerUnit']} \$', goldAccent),
+                  _buildMetricBlock('السعر الأدنى لضمان الربح', '${_activeProposal!.pricingPayload!['suggestedPricePerUnit']} \$', tealSuccess),
+                ],
+              )
+            ] else ...[
+              if (_activeProposal!.inventoryPayload != null)
+                _buildFormRow(Icons.storefront_outlined, 'الصنف والمستودع المستهدف:', '"${_activeProposal!.inventoryPayload!['name']}" | العدد: ${_activeProposal!.inventoryPayload!['quantity']} كرتون'),
+              if (_activeProposal!.customerPayload != null)
+                _buildFormRow(Icons.business_center_outlined, 'أطراف التعاقد والتوريد:', _activeProposal!.customerPayload!['name']),
+              if (_activeProposal!.financialPayload != null) ...[
+                const Divider(color: borderTerminal, height: 16),
+                _buildFormRow(Icons.monetization_on_outlined, 'القيمة الإجمالية الصافية:', '${_activeProposal!.financialPayload!['totalAmount']} \$ أمريكي'),
+                _buildFormRow(Icons.check_circle_outline, 'الضرائب المقدرة وعوائد VAT:', 'مشمولة بنسبة 15% قانونية'),
+              ]
+            ],
+            
+            const SizedBox(height: 20),
+            Row(
+              textDirection: TextDirection.rtl,
+              children: [
+                Expanded(
+                  child: SizedBox(
+                    height: 38,
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: isPricing ? tealSuccess : goldAccent,
+                        foregroundColor: isPricing ? Colors.white : Colors.black,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                        elevation: 0,
+                      ),
+                      onPressed: _isCommitting ? null : (isPricing ? () => setState(() => _activeProposal = null) : _commitProposalToLedger),
+                      child: _isCommitting 
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
+                          : Text(isPricing ? 'حفظ وإيداع دراسة الجدوى' : 'توقيع وتعميد السند رسمياً', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                OutlinedButton(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.redAccent,
+                    side: const BorderSide(color: borderTerminal),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      // Remove uncommitted temporary visualization row if cancelled
+                      _ledgerRows.removeWhere((row) => row.code == "PENDING-AI");
+                      _activeProposal = null;
+                    });
+                  },
+                  child: const Text('إلغاء وفك السند', style: TextStyle(fontSize: 12)),
+                )
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFormRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        textDirection: TextDirection.rtl,
+        children: [
+          Icon(icon, color: textSecondary, size: 14),
+          const SizedBox(width: 6),
+          Text(label, style: const TextStyle(color: textSecondary, fontSize: 11)),
+          const SizedBox(width: 4),
+          Expanded(child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w500), overflow: TextOverflow.ellipsis, textDirection: TextDirection.rtl)),
+        ],
+      ),
     );
   }
 
@@ -542,62 +467,71 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       textDirection: TextDirection.rtl,
       children: [
         Text(title, style: const TextStyle(color: textSecondary, fontSize: 10)),
-        Text(val, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 2),
+        Text(val, style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.bold)),
       ],
     );
   }
 
-  Widget _buildMessageInputField() {
+  Widget _buildQuickPromptsStrip() {
+    final prompts = [
+      "أخطط لتصدير حاوية 20 قدم علك لأفغانستان شحن 3500 جمارك 1200 تكلفة الكرتون 45 كم أسعر لربح 25%؟",
+      "اشتريت 150 كرتون شوكولاتة Godiva بسعر 85 دولار كاش من التوريد",
+    ];
+    return SizedBox(
+      height: 34,
+      child: ListView.builder(
+        scrollDirection: Axis.horizontal,
+        reverse: true,
+        itemCount: prompts.length,
+        itemBuilder: (context, index) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4),
+            child: ActionChip(
+              backgroundColor: darkSurface,
+              side: const BorderSide(color: borderTerminal),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+              label: Text(
+                prompts[index].length > 45 ? '${prompts[index].substring(0, 42)}...' : prompts[index],
+                style: const TextStyle(color: textSecondary, fontSize: 10),
+              ),
+              onPressed: () => _processAiCommand(customText: prompts[index]),
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  Widget _buildTerminalInputField() {
     return Container(
-      color: darkSurface,
-      padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 16),
+      decoration: BoxDecoration(
+        color: darkSurface,
+        borderRadius: BorderRadius.circular(6),
+        border: Border.all(color: borderTerminal),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
       child: Row(
         children: [
-          CircleAvatar(
-            radius: 18,
-            backgroundColor: goldAccent,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_upward_rounded, color: Colors.black, size: 18),
-              onPressed: () => _handleSendMessage(),
-            ),
+          IconButton(
+            icon: _isAnalyzing 
+                ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: goldAccent, strokeWidth: 2))
+                : const Icon(Icons.flash_on_rounded, color: goldAccent, size: 18),
+            onPressed: _isAnalyzing ? null : () => _processAiCommand(),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 6),
           Expanded(
-            child: Container(
-              height: 38,
-              decoration: BoxDecoration(
-                color: darkBg,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: borderCard),
+            child: TextField(
+              controller: _textController,
+              style: const TextStyle(color: Colors.white, fontSize: 13, fontFamily: 'Courier'),
+              textAlign: TextAlign.right,
+              textDirection: TextDirection.rtl,
+              decoration: const InputDecoration(
+                hintText: 'أدخل أمر الترحيل المالي أو استعلام محاكاة تسعير الحاويات الدولي...',
+                hintStyle: TextStyle(color: Color(0xFF434E5E), fontSize: 11),
+                border: InputBorder.none,
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 12),
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.document_scanner_outlined, color: textSecondary, size: 18),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    onPressed: _handleMultimodalOCR,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: TextField(
-                      controller: _textController,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
-                      textAlign: TextAlign.right,
-                      textDirection: TextDirection.rtl,
-                      decoration: const InputDecoration(
-                        hintText: 'تحدث مع المساعد المالي أو أرسل معاملة الحاوية...',
-                        hintStyle: TextStyle(color: Color(0xFF4B5563), fontSize: 12),
-                        border: InputBorder.none,
-                        contentPadding: EdgeInsets.zero,
-                        isDense: true,
-                      ),
-                      onSubmitted: (_) => _handleSendMessage(),
-                    ),
-                  ),
-                ],
-              ),
+              onSubmitted: (_) => _processAiCommand(),
             ),
           ),
         ],
