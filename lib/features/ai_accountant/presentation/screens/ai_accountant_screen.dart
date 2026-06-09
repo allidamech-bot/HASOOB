@@ -30,20 +30,19 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _repository = AiAccountantRepositoryFactory.make();
   
   bool _isTyping = false;
-  bool _isExecuting = false;
   final List<ChatMessage> _messages = [];
   AiProposalModel? _extractedProposal;
 
-  // Established Design System Palettes
-  static const Color darkBg = Color(0xFF090D14);       // Deep Matte Black
-  static const Color darkSurface = Color(0xFF111722);  // Premium Smooth Black
-  static const Color goldAccent = Color(0xFFD4AF37);   // Matte Gold
+  // Premium Dark SaaS Palette Definition
+  static const Color darkBg = Color(0xFF090D14);
+  static const Color darkSurface = Color(0xFF111722);
+  static const Color goldAccent = Color(0xFFD4AF37);
   static const Color textSecondary = Color(0xFF9CA3AF);
+  static const Color borderCard = Color(0xFF222B3C);
 
   @override
   void initState() {
     super.initState();
-    // Inject welcoming dynamic greeting from the interactive agent
     _messages.add(ChatMessage(
       text: "مرحباً بك في نظام HASOOB الذكي. أنا محاسبك الافتراضي المعزز، يمكنك التحدث معي بحرية بالعامية أو الفصحى، أو رفع المستندات مباشرة لتنظيم دفاتر حساباتك.",
       isUser: false,
@@ -63,7 +62,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       if (_scrollController.hasClients) {
         _scrollController.animateTo(
           _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
+          duration: const Duration(milliseconds: 200),
           curve: Curves.easeOut,
         );
       }
@@ -89,7 +88,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
       setState(() {
         _extractedProposal = proposal.actionType != 'unknown' ? proposal : null;
-        
         String responseText = proposal.explanation;
         if (proposal.actionType == 'unknown') {
           responseText = "لم أستطع استخراج قيد محاسبي مكتمل الأركان من النص المكتوب. يرجى تزويدي بتفاصيل إضافية عن السلع أو القيم المالية لأتمكن من صياغة المعاملة بدقة.";
@@ -106,7 +104,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       if (!mounted) return;
       setState(() {
         _messages.add(ChatMessage(
-          text: "عذراً، واجهت مشكلة اتصال مؤقتة في النواة السحابية. يرجى إدخال الجملة المالية مرة أخرى.",
+          text: "عذراً، واجهت مشكلة اتصال مؤقتة في النواة السحابية. يرجى إعادة المحاولة.",
           isUser: false,
           timestamp: DateTime.now(),
         ));
@@ -165,7 +163,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   Future<void> _handleExecuteLedger() async {
     if (_extractedProposal == null) return;
 
-    setState(() => _isExecuting = true);
     try {
       final success = await _repository.executeProposal(_extractedProposal!);
       if (!mounted) return;
@@ -184,7 +181,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       // Graceful error display
     } finally {
       if (mounted) {
-        setState(() => _isExecuting = false);
         _scrollToBottom();
       }
     }
@@ -192,50 +188,170 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Utilize LayoutBuilder to detect if viewport is Desktop widescreen
     return Scaffold(
       backgroundColor: darkBg,
-      appBar: AppBar(
-        backgroundColor: darkSurface,
-        elevation: 0,
-        title: const Text(
-          'المستشار المالي التفاعلي',
-          style: TextStyle(color: goldAccent, fontWeight: FontWeight.bold, fontSize: 16, letterSpacing: 0.5),
-        ),
-        centerTitle: true,
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(1.5),
-          child: Container(color: const Color(0xFF222B3C), height: 1.5),
-        ),
+      body: LayoutBuilder(
+        builder: (context, constraints) {
+          final isDesktop = constraints.maxWidth > 950;
+          
+          if (isDesktop) {
+            return Row(
+              textDirection: TextDirection.rtl,
+              children: [
+                // Center Module Workspace: Chat Loop & Actions
+                Expanded(
+                  flex: 3,
+                  child: _buildCentralWorkspace(),
+                ),
+                // Left Module Workspace: Recent Activity Feed (Clean Desktop Split)
+                Expanded(
+                  flex: 1,
+                  child: _buildLeftActivitySidebar(),
+                ),
+              ],
+            );
+          } else {
+            // Mobile viewport fallback stack
+            return _buildCentralWorkspace();
+          }
+        },
       ),
-      body: Column(
+    );
+  }
+
+  Widget _buildCentralWorkspace() {
+    return Container(
+      decoration: const BoxDecoration(
+        border: Border(left: BorderSide(color: Color(0xFF1F2937), width: 0.5)),
+      ),
+      child: Column(
         children: [
-          // Dynamic Multi-turn Chat Viewport Area
+          // Screen Context Header
+          Container(
+            padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+            color: darkSurface,
+            child: const Row(
+              textDirection: TextDirection.rtl,
+              children: [
+                Icon(Icons.psychology_outlined, color: goldAccent, size: 22),
+                SizedBox(width: 10),
+                Text(
+                  'المستشار المالي التفاعلي الموحد',
+                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 15),
+                ),
+              ],
+            ),
+          ),
+          
+          // Chat Streams History Area
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
-              padding: const EdgeInsets.all(16),
+              padding: const EdgeInsets.all(20),
               itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                return _buildChatBubble(msg);
-              },
+              itemBuilder: (context, index) => _buildChatBubble(_messages[index]),
             ),
           ),
 
           if (_isTyping)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8),
-              child: Center(child: SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: goldAccent, strokeWidth: 2))),
+              child: SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: goldAccent, strokeWidth: 2)),
             ),
 
-          // Sliding Action Hub for Executive Verification and End-User Approval
+          // Safe Container Bounds: Proposals do NOT span across sidebars anymore
           if (_extractedProposal != null) _buildProposalExecutiveCard(),
 
-          // Fixed Premium Dock Bar for Quick Context Prompts
+          // Quick Action Chip Prompts
           if (!_isTyping && _extractedProposal == null) _buildQuickSuggestionsBar(),
 
-          // Modernized Dark SaaS Interaction Input Box
+          // Interactive Command Input Area Container
           _buildMessageInputField(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLeftActivitySidebar() {
+    return Container(
+      color: const Color(0xFF0D111A),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        textDirection: TextDirection.rtl,
+        children: [
+          const Text(
+            'النشاط الأخير للقيود',
+            style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.bold),
+            textDirection: TextDirection.rtl,
+          ),
+          const SizedBox(height: 12),
+          // Clean custom search field inside activity feed
+          Container(
+            height: 36,
+            decoration: BoxDecoration(
+              color: darkBg,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: borderCard),
+            ),
+            padding: const EdgeInsets.symmetric(horizontal: 10),
+            child: const Row(
+              textDirection: TextDirection.rtl,
+              children: [
+                Icon(Icons.search, color: textSecondary, size: 16),
+                SizedBox(width: 6),
+                Expanded(
+                  child: TextField(
+                    textAlign: TextAlign.right,
+                    style: TextStyle(color: Colors.white, fontSize: 12),
+                    decoration: InputDecoration(
+                      hintText: 'ابحث في السجل...',
+                      hintStyle: TextStyle(color: Color(0xFF4B5563), fontSize: 11),
+                      border: InputBorder.none,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Expanded(
+            child: ListView(
+              children: [
+                _buildActivityLogItem('مؤنتال', 'معاملة غير محددة', 'معاينة القيد'),
+                _buildActivityLogItem('hgm', 'معاملة قيد معلقة', 'معاينة القيد'),
+              ],
+            ),
+          )
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityLogItem(String title, String type, String action) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: darkSurface,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: borderCard),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        textDirection: TextDirection.rtl,
+        children: [
+          Text(title, style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold)),
+          const SizedBox(height: 4),
+          Row(
+            textDirection: TextDirection.rtl,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(type, style: const TextStyle(color: textSecondary, fontSize: 11)),
+              Text(action, style: const TextStyle(color: goldAccent, fontSize: 11, fontWeight: FontWeight.w500)),
+            ],
+          )
         ],
       ),
     );
@@ -250,38 +366,26 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           CircleAvatar(
-            radius: 16,
+            radius: 14,
             backgroundColor: isUser ? const Color(0xFF1F2937) : goldAccent.withValues(alpha: 0.1),
             child: Icon(
               isUser ? Icons.person_outline_rounded : Icons.psychology_outlined,
               color: isUser ? Colors.white70 : goldAccent,
-              size: 16,
+              size: 14,
             ),
           ),
           const SizedBox(width: 10),
           Flexible(
             child: Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
                 color: isUser ? const Color(0xFF1E293B) : darkSurface,
-                borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(14),
-                  topRight: const Radius.circular(14),
-                  bottomLeft: isUser ? const Radius.circular(14) : Radius.zero,
-                  bottomRight: isUser ? Radius.zero : const Radius.circular(14),
-                ),
-                border: Border.all(
-                  color: isUser ? const Color(0xFF334155) : const Color(0xFF222B3C),
-                  width: 1.2,
-                ),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: isUser ? const Color(0xFF334155) : borderCard),
               ),
               child: Text(
                 msg.text,
-                style: TextStyle(
-                  color: isUser ? Colors.white : const Color(0xFFE5E7EB),
-                  fontSize: 13,
-                  height: 1.5,
-                ),
+                style: const TextStyle(color: Colors.white, fontSize: 13, height: 1.4),
                 textDirection: TextDirection.rtl,
               ),
             ),
@@ -297,26 +401,22 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       "زبون أحمد دفع 500 وباقي عليه 200",
       "احسب ضريبة 15% على 1200"
     ];
-
     return Container(
-      height: 38,
-      margin: const EdgeInsets.only(bottom: 4),
+      height: 36,
+      margin: const EdgeInsets.only(bottom: 6),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         reverse: true,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
         itemCount: prompts.length,
         itemBuilder: (context, index) {
           return Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4),
             child: ActionChip(
               backgroundColor: darkSurface,
-              side: const BorderSide(color: Color(0xFF222B3C)),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              label: Text(
-                prompts[index],
-                style: const TextStyle(color: textSecondary, fontSize: 11, fontWeight: FontWeight.w500),
-              ),
+              side: const BorderSide(color: borderCard),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              label: Text(prompts[index], style: const TextStyle(color: textSecondary, fontSize: 11)),
               onPressed: () => _handleSendMessage(customText: prompts[index]),
             ),
           );
@@ -327,17 +427,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Widget _buildProposalExecutiveCard() {
     final isPricing = _extractedProposal!.actionType == 'pricing_simulation';
-    
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      margin: const EdgeInsets.all(16),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: darkSurface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: isPricing ? const Color(0xFF0D9488) : goldAccent.withValues(alpha: 0.3), width: 1.5),
-        boxShadow: [
-          BoxShadow(color: isPricing ? const Color(0xFF0D9488).withValues(alpha: 0.02) : goldAccent.withValues(alpha: 0.02), blurRadius: 10, spreadRadius: 1)
-        ],
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: isPricing ? const Color(0xFF0D9488) : goldAccent.withValues(alpha: 0.3), width: 1.2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -347,50 +443,40 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             textDirection: TextDirection.rtl,
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                textDirection: TextDirection.rtl,
-                children: [
-                  Icon(isPricing ? Icons.calculate_outlined : Icons.analytics_outlined, color: isPricing ? const Color(0xFF0D9488) : goldAccent, size: 18),
-                  const SizedBox(width: 6),
-                  Text(
-                    isPricing ? 'محاكاة الأسعار وهامش الربح اللوجستي المستهدف' : 'مراجعة وتعميد العقد المحاسبي المكتشف',
-                    style: TextStyle(color: Colors.white.withValues(alpha: 0.95), fontSize: 13, fontWeight: FontWeight.bold),
-                  ),
-                ],
+              Text(
+                isPricing ? '📊 محاكاة التكلفة وهامش الربح اللوجستي المستهدف' : '⚖️ مراجعة العقد المحاسبي الذكي وتعميده',
+                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
               ),
               Text(
                 'تحليل دقيق',
-                style: TextStyle(color: isPricing ? const Color(0xFF0D9488) : goldAccent, fontSize: 11, fontWeight: FontWeight.bold),
+                style: TextStyle(color: isPricing ? const Color(0xFF0D9488) : goldAccent, fontSize: 11),
               )
             ],
           ),
-          const Divider(color: Color(0xFF222B3C), height: 24),
-          
+          const Divider(color: borderCard, height: 20),
           if (isPricing && _extractedProposal!.pricingPayload != null) ...[
-            _buildExtractedRow(Icons.place_outlined, 'وجهة الشحن الدولي:', _extractedProposal!.pricingPayload!['destination']),
-            const SizedBox(height: 6),
-            _buildExtractedRow(Icons.inventory_2_outlined, 'السعة المقدرة للحاوية:', '${_extractedProposal!.pricingPayload!['estimatedTotalBoxes']} كرتون (سعة كاملة)'),
-            const SizedBox(height: 6),
-            _buildExtractedRow(Icons.trending_up_outlined, 'الهامش المستهدف للربح:', '${_extractedProposal!.pricingPayload!['targetMarginPercentage']}% صافي'),
-            const Divider(color: Color(0xFF222B3C), height: 20),
+            _buildExtractedRow(Icons.place_outlined, 'الوجهة الدولية:', _extractedProposal!.pricingPayload!['destination']),
+            const SizedBox(height: 4),
+            _buildExtractedRow(Icons.inventory_2_outlined, 'سعة الحاوية المقدرة:', '${_extractedProposal!.pricingPayload!['estimatedTotalBoxes']} كرتون كامل'),
+            const Divider(color: borderCard, height: 16),
             Row(
               textDirection: TextDirection.rtl,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildMetricBlock('التكلفة الفعلية للكرتون (Landed)', '${_extractedProposal!.pricingPayload!['landedCostPerUnit']} \$', goldAccent),
-                _buildMetricBlock('سعر البيع المقترح لضمان الربح', '${_extractedProposal!.pricingPayload!['suggestedPricePerUnit']} \$', const Color(0xFF0D9488)),
+                _buildMetricBlock('تكلفة الكرتون (Landed)', '${_extractedProposal!.pricingPayload!['landedCostPerUnit']} \$', goldAccent),
+                _buildMetricBlock('سعر البيع لربح صافي 25%', '${_extractedProposal!.pricingPayload!['suggestedPricePerUnit']} \$', const Color(0xFF0D9488)),
               ],
             )
           ] else ...[
             if (_extractedProposal!.inventoryPayload != null)
-              _buildExtractedRow(Icons.inventory_2_outlined, 'المخزن:', '"${_extractedProposal!.inventoryPayload!['name']}" | العدد: ${_extractedProposal!.inventoryPayload!['quantity']}'),
+              _buildExtractedRow(Icons.inventory_2_outlined, 'تأثير المخزن:', '"${_extractedProposal!.inventoryPayload!['name']}" | العدد: ${_extractedProposal!.inventoryPayload!['quantity']}'),
             if (_extractedProposal!.financialPayload != null) ...[
-              const SizedBox(height: 6),
-              _buildExtractedRow(Icons.payments_outlined, 'المالية:', 'القيمة الإجمالية: ${_extractedProposal!.financialPayload!['totalAmount']} | المدفوع: ${_extractedProposal!.financialPayload!['amountPaid']}'),
+              const SizedBox(height: 4),
+              _buildExtractedRow(Icons.payments_outlined, 'القيد المالي الإجمالي:', 'القيمة: ${_extractedProposal!.financialPayload!['totalAmount']} ر.س | المحصل: ${_extractedProposal!.financialPayload!['amountPaid']} ر.س'),
             ],
           ],
-
           const SizedBox(height: 14),
+          // Action Buttons: Styled STRICTLY in Matte Black and Gold/Teal - NO MORE CLASHING BLUE
           Row(
             textDirection: TextDirection.rtl,
             children: [
@@ -401,25 +487,19 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: isPricing ? const Color(0xFF0D9488) : goldAccent,
                       foregroundColor: isPricing ? Colors.white : Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                     ),
-                    onPressed: _isExecuting ? null : () {
+                    onPressed: () {
                       if (isPricing) {
                         setState(() {
-                          _messages.add(ChatMessage(
-                            text: "💡 تم اعتماد دراسة التسعير اللوجستية وحفظ المعطيات بنجاح لجدولة الصفقات القادمة نحو ${_extractedProposal!.pricingPayload!['destination']}.",
-                            isUser: false,
-                            timestamp: DateTime.now(),
-                          ));
+                          _messages.add(ChatMessage(text: "💡 تم حفظ دراسة الجدوى اللوجستية بنجاح.", isUser: false, timestamp: DateTime.now()));
                           _extractedProposal = null;
                         });
                       } else {
                         _handleExecuteLedger();
                       }
                     },
-                    child: _isExecuting 
-                        ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.black, strokeWidth: 2))
-                        : Text(isPricing ? 'حفظ دراسة الجدوى اللوجستية' : 'تأكيد وتعميد العملية مالياً', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                    child: Text(isPricing ? 'حفظ دراسة الجدوى' : 'اعتماد وتعميد المعاملة فوراً', style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
                   ),
                 ),
               ),
@@ -429,11 +509,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 child: OutlinedButton(
                   style: OutlinedButton.styleFrom(
                     foregroundColor: Colors.redAccent,
-                    side: const BorderSide(color: Color(0xFF222B3C)),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    side: const BorderSide(color: borderCard),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
                   ),
                   onPressed: () => setState(() => _extractedProposal = null),
-                  child: const Text('إلغاء', style: TextStyle(fontSize: 12)),
+                  child: const Text('إلغاء القيد', style: TextStyle(fontSize: 12)),
                 ),
               )
             ],
@@ -443,34 +523,26 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  Widget _buildMetricBlock(String title, String val, Color color) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      textDirection: TextDirection.rtl,
-      children: [
-        Text(title, style: const TextStyle(color: textSecondary, fontSize: 10)),
-        const SizedBox(height: 2),
-        Text(val, style: TextStyle(color: color, fontSize: 14, fontWeight: FontWeight.bold)),
-      ],
-    );
-  }
-
   Widget _buildExtractedRow(IconData icon, String label, String value) {
     return Row(
       textDirection: TextDirection.rtl,
       children: [
         Icon(icon, color: textSecondary, size: 14),
         const SizedBox(width: 6),
-        Text(label, style: const TextStyle(color: textSecondary, fontSize: 12)),
+        Text(label, style: const TextStyle(color: textSecondary, fontSize: 11)),
         const SizedBox(width: 4),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w500),
-            textDirection: TextDirection.rtl,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
+        Expanded(child: Text(value, style: const TextStyle(color: Colors.white, fontSize: 11), overflow: TextOverflow.ellipsis, textDirection: TextDirection.rtl)),
+      ],
+    );
+  }
+
+  Widget _buildMetricBlock(String title, String val, Color color) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      textDirection: TextDirection.rtl,
+      children: [
+        Text(title, style: const TextStyle(color: textSecondary, fontSize: 10)),
+        Text(val, style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.bold)),
       ],
     );
   }
@@ -478,34 +550,31 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   Widget _buildMessageInputField() {
     return Container(
       color: darkSurface,
-      padding: const EdgeInsets.only(left: 12, right: 12, top: 10, bottom: 20),
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 10, bottom: 16),
       child: Row(
         children: [
-          // Matte Gold Action Send Arrow Button
           CircleAvatar(
-            radius: 20,
+            radius: 18,
             backgroundColor: goldAccent,
             child: IconButton(
-              icon: const Icon(Icons.arrow_upward_rounded, color: Colors.black, size: 20),
+              icon: const Icon(Icons.arrow_upward_rounded, color: Colors.black, size: 18),
               onPressed: () => _handleSendMessage(),
             ),
           ),
-          const SizedBox(width: 10),
-          
-          // Central Standard Input Text Area Field
+          const SizedBox(width: 12),
           Expanded(
             child: Container(
-              height: 42,
+              height: 38,
               decoration: BoxDecoration(
                 color: darkBg,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFF222B3C)),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: borderCard),
               ),
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 12),
               child: Row(
                 children: [
                   IconButton(
-                    icon: const Icon(Icons.document_scanner_outlined, color: textSecondary, size: 20),
+                    icon: const Icon(Icons.document_scanner_outlined, color: textSecondary, size: 18),
                     padding: EdgeInsets.zero,
                     constraints: const BoxConstraints(),
                     onPressed: _handleMultimodalOCR,
@@ -518,7 +587,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                       textAlign: TextAlign.right,
                       textDirection: TextDirection.rtl,
                       decoration: const InputDecoration(
-                        hintText: 'تحدث مع المساعد المالي أو أرسل معاملة...',
+                        hintText: 'تحدث مع المساعد المالي أو أرسل معاملة الحاوية...',
                         hintStyle: TextStyle(color: Color(0xFF4B5563), fontSize: 12),
                         border: InputBorder.none,
                         contentPadding: EdgeInsets.zero,
