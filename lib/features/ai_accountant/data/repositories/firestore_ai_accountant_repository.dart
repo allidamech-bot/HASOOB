@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
+import '../../../../core/utils/logistics_math_engine.dart';
 import '../../domain/repositories/ai_accountant_repository.dart';
 import '../models/ai_proposal_model.dart';
 
@@ -82,15 +83,34 @@ JSON CONTRACT SCHEMA REQUIRED:
 
   AiProposalModel _generateDynamicPricingMock(String text) {
     if (text.contains('أفغانستان') || text.contains('تصدير') || text.contains('تسعير')) {
+      const itemBasePrice = 45.0;
+      const itemVolumeCbm = 0.09;
+      const shippingCost = 1200.0;
+      const customsDuties = 300.0;
+      const totalBatchVolumeCbm = 33.2;
+      const targetMargin = 25.0;
+
+      final landedCostPerUnit = LogisticsMathEngine.calculatePreciseLandedCost(
+        itemBasePrice: itemBasePrice,
+        itemVolumeCbm: itemVolumeCbm,
+        totalShippingCost: shippingCost,
+        totalCustomsDuties: customsDuties,
+        totalBatchVolumeCbm: totalBatchVolumeCbm,
+      );
+      final suggestedPricePerUnit = LogisticsMathEngine.calculateSuggestedSellingPrice(
+        landedCostPerUnit: landedCostPerUnit,
+        targetMarginPercentage: targetMargin,
+      );
+
       return AiProposalModel(
         actionType: 'pricing_simulation',
-        explanation: 'تحليل استباقي لهوامش الربح: بناءً على أبعاد الحاوية 20 قدم ومصاريف الشحن والجمارك المذكورة لأفغانستان، تم تقسيم التكلفة الخطية اللوجستية للكرتون وحساب السعر المستهدف لضمان ربح 25%.',
+        explanation: 'تحليل استباقي لهوامش الربح: تم استخدام محرك Landed Cost المركزي لتوزيع الشحن والجمارك على أساس الحجم CBM وحساب السعر المستهدف لضمان ربح 25%.',
         confidenceScore: 0.98,
         pricingPayload: {
-          'suggestedPricePerUnit': 68.50,
-          'landedCostPerUnit': 51.37,
-          'targetMarginPercentage': 25.0,
-          'estimatedTotalBoxes': 737,
+          'suggestedPricePerUnit': suggestedPricePerUnit,
+          'landedCostPerUnit': landedCostPerUnit,
+          'targetMarginPercentage': targetMargin,
+          'estimatedTotalBoxes': LogisticsMathEngine.estimateTotalBoxes(totalBatchVolumeCbm: totalBatchVolumeCbm),
           'destination': 'أفغانستان (كابول)',
         },
       );

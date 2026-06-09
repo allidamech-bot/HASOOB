@@ -333,7 +333,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Widget _buildFormalVoucherPreviewCard() {
     final isPricing = _activeProposal!.actionType == 'pricing_simulation';
-    
+    final pricingPayload = _activeProposal!.pricingPayload;
+
+    String formatCurrency(dynamic value) {
+      final numericValue = (value is num) ? value.toDouble() : 0.0;
+      return numericValue.toStringAsFixed(2);
+    }
+
     return SingleChildScrollView(
       child: Container(
         padding: const EdgeInsets.all(16),
@@ -375,17 +381,17 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ),
             const SizedBox(height: 16),
 
-            if (isPricing && _activeProposal!.pricingPayload != null) ...[
-              _buildFormRow(Icons.location_on_outlined, 'الوجهة الدولية:', _activeProposal!.pricingPayload!['destination']),
-              _buildFormRow(Icons.inventory_2_outlined, 'سعة تعبئة الحاوية 20ft:', '${_activeProposal!.pricingPayload!['estimatedTotalBoxes']} كرتون عيار قياسي'),
-              _buildFormRow(Icons.trending_up_rounded, 'هامش الربح المستهدف:', '${_activeProposal!.pricingPayload!['targetMarginPercentage']}% صافي من المبيعات'),
+            if (isPricing && pricingPayload != null) ...[
+              _buildFormRow(Icons.location_on_outlined, 'الوجهة الدولية:', pricingPayload['destination'].toString()),
+              _buildFormRow(Icons.inventory_2_outlined, 'سعة تعبئة الحاوية 20ft:', '${pricingPayload['estimatedTotalBoxes']} كرتون عيار قياسي'),
+              _buildFormRow(Icons.trending_up_rounded, 'هامش الربح المستهدف:', '${pricingPayload['targetMarginPercentage']}% صافي من المبيعات'),
               const Divider(color: borderTerminal, height: 20),
               Row(
                 textDirection: TextDirection.rtl,
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  _buildMetricBlock('التكلفة الواصلة للكرتون (Landed)', '${_activeProposal!.pricingPayload!['landedCostPerUnit']} \$', goldAccent),
-                  _buildMetricBlock('السعر الأدنى لضمان الربح', '${_activeProposal!.pricingPayload!['suggestedPricePerUnit']} \$', tealSuccess),
+                  _buildMetricBlock('التكلفة الواصلة للكرتون (Landed)', '${formatCurrency(pricingPayload['landedCostPerUnit'])} \$', goldAccent),
+                  _buildMetricBlock('السعر الأدنى لضمان الربح', '${formatCurrency(pricingPayload['suggestedPricePerUnit'])} \$', tealSuccess),
                 ],
               )
             ] else ...[
