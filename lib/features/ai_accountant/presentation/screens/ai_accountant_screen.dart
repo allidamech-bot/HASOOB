@@ -31,6 +31,44 @@ class LedgerEntry {
   });
 }
 
+enum AiChatRole {
+  user,
+  assistant,
+}
+
+enum AiChatMessageType {
+  normal,
+  recommendation,
+  question,
+  scenarioComparison,
+  proposal,
+  confirmation,
+  executionResult,
+  error,
+}
+
+class AiChatMessage {
+  final String id;
+  final AiChatRole role;
+  final AiChatMessageType type;
+  final String text;
+  final DateTime timestamp;
+  final AiProposalModel? proposal;
+  final ProposalExecutionResult? executionResult;
+  final List<String> suggestedReplies;
+
+  const AiChatMessage({
+    required this.id,
+    required this.role,
+    required this.type,
+    required this.text,
+    required this.timestamp,
+    this.proposal,
+    this.executionResult,
+    this.suggestedReplies = const [],
+  });
+}
+
 class AiAccountantScreen extends StatefulWidget {
   const AiAccountantScreen({super.key});
 
@@ -40,13 +78,13 @@ class AiAccountantScreen extends StatefulWidget {
 
 class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _textController = TextEditingController();
+  final _chatScrollController = ScrollController();
   final _repository = AiAccountantRepositoryFactory.make();
 
   bool _isAnalyzing = false;
   bool _isCommitting = false;
   AiProposalModel? _activeProposal;
   AiProposalModel? _confirmationProposal;
-  ProposalExecutionResult? _lastExecutionResult;
 
   static const Color darkBg = AppTheme.aiDeep;
   static const Color darkSurface = AppTheme.aiCard;
@@ -55,29 +93,45 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   static const Color borderTerminal = AppTheme.aiCardBorder;
   static const Color tealSuccess = AppTheme.aiGreen;
 
+  final List<AiChatMessage> _messages = [
+    AiChatMessage(
+      id: 'welcome',
+      role: AiChatRole.assistant,
+      type: AiChatMessageType.question,
+      text:
+          'Tell me what you want to decide or record. I can discuss pricing, export strategy, margins, cash impact, purchases, and sales. I will not change your books until a clear proposal is reviewed and approved.',
+      timestamp: DateTime(2026, 6, 11),
+      suggestedReplies: [
+        'I want to export chocolate to Saudi Arabia',
+        'Is a 25% margin suitable?',
+        'Prepare a purchase proposal',
+      ],
+    ),
+  ];
+
   final List<LedgerEntry> _ledgerRows = [
     LedgerEntry(
       code: 'JV-2026-089',
-      account: 'مخزون السلع',
+      account: 'Inventory',
       debit: 56000,
       credit: 0,
-      description: 'توريد شحنة بضائع مستوردة',
+      description: 'Imported goods shipment',
       date: '2026-06-08',
     ),
     LedgerEntry(
       code: 'JV-2026-089',
-      account: 'حساب الموردين',
+      account: 'Accounts payable',
       debit: 0,
       credit: 56000,
-      description: 'استحقاق فاتورة توريد',
+      description: 'Supplier invoice accrual',
       date: '2026-06-08',
     ),
     LedgerEntry(
       code: 'JV-2026-090',
-      account: 'مصاريف شحن',
+      account: 'Freight expense',
       debit: 12500,
       credit: 0,
-      description: 'تكلفة شحن مرتبطة بالمخزون',
+      description: 'Freight cost linked to inventory',
       date: '2026-06-09',
     ),
   ];
@@ -85,6 +139,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   @override
   void dispose() {
     _textController.dispose();
+    _chatScrollController.dispose();
     super.dispose();
   }
 
@@ -93,31 +148,146 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     if (text.isEmpty) return;
     if (customText == null) _textController.clear();
 
+    _appendMessage(
+      role: AiChatRole.user,
+      type: AiChatMessageType.normal,
+      text: text,
+    );
+
+    if (_isExecutionIntent(text)) {
+      await _handleExecutionIntent(text);
+      return;
+    }
+
+    final advisory = _buildAdvisoryResponse(text);
+    if (advisory != null) {
+      _appendMessage(
+        role: AiChatRole.assistant,
+        type: advisory.type,
+        text: advisory.text,
+        suggestedReplies: advisory.suggestedReplies,
+      );
+      return;
+    }
+
     setState(() {
       _isAnalyzing = true;
-      _activeProposal = null;
       _confirmationProposal = null;
-      _lastExecutionResult = null;
     });
 
     try {
       final proposal = await _repository.parseNaturalLanguage(text);
       if (!mounted) return;
+
+      if (proposal.actionType == 'unknown') {
+        _appendMessage(
+          role: AiChatRole.assistant,
+          type: AiChatMessageType.question,
+          text:
+              'I need a little more detail before I can prepare a safe proposal. Is this a purchase, sale, or pricing simulation? Please include product, quantity, amount, and customer or supplier when relevant.',
+          suggestedReplies: const [
+            'Prepare a purchase',
+            'Prepare a sale',
+            'Run a pricing simulation',
+          ],
+        );
+        return;
+      }
+
       setState(() {
         _activeProposal = proposal;
         _addPreviewLedgerRow(proposal);
       });
+      _appendMessage(
+        role: AiChatRole.assistant,
+        type: AiChatMessageType.proposal,
+        text:
+            'I prepared a reviewable proposal. Check the details before approving. Execution will still go through the guarded accounting engine.',
+        proposal: proposal,
+        suggestedReplies: _proposalSuggestedReplies(proposal),
+      );
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _lastExecutionResult = ProposalExecutionResult(
-          success: false,
-          error: 'تعذر تحليل الطلب: $e',
-        );
-      });
+      _appendMessage(
+        role: AiChatRole.assistant,
+        type: AiChatMessageType.error,
+        text: 'I could not analyze that request safely: $e',
+        suggestedReplies: const [
+          'Try as a purchase',
+          'Try as a sale',
+          'Ask for advice instead',
+        ],
+      );
     } finally {
       if (mounted) setState(() => _isAnalyzing = false);
     }
+  }
+
+  Future<void> _handleExecutionIntent(String text) async {
+    final wantsQuotation = _containsAny(_normalized(text), [
+      'convert',
+      'quotation',
+      'quote',
+    ]);
+    final proposal = _activeProposal ?? _confirmationProposal;
+
+    if (proposal == null || !_isExecutableProposal(proposal)) {
+      _appendMessage(
+        role: AiChatRole.assistant,
+        type: AiChatMessageType.confirmation,
+        text:
+            'I need a clear, complete proposal before execution. Do you want to prepare a purchase, sale, or pricing simulation?',
+        suggestedReplies: const [
+          'Prepare a purchase',
+          'Prepare a sale',
+          'Run a pricing simulation',
+        ],
+      );
+      return;
+    }
+
+    if (wantsQuotation && proposal.actionType == 'pricing_simulation') {
+      _convertPricingToQuotation();
+      return;
+    }
+
+    await _executeProposal(proposal, clearActive: true);
+  }
+
+  void _appendMessage({
+    required AiChatRole role,
+    required AiChatMessageType type,
+    required String text,
+    AiProposalModel? proposal,
+    ProposalExecutionResult? executionResult,
+    List<String> suggestedReplies = const [],
+  }) {
+    setState(() {
+      _messages.add(
+        AiChatMessage(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          role: role,
+          type: type,
+          text: text,
+          timestamp: DateTime.now(),
+          proposal: proposal,
+          executionResult: executionResult,
+          suggestedReplies: suggestedReplies,
+        ),
+      );
+    });
+    _scrollChatToEnd();
+  }
+
+  void _scrollChatToEnd() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_chatScrollController.hasClients) return;
+      _chatScrollController.animateTo(
+        _chatScrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 240),
+        curve: Curves.easeOutCubic,
+      );
+    });
   }
 
   void _addPreviewLedgerRow(AiProposalModel proposal) {
@@ -130,16 +300,16 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final total =
         (proposal.financialPayload?['totalAmount'] as num?)?.toDouble() ?? 0;
     final itemName =
-        proposal.inventoryPayload?['name']?.toString() ?? 'صنف مقترح';
+        proposal.inventoryPayload?['name']?.toString() ?? 'Proposed item';
     _ledgerRows.insert(
       0,
       LedgerEntry(
         code: 'PENDING-AI',
-        account: isPurchase ? 'مخزون الأصناف ($itemName)' : 'حساب المبيعات',
+        account: isPurchase ? 'Inventory ($itemName)' : 'Sales revenue',
         debit: isPurchase ? total : 0,
         credit: isPurchase ? 0 : total,
         description: proposal.explanation,
-        date: 'قيد قيد المراجعة',
+        date: 'Pending review',
         isUncommitted: true,
       ),
     );
@@ -152,15 +322,28 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   void _convertPricingToQuotation() {
+    const result = ProposalExecutionResult(
+      success: false,
+      requiresUserConfirmation: true,
+      error:
+          'Converting a pricing simulation to a quotation needs a confirmed customer and product first.',
+    );
     setState(() {
-      _lastExecutionResult = const ProposalExecutionResult(
-        success: false,
-        requiresUserConfirmation: true,
-        error: 'تحويل المحاكاة إلى عرض سعر يحتاج اختيار عميل وصنف مؤكدين أولا.',
-      );
       _activeProposal = null;
       _confirmationProposal = null;
     });
+    _appendMessage(
+      role: AiChatRole.assistant,
+      type: AiChatMessageType.executionResult,
+      text:
+          'I cannot convert this yet. A quotation needs a confirmed customer and product first.',
+      executionResult: result,
+      suggestedReplies: const [
+        'Add customer details',
+        'Choose a product',
+        'Keep discussing pricing',
+      ],
+    );
   }
 
   Future<void> _commitProposalToLedger() async {
@@ -196,25 +379,56 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       final result = await _repository.executeProposalDetailed(proposal);
       if (!mounted) return;
       setState(() {
-        _lastExecutionResult = result;
         _confirmationProposal =
             result.requiresUserConfirmation ? proposal : null;
-        if (clearActive) _activeProposal = null;
+        if (clearActive && !result.requiresUserConfirmation) {
+          _activeProposal = null;
+        }
         _isCommitting = false;
         _markPreviewRow(result.success);
       });
+      _appendMessage(
+        role: AiChatRole.assistant,
+        type: AiChatMessageType.executionResult,
+        text: result.success
+            ? 'Execution finished. You can review the result below or continue the conversation.'
+            : 'The guarded execution flow stopped this action. Review the details below before trying again.',
+        executionResult: result,
+        suggestedReplies: result.success
+            ? const [
+                'Explain the impact',
+                'Prepare another transaction',
+                'Discuss pricing',
+              ]
+            : const [
+                'What is missing?',
+                'Prepare a clearer proposal',
+                'Continue discussion',
+              ],
+      );
     } catch (e) {
       if (!mounted) return;
+      final result = ProposalExecutionResult(
+        success: false,
+        error: 'Could not execute safely: $e',
+      );
       setState(() {
-        _lastExecutionResult = ProposalExecutionResult(
-          success: false,
-          error: 'تعذر تنفيذ العملية بأمان: $e',
-        );
         _confirmationProposal = null;
         if (clearActive) _activeProposal = null;
         _isCommitting = false;
         _markPreviewRow(false);
       });
+      _appendMessage(
+        role: AiChatRole.assistant,
+        type: AiChatMessageType.executionResult,
+        text: 'Execution failed safely. No vague conversation was committed.',
+        executionResult: result,
+        suggestedReplies: const [
+          'Review requirements',
+          'Prepare a new proposal',
+          'Ask for advice',
+        ],
+      );
     }
   }
 
@@ -228,8 +442,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           debit: row.debit,
           credit: row.credit,
           description: success
-              ? '${row.description} (منفذ)'
-              : '${row.description} (بحاجة مراجعة)',
+              ? '${row.description} (executed)'
+              : '${row.description} (needs review)',
           date: DateTime.now().toIso8601String().split('T').first,
           isUncommitted: !success,
         );
@@ -245,7 +459,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     if (!mounted) return;
     if (product == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('لم يتم العثور على الصنف.')),
+        const SnackBar(content: Text('Product was not found.')),
       );
       return;
     }
@@ -259,7 +473,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-          builder: (_) => InvoiceDetailsScreen(invoiceId: invoiceId)),
+        builder: (_) => InvoiceDetailsScreen(invoiceId: invoiceId),
+      ),
     );
   }
 
@@ -267,7 +482,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     await Clipboard.setData(ClipboardData(text: _resultSummary(result)));
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('تم نسخ ملخص العملية.')),
+      const SnackBar(content: Text('Execution summary copied.')),
     );
   }
 
@@ -277,22 +492,22 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final invoice = _asMap(data['invoice']);
     final journal = _asMap(data['journalEntry']);
     return [
-      'الحالة: ${_statusLabel(result, data)}',
-      if ((result.message ?? '').isNotEmpty) 'الرسالة: ${result.message}',
-      if ((result.error ?? '').isNotEmpty) 'الخطأ: ${result.error}',
+      'Status: ${_statusLabel(result, data)}',
+      if ((result.message ?? '').isNotEmpty) 'Message: ${result.message}',
+      if ((result.error ?? '').isNotEmpty) 'Error: ${result.error}',
       if (product.isNotEmpty)
-        'الصنف: ${product['id'] ?? '-'} / ${product['name'] ?? '-'}',
+        'Product: ${product['id'] ?? '-'} / ${product['name'] ?? '-'}',
       if (invoice.isNotEmpty)
-        'الفاتورة: ${invoice['id'] ?? '-'} / ${invoice['number'] ?? '-'}',
+        'Invoice: ${invoice['id'] ?? '-'} / ${invoice['number'] ?? '-'}',
       if (journal.isNotEmpty)
-        'القيد: ${journal['id'] ?? '-'} / ${journal['code'] ?? '-'}',
+        'Journal: ${journal['id'] ?? '-'} / ${journal['code'] ?? '-'}',
     ].join('\n');
   }
 
   @override
   Widget build(BuildContext context) {
     return Directionality(
-      textDirection: TextDirection.rtl,
+      textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: darkBg,
         body: LayoutBuilder(
@@ -305,15 +520,20 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                   child: isDesktop
                       ? Row(
                           children: [
-                            Expanded(flex: 3, child: _buildLedgerPanel()),
-                            Expanded(flex: 2, child: _buildAiPanel()),
+                            Expanded(flex: 3, child: _buildAiPanel()),
+                            Expanded(flex: 2, child: _buildLedgerPanel()),
                           ],
                         )
-                      : ListView(
-                          padding: const EdgeInsets.only(bottom: 112),
+                      : Column(
                           children: [
-                            SizedBox(height: 340, child: _buildLedgerPanel()),
-                            _buildAiPanel(isMobile: true),
+                            Expanded(
+                              flex: 3,
+                              child: _buildAiPanel(isMobile: true),
+                            ),
+                            SizedBox(
+                              height: constraints.maxHeight < 700 ? 220 : 280,
+                              child: _buildLedgerPanel(isCompact: true),
+                            ),
                           ],
                         ),
                 ),
@@ -336,12 +556,15 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         ),
         child: Row(
           children: [
-            const Icon(Icons.account_balance_wallet_outlined,
-                color: goldAccent, size: 20),
+            const Icon(
+              Icons.account_balance_wallet_outlined,
+              color: goldAccent,
+              size: 20,
+            ),
             const SizedBox(width: 10),
             const Expanded(
               child: Text(
-                'HASOOB | مراجعة العمليات المحاسبية',
+                'HASOOB | AI Accountant Advisor',
                 overflow: TextOverflow.ellipsis,
                 style: TextStyle(
                   color: Colors.white,
@@ -351,32 +574,26 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 ),
               ),
             ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-              decoration: BoxDecoration(
-                color: tealSuccess.withValues(alpha: 0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: tealSuccess.withValues(alpha: 0.35)),
-              ),
-              child: const Text(
-                'جاهز للمراجعة',
-                style: TextStyle(
-                    color: tealSuccess,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700),
-              ),
-            ),
+            _statusPill('Review before execution', tealSuccess),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildLedgerPanel() {
+  Widget _buildLedgerPanel({bool isCompact = false}) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: const BoxDecoration(
-        border: Border(left: BorderSide(color: borderTerminal)),
+      padding: EdgeInsets.all(isCompact ? 12 : 16),
+      decoration: BoxDecoration(
+        color: darkBg,
+        border: Border(
+          left: isCompact
+              ? BorderSide.none
+              : const BorderSide(color: borderTerminal),
+          top: isCompact
+              ? const BorderSide(color: borderTerminal)
+              : BorderSide.none,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -385,15 +602,16 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             children: [
               const Expanded(
                 child: Text(
-                  'دفتر الأستاذ واليومية',
+                  'Ledger context',
                   style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontWeight: FontWeight.w800),
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
               Text(
-                'عدد السطور: ${_ledgerRows.length}',
+                '${_ledgerRows.length} rows',
                 style: const TextStyle(color: textSecondary, fontSize: 12),
               ),
             ],
@@ -403,11 +621,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             child: DecoratedBox(
               decoration: BoxDecoration(
                 color: darkSurface,
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: borderTerminal),
               ),
               child: ClipRRect(
-                borderRadius: BorderRadius.circular(10),
+                borderRadius: BorderRadius.circular(8),
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
                   child: ConstrainedBox(
@@ -421,62 +639,103 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                       columnSpacing: 18,
                       columns: const [
                         DataColumn(
-                            label: Text('كود القيد',
-                                style: TextStyle(
-                                    color: goldAccent,
-                                    fontWeight: FontWeight.w700))),
+                          label: Text(
+                            'Code',
+                            style: TextStyle(
+                              color: goldAccent,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
                         DataColumn(
-                            label: Text('الحساب',
-                                style: TextStyle(color: Colors.white70))),
+                          label: Text(
+                            'Account',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ),
                         DataColumn(
-                            label: Text('مدين',
-                                style: TextStyle(color: Colors.white70))),
+                          label: Text(
+                            'Debit',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ),
                         DataColumn(
-                            label: Text('دائن',
-                                style: TextStyle(color: Colors.white70))),
+                          label: Text(
+                            'Credit',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ),
                         DataColumn(
-                            label: Text('البيان',
-                                style: TextStyle(color: Colors.white70))),
+                          label: Text(
+                            'Memo',
+                            style: TextStyle(color: Colors.white70),
+                          ),
+                        ),
                       ],
                       rows: _ledgerRows.map((row) {
                         return DataRow(
                           color: row.isUncommitted
                               ? WidgetStateProperty.all(
-                                  goldAccent.withValues(alpha: 0.06))
+                                  goldAccent.withValues(alpha: 0.06),
+                                )
                               : null,
                           cells: [
-                            DataCell(Text(row.code,
+                            DataCell(
+                              Text(
+                                row.code,
                                 style: TextStyle(
-                                    color: row.isUncommitted
-                                        ? goldAccent
-                                        : textSecondary,
-                                    fontWeight: FontWeight.w700,
-                                    fontSize: 11))),
-                            DataCell(Text(row.account,
+                                  color: row.isUncommitted
+                                      ? goldAccent
+                                      : textSecondary,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                row.account,
                                 style: const TextStyle(
-                                    color: Colors.white, fontSize: 12))),
-                            DataCell(Text(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
                                 row.debit > 0
                                     ? row.debit.toStringAsFixed(2)
                                     : '-',
                                 style: const TextStyle(
-                                    color: AppTheme.aiRed,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700))),
-                            DataCell(Text(
+                                  color: AppTheme.aiRed,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
                                 row.credit > 0
                                     ? row.credit.toStringAsFixed(2)
                                     : '-',
                                 style: const TextStyle(
-                                    color: tealSuccess,
-                                    fontSize: 11,
-                                    fontWeight: FontWeight.w700))),
-                            DataCell(Text(row.description,
+                                  color: tealSuccess,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            DataCell(
+                              Text(
+                                row.description,
                                 style: TextStyle(
-                                    color: row.isUncommitted
-                                        ? Colors.white
-                                        : Colors.white70,
-                                    fontSize: 11))),
+                                  color: row.isUncommitted
+                                      ? Colors.white
+                                      : Colors.white70,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
                           ],
                         );
                       }).toList(),
@@ -494,30 +753,38 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   Widget _buildAiPanel({bool isMobile = false}) {
     return Container(
       color: AppTheme.aiNavy,
-      padding: EdgeInsets.all(isMobile ? 16 : 20),
+      padding: EdgeInsets.all(isMobile ? 14 : 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
-            'المحاسب الذكي',
-            style: TextStyle(
-                color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Advisor chat',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              if (_activeProposal != null)
+                _statusPill('Proposal ready', goldAccent)
+              else
+                _statusPill('Conversation safe', tealSuccess),
+            ],
           ),
           const SizedBox(height: 4),
           const Text(
-            'اكتب عملية شراء أو بيع أو طلب تسعير. سيظهر المقترح للمراجعة قبل أي تنفيذ.',
+            'Discuss decisions freely. Clear purchase, sale, and pricing commands become reviewable proposal cards.',
             style: TextStyle(color: textSecondary, fontSize: 12, height: 1.4),
           ),
-          const Divider(color: borderTerminal, height: 24),
-          Expanded(
-            child: _activeProposal != null
-                ? _buildProposalCard(_activeProposal!)
-                : (_lastExecutionResult != null
-                    ? _buildExecutionResultCard(_lastExecutionResult!)
-                    : _buildEmptyState()),
-          ),
-          if (!_isAnalyzing && _activeProposal == null)
-            _buildQuickPromptsStrip(),
+          const Divider(color: borderTerminal, height: 22),
+          Expanded(child: _buildChatTimeline()),
+          if (_isAnalyzing) _buildTypingIndicator(),
+          const SizedBox(height: 10),
+          _buildQuickPromptsStrip(),
           const SizedBox(height: 10),
           _buildInputField(),
         ],
@@ -525,17 +792,132 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  Widget _buildEmptyState() {
-    return const Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildChatTimeline() {
+    return ListView.separated(
+      controller: _chatScrollController,
+      padding: const EdgeInsets.only(bottom: 8),
+      itemCount: _messages.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (context, index) => _buildChatMessage(_messages[index]),
+    );
+  }
+
+  Widget _buildChatMessage(AiChatMessage message) {
+    final isUser = message.role == AiChatRole.user;
+    final alignment = isUser ? Alignment.centerRight : Alignment.centerLeft;
+    final bubbleColor =
+        isUser ? goldAccent.withValues(alpha: 0.16) : darkSurface;
+    final borderColor =
+        isUser ? goldAccent.withValues(alpha: 0.34) : borderTerminal;
+    final maxWidth = MediaQuery.sizeOf(context).width >= 1000 ? 680.0 : 560.0;
+
+    return Align(
+      alignment: alignment,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: Column(
+          crossAxisAlignment:
+              isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: bubbleColor,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: borderColor),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Row(
+                    children: [
+                      Icon(
+                        isUser
+                            ? Icons.person_outline
+                            : _messageIcon(message.type),
+                        color:
+                            isUser ? goldAccent : _messageColor(message.type),
+                        size: 16,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          isUser ? 'You' : 'AI Accountant',
+                          style: TextStyle(
+                            color: isUser
+                                ? goldAccent
+                                : _messageColor(message.type),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    message.text,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      height: 1.45,
+                    ),
+                  ),
+                  if (message.proposal != null) ...[
+                    const SizedBox(height: 12),
+                    _buildProposalCard(message.proposal!),
+                  ],
+                  if (message.executionResult != null) ...[
+                    const SizedBox(height: 12),
+                    _buildExecutionResultCard(message.executionResult!),
+                  ],
+                ],
+              ),
+            ),
+            if (!isUser && message.suggestedReplies.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _buildSuggestedReplies(message.suggestedReplies),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSuggestedReplies(List<String> replies) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: replies.map((reply) {
+        return ActionChip(
+          backgroundColor: AppTheme.aiCardElevated,
+          side: const BorderSide(color: borderTerminal),
+          label: Text(
+            reply,
+            style: const TextStyle(color: textSecondary, fontSize: 11),
+          ),
+          onPressed: _isAnalyzing || _isCommitting
+              ? null
+              : () => _processAiCommand(customText: reply),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildTypingIndicator() {
+    return const Padding(
+      padding: EdgeInsets.only(top: 8),
+      child: Row(
         children: [
-          Icon(Icons.account_balance_outlined, color: borderTerminal, size: 44),
-          SizedBox(height: 12),
+          SizedBox(
+            width: 14,
+            height: 14,
+            child: CircularProgressIndicator(color: goldAccent, strokeWidth: 2),
+          ),
+          SizedBox(width: 8),
           Text(
-            'أدخل طلبا ماليا واضحا.\nلن يتم تنفيذ أي عملية قبل ظهور المقترح أو نتيجة المراجعة.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: textSecondary, fontSize: 12, height: 1.5),
+            'Preparing a safe response...',
+            style: TextStyle(color: textSecondary, fontSize: 12),
           ),
         ],
       ),
@@ -548,109 +930,136 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final inventory = proposal.inventoryPayload ?? const <String, dynamic>{};
     final financial = proposal.financialPayload ?? const <String, dynamic>{};
 
-    return SingleChildScrollView(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: darkSurface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(
-              color: isPricing
-                  ? tealSuccess.withValues(alpha: 0.6)
-                  : goldAccent.withValues(alpha: 0.55)),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.aiCardElevated,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(
+          color: isPricing
+              ? tealSuccess.withValues(alpha: 0.6)
+              : goldAccent.withValues(alpha: 0.55),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(
-                    isPricing
-                        ? Icons.price_check_outlined
-                        : Icons.fact_check_outlined,
-                    color: isPricing ? tealSuccess : goldAccent,
-                    size: 18),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    isPricing ? 'مقترح تسعير' : 'مقترح عملية محاسبية',
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(
+                isPricing
+                    ? Icons.price_check_outlined
+                    : Icons.fact_check_outlined,
+                color: isPricing ? tealSuccess : goldAccent,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  isPricing ? 'Pricing proposal' : 'Accounting proposal',
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                _statusPill(
-                    '${(proposal.confidenceScore * 100).clamp(0, 100).toStringAsFixed(0)}%',
-                    goldAccent),
-              ],
-            ),
-            const Divider(color: borderTerminal, height: 22),
-            Text(proposal.explanation,
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 12, height: 1.5)),
-            const SizedBox(height: 14),
-            if (isPricing) ...[
-              _detailLine(Icons.location_on_outlined, 'الوجهة',
-                  '${pricing['destination'] ?? '-'}'),
-              _detailLine(Icons.inventory_2_outlined, 'الكمية المتوقعة',
-                  '${pricing['estimatedTotalBoxes'] ?? '-'}'),
-              _detailLine(Icons.price_change_outlined, 'التكلفة الواصلة',
-                  '${pricing['landedCostPerUnit'] ?? '-'}'),
-              _detailLine(Icons.trending_up_rounded, 'السعر المقترح',
-                  '${pricing['suggestedPricePerUnit'] ?? '-'}'),
-            ] else ...[
-              _detailLine(Icons.inventory_2_outlined, 'الصنف',
-                  '${inventory['name'] ?? inventory['productId'] ?? '-'}'),
-              _detailLine(Icons.format_list_numbered_rtl, 'الكمية',
-                  '${inventory['quantity'] ?? '-'}'),
-              _detailLine(Icons.payments_outlined, 'القيمة',
-                  '${financial['totalAmount'] ?? '-'}'),
+              ),
+              _statusPill(
+                '${(proposal.confidenceScore * 100).clamp(0, 100).toStringAsFixed(0)}%',
+                goldAccent,
+              ),
             ],
-            const SizedBox(height: 16),
-            Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (isPricing)
-                  FilledButton.icon(
-                    onPressed: _isCommitting ? null : _savePricingSimulation,
-                    icon: _isCommitting
-                        ? _miniProgress()
-                        : const Icon(Icons.save_outlined, size: 16),
-                    label: const Text('حفظ المحاكاة'),
-                  )
-                else
-                  FilledButton.icon(
-                    onPressed: _isCommitting ? null : _commitProposalToLedger,
-                    icon: _isCommitting
-                        ? _miniProgress()
-                        : const Icon(Icons.check_circle_outline, size: 16),
-                    label: const Text('تنفيذ بعد المراجعة'),
-                  ),
-                if (isPricing)
-                  OutlinedButton.icon(
-                    onPressed:
-                        _isCommitting ? null : _convertPricingToQuotation,
-                    icon: const Icon(Icons.request_quote_outlined, size: 16),
-                    label: const Text('تحويل إلى عرض سعر'),
-                  ),
-                OutlinedButton.icon(
-                  onPressed: _isCommitting
-                      ? null
-                      : () => setState(() {
-                            _activeProposal = null;
-                            _ledgerRows
-                                .removeWhere((row) => row.code == 'PENDING-AI');
-                          }),
-                  icon: const Icon(Icons.close_rounded, size: 16),
-                  label: const Text('تجاهل'),
-                ),
-              ],
+          ),
+          const Divider(color: borderTerminal, height: 22),
+          Text(
+            proposal.explanation,
+            style:
+                const TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
+          ),
+          const SizedBox(height: 14),
+          if (isPricing) ...[
+            _detailLine(
+              Icons.location_on_outlined,
+              'Destination',
+              '${pricing['destination'] ?? '-'}',
+            ),
+            _detailLine(
+              Icons.inventory_2_outlined,
+              'Estimated units',
+              '${pricing['estimatedTotalBoxes'] ?? '-'}',
+            ),
+            _detailLine(
+              Icons.price_change_outlined,
+              'Landed cost',
+              '${pricing['landedCostPerUnit'] ?? '-'}',
+            ),
+            _detailLine(
+              Icons.trending_up_rounded,
+              'Suggested price',
+              '${pricing['suggestedPricePerUnit'] ?? '-'}',
+            ),
+          ] else ...[
+            _detailLine(
+              Icons.inventory_2_outlined,
+              'Item',
+              '${inventory['name'] ?? inventory['productId'] ?? '-'}',
+            ),
+            _detailLine(
+              Icons.format_list_numbered_rtl,
+              'Quantity',
+              '${inventory['quantity'] ?? '-'}',
+            ),
+            _detailLine(
+              Icons.payments_outlined,
+              'Amount',
+              '${financial['totalAmount'] ?? '-'}',
             ),
           ],
-        ),
+          const SizedBox(height: 16),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if (isPricing)
+                FilledButton.icon(
+                  onPressed: _isCommitting ? null : _savePricingSimulation,
+                  icon: _isCommitting
+                      ? _miniProgress()
+                      : const Icon(Icons.save_outlined, size: 16),
+                  label: const Text('Save simulation'),
+                )
+              else
+                FilledButton.icon(
+                  onPressed: _isCommitting ? null : _commitProposalToLedger,
+                  icon: _isCommitting
+                      ? _miniProgress()
+                      : const Icon(Icons.check_circle_outline, size: 16),
+                  label: const Text('Approve after review'),
+                ),
+              if (isPricing)
+                OutlinedButton.icon(
+                  onPressed: _isCommitting ? null : _convertPricingToQuotation,
+                  icon: const Icon(Icons.request_quote_outlined, size: 16),
+                  label: const Text('Convert to quote'),
+                ),
+              OutlinedButton.icon(
+                onPressed: _isCommitting
+                    ? null
+                    : () => setState(() {
+                          if (identical(_activeProposal, proposal)) {
+                            _activeProposal = null;
+                          }
+                          _ledgerRows.removeWhere(
+                            (row) => row.code == 'PENDING-AI',
+                          );
+                        }),
+                icon: const Icon(Icons.close_rounded, size: 16),
+                label: const Text('Dismiss'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -672,111 +1081,115 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ? (partialSync ? AppTheme.warning : tealSuccess)
             : AppTheme.aiRed;
 
-    return SingleChildScrollView(
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: darkSurface,
-          borderRadius: BorderRadius.circular(10),
-          border: Border.all(color: statusColor.withValues(alpha: 0.65)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Row(
-              children: [
-                Icon(_statusIcon(result, partialSync),
-                    color: statusColor, size: 19),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    _statusLabel(result, data),
-                    style: TextStyle(
-                        color: statusColor,
-                        fontSize: 14,
-                        fontWeight: FontWeight.w800),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppTheme.aiCardElevated,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: statusColor.withValues(alpha: 0.65)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(_statusIcon(result, partialSync),
+                  color: statusColor, size: 19),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  _statusLabel(result, data),
+                  style: TextStyle(
+                    color: statusColor,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-              ],
-            ),
-            const Divider(color: borderTerminal, height: 22),
-            Text(
-              result.message ?? result.error ?? 'لا توجد تفاصيل إضافية.',
-              style: const TextStyle(
-                  color: Colors.white, fontSize: 12, height: 1.5),
-            ),
-            const SizedBox(height: 12),
-            if (product.isNotEmpty)
-              _detailLine(Icons.inventory_2_outlined, 'الصنف',
-                  '${product['id'] ?? '-'} | ${product['name'] ?? '-'}'),
-            if (invoice.isNotEmpty)
-              _detailLine(Icons.receipt_long_outlined, 'الفاتورة',
-                  '${invoice['id'] ?? '-'} | ${invoice['number'] ?? '-'}'),
-            if (journal.isNotEmpty)
-              _detailLine(Icons.account_balance_outlined, 'قيد اليومية',
-                  '${journal['id'] ?? '-'} | ${journal['code'] ?? '-'}'),
-            if (pricing.isNotEmpty)
-              _detailLine(Icons.price_check_outlined, 'محاكاة التسعير',
-                  '${pricing['id'] ?? '-'} | ${pricing['suggestedPrice'] ?? pricing['suggestedPricePerUnit'] ?? '-'}'),
+              ),
+            ],
+          ),
+          const Divider(color: borderTerminal, height: 22),
+          Text(
+            result.message ?? result.error ?? 'No additional details.',
+            style:
+                const TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
+          ),
+          const SizedBox(height: 12),
+          if (product.isNotEmpty)
             _detailLine(
-                Icons.sync_rounded,
-                'حالة المزامنة',
-                sync['status']?.toString() ??
-                    (result.success ? 'queued' : '-')),
+              Icons.inventory_2_outlined,
+              'Product',
+              '${product['id'] ?? '-'} | ${product['name'] ?? '-'}',
+            ),
+          if (invoice.isNotEmpty)
             _detailLine(
-                Icons.fact_check_outlined,
-                'سجل التدقيق',
-                audit['status']?.toString() ??
-                    (result.success ? 'stored' : '-')),
-            if (result.requiresUserConfirmation && candidates.isNotEmpty)
-              _buildCandidateProductList(candidates),
-            if (data['reason'] == 'missing_chart_accounts')
-              _buildChartSetupAction(),
-            const SizedBox(height: 14),
-            Wrap(
-              alignment: WrapAlignment.end,
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if ((product['id'] ?? '').toString().isNotEmpty)
-                  TextButton.icon(
-                    onPressed: () => _openProduct(product['id'].toString()),
-                    icon: const Icon(Icons.inventory_2_outlined, size: 16),
-                    label: const Text('عرض الصنف'),
-                  ),
-                if ((invoice['id'] ?? '').toString().isNotEmpty)
-                  TextButton.icon(
-                    onPressed: () => _openInvoice(invoice['id'].toString()),
-                    icon: const Icon(Icons.receipt_long_outlined, size: 16),
-                    label: const Text('عرض الفاتورة'),
-                  ),
-                if ((journal['id'] ?? '').toString().isNotEmpty)
-                  TextButton.icon(
-                    onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content:
-                              Text('يمكن مراجعة قيد اليومية من دفتر الأستاذ.')),
+              Icons.receipt_long_outlined,
+              'Invoice',
+              '${invoice['id'] ?? '-'} | ${invoice['number'] ?? '-'}',
+            ),
+          if (journal.isNotEmpty)
+            _detailLine(
+              Icons.account_balance_outlined,
+              'Journal',
+              '${journal['id'] ?? '-'} | ${journal['code'] ?? '-'}',
+            ),
+          if (pricing.isNotEmpty)
+            _detailLine(
+              Icons.price_check_outlined,
+              'Pricing simulation',
+              '${pricing['id'] ?? '-'} | ${pricing['suggestedPrice'] ?? pricing['suggestedPricePerUnit'] ?? '-'}',
+            ),
+          _detailLine(
+            Icons.sync_rounded,
+            'Sync',
+            sync['status']?.toString() ?? (result.success ? 'queued' : '-'),
+          ),
+          _detailLine(
+            Icons.fact_check_outlined,
+            'Audit',
+            audit['status']?.toString() ?? (result.success ? 'stored' : '-'),
+          ),
+          if (result.requiresUserConfirmation && candidates.isNotEmpty)
+            _buildCandidateProductList(candidates),
+          if (data['reason'] == 'missing_chart_accounts')
+            _buildChartSetupAction(),
+          const SizedBox(height: 14),
+          Wrap(
+            alignment: WrapAlignment.end,
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              if ((product['id'] ?? '').toString().isNotEmpty)
+                TextButton.icon(
+                  onPressed: () => _openProduct(product['id'].toString()),
+                  icon: const Icon(Icons.inventory_2_outlined, size: 16),
+                  label: const Text('Open product'),
+                ),
+              if ((invoice['id'] ?? '').toString().isNotEmpty)
+                TextButton.icon(
+                  onPressed: () => _openInvoice(invoice['id'].toString()),
+                  icon: const Icon(Icons.receipt_long_outlined, size: 16),
+                  label: const Text('Open invoice'),
+                ),
+              if ((journal['id'] ?? '').toString().isNotEmpty)
+                TextButton.icon(
+                  onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content:
+                          Text('Review the journal entry in ledger context.'),
                     ),
-                    icon: const Icon(Icons.account_balance_outlined, size: 16),
-                    label: const Text('عرض القيد'),
                   ),
-                TextButton.icon(
-                  onPressed: () => _copyExecutionSummary(result),
-                  icon: const Icon(Icons.copy_rounded, size: 16),
-                  label: const Text('نسخ الملخص'),
+                  icon: const Icon(Icons.account_balance_outlined, size: 16),
+                  label: const Text('Show journal'),
                 ),
-                TextButton.icon(
-                  onPressed: () => setState(() {
-                    _lastExecutionResult = null;
-                    _confirmationProposal = null;
-                  }),
-                  icon: const Icon(Icons.close_rounded, size: 16),
-                  label: const Text('إغلاق'),
-                ),
-              ],
-            ),
-          ],
-        ),
+              TextButton.icon(
+                onPressed: () => _copyExecutionSummary(result),
+                icon: const Icon(Icons.copy_rounded, size: 16),
+                label: const Text('Copy summary'),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -787,16 +1200,19 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: goldAccent.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: goldAccent.withValues(alpha: 0.28)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const Text(
-            'اختر الصنف الصحيح قبل التنفيذ',
+            'Choose the correct product before execution',
             style: TextStyle(
-                color: goldAccent, fontSize: 12, fontWeight: FontWeight.w800),
+              color: goldAccent,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
           ),
           const SizedBox(height: 8),
           ...candidates.map((candidate) {
@@ -804,7 +1220,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 (candidate['id'] ?? candidate['productId'] ?? '').toString();
             final name = (candidate['name'] ??
                     candidate['productName'] ??
-                    'صنف بدون اسم')
+                    'Unnamed item')
                 .toString();
             final stock =
                 (candidate['stock'] ?? candidate['quantity'] ?? '-').toString();
@@ -815,9 +1231,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                     ? null
                     : () => _confirmProductAndExecute(id),
                 style:
-                    OutlinedButton.styleFrom(alignment: Alignment.centerRight),
-                child: Text('$name | $id | المخزون: $stock',
-                    overflow: TextOverflow.ellipsis),
+                    OutlinedButton.styleFrom(alignment: Alignment.centerLeft),
+                child: Text(
+                  '$name | $id | stock: $stock',
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
             );
           }),
@@ -831,9 +1249,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       padding: const EdgeInsets.only(top: 12),
       child: OutlinedButton.icon(
         onPressed: () => Navigator.push(
-            context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
+          context,
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
+        ),
         icon: const Icon(Icons.settings_outlined, size: 16),
-        label: const Text('إكمال إعداد الحسابات'),
+        label: const Text('Complete chart of accounts setup'),
       ),
     );
   }
@@ -846,9 +1266,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           Icon(icon, color: textSecondary, size: 15),
           const SizedBox(width: 8),
           SizedBox(
-            width: 104,
-            child: Text(label,
-                style: const TextStyle(color: textSecondary, fontSize: 11)),
+            width: 112,
+            child: Text(
+              label,
+              style: const TextStyle(color: textSecondary, fontSize: 11),
+            ),
           ),
           Expanded(
             child: Text(
@@ -870,9 +1292,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: color.withValues(alpha: 0.24)),
       ),
-      child: Text(label,
-          style: TextStyle(
-              color: color, fontSize: 11, fontWeight: FontWeight.w700)),
+      child: Text(
+        label,
+        style:
+            TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.w700),
+      ),
     );
   }
 
@@ -886,24 +1310,27 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Widget _buildQuickPromptsStrip() {
     final prompts = [
-      'اشتريت 150 كرتون شوكولاتة بسعر 85 دولار كاش',
-      'بعت 12 كرتون بسعر 120 دولار للعميل أحمد',
-      'احسب سعر حاوية 20 قدم بهامش ربح 25%',
+      'I want to export chocolate to Saudi Arabia. What do you recommend?',
+      'Is a 25% margin suitable?',
+      'I bought 150 cartons of chocolate at 85 dollars cash',
     ];
     return SizedBox(
       height: 38,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        reverse: true,
         itemCount: prompts.length,
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           return ActionChip(
             backgroundColor: darkSurface,
             side: const BorderSide(color: borderTerminal),
-            label: Text(prompts[index],
-                style: const TextStyle(color: textSecondary, fontSize: 11)),
-            onPressed: () => _processAiCommand(customText: prompts[index]),
+            label: Text(
+              prompts[index],
+              style: const TextStyle(color: textSecondary, fontSize: 11),
+            ),
+            onPressed: _isAnalyzing || _isCommitting
+                ? null
+                : () => _processAiCommand(customText: prompts[index]),
           );
         },
       ),
@@ -914,39 +1341,197 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     return Container(
       decoration: BoxDecoration(
         color: darkSurface,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: borderTerminal),
       ),
       child: Row(
         children: [
-          IconButton(
-            icon: _isAnalyzing
-                ? const SizedBox(
-                    width: 16,
-                    height: 16,
-                    child: CircularProgressIndicator(
-                        color: goldAccent, strokeWidth: 2))
-                : const Icon(Icons.send_rounded, color: goldAccent, size: 18),
-            onPressed: _isAnalyzing ? null : () => _processAiCommand(),
-          ),
           Expanded(
             child: TextField(
               controller: _textController,
               style: const TextStyle(color: Colors.white, fontSize: 13),
-              textAlign: TextAlign.right,
-              textDirection: TextDirection.rtl,
+              textInputAction: TextInputAction.send,
               decoration: const InputDecoration(
-                hintText: 'اكتب عملية مالية أو طلب تسعير...',
+                contentPadding: EdgeInsets.symmetric(horizontal: 14),
+                hintText: 'Ask for advice or describe a clear transaction...',
                 hintStyle: TextStyle(color: AppTheme.aiTextMuted, fontSize: 12),
                 border: InputBorder.none,
               ),
               onSubmitted: (_) => _processAiCommand(),
             ),
           ),
-          const SizedBox(width: 10),
+          IconButton(
+            tooltip: 'Send',
+            icon: _isAnalyzing
+                ? const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      color: goldAccent,
+                      strokeWidth: 2,
+                    ),
+                  )
+                : const Icon(Icons.send_rounded, color: goldAccent, size: 18),
+            onPressed: _isAnalyzing || _isCommitting
+                ? null
+                : () => _processAiCommand(),
+          ),
+          const SizedBox(width: 4),
         ],
       ),
     );
+  }
+
+  _AdvisorResponse? _buildAdvisoryResponse(String text) {
+    final normalized = _normalized(text);
+    if (_isClearTransactionCommand(normalized)) return null;
+
+    if (_containsAny(normalized, [
+      'export',
+      'saudi',
+      'market entry',
+      'تصدير',
+      'السعودية',
+      'دخول السوق',
+    ])) {
+      return const _AdvisorResponse(
+        type: AiChatMessageType.question,
+        text:
+            'Let us build the export decision step by step. I need carton cost, expected selling price or target margin, shipping cost, customs cost, payment terms, and whether your priority is fast market entry or higher margin. Until those are clear, I will keep this as advice only.',
+        suggestedReplies: [
+          'My goal is fast market entry',
+          'My goal is higher margin',
+          'Compare pricing scenarios',
+        ],
+      );
+    }
+
+    if (_containsAny(normalized, [
+      '25%',
+      '25 percent',
+      'margin',
+      'هامش',
+      'ربح',
+      'مناسب',
+    ])) {
+      return const _AdvisorResponse(
+        type: AiChatMessageType.scenarioComparison,
+        text:
+            'A 25% margin can be suitable when demand is stable, returns are low, and competitors are not forcing discounts. For first entry, compare three scenarios: conservative at 15-18% to win accounts, balanced at 22-25% to protect profit, and aggressive at 30%+ only if the product has clear differentiation or limited supply.',
+        suggestedReplies: [
+          'Run conservative scenario',
+          'Run balanced scenario',
+          'Run aggressive scenario',
+        ],
+      );
+    }
+
+    if (_containsAny(normalized, [
+      'recommend',
+      'advice',
+      'advise',
+      'compare',
+      'explain',
+      'what do you think',
+      'suitable',
+      'better',
+      'strategy',
+      'discussion',
+      'تنصح',
+      'نصيحة',
+      'توصي',
+      'قارن',
+      'اشرح',
+      'أفضل',
+      'استراتيجية',
+      'مناقشة',
+    ])) {
+      return const _AdvisorResponse(
+        type: AiChatMessageType.recommendation,
+        text:
+            'I can help reason through that without touching the database. To make the recommendation useful, tell me the product, cost base, expected volume, payment terms, and your goal: cash speed, margin, market entry, or risk reduction.',
+        suggestedReplies: [
+          'Focus on cash speed',
+          'Focus on higher margin',
+          'Help me compare options',
+        ],
+      );
+    }
+
+    return null;
+  }
+
+  bool _isExecutionIntent(String text) {
+    final normalized = _normalized(text);
+    return _containsAny(normalized, [
+      'execute',
+      'approve',
+      'save',
+      'commit',
+      'confirm',
+      'convert',
+      'نفذ',
+      'اعتمد',
+      'احفظ',
+      'ثبت',
+      'اكد',
+      'أكد',
+      'حول',
+    ]);
+  }
+
+  bool _isClearTransactionCommand(String normalized) {
+    return _containsAny(normalized, [
+      'bought',
+      'purchased',
+      'sold',
+      'sale',
+      'purchase',
+      'invoice',
+      'quotation',
+      'quote',
+      'pricing simulation',
+      'calculate price',
+      'run pricing',
+      'اشتريت',
+      'اشتر',
+      'شراء',
+      'بعت',
+      'بيع',
+      'فاتورة',
+      'عرض سعر',
+      'تسعير',
+      'احسب سعر',
+    ]);
+  }
+
+  bool _isExecutableProposal(AiProposalModel proposal) {
+    return proposal.actionType == 'purchase' ||
+        proposal.actionType == 'sale' ||
+        proposal.actionType == 'pricing_simulation';
+  }
+
+  List<String> _proposalSuggestedReplies(AiProposalModel proposal) {
+    if (proposal.actionType == 'pricing_simulation') {
+      return const [
+        'Explain this pricing',
+        'Convert to quote',
+        'Compare margins',
+      ];
+    }
+    return const [
+      'Approve',
+      'Explain accounting impact',
+      'Change details',
+    ];
+  }
+
+  bool _containsAny(String value, List<String> needles) {
+    return needles.any(value.contains);
+  }
+
+  String _normalized(String value) {
+    return value.toLowerCase().trim();
   }
 
   Map<String, dynamic> _asMap(dynamic value) {
@@ -965,12 +1550,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   String _statusLabel(
       ProposalExecutionResult result, Map<String, dynamic> data) {
-    if (result.requiresUserConfirmation) return 'بحاجة إلى تأكيد';
+    if (result.requiresUserConfirmation) return 'Needs confirmation';
     if (result.success && _asMap(data['auditLog'])['status'] == 'failed') {
-      return 'تم التنفيذ مع مزامنة جزئية';
+      return 'Executed with partial sync';
     }
-    if (result.success) return 'تم التنفيذ';
-    return 'تعذر التنفيذ';
+    if (result.success) return 'Executed';
+    return 'Execution blocked';
   }
 
   IconData _statusIcon(ProposalExecutionResult result, bool partialSync) {
@@ -979,4 +1564,55 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     if (result.success) return Icons.verified_rounded;
     return Icons.report_problem_outlined;
   }
+
+  IconData _messageIcon(AiChatMessageType type) {
+    switch (type) {
+      case AiChatMessageType.recommendation:
+        return Icons.psychology_alt_outlined;
+      case AiChatMessageType.question:
+        return Icons.help_outline_rounded;
+      case AiChatMessageType.scenarioComparison:
+        return Icons.compare_arrows_rounded;
+      case AiChatMessageType.proposal:
+        return Icons.fact_check_outlined;
+      case AiChatMessageType.confirmation:
+        return Icons.rule_folder_outlined;
+      case AiChatMessageType.executionResult:
+        return Icons.verified_outlined;
+      case AiChatMessageType.error:
+        return Icons.report_problem_outlined;
+      case AiChatMessageType.normal:
+        return Icons.account_balance_outlined;
+    }
+  }
+
+  Color _messageColor(AiChatMessageType type) {
+    switch (type) {
+      case AiChatMessageType.recommendation:
+      case AiChatMessageType.scenarioComparison:
+        return tealSuccess;
+      case AiChatMessageType.question:
+      case AiChatMessageType.proposal:
+      case AiChatMessageType.confirmation:
+        return goldAccent;
+      case AiChatMessageType.executionResult:
+        return AppTheme.aiGreen;
+      case AiChatMessageType.error:
+        return AppTheme.aiRed;
+      case AiChatMessageType.normal:
+        return textSecondary;
+    }
+  }
+}
+
+class _AdvisorResponse {
+  final AiChatMessageType type;
+  final String text;
+  final List<String> suggestedReplies;
+
+  const _AdvisorResponse({
+    required this.type,
+    required this.text,
+    this.suggestedReplies = const [],
+  });
 }
