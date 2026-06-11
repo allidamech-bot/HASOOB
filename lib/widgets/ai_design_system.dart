@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 
-/// Glassmorphism card with optional glow border
+/// Calm dark card with optional emphasis border.
 class AiGlassCard extends StatelessWidget {
   final Widget child;
   final EdgeInsets? padding;
@@ -34,16 +34,16 @@ class AiGlassCard extends StatelessWidget {
         boxShadow: glowColor != null
             ? [
                 BoxShadow(
-                  color: glowColor!.withValues(alpha: 0.12),
-                  blurRadius: 24,
+                  color: glowColor!.withValues(alpha: 0.06),
+                  blurRadius: 14,
                   spreadRadius: 0,
                 ),
               ]
             : [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.3),
-                  blurRadius: 12,
-                  offset: const Offset(0, 4),
+                  color: Colors.black.withValues(alpha: 0.24),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
                 ),
               ],
       ),
@@ -98,9 +98,9 @@ class AiPageHeader extends StatelessWidget {
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Colors.black.withValues(alpha: 0.24),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -232,8 +232,7 @@ class AiKpiCard extends StatelessWidget {
                             ? Icons.trending_up_rounded
                             : Icons.trending_down_rounded,
                         size: 12,
-                        color:
-                            isTrendUp! ? AppTheme.aiGreen : AppTheme.aiRed,
+                        color: isTrendUp! ? AppTheme.aiGreen : AppTheme.aiRed,
                       ),
                       const SizedBox(width: 3),
                       Text(
@@ -241,9 +240,7 @@ class AiKpiCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 10,
                           fontWeight: FontWeight.w700,
-                          color: isTrendUp!
-                              ? AppTheme.aiGreen
-                              : AppTheme.aiRed,
+                          color: isTrendUp! ? AppTheme.aiGreen : AppTheme.aiRed,
                         ),
                       ),
                     ],
@@ -258,7 +255,7 @@ class AiKpiCard extends StatelessWidget {
               color: AppTheme.aiTextPrimary,
               fontSize: 20,
               fontWeight: FontWeight.w900,
-              letterSpacing: -0.5,
+              letterSpacing: 0,
             ),
           ),
           const SizedBox(height: 4),
@@ -427,9 +424,9 @@ class AiEmptyState extends StatelessWidget {
         color: AppTheme.aiGold.withValues(alpha: 0.05),
         boxShadow: [
           BoxShadow(
-            color: AppTheme.aiGold.withValues(alpha: 0.08),
-            blurRadius: 22,
-            offset: const Offset(0, 6),
+            color: AppTheme.aiGold.withValues(alpha: 0.04),
+            blurRadius: 14,
+            offset: const Offset(0, 4),
           )
         ],
       ),
@@ -549,8 +546,7 @@ class AiErrorState extends StatelessWidget {
                 shape: BoxShape.circle,
               ),
               child: Icon(Icons.error_outline_rounded,
-                  size: 36,
-                  color: AppTheme.aiRed.withValues(alpha: 0.7)),
+                  size: 36, color: AppTheme.aiRed.withValues(alpha: 0.7)),
             ),
             const SizedBox(height: 16),
             Text(
@@ -672,8 +668,7 @@ class AiActionButton extends StatelessWidget {
                     height: 16,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor:
-                          AlwaysStoppedAnimation<Color>(Colors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                     ),
                   )
                 else if (icon != null)
@@ -736,8 +731,7 @@ class AiSecondaryButton extends StatelessWidget {
               children: [
                 if (icon != null) ...[
                   Icon(icon,
-                      color: AppTheme.aiTextSecondary,
-                      size: isSmall ? 16 : 18),
+                      color: AppTheme.aiTextSecondary, size: isSmall ? 16 : 18),
                   SizedBox(width: isSmall ? 6 : 8),
                 ],
                 Text(
@@ -786,8 +780,7 @@ class AiSearchField extends StatelessWidget {
         style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 14),
         decoration: InputDecoration(
           hintText: hintText,
-          hintStyle:
-              const TextStyle(color: AppTheme.aiTextMuted, fontSize: 14),
+          hintStyle: const TextStyle(color: AppTheme.aiTextMuted, fontSize: 14),
           prefixIcon: const Icon(Icons.search_rounded,
               color: AppTheme.aiTextMuted, size: 20),
           suffixIcon: controller != null && (controller!.text.isNotEmpty)
@@ -968,11 +961,18 @@ class AiMobileConfig {
   static const double cardRadius = 20.0;
   static const double bottomClearance = 100.0;
 
-  static const TextStyle pageTitle = TextStyle(color: AppTheme.aiTextPrimary, fontSize: 24, fontWeight: FontWeight.w800);
-  static const TextStyle sectionTitle = TextStyle(color: AppTheme.aiTextPrimary, fontSize: 20, fontWeight: FontWeight.w700);
-  static const TextStyle cardTitle = TextStyle(color: AppTheme.aiTextPrimary, fontSize: 16, fontWeight: FontWeight.w700);
-  static const TextStyle body = TextStyle(color: AppTheme.aiTextSecondary, fontSize: 13, fontWeight: FontWeight.w500);
-  static const TextStyle caption = TextStyle(color: AppTheme.aiTextMuted, fontSize: 12, fontWeight: FontWeight.w500);
+  static const TextStyle pageTitle = TextStyle(
+      color: AppTheme.aiTextPrimary, fontSize: 24, fontWeight: FontWeight.w800);
+  static const TextStyle sectionTitle = TextStyle(
+      color: AppTheme.aiTextPrimary, fontSize: 20, fontWeight: FontWeight.w700);
+  static const TextStyle cardTitle = TextStyle(
+      color: AppTheme.aiTextPrimary, fontSize: 16, fontWeight: FontWeight.w700);
+  static const TextStyle body = TextStyle(
+      color: AppTheme.aiTextSecondary,
+      fontSize: 13,
+      fontWeight: FontWeight.w500);
+  static const TextStyle caption = TextStyle(
+      color: AppTheme.aiTextMuted, fontSize: 12, fontWeight: FontWeight.w500);
 }
 
 class AiMobilePageShell extends StatelessWidget {
@@ -997,7 +997,8 @@ class AiMobileSectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AiMobileConfig.horizontalPadding),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
@@ -1017,7 +1018,8 @@ class AiMobileKpiStrip extends StatelessWidget {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       physics: const BouncingScrollPhysics(),
-      padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AiMobileConfig.horizontalPadding),
       child: Row(children: children),
     );
   }
@@ -1027,7 +1029,11 @@ class AiMobileKpiChip extends StatelessWidget {
   final String label;
   final IconData icon;
   final Color color;
-  const AiMobileKpiChip({super.key, required this.label, required this.icon, required this.color});
+  const AiMobileKpiChip(
+      {super.key,
+      required this.label,
+      required this.icon,
+      required this.color});
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -1043,7 +1049,9 @@ class AiMobileKpiChip extends StatelessWidget {
         children: [
           Icon(icon, color: color, size: 16),
           const SizedBox(width: 8),
-          Text(label, style: AiMobileConfig.body.copyWith(fontWeight: FontWeight.w700, color: AppTheme.aiTextPrimary)),
+          Text(label,
+              style: AiMobileConfig.body.copyWith(
+                  fontWeight: FontWeight.w700, color: AppTheme.aiTextPrimary)),
         ],
       ),
     );
@@ -1055,7 +1063,12 @@ class AiMobileActionCard extends StatelessWidget {
   final IconData icon;
   final Color color;
   final VoidCallback onTap;
-  const AiMobileActionCard({super.key, required this.title, required this.icon, required this.color, required this.onTap});
+  const AiMobileActionCard(
+      {super.key,
+      required this.title,
+      required this.icon,
+      required this.color,
+      required this.onTap});
   @override
   Widget build(BuildContext context) {
     return AiGlassCard(
@@ -1069,7 +1082,8 @@ class AiMobileActionCard extends StatelessWidget {
           Icon(icon, color: color, size: 20),
           const SizedBox(width: 10),
           Flexible(
-            child: Text(title, style: AiMobileConfig.cardTitle.copyWith(fontSize: 14)),
+            child: Text(title,
+                style: AiMobileConfig.cardTitle.copyWith(fontSize: 14)),
           ),
         ],
       ),
@@ -1083,7 +1097,13 @@ class AiMobileEmptyState extends StatelessWidget {
   final IconData icon;
   final String actionLabel;
   final VoidCallback onAction;
-  const AiMobileEmptyState({super.key, required this.title, required this.subtitle, required this.icon, required this.actionLabel, required this.onAction});
+  const AiMobileEmptyState(
+      {super.key,
+      required this.title,
+      required this.subtitle,
+      required this.icon,
+      required this.actionLabel,
+      required this.onAction});
   @override
   Widget build(BuildContext context) {
     return AiGlassCard(
@@ -1094,15 +1114,20 @@ class AiMobileEmptyState extends StatelessWidget {
         children: [
           Icon(icon, color: AppTheme.aiGold, size: 48),
           const SizedBox(height: 16),
-          Text(title, style: AiMobileConfig.cardTitle, textAlign: TextAlign.center),
+          Text(title,
+              style: AiMobileConfig.cardTitle, textAlign: TextAlign.center),
           const SizedBox(height: 8),
-          Text(subtitle, style: AiMobileConfig.body, textAlign: TextAlign.center),
+          Text(subtitle,
+              style: AiMobileConfig.body, textAlign: TextAlign.center),
           const SizedBox(height: 16),
           FilledButton.icon(
             onPressed: onAction,
             icon: const Icon(Icons.add_rounded, size: 16),
-            label: Text(actionLabel, style: const TextStyle(fontWeight: FontWeight.w700)),
-            style: FilledButton.styleFrom(backgroundColor: AppTheme.aiGold, foregroundColor: Colors.black),
+            label: Text(actionLabel,
+                style: const TextStyle(fontWeight: FontWeight.w700)),
+            style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.aiGold,
+                foregroundColor: Colors.black),
           ),
         ],
       ),
@@ -1116,10 +1141,12 @@ class AiMobileFilterPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AiMobileConfig.horizontalPadding),
       child: AiGlassCard(
         borderRadius: AiMobileConfig.cardRadius,
-        padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.cardPadding, vertical: 12),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AiMobileConfig.cardPadding, vertical: 12),
         child: child,
       ),
     );

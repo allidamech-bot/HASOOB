@@ -16,7 +16,6 @@ class CommandDock extends StatelessWidget {
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
 
-    // List of items in the bottom navigation dock
     final items = [
       _DockItemData(
         index: 0,
@@ -58,29 +57,24 @@ class CommandDock extends StatelessWidget {
     ];
 
     return Container(
-      height: 60,
+      height: 72,
       decoration: BoxDecoration(
         color: AppTheme.aiNavy.withValues(alpha: 0.97),
-        borderRadius: BorderRadius.circular(AppTheme.radiusXLarge),
+        borderRadius: BorderRadius.circular(22),
         border: Border.all(
           color: AppTheme.aiCardBorder,
-          width: 1.5,
+          width: 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withValues(alpha: 0.4),
-            blurRadius: 20,
-            offset: const Offset(0, 8),
-          ),
-          BoxShadow(
-            color: AppTheme.aiBlue.withValues(alpha: 0.05),
-            blurRadius: 40,
-            spreadRadius: 0,
+            color: Colors.black.withValues(alpha: 0.28),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: items.map((item) {
@@ -97,17 +91,17 @@ class CommandDock extends StatelessWidget {
   Widget _buildCenterButton(BuildContext context, _DockItemData item) {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 4),
-      height: 46,
-      width: 46,
+      height: 52,
+      width: 52,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         gradient: AppTheme.aiBlueGradient,
         boxShadow: [
           BoxShadow(
-            color: AppTheme.aiBlue.withValues(alpha: 0.45),
-            blurRadius: 18,
-            spreadRadius: 2,
-            offset: const Offset(0, 4),
+            color: AppTheme.aiBlue.withValues(alpha: 0.22),
+            blurRadius: 12,
+            spreadRadius: 1,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
@@ -119,7 +113,7 @@ class CommandDock extends StatelessWidget {
           child: Icon(
             item.icon,
             color: Colors.white,
-            size: 26,
+            size: 28,
           ),
         ),
       ),
@@ -137,7 +131,7 @@ class CommandDock extends StatelessWidget {
         child: Material(
           color: Colors.transparent,
           child: InkWell(
-            borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
             onTap: () => onDestinationSelected(item.index),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -145,19 +139,18 @@ class CommandDock extends StatelessWidget {
               children: [
                 AnimatedContainer(
                   duration: const Duration(milliseconds: 200),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
                   decoration: BoxDecoration(
                     color: isSelected
                         ? AppTheme.aiBlue.withValues(alpha: 0.12)
                         : Colors.transparent,
-                    borderRadius:
-                        BorderRadius.circular(AppTheme.radiusMedium),
+                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
                     boxShadow: isSelected
                         ? [
                             BoxShadow(
-                              color: AppTheme.aiBlue.withValues(alpha: 0.15),
-                              blurRadius: 8,
+                              color: AppTheme.aiBlue.withValues(alpha: 0.08),
+                              blurRadius: 6,
                             ),
                           ]
                         : null,
@@ -165,7 +158,7 @@ class CommandDock extends StatelessWidget {
                   child: Icon(
                     isSelected ? item.selectedIcon : item.icon,
                     color: isSelected ? activeColor : inactiveColor,
-                    size: 20,
+                    size: 21,
                   ),
                 ),
                 const SizedBox(height: 4),
@@ -175,10 +168,10 @@ class CommandDock extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     color: isSelected ? activeColor : inactiveColor,
-                    fontWeight: isSelected
-                        ? FontWeight.w700
-                        : FontWeight.w500,
-                    fontSize: 9,
+                    fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                    fontSize: 10.5,
+                    height: 1.05,
+                    letterSpacing: 0,
                   ),
                 ),
               ],

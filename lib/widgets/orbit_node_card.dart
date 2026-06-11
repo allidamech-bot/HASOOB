@@ -98,7 +98,8 @@ class OrbitNodeCard extends StatelessWidget {
                     height: 42,
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
+                      borderRadius:
+                          BorderRadius.circular(AppTheme.radiusMedium),
                       border: Border.all(
                         color: color.withValues(alpha: 0.25),
                         width: 1,
@@ -138,7 +139,7 @@ class OrbitNodeCard extends StatelessWidget {
                               color: isDark
                                   ? AppTheme.aiTextPrimary
                                   : AppTheme.lightTextPrimary,
-                              letterSpacing: -0.5,
+                              letterSpacing: 0,
                             ),
                           ),
                         ),

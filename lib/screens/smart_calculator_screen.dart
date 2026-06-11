@@ -68,7 +68,8 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
     if (preview == null) return;
     if (preview.parse.missingFields.isNotEmpty) {
       final missing = preview.parse.missingFields.map(_label).join(', ');
-      _showMessage(_text('Missing fields: $missing', 'حقول ناقصة: $missing'));
+      _showMessage(
+          _text('Missing fields: $missing', 'ط­ظ‚ظˆظ„ ظ†ط§ظ‚طµط©: $missing'));
       return;
     }
     setState(() => _busy = true);
@@ -92,7 +93,8 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
     final preview = _preview;
     if (preview == null) return;
     await _service.saveDraft(preview);
-    _showMessage(_text('Draft saved locally.', 'تم حفظ المسودة محلياً.'));
+    _showMessage(_text(
+        'Draft saved locally.', 'طھظ… ط­ظپط¸ ط§ظ„ظ…ط³ظˆط¯ط© ظ…ط­ظ„ظٹط§ظ‹.'));
     await _loadHistory();
   }
 
@@ -106,7 +108,8 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
         return Container(
           decoration: BoxDecoration(
             color: AppTheme.surfaceSecondary,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(AppTheme.radiusXLarge)),
+            borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(AppTheme.radiusXLarge)),
             border: Border.all(color: AppTheme.border),
           ),
           padding: EdgeInsets.fromLTRB(
@@ -122,10 +125,11 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                       ?.copyWith(fontWeight: FontWeight.w800)),
               const SizedBox(height: 20),
               TextField(
-                controller: controller, 
+                controller: controller,
                 autofocus: true,
                 decoration: InputDecoration(
-                  hintText: _text('Enter new value', 'أدخل القيمة الجديدة'),
+                  hintText: _text('Enter new value',
+                      'ط£ط¯ط®ظ„ ط§ظ„ظ‚ظٹظ…ط© ط§ظ„ط¬ط¯ظٹط¯ط©'),
                 ),
               ),
               const SizedBox(height: 24),
@@ -138,7 +142,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                   setState(() => _preview = next);
                   Navigator.pop(context);
                 },
-                child: Text(_text('Update Field', 'تحديث الحقل')),
+                child: Text(_text('Update Field', 'طھط­ط¯ظٹط« ط§ظ„ط­ظ‚ظ„')),
               ),
             ],
           ),
@@ -154,7 +158,8 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
         content: Text(message),
         backgroundColor: AppTheme.surfaceElevated,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
+        shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppTheme.radiusMedium)),
       ),
     );
   }
@@ -162,7 +167,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
   @override
   Widget build(BuildContext context) {
     final isDesktop = MediaQuery.sizeOf(context).width >= 800;
-    
+
     return Scaffold(
       extendBody: true,
       body: Stack(
@@ -180,25 +185,29 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
               ),
             ),
           ),
-          
+
           if (!isDesktop)
             AiMobilePageShell(
               child: Column(
                 children: [
                   AiPageHeader(
-                    title: _isEnglish ? 'Smart Financial Advisor' : 'المستشار المالي الذكي',
+                    title: _isEnglish
+                        ? 'Smart Financial Advisor'
+                        : 'ط§ظ„ظ…ط³طھط´ط§ط± ط§ظ„ظ…ط§ظ„ظٹ ط§ظ„ط°ظƒظٹ',
                     subtitle: _isEnglish
                         ? 'AI-powered local financial assistant'
-                        : 'مركز التحكم الذكي في أعمالك التجارية.',
+                        : 'ظ…ط±ظƒط² ط§ظ„طھط­ظƒظ… ط§ظ„ط°ظƒظٹ ظپظٹ ط£ط¹ظ…ط§ظ„ظƒ ط§ظ„طھط¬ط§ط±ظٹط©.',
                   ),
                   const SizedBox(height: AiMobileConfig.sectionGap),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AiMobileConfig.horizontalPadding),
                     child: _mainColumn(),
                   ),
                   const SizedBox(height: AiMobileConfig.sectionGap),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: AiMobileConfig.horizontalPadding),
                     child: _historyColumn(),
                   ),
                 ],
@@ -209,10 +218,12 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
               slivers: [
                 SliverToBoxAdapter(
                   child: AiPageHeader(
-                    title: _isEnglish ? 'Smart Financial Advisor' : 'المستشار المالي الذكي',
+                    title: _isEnglish
+                        ? 'Smart Financial Advisor'
+                        : 'ط§ظ„ظ…ط³طھط´ط§ط± ط§ظ„ظ…ط§ظ„ظٹ ط§ظ„ط°ظƒظٹ',
                     subtitle: _isEnglish
                         ? 'AI-powered local financial assistant'
-                        : 'مركز التحكم الذكي في أعمالك التجارية.',
+                        : 'ظ…ط±ظƒط² ط§ظ„طھط­ظƒظ… ط§ظ„ط°ظƒظٹ ظپظٹ ط£ط¹ظ…ط§ظ„ظƒ ط§ظ„طھط¬ط§ط±ظٹط©.',
                   ),
                 ),
                 SliverPadding(
@@ -230,7 +241,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                 ),
               ],
             ),
-          
+
           if (_preview != null) _floatingActionBar(isDesktop: isDesktop),
         ],
       ),
@@ -256,9 +267,9 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
             'Calculate 15% VAT on 1200',
           ]
         : [
-            'اشتريت 20 كرتونة منظف بسعر 50 للواحدة',
-            'زبون أحمد دفع 500 وباقي عليه 200',
-            'احسب ضريبة 15% على 1200',
+            'ط§ط´طھط±ظٹطھ 20 ظƒط±طھظˆظ†ط© ظ…ظ†ط¸ظپ ط¨ط³ط¹ط± 50 ظ„ظ„ظˆط§ط­ط¯ط©',
+            'ط²ط¨ظˆظ† ط£ط­ظ…ط¯ ط¯ظپط¹ 500 ظˆط¨ط§ظ‚ظٹ ط¹ظ„ظٹظ‡ 200',
+            'ط§ط­ط³ط¨ ط¶ط±ظٹط¨ط© 15% ط¹ظ„ظ‰ 1200',
           ];
 
     final isDark = AppTheme.isDark(context);
@@ -282,41 +293,49 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                 controller: _controller,
                 minLines: 1,
                 maxLines: 3,
-                style: GoogleFonts.inter(fontSize: 16, fontWeight: FontWeight.w500),
+                style: GoogleFonts.inter(
+                    fontSize: 16, fontWeight: FontWeight.w500),
                 decoration: InputDecoration(
-                  hintText: _text('What would you like to record?', 'ماذا تريد أن تسجل؟'),
+                  hintText: _text('What would you like to record?',
+                      'ظ…ط§ط°ط§ طھط±ظٹط¯ ط£ظ† طھط³ط¬ظ„طں'),
                   fillColor: Colors.transparent,
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
                   focusedBorder: InputBorder.none,
-                  contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                 ),
               ),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
                 child: Row(
                   children: [
-                    const Icon(Icons.auto_awesome, color: AppTheme.accentBlue, size: 20),
+                    const Icon(Icons.auto_awesome,
+                        color: AppTheme.accentBlue, size: 20),
                     const SizedBox(width: 8),
                     Text(
-                      _text('AI Copilot active', 'المساعد الذكي نشط'),
+                      _text('AI Copilot active',
+                          'ط§ظ„ظ…ط³ط§ط¹ط¯ ط§ظ„ط°ظƒظٹ ظ†ط´ط·'),
                       style: GoogleFonts.inter(
-                        fontSize: 12, 
+                        fontSize: 12,
                         fontWeight: FontWeight.w600,
                         color: AppTheme.accentBlue,
                       ),
                     ),
                     const Spacer(),
-                    _busy 
-                      ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                      : IconButton.filled(
-                          onPressed: () => _runPreview(),
-                          icon: const Icon(Icons.arrow_upward),
-                          style: IconButton.styleFrom(
-                            backgroundColor: AppTheme.accentBlue,
-                            foregroundColor: Colors.white,
+                    _busy
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : IconButton.filled(
+                            onPressed: () => _runPreview(),
+                            icon: const Icon(Icons.arrow_upward),
+                            style: IconButton.styleFrom(
+                              backgroundColor: AppTheme.accentBlue,
+                              foregroundColor: Colors.white,
+                            ),
                           ),
-                        ),
                   ],
                 ),
               ),
@@ -327,23 +346,26 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
         Wrap(
           spacing: 6,
           runSpacing: 6,
-          children: suggestions.map((s) => ActionChip(
-                label: Text(s),
-                onPressed: () {
-                  _controller.text = s;
-                  _runPreview(s);
-                },
-                side: BorderSide(
-                  color: AppTheme.accentBlue.withValues(alpha: 0.3),
-                  width: 1.2,
-                ),
-                backgroundColor: AppTheme.accentBlue.withValues(alpha: 0.08),
-                labelStyle: const TextStyle(
-                  color: AppTheme.accentBlue,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 11,
-                ),
-              )).toList(),
+          children: suggestions
+              .map((s) => ActionChip(
+                    label: Text(s),
+                    onPressed: () {
+                      _controller.text = s;
+                      _runPreview(s);
+                    },
+                    side: BorderSide(
+                      color: AppTheme.accentBlue.withValues(alpha: 0.3),
+                      width: 1.2,
+                    ),
+                    backgroundColor:
+                        AppTheme.accentBlue.withValues(alpha: 0.08),
+                    labelStyle: const TextStyle(
+                      color: AppTheme.accentBlue,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 11,
+                    ),
+                  ))
+              .toList(),
         ),
       ],
     );
@@ -358,8 +380,11 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
           children: [
             Expanded(
               child: Text(
-                _text('Assistant Analysis', 'تحليل المساعد'),
-                style: Theme.of(context).textTheme.headlineMedium?.copyWith(fontWeight: FontWeight.w800),
+                _text('Assistant Analysis', 'طھط­ظ„ظٹظ„ ط§ظ„ظ…ط³ط§ط¹ط¯'),
+                style: Theme.of(context)
+                    .textTheme
+                    .headlineMedium
+                    ?.copyWith(fontWeight: FontWeight.w800),
               ),
             ),
             const SizedBox(width: 16),
@@ -374,8 +399,12 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                _text('Detailed Data Points', 'نقاط البيانات التفصيلية'),
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w700),
+                _text('Detailed Data Points',
+                    'ظ†ظ‚ط§ط· ط§ظ„ط¨ظٹط§ظ†ط§طھ ط§ظ„طھظپطµظٹظ„ظٹط©'),
+                style: Theme.of(context)
+                    .textTheme
+                    .titleMedium
+                    ?.copyWith(fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 20),
               Wrap(
@@ -391,10 +420,13 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                         ))
                     .toList(),
               ),
-              if (preview.parse.missingFields.isNotEmpty || preview.calculation.warnings.isNotEmpty) ...[
+              if (preview.parse.missingFields.isNotEmpty ||
+                  preview.calculation.warnings.isNotEmpty) ...[
                 const SizedBox(height: 24),
                 _WarningList(
-                  missing: preview.parse.missingFields.map((f) => _label(f)).toList(),
+                  missing: preview.parse.missingFields
+                      .map((f) => _label(f))
+                      .toList(),
                   warnings: preview.calculation.warnings,
                   isEnglish: _isEnglish,
                 ),
@@ -411,8 +443,11 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         Text(
-          _text('Recent Activity', 'النشاط الأخير'),
-          style: Theme.of(context).textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700),
+          _text('Recent Activity', 'ط§ظ„ظ†ط´ط§ط· ط§ظ„ط£ط®ظٹط±'),
+          style: Theme.of(context)
+              .textTheme
+              .titleLarge
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 20),
         PremiumCard(
@@ -422,7 +457,8 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
               TextField(
                 controller: _searchController,
                 decoration: InputDecoration(
-                  hintText: _text('Search history...', 'ابحث في السجل...'),
+                  hintText:
+                      _text('Search history...', 'ط§ط¨ط­ط« ظپظٹ ط§ظ„ط³ط¬ظ„...'),
                   prefixIcon: const Icon(Icons.search, size: 20),
                   contentPadding: const EdgeInsets.symmetric(vertical: 12),
                 ),
@@ -435,7 +471,8 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
               if (_history.isEmpty)
                 Padding(
                   padding: const EdgeInsets.all(32),
-                  child: Text(_text('No history found', 'لا يوجد سجل')),
+                  child:
+                      Text(_text('No history found', 'ظ„ط§ ظٹظˆط¬ط¯ ط³ط¬ظ„')),
                 )
               else
                 ListView.separated(
@@ -446,9 +483,17 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                   itemBuilder: (context, index) {
                     final item = _history[index];
                     return ListTile(
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      title: Text(item.userInput, maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text('${item.detectedIntent.name} • ${item.actionStatus.name}', style: TextStyle(fontSize: 12, color: AppTheme.textSecondaryFor(context))),
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      title: Text(item.userInput,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      subtitle: Text(
+                          '${item.detectedIntent.name} â€¢ ${item.actionStatus.name}',
+                          style: TextStyle(
+                              fontSize: 12,
+                              color: AppTheme.textSecondaryFor(context))),
                       trailing: const Icon(Icons.chevron_right, size: 16),
                     );
                   },
@@ -473,20 +518,28 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
         children: [
           Row(
             children: [
-              const Icon(Icons.psychology_rounded, color: AppTheme.aiGold, size: 24),
+              const Icon(Icons.psychology_rounded,
+                  color: AppTheme.aiGold, size: 24),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
-                  _text('Financial AI Advisor Ready', 'المستشار الذكي جاهز'),
-                  style: const TextStyle(color: AppTheme.aiGold, fontSize: 14, fontWeight: FontWeight.bold),
+                  _text('Financial AI Advisor Ready',
+                      'ط§ظ„ظ…ط³طھط´ط§ط± ط§ظ„ط°ظƒظٹ ط¬ط§ظ‡ط²'),
+                  style: const TextStyle(
+                      color: AppTheme.aiGold,
+                      fontSize: 14,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 12),
           Text(
-            _text('Describe any business transaction in Arabic. The AI will parse metrics and calculate cash flows instantly.', 'اكتب عمليتك التجارية باللغة العربية (مثال: بعت 5 قطع بسعر 100). سيقوم المستشار بتحليلها وحساب الأرباح فوراً.'),
-            style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12),
+            _text(
+                'Describe any business transaction in Arabic. The AI will parse metrics and calculate cash flows instantly.',
+                'ط§ظƒطھط¨ ط¹ظ…ظ„ظٹطھظƒ ط§ظ„طھط¬ط§ط±ظٹط© ط¨ط§ظ„ظ„ط؛ط© ط§ظ„ط¹ط±ط¨ظٹط© (ظ…ط«ط§ظ„: ط¨ط¹طھ 5 ظ‚ط·ط¹ ط¨ط³ط¹ط± 100). ط³ظٹظ‚ظˆظ… ط§ظ„ظ…ط³طھط´ط§ط± ط¨طھط­ظ„ظٹظ„ظ‡ط§ ظˆط­ط³ط§ط¨ ط§ظ„ط£ط±ط¨ط§ط­ ظپظˆط±ط§ظ‹.'),
+            style:
+                const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12),
           ),
         ],
       ),
@@ -503,7 +556,8 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
           decoration: BoxDecoration(
             color: AppTheme.surfaceElevated.withValues(alpha: 0.95),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.3)),
+            border:
+                Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.3)),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withValues(alpha: 0.5),
@@ -518,7 +572,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
               IconButton(
                 onPressed: () => setState(() => _preview = null),
                 icon: const Icon(Icons.close),
-                tooltip: _text('Dismiss', 'تجاهل'),
+                tooltip: _text('Dismiss', 'طھط¬ط§ظ‡ظ„'),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -528,7 +582,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                     backgroundColor: AppTheme.surfaceSecondary,
                     side: const BorderSide(color: AppTheme.border),
                   ),
-                  child: Text(_text('Save Draft', 'حفظ كمسودة')),
+                  child: Text(_text('Save Draft', 'ط­ظپط¸ ظƒظ…ط³ظˆط¯ط©')),
                 ),
               ),
               const SizedBox(width: 12),
@@ -540,9 +594,14 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
                     backgroundColor: AppTheme.accentBlue,
                     foregroundColor: Colors.white,
                   ),
-                  child: _busy 
-                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                    : Text(_text('Confirm Entry', 'تأكيد العملية')),
+                  child: _busy
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : Text(
+                          _text('Confirm Entry', 'طھط£ظƒظٹط¯ ط§ظ„ط¹ظ…ظ„ظٹط©')),
                 ),
               ),
             ],
@@ -619,11 +678,13 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
             Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                   decoration: BoxDecoration(
                     color: AppTheme.accentBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(AppTheme.radiusSmall),
-                    border: Border.all(color: AppTheme.accentBlue.withValues(alpha: 0.2)),
+                    border: Border.all(
+                        color: AppTheme.accentBlue.withValues(alpha: 0.2)),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
@@ -642,7 +703,9 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
                       ),
                       const SizedBox(width: 8),
                       Text(
-                        widget.isEnglish ? 'LOCAL AI ENGINE ACTIVE' : 'محرك المساعد الذكي نشط',
+                        widget.isEnglish
+                            ? 'LOCAL AI ENGINE ACTIVE'
+                            : 'ظ…ط­ط±ظƒ ط§ظ„ظ…ط³ط§ط¹ط¯ ط§ظ„ط°ظƒظٹ ظ†ط´ط·',
                         style: GoogleFonts.inter(
                           fontSize: 9,
                           fontWeight: FontWeight.w900,
@@ -662,7 +725,7 @@ class _HeaderState extends State<_Header> with SingleTickerProviderStateMixin {
                 fontSize: 24,
                 fontWeight: FontWeight.w900,
                 color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-                letterSpacing: -0.5,
+                letterSpacing: 0,
               ),
             ),
             const SizedBox(height: 6),
@@ -690,10 +753,30 @@ class _MetricGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final values = preview.calculation.values;
     final tiles = [
-      ('Total Cost', 'إجمالي التكلفة', values['totalCost'], Icons.shopping_cart_outlined),
-      ('Revenue', 'الإيرادات', values['expectedRevenue'] ?? values['saleTotal'], Icons.payments_outlined),
-      ('Net Profit', 'صافي الربح', values['expectedProfit'] ?? values['profit'], Icons.trending_up),
-      ('Margin', 'الهامش', values['profitMargin'], Icons.pie_chart_outline),
+      (
+        'Total Cost',
+        'ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„طھظƒظ„ظپط©',
+        values['totalCost'],
+        Icons.shopping_cart_outlined
+      ),
+      (
+        'Revenue',
+        'ط§ظ„ط¥ظٹط±ط§ط¯ط§طھ',
+        values['expectedRevenue'] ?? values['saleTotal'],
+        Icons.payments_outlined
+      ),
+      (
+        'Net Profit',
+        'طµط§ظپظٹ ط§ظ„ط±ط¨ط­',
+        values['expectedProfit'] ?? values['profit'],
+        Icons.trending_up
+      ),
+      (
+        'Margin',
+        'ط§ظ„ظ‡ط§ظ…ط´',
+        values['profitMargin'],
+        Icons.pie_chart_outline
+      ),
     ].where((item) => item.$3 != null).toList();
 
     return GridView.builder(
@@ -719,13 +802,17 @@ class _MetricGrid extends StatelessWidget {
               const Spacer(),
               Text(
                 isEnglish ? item.$1 : item.$2,
-                style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 12),
+                style: TextStyle(
+                    color: AppTheme.textSecondaryFor(context), fontSize: 12),
               ),
               const SizedBox(height: 4),
               FittedBox(
                 child: Text(
-                  item.$3 is num ? AppFormatters.number((item.$3 as num).toDouble()) : item.$3.toString(),
-                  style: GoogleFonts.inter(fontWeight: FontWeight.w800, fontSize: 18),
+                  item.$3 is num
+                      ? AppFormatters.number((item.$3 as num).toDouble())
+                      : item.$3.toString(),
+                  style: GoogleFonts.inter(
+                      fontWeight: FontWeight.w800, fontSize: 18),
                 ),
               ),
             ],
@@ -742,7 +829,9 @@ class _ConfidenceBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = value > 0.8 ? AppTheme.success : (value > 0.5 ? Colors.orange : Colors.red);
+    final color = value > 0.8
+        ? AppTheme.success
+        : (value > 0.5 ? Colors.orange : Colors.red);
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
       decoration: BoxDecoration(
@@ -757,7 +846,8 @@ class _ConfidenceBadge extends StatelessWidget {
           const SizedBox(width: 6),
           Text(
             '${(value * 100).round()}% Match',
-            style: GoogleFonts.inter(fontSize: 12, fontWeight: FontWeight.w700, color: color),
+            style: GoogleFonts.inter(
+                fontSize: 12, fontWeight: FontWeight.w700, color: color),
           ),
         ],
       ),
@@ -766,7 +856,8 @@ class _ConfidenceBadge extends StatelessWidget {
 }
 
 class _PremiumFieldTile extends StatelessWidget {
-  const _PremiumFieldTile({required this.label, required this.value, this.onTap});
+  const _PremiumFieldTile(
+      {required this.label, required this.value, this.onTap});
   final String label;
   final String value;
   final VoidCallback? onTap;
@@ -789,15 +880,23 @@ class _PremiumFieldTile extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(label, style: TextStyle(color: AppTheme.textSecondaryFor(context), fontSize: 11, fontWeight: FontWeight.w600)),
+                Text(label,
+                    style: TextStyle(
+                        color: AppTheme.textSecondaryFor(context),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600)),
                 const SizedBox(height: 2),
-                Text(value, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                Text(value,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w800, fontSize: 14)),
               ],
             ),
             if (onTap != null)
               Padding(
                 padding: const EdgeInsetsDirectional.only(start: 12),
-                child: Icon(Icons.edit_outlined, size: 14, color: AppTheme.accentBlue.withValues(alpha: 0.6)),
+                child: Icon(Icons.edit_outlined,
+                    size: 14,
+                    color: AppTheme.accentBlue.withValues(alpha: 0.6)),
               ),
           ],
         ),
@@ -807,7 +906,8 @@ class _PremiumFieldTile extends StatelessWidget {
 }
 
 class _WarningList extends StatelessWidget {
-  const _WarningList({required this.missing, required this.warnings, required this.isEnglish});
+  const _WarningList(
+      {required this.missing, required this.warnings, required this.isEnglish});
   final List<String> missing;
   final List<String> warnings;
   final bool isEnglish;
@@ -825,28 +925,34 @@ class _WarningList extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           ...missing.map((m) => Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Row(
-              children: [
-                const Icon(Icons.error_outline, size: 16, color: AppTheme.danger),
-                const SizedBox(width: 8),
-                Text('${isEnglish ? 'Missing' : 'ناقص'}: $m', style: const TextStyle(color: AppTheme.danger, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          )),
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline,
+                        size: 16, color: AppTheme.danger),
+                    const SizedBox(width: 8),
+                    Text('${isEnglish ? 'Missing' : 'ظ†ط§ظ‚طµ'}: $m',
+                        style: const TextStyle(
+                            color: AppTheme.danger,
+                            fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              )),
           ...warnings.map((w) => Padding(
-            padding: const EdgeInsets.only(bottom: 4),
-            child: Row(
-              children: [
-                const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
-                const SizedBox(width: 8),
-                Text(w, style: const TextStyle(color: Colors.orange, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          )),
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Row(
+                  children: [
+                    const Icon(Icons.warning_amber_rounded,
+                        size: 16, color: Colors.orange),
+                    const SizedBox(width: 8),
+                    Text(w,
+                        style: const TextStyle(
+                            color: Colors.orange, fontWeight: FontWeight.w600)),
+                  ],
+                ),
+              )),
         ],
       ),
     );
   }
 }
-

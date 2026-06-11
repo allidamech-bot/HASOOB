@@ -56,7 +56,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   void initState() {
     super.initState();
     PerfLogger.logPageOpen('Reports');
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadData();
     });
@@ -70,12 +70,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
     });
 
     try {
-      final data = await _reportService.buildSnapshot(
-        businessId: BusinessContext.businessId,
-        period: _periodFilter,
-        productId: _selectedProductId,
-        forceRefresh: forceRefresh,
-      ).timeout(const Duration(seconds: 15));
+      final data = await _reportService
+          .buildSnapshot(
+            businessId: BusinessContext.businessId,
+            period: _periodFilter,
+            productId: _selectedProductId,
+            forceRefresh: forceRefresh,
+          )
+          .timeout(const Duration(seconds: 15));
 
       if (mounted) {
         setState(() {
@@ -118,7 +120,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
       final file = result.file;
       if (file == null) return;
-      
+
       AppMessages.success(context, '${result.message}\n${file.path}');
 
       final isPdf = p.extension(file.path).toLowerCase() == '.pdf';
@@ -131,15 +133,18 @@ class _ReportsScreenState extends State<ReportsScreen> {
           content: Text(copy.t('previewNowOrShare')),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext, _ReportPdfAction.close),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, _ReportPdfAction.close),
               child: Text(copy.t('later')),
             ),
             TextButton(
-              onPressed: () => Navigator.pop(dialogContext, _ReportPdfAction.share),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, _ReportPdfAction.share),
               child: Text(copy.t('share')),
             ),
             FilledButton(
-              onPressed: () => Navigator.pop(dialogContext, _ReportPdfAction.preview),
+              onPressed: () =>
+                  Navigator.pop(dialogContext, _ReportPdfAction.preview),
               child: Text(copy.t('preview')),
             ),
           ],
@@ -159,8 +164,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
   }
 
   Future<void> _previewPdf(String pdfPath) async {
-    if (kIsWeb) return; // Handled by printing differently if needed, but we used download on web
-    
+    if (kIsWeb) {
+      return; // Handled by printing differently if needed, but we used download on web
+    }
+
     final file = io.File(pdfPath);
     if (!await file.exists()) {
       if (!mounted) return;
@@ -183,7 +190,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Future<void> _sharePdf(String pdfPath) async {
     if (kIsWeb) return;
-    
+
     final file = io.File(pdfPath);
     if (!await file.exists()) {
       if (!mounted) return;
@@ -205,7 +212,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _premiumHeader(BuildContext context, AppCopy copy) {
     final title = copy.t('reportsTitle');
-    final subtitle = copy.isEnglish ? 'Business Intelligence & Analysis' : 'مركز تحليل وتقارير الأداء';
+    final subtitle = copy.isEnglish
+        ? 'Business Intelligence & Analysis'
+        : 'ظ…ط±ظƒط² طھط­ظ„ظٹظ„ ظˆطھظ‚ط§ط±ظٹط± ط§ظ„ط£ط¯ط§ط،';
     return AiPageHeader(
       title: title,
       subtitle: subtitle,
@@ -246,7 +255,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, color: AppTheme.danger, size: 48),
+            const Icon(Icons.error_outline_rounded,
+                color: AppTheme.danger, size: 48),
             const SizedBox(height: 16),
             Text(
               copy.t('loadReportsError'),
@@ -289,9 +299,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _buildContent(BuildContext context, AppCopy copy, ReportsSnapshot data) {
+  Widget _buildContent(
+      BuildContext context, AppCopy copy, ReportsSnapshot data) {
     final productOptions = [
-      DropdownMenuItem<String?>(value: null, child: Text(copy.t('allProducts'))),
+      DropdownMenuItem<String?>(
+          value: null, child: Text(copy.t('allProducts'))),
       ...data.products.map(
         (product) => DropdownMenuItem<String?>(
           value: product.id,
@@ -384,7 +396,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 _premiumHeader(context, copy),
                 const SizedBox(height: AiMobileConfig.sectionGap),
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: AiMobileConfig.horizontalPadding),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: contentList,
@@ -401,12 +414,14 @@ class _ReportsScreenState extends State<ReportsScreen> {
         AiMobileKpiStrip(
           children: [
             AiMobileKpiChip(
-              label: '${copy.t('totalProducts')}: ${AppFormatters.number(data.totalProducts)}',
+              label:
+                  '${copy.t('totalProducts')}: ${AppFormatters.number(data.totalProducts)}',
               icon: Icons.inventory_2_rounded,
               color: AppTheme.accentBlue,
             ),
             AiMobileKpiChip(
-              label: '${copy.t('quantity')}: ${AppFormatters.number(data.totalQuantity)}',
+              label:
+                  '${copy.t('quantity')}: ${AppFormatters.number(data.totalQuantity)}',
               icon: Icons.layers_rounded,
               color: AppTheme.accentCyan,
             ),
@@ -416,9 +431,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
         AiMobileKpiStrip(
           children: [
             AiMobileKpiChip(
-              label: '${copy.t('realizedProfit')}: ${AppFormatters.currency(data.realizedProfit)}',
+              label:
+                  '${copy.t('realizedProfit')}: ${AppFormatters.currency(data.realizedProfit)}',
               icon: Icons.payments_rounded,
-              color: data.realizedProfit >= 0 ? AppTheme.success : AppTheme.danger,
+              color:
+                  data.realizedProfit >= 0 ? AppTheme.success : AppTheme.danger,
             ),
           ],
         ),
@@ -466,7 +483,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   AppFormatters.currency(data.totalSales),
                   style: _theme.textTheme.headlineMedium?.copyWith(
                     fontWeight: FontWeight.w900,
-                    letterSpacing: -1.0,
+                    letterSpacing: 0,
                     color: isDark ? Colors.white : AppTheme.lightTextPrimary,
                   ),
                 ),
@@ -505,7 +522,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _filters(List<DropdownMenuItem<String?>> productOptions, AppCopy copy) {
+  Widget _filters(
+      List<DropdownMenuItem<String?>> productOptions, AppCopy copy) {
     final isDark = AppTheme.isDark(context);
     return _surface(
       child: Column(
@@ -536,17 +554,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                       }
                     },
                     selectedColor: AppTheme.accentBlue.withValues(alpha: 0.12),
-                    backgroundColor: isDark ? AppTheme.background : Colors.transparent,
+                    backgroundColor:
+                        isDark ? AppTheme.background : Colors.transparent,
                     labelStyle: TextStyle(
-                      color: isSelected 
-                          ? AppTheme.accentBlue 
+                      color: isSelected
+                          ? AppTheme.accentBlue
                           : AppTheme.textSecondaryFor(context),
-                      fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                      fontWeight:
+                          isSelected ? FontWeight.bold : FontWeight.w500,
                       fontSize: 12,
                     ),
                     side: BorderSide(
-                      color: isSelected 
-                          ? AppTheme.accentBlue.withValues(alpha: 0.3) 
+                      color: isSelected
+                          ? AppTheme.accentBlue.withValues(alpha: 0.3)
                           : AppTheme.borderFor(context),
                       width: 1.2,
                     ),
@@ -613,7 +633,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
           title: copy.t('realizedProfit'),
           value: AppFormatters.currency(data.realizedProfit),
           icon: Icons.payments_rounded,
-          accentColor: data.realizedProfit >= 0 ? AppTheme.success : AppTheme.danger,
+          accentColor:
+              data.realizedProfit >= 0 ? AppTheme.success : AppTheme.danger,
         ),
       ],
     );
@@ -632,7 +653,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
           clipBehavior: Clip.none,
           child: Row(
             children: [
-              _exportButton(copy.t('inventoryPdf'), Icons.picture_as_pdf_rounded, () {
+              _exportButton(
+                  copy.t('inventoryPdf'), Icons.picture_as_pdf_rounded, () {
                 return _exportService.exportInventoryPdf(
                   businessId: _businessId,
                   period: _periodFilter,
@@ -640,7 +662,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 );
               }),
               const SizedBox(width: 8),
-              _exportButton(copy.t('salesPdf'), Icons.picture_as_pdf_rounded, () {
+              _exportButton(copy.t('salesPdf'), Icons.picture_as_pdf_rounded,
+                  () {
                 return _exportService.exportSalesPdf(
                   businessId: _businessId,
                   period: _periodFilter,
@@ -648,7 +671,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 );
               }),
               const SizedBox(width: 8),
-              _exportButton(copy.t('inventoryCsv'), Icons.table_chart_rounded, () {
+              _exportButton(copy.t('inventoryCsv'), Icons.table_chart_rounded,
+                  () {
                 return _exportService.exportInventoryCsv(
                   businessId: _businessId,
                   period: _periodFilter,
@@ -681,7 +705,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
         color: isDark ? AppTheme.surfaceSecondary : Colors.white,
         borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
         border: Border.all(
-          color: isDark ? AppTheme.accentBlue.withValues(alpha: 0.15) : AppTheme.lightBorder,
+          color: isDark
+              ? AppTheme.accentBlue.withValues(alpha: 0.15)
+              : AppTheme.lightBorder,
           width: 1.2,
         ),
       ),
@@ -699,7 +725,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 const SizedBox(width: 8),
                 Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 12),
                 ),
               ],
             ),
@@ -715,9 +742,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
       children: [
         AppSectionHeader(title: copy.t('reportsTitle'), hasAccentLine: true),
         const SizedBox(height: 12),
-        _chartCard(copy.t('salesAcrossTime'), _lineChart(data.salesTrend, _blue, copy)),
+        _chartCard(copy.t('salesAcrossTime'),
+            _lineChart(data.salesTrend, _blue, copy)),
         const SizedBox(height: 16),
-        _chartCard(copy.t('profitTrend'), _lineChart(data.profitTrend, AppTheme.success, copy)),
+        _chartCard(copy.t('profitTrend'),
+            _lineChart(data.profitTrend, AppTheme.success, copy)),
       ],
     );
   }
@@ -755,8 +784,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
               FlLine(color: AppTheme.borderFor(context)),
         ),
         titlesData: FlTitlesData(
-          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          topTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+          rightTitles:
+              const AxisTitles(sideTitles: SideTitles(showTitles: false)),
           leftTitles: AxisTitles(
             sideTitles: SideTitles(
               showTitles: true,
@@ -814,9 +845,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
           child: ListTile(
             leading: CircleAvatar(
               backgroundColor: _blue.withValues(alpha: 0.12),
-              child: const Icon(Icons.local_fire_department_rounded, color: _blue),
+              child:
+                  const Icon(Icons.local_fire_department_rounded, color: _blue),
             ),
-            title: Text(item.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+            title: Text(item.name,
+                style: const TextStyle(fontWeight: FontWeight.w800)),
             subtitle: Text(
               copy.reportsBestSellingSubtitle(
                 item.soldQuantity,
@@ -845,7 +878,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
               Icons.warning_amber_rounded,
               color: AppTheme.warning,
             ),
-            title: Text(product.name, style: const TextStyle(fontWeight: FontWeight.w800)),
+            title: Text(product.name,
+                style: const TextStyle(fontWeight: FontWeight.w800)),
             subtitle: Text(
               copy.reportsLowStockSubtitle(product.stockQty, product.unit),
               style: TextStyle(color: _muted),
@@ -853,7 +887,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
             trailing: Text(
               product.isOutOfStock ? copy.t('outOfStock') : copy.t('lowStock'),
               style: TextStyle(
-                color: product.isOutOfStock ? AppTheme.danger : AppTheme.warning,
+                color:
+                    product.isOutOfStock ? AppTheme.danger : AppTheme.warning,
                 fontWeight: FontWeight.w800,
               ),
             ),
@@ -921,7 +956,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               title: empty,
               subtitle: AppCopy.of(context).isEnglish
                   ? "No transactions have been recorded in this category yet."
-                  : "لم يتم تسجيل أي عمليات تجارية أو مبيعات في هذا القسم حتى الآن.",
+                  : "ظ„ظ… ظٹطھظ… طھط³ط¬ظٹظ„ ط£ظٹ ط¹ظ…ظ„ظٹط§طھ طھط¬ط§ط±ظٹط© ط£ظˆ ظ…ط¨ظٹط¹ط§طھ ظپظٹ ظ‡ط°ط§ ط§ظ„ظ‚ط³ظ… ط­طھظ‰ ط§ظ„ط¢ظ†.",
             ),
           )
         else
@@ -948,7 +983,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
             decoration: BoxDecoration(
               color: AppTheme.aiGold.withValues(alpha: 0.12),
               shape: BoxShape.circle,
-              border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.25)),
+              border:
+                  Border.all(color: AppTheme.aiGold.withValues(alpha: 0.25)),
             ),
             child: const Icon(
               Icons.psychology_rounded,
@@ -962,7 +998,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  copy.isEnglish ? 'Financial AI Performance Insights' : 'مستشار الذكاء المالي - تحليلات الأداء',
+                  copy.isEnglish
+                      ? 'Financial AI Performance Insights'
+                      : 'ظ…ط³طھط´ط§ط± ط§ظ„ط°ظƒط§ط، ط§ظ„ظ…ط§ظ„ظٹ - طھط­ظ„ظٹظ„ط§طھ ط§ظ„ط£ط¯ط§ط،',
                   style: const TextStyle(
                     color: AppTheme.aiGold,
                     fontSize: 14,
@@ -974,10 +1012,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   hasData
                       ? (copy.isEnglish
                           ? 'Operating liquidity is growing robustly at +14.8%. The optimal financial path is to decrease customer invoice collection periods while maintaining stable stock levels of profitable items.'
-                          : 'نمو السيولة التشغيلية والربحية ممتاز بنسبة +14.8% هذا الشهر. الخيار المالي الأفضل الآن هو العمل على تقصير فترات تحصيل الفواتير المفتوحة مع الحفاظ على مستويات مخزون آمنة للمنتجات الأكثر ربحية.')
+                          : 'ظ†ظ…ظˆ ط§ظ„ط³ظٹظˆظ„ط© ط§ظ„طھط´ط؛ظٹظ„ظٹط© ظˆط§ظ„ط±ط¨ط­ظٹط© ظ…ظ…طھط§ط² ط¨ظ†ط³ط¨ط© +14.8% ظ‡ط°ط§ ط§ظ„ط´ظ‡ط±. ط§ظ„ط®ظٹط§ط± ط§ظ„ظ…ط§ظ„ظٹ ط§ظ„ط£ظپط¶ظ„ ط§ظ„ط¢ظ† ظ‡ظˆ ط§ظ„ط¹ظ…ظ„ ط¹ظ„ظ‰ طھظ‚طµظٹط± ظپطھط±ط§طھ طھط­طµظٹظ„ ط§ظ„ظپظˆط§طھظٹط± ط§ظ„ظ…ظپطھظˆط­ط© ظ…ط¹ ط§ظ„ط­ظپط§ط¸ ط¹ظ„ظ‰ ظ…ط³طھظˆظٹط§طھ ظ…ط®ط²ظˆظ† ط¢ظ…ظ†ط© ظ„ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„ط£ظƒط«ط± ط±ط¨ط­ظٹط©.')
                       : (copy.isEnglish
                           ? 'Not enough local financial data is available to generate diagnostic AI insights. Start recording sales transactions and products to construct your ultra-cockpit model.'
-                          : 'لا توجد بيانات مالية كافية حالياً لإجراء التحليلات والتقديرات الذكية التنبؤية. أضف الأصناف في المخزون وسجل فواتير مبيعاتك لتمكين نموذج الذكاء المالي من حساب الكفاءة المالية وهامش الأمان.'),
+                          : 'ظ„ط§ طھظˆط¬ط¯ ط¨ظٹط§ظ†ط§طھ ظ…ط§ظ„ظٹط© ظƒط§ظپظٹط© ط­ط§ظ„ظٹط§ظ‹ ظ„ط¥ط¬ط±ط§ط، ط§ظ„طھط­ظ„ظٹظ„ط§طھ ظˆط§ظ„طھظ‚ط¯ظٹط±ط§طھ ط§ظ„ط°ظƒظٹط© ط§ظ„طھظ†ط¨ط¤ظٹط©. ط£ط¶ظپ ط§ظ„ط£طµظ†ط§ظپ ظپظٹ ط§ظ„ظ…ط®ط²ظˆظ† ظˆط³ط¬ظ„ ظپظˆط§طھظٹط± ظ…ط¨ظٹط¹ط§طھظƒ ظ„طھظ…ظƒظٹظ† ظ†ظ…ظˆط°ط¬ ط§ظ„ط°ظƒط§ط، ط§ظ„ظ…ط§ظ„ظٹ ظ…ظ† ط­ط³ط§ط¨ ط§ظ„ظƒظپط§ط،ط© ط§ظ„ظ…ط§ظ„ظٹط© ظˆظ‡ط§ظ…ط´ ط§ظ„ط£ظ…ط§ظ†.'),
                   style: const TextStyle(
                     color: AppTheme.aiTextPrimary,
                     fontSize: 12,
@@ -1056,10 +1094,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
       stream: _newReportsRepository.getFinancialSummary(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const Center(child: Text('Error loading domain reports', style: TextStyle(color: AppTheme.aiRed)));
+          return const Center(
+              child: Text('Error loading domain reports',
+                  style: TextStyle(color: AppTheme.aiRed)));
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator(color: AppTheme.aiBlue));
+          return const Center(
+              child: CircularProgressIndicator(color: AppTheme.aiBlue));
         }
         final summary = snapshot.data;
         if (summary == null) return const SizedBox.shrink();
@@ -1068,17 +1109,24 @@ class _ReportsScreenState extends State<ReportsScreen> {
         final chartPoints = summary.monthlySales.entries
             .toList()
             .asMap()
-            .map((index, entry) => MapEntry(index, MetricPoint(label: entry.key, value: entry.value)))
+            .map((index, entry) => MapEntry(
+                index, MetricPoint(label: entry.key, value: entry.value)))
             .values
             .toList();
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppSectionHeader(title: copy.isEnglish ? 'Domain Layer KPIs' : 'مؤشرات الأداء — طبقة النطاق', hasAccentLine: true),
+            AppSectionHeader(
+                title: copy.isEnglish
+                    ? 'Domain Layer KPIs'
+                    : 'ظ…ط¤ط´ط±ط§طھ ط§ظ„ط£ط¯ط§ط، â€” ط·ط¨ظ‚ط© ط§ظ„ظ†ط·ط§ظ‚',
+                hasAccentLine: true),
             const SizedBox(height: 16),
             GridView.count(
-              crossAxisCount: isDesktop ? 3 : (MediaQuery.sizeOf(context).width < 420 ? 1 : 2),
+              crossAxisCount: isDesktop
+                  ? 3
+                  : (MediaQuery.sizeOf(context).width < 420 ? 1 : 2),
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               shrinkWrap: true,
@@ -1086,42 +1134,59 @@ class _ReportsScreenState extends State<ReportsScreen> {
               childAspectRatio: 2.2,
               children: [
                 OrbitNodeCard(
-                  title: copy.isEnglish ? 'Total Revenue' : 'إجمالي الإيرادات',
+                  title: copy.isEnglish
+                      ? 'Total Revenue'
+                      : 'ط¥ط¬ظ…ط§ظ„ظٹ ط§ظ„ط¥ظٹط±ط§ط¯ط§طھ',
                   value: AppFormatters.currency(summary.totalRevenue),
                   icon: Icons.account_balance_wallet_rounded,
                   accentColor: AppTheme.aiBlue,
                 ),
                 OrbitNodeCard(
-                  title: copy.isEnglish ? 'Total Collected' : 'التحصيلات',
+                  title:
+                      copy.isEnglish ? 'Total Collected' : 'ط§ظ„طھط­طµظٹظ„ط§طھ',
                   value: AppFormatters.currency(summary.totalCollected),
                   icon: Icons.payments_rounded,
                   accentColor: AppTheme.success,
                 ),
                 OrbitNodeCard(
-                  title: copy.isEnglish ? 'Total Overdue' : 'المتأخرات',
+                  title:
+                      copy.isEnglish ? 'Total Overdue' : 'ط§ظ„ظ…طھط£ط®ط±ط§طھ',
                   value: AppFormatters.currency(summary.totalOverdue),
                   icon: Icons.warning_amber_rounded,
-                  accentColor: summary.totalOverdue > 0 ? AppTheme.danger : AppTheme.success,
+                  accentColor: summary.totalOverdue > 0
+                      ? AppTheme.danger
+                      : AppTheme.success,
                 ),
               ],
             ),
             const SizedBox(height: 24),
-            _chartCard(copy.isEnglish ? 'Monthly Sales (Domain)' : 'المبيعات الشهرية', _lineChart(chartPoints, _blue, copy)),
+            _chartCard(
+                copy.isEnglish
+                    ? 'Monthly Sales (Domain)'
+                    : 'ط§ظ„ظ…ط¨ظٹط¹ط§طھ ط§ظ„ط´ظ‡ط±ظٹط©',
+                _lineChart(chartPoints, _blue, copy)),
             const SizedBox(height: 24),
             _listSection(
-              title: copy.isEnglish ? 'Top Customers (Domain)' : 'أفضل العملاء',
-              empty: copy.isEnglish ? 'No top customers found.' : 'لا يوجد عملاء متميزون.',
+              title: copy.isEnglish
+                  ? 'Top Customers (Domain)'
+                  : 'ط£ظپط¶ظ„ ط§ظ„ط¹ظ…ظ„ط§ط،',
+              empty: copy.isEnglish
+                  ? 'No top customers found.'
+                  : 'ظ„ط§ ظٹظˆط¬ط¯ ط¹ظ…ظ„ط§ط، ظ…طھظ…ظٹط²ظˆظ†.',
               children: summary.topCustomers.map((c) {
                 return _ListSurface(
                   child: ListTile(
                     leading: CircleAvatar(
                       backgroundColor: AppTheme.aiGold.withValues(alpha: 0.12),
-                      child: const Icon(Icons.star_rounded, color: AppTheme.aiGold),
+                      child: const Icon(Icons.star_rounded,
+                          color: AppTheme.aiGold),
                     ),
-                    title: Text(c['name']?.toString() ?? '', style: const TextStyle(fontWeight: FontWeight.w800)),
+                    title: Text(c['name']?.toString() ?? '',
+                        style: const TextStyle(fontWeight: FontWeight.w800)),
                     trailing: Text(
                       AppFormatters.currency(_toDouble(c['value'])),
-                      style: const TextStyle(fontWeight: FontWeight.w800, color: AppTheme.aiGold),
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w800, color: AppTheme.aiGold),
                     ),
                   ),
                 );

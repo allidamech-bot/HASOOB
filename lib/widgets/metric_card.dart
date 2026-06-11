@@ -42,9 +42,8 @@ class MetricCard extends StatelessWidget {
                 ],
               )
             : null,
-        boxShadow: isDark
-            ? AppTheme.haloShadow(color)
-            : AppTheme.softShadow(context),
+        boxShadow:
+            isDark ? AppTheme.haloShadow(color) : AppTheme.softShadow(context),
       ),
       child: ClipRRect(
         borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
@@ -95,17 +94,22 @@ class MetricCard extends StatelessWidget {
                       Container(
                         padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
-                          color: isDark ? Colors.white.withValues(alpha: 0.03) : color.withValues(alpha: 0.1),
+                          color: isDark
+                              ? Colors.white.withValues(alpha: 0.03)
+                              : color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(8),
                           border: Border.all(
-                            color: isDark ? Colors.white.withValues(alpha: 0.05) : color.withValues(alpha: 0.2),
+                            color: isDark
+                                ? Colors.white.withValues(alpha: 0.05)
+                                : color.withValues(alpha: 0.2),
                           ),
                         ),
                         child: Icon(icon, color: color, size: 16),
                       ),
                       if (caption != null && caption!.isNotEmpty)
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
                           decoration: BoxDecoration(
                             color: color.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(4),
@@ -129,7 +133,9 @@ class MetricCard extends StatelessWidget {
                     style: GoogleFonts.inter(
                       fontSize: 12,
                       fontWeight: FontWeight.w500,
-                      color: isDark ? AppTheme.aiTextSecondary : AppTheme.lightTextSecondary,
+                      color: isDark
+                          ? AppTheme.aiTextSecondary
+                          : AppTheme.lightTextSecondary,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -141,8 +147,9 @@ class MetricCard extends StatelessWidget {
                       style: GoogleFonts.inter(
                         fontSize: 22,
                         fontWeight: FontWeight.w800,
-                        color: isDark ? Colors.white : AppTheme.lightTextPrimary,
-                        letterSpacing: -0.5,
+                        color:
+                            isDark ? Colors.white : AppTheme.lightTextPrimary,
+                        letterSpacing: 0,
                       ),
                     ),
                   ),
@@ -155,4 +162,3 @@ class MetricCard extends StatelessWidget {
     );
   }
 }
-

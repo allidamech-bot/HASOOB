@@ -48,99 +48,102 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         side: BorderSide(color: AppTheme.aiCardBorder, width: 1),
       ),
       builder: (sheetContext) {
-        return SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 8),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: AppTheme.aiCardBorder,
-                    borderRadius: BorderRadius.circular(2),
+        return Directionality(
+          textDirection: copy.isEnglish ? TextDirection.ltr : TextDirection.rtl,
+          child: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 12),
+                    decoration: BoxDecoration(
+                      color: AppTheme.aiCardBorder,
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-                Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.add_circle_outline_rounded,
-                          color: AppTheme.aiBlue, size: 20),
-                      const SizedBox(width: 10),
-                      Text(
-                        copy.isEnglish ? 'Quick Add' : 'إضافة سريعة',
-                        style: const TextStyle(
-                          color: AppTheme.aiTextPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
+                  Padding(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.add_circle_outline_rounded,
+                            color: AppTheme.aiBlue, size: 20),
+                        const SizedBox(width: 10),
+                        Text(
+                          copy.t('quickAdd'),
+                          style: const TextStyle(
+                            color: AppTheme.aiTextPrimary,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
-                ),
-                const SizedBox(height: 8),
-                _aiListTile(
-                  sheetContext: sheetContext,
-                  icon: Icons.inventory_2_rounded,
-                  iconColor: AppTheme.aiBlue,
-                  label: copy.t('addProduct'),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const AddProductScreen()),
-                    );
-                  },
-                ),
-                _aiListTile(
-                  sheetContext: sheetContext,
-                  icon: Icons.receipt_long_rounded,
-                  iconColor: AppTheme.aiGold,
-                  label: copy.t('createInvoice'),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const InvoiceFormScreen()),
-                    );
-                  },
-                ),
-                _aiListTile(
-                  sheetContext: sheetContext,
-                  icon: Icons.person_add_rounded,
-                  iconColor: AppTheme.aiGreen,
-                  label: copy.t('addCustomer'),
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const CustomersScreen()),
-                    );
-                  },
-                ),
-                _aiListTile(
-                  sheetContext: sheetContext,
-                  icon: Icons.psychology_outlined,
-                  iconColor: const Color(0xFFD4AF37),
-                  label: copy.isEnglish ? 'AI Accountant' : 'المحاسب الذكي',
-                  onTap: () {
-                    Navigator.pop(sheetContext);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (_) => const AiAccountantScreen()),
-                    );
-                  },
-                ),
-                const SizedBox(height: 8),
-              ],
+                  const SizedBox(height: 8),
+                  _aiListTile(
+                    sheetContext: sheetContext,
+                    icon: Icons.inventory_2_rounded,
+                    iconColor: AppTheme.aiBlue,
+                    label: copy.t('addProduct'),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AddProductScreen()),
+                      );
+                    },
+                  ),
+                  _aiListTile(
+                    sheetContext: sheetContext,
+                    icon: Icons.receipt_long_rounded,
+                    iconColor: AppTheme.aiGold,
+                    label: copy.t('createInvoice'),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const InvoiceFormScreen()),
+                      );
+                    },
+                  ),
+                  _aiListTile(
+                    sheetContext: sheetContext,
+                    icon: Icons.person_add_rounded,
+                    iconColor: AppTheme.aiGreen,
+                    label: copy.t('addCustomer'),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const CustomersScreen()),
+                      );
+                    },
+                  ),
+                  _aiListTile(
+                    sheetContext: sheetContext,
+                    icon: Icons.psychology_outlined,
+                    iconColor: const Color(0xFFD4AF37),
+                    label: copy.t('aiAccountant'),
+                    onTap: () {
+                      Navigator.pop(sheetContext);
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AiAccountantScreen()),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 8),
+                ],
+              ),
             ),
           ),
         );
@@ -168,8 +171,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                 decoration: BoxDecoration(
                   color: iconColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
-                  border:
-                      Border.all(color: iconColor.withValues(alpha: 0.2)),
+                  border: Border.all(color: iconColor.withValues(alpha: 0.2)),
                 ),
                 child: Icon(icon, color: iconColor, size: 18),
               ),
@@ -211,58 +213,59 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
         focusNode: FocusNode(),
         autofocus: true,
         onKeyEvent: (event) {
-          if (event is KeyDownEvent && 
-              event.logicalKey == LogicalKeyboardKey.keyK && 
+          if (event is KeyDownEvent &&
+              event.logicalKey == LogicalKeyboardKey.keyK &&
               HardwareKeyboard.instance.isControlPressed) {
             CommandSearchOverlay.show(context);
           }
         },
         child: Scaffold(
-        backgroundColor: AppTheme.aiDeep,
-        extendBody: false,
-        body: LayoutBuilder(
-          builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 800;
-            if (isDesktop) {
-              return Directionality(
-                textDirection: localeKey == 'ar' ? TextDirection.rtl : TextDirection.ltr,
-                child: Row(
-                  children: [
-                    DesktopSidebar(
-                      selectedIndex: _index,
-                      onDestinationSelected: _onDestinationSelected,
-                    ),
-                    Expanded(
-                      child: IndexedStack(
-                        index: _index,
-                        children: screens,
+          backgroundColor: AppTheme.aiDeep,
+          extendBody: false,
+          body: LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth >= 800;
+              if (isDesktop) {
+                return Directionality(
+                  textDirection:
+                      localeKey == 'ar' ? TextDirection.rtl : TextDirection.ltr,
+                  child: Row(
+                    children: [
+                      DesktopSidebar(
+                        selectedIndex: _index,
+                        onDestinationSelected: _onDestinationSelected,
                       ),
-                    ),
-                  ],
+                      Expanded(
+                        child: IndexedStack(
+                          index: _index,
+                          children: screens,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return IndexedStack(
+                index: _index,
+                children: screens,
+              );
+            },
+          ),
+          bottomNavigationBar: LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth >= 800;
+              if (isDesktop) return const SizedBox.shrink();
+
+              return SafeArea(
+                minimum: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                child: CommandDock(
+                  selectedIndex: _index,
+                  onDestinationSelected: _onDestinationSelected,
                 ),
               );
-            }
-
-            return IndexedStack(
-              index: _index,
-              children: screens,
-            );
-          },
-        ),
-        bottomNavigationBar: LayoutBuilder(
-          builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 800;
-            if (isDesktop) return const SizedBox.shrink();
-
-            return SafeArea(
-              minimum: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-              child: CommandDock(
-                selectedIndex: _index,
-                onDestinationSelected: _onDestinationSelected,
-              ),
-            );
-          },
-        ),
+            },
+          ),
         ),
       ),
     );

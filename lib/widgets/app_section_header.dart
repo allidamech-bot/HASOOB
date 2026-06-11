@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../core/app_theme.dart';
 
 class AppSectionHeader extends StatelessWidget {
@@ -44,10 +43,10 @@ class AppSectionHeader extends StatelessWidget {
                   Expanded(
                     child: Text(
                       title,
-                      style: GoogleFonts.inter(
+                      style: AppTheme.localeTextStyle(
+                        context,
                         fontSize: 18,
                         fontWeight: FontWeight.w900,
-                        letterSpacing: -0.2,
                         color: isDark
                             ? AppTheme.aiTextPrimary
                             : AppTheme.lightTextPrimary,
@@ -60,7 +59,8 @@ class AppSectionHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   subtitle!,
-                  style: GoogleFonts.inter(
+                  style: AppTheme.localeTextStyle(
+                    context,
                     fontSize: 12,
                     fontWeight: FontWeight.w500,
                     color: isDark

@@ -12,18 +12,41 @@ class AppTheme {
   static const String fontFamilyArabic = 'Cairo';
   static String? get fontFamilyEnglish => GoogleFonts.inter().fontFamily;
 
+  static String? localeFontFamily(BuildContext context) {
+    return Localizations.localeOf(context).languageCode == 'ar'
+        ? fontFamilyArabic
+        : fontFamilyEnglish;
+  }
+
+  static TextStyle localeTextStyle(
+    BuildContext context, {
+    Color? color,
+    double? fontSize,
+    FontWeight? fontWeight,
+    double? height,
+  }) {
+    return TextStyle(
+      fontFamily: localeFontFamily(context),
+      color: color,
+      fontSize: fontSize,
+      fontWeight: fontWeight,
+      height: height,
+      letterSpacing: 0,
+    );
+  }
+
   // Premium Palette
   static const Color background = Color(0xFF0F172A);
   static const Color backgroundDeep = Color(0xFF090D16);
   static const Color surfaceSecondary = Color(0xFF1E293B);
   static const Color surfaceElevated = Color(0xFF334155);
-  
+
   static const Color accentBlue = Color(0xFF3B82F6);
   static const Color accentCyan = Color(0xFF22D3EE);
   static const Color accentGold = Color(0xFFD4AF37);
   static const Color accentViolet = Color(0xFF8B5CF6);
   static const Color accentAmber = Color(0xFFF59E0B);
-  
+
   static const Color glowBlue = Color(0x2E3B82F6); // 18% opacity
   static const Color glowBlueStrong = Color(0x403B82F6); // 25% opacity
   static const Color glowViolet = Color(0x2E8B5CF6); // 18% opacity
@@ -31,7 +54,7 @@ class AppTheme {
   static const Color success = Color(0xFF10B981);
   static const Color danger = Color(0xFFEF4444);
   static const Color warning = Color(0xFFF59E0B);
-  
+
   static const Color textPrimary = Color(0xFFF8FAFC);
   static const Color textSecondary = Color(0xFF94A3B8);
   static const Color border = Color(0x1F94A3B8); // 12% opacity
@@ -105,8 +128,8 @@ class AppTheme {
       boxShadow: glowColor != null
           ? [
               BoxShadow(
-                color: glowColor.withValues(alpha: 0.15),
-                blurRadius: 20,
+                color: glowColor.withValues(alpha: 0.08),
+                blurRadius: 14,
                 spreadRadius: 0,
               ),
             ]
@@ -124,8 +147,8 @@ class AppTheme {
       borderRadius: BorderRadius.circular(12),
       boxShadow: [
         BoxShadow(
-          color: color.withValues(alpha: 0.3),
-          blurRadius: 12,
+          color: color.withValues(alpha: 0.16),
+          blurRadius: 10,
           offset: const Offset(0, 4),
         ),
       ],
@@ -161,18 +184,21 @@ class AppTheme {
       scaffoldBackgroundColor: aiDeep,
       canvasColor: aiDeep,
       primaryColor: aiBlue,
-      fontFamily: fontFamilyArabic, // Base for Arabic, Inter for English via textTheme
-      
-      appBarTheme: AppBarTheme(
+      fontFamily:
+          fontFamilyArabic, // Base for Arabic, Inter for English via textTheme
+
+      appBarTheme: const AppBarTheme(
         centerTitle: false,
         backgroundColor: Colors.transparent,
         foregroundColor: aiTextPrimary,
         elevation: 0,
         scrolledUnderElevation: 0,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: TextStyle(
+          fontFamily: fontFamilyArabic,
           fontSize: 20,
           fontWeight: FontWeight.w700,
           color: aiTextPrimary,
+          letterSpacing: 0,
         ),
       ),
 
@@ -186,7 +212,7 @@ class AppTheme {
       ),
 
       inputDecorationTheme: _inputThemeDark(),
-      
+
       chipTheme: ChipThemeData(
         backgroundColor: aiCardElevated,
         selectedColor: aiBlue.withValues(alpha: 0.2),
@@ -196,10 +222,12 @@ class AppTheme {
           borderRadius: BorderRadius.circular(radiusSmall),
         ),
         side: const BorderSide(color: aiCardBorder),
-        labelStyle: GoogleFonts.inter(
+        labelStyle: const TextStyle(
+          fontFamily: fontFamilyArabic,
           color: aiTextPrimary,
           fontWeight: FontWeight.w600,
           fontSize: 13,
+          letterSpacing: 0,
         ),
       ),
 
@@ -218,7 +246,11 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMedium),
           ),
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w700),
+          textStyle: const TextStyle(
+            fontFamily: fontFamilyArabic,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0,
+          ),
         ),
       ),
 
@@ -230,7 +262,11 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(radiusMedium),
           ),
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(
+            fontFamily: fontFamilyArabic,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0,
+          ),
         ),
       ),
 
@@ -243,7 +279,11 @@ class AppTheme {
             borderRadius: BorderRadius.circular(radiusMedium),
           ),
           side: const BorderSide(color: aiCardBorder),
-          textStyle: GoogleFonts.inter(fontWeight: FontWeight.w600),
+          textStyle: const TextStyle(
+            fontFamily: fontFamilyArabic,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 0,
+          ),
         ),
       ),
 
@@ -254,10 +294,12 @@ class AppTheme {
         surfaceTintColor: Colors.transparent,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final isSelected = states.contains(WidgetState.selected);
-          return GoogleFonts.inter(
+          return TextStyle(
+            fontFamily: fontFamilyArabic,
             fontSize: 12,
             fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
             color: isSelected ? aiTextPrimary : aiTextSecondary,
+            letterSpacing: 0,
           );
         }),
       ),
@@ -279,13 +321,15 @@ class AppTheme {
       ),
       scaffoldBackgroundColor: lightBackground,
       fontFamily: fontFamilyArabic,
-      appBarTheme: AppBarTheme(
+      appBarTheme: const AppBarTheme(
         backgroundColor: Colors.transparent,
         elevation: 0,
-        titleTextStyle: GoogleFonts.inter(
+        titleTextStyle: TextStyle(
+          fontFamily: fontFamilyArabic,
           color: lightTextPrimary,
           fontSize: 20,
           fontWeight: FontWeight.w700,
+          letterSpacing: 0,
         ),
       ),
       cardTheme: CardThemeData(
@@ -299,55 +343,71 @@ class AppTheme {
     return _applyTypography(theme, lightTextPrimary, lightTextSecondary);
   }
 
-  static ThemeData _applyTypography(ThemeData base, Color primary, Color secondary) {
+  static ThemeData _applyTypography(
+      ThemeData base, Color primary, Color secondary) {
     final textTheme = base.textTheme.copyWith(
-      displayLarge: GoogleFonts.inter(
+      displayLarge: TextStyle(
+        fontFamily: fontFamilyArabic,
         fontSize: 48,
         fontWeight: FontWeight.w800,
         color: primary,
-        letterSpacing: -1.5,
+        letterSpacing: 0,
       ),
-      displayMedium: GoogleFonts.inter(
+      displayMedium: TextStyle(
+        fontFamily: fontFamilyArabic,
         fontSize: 36,
         fontWeight: FontWeight.w800,
         color: primary,
-        letterSpacing: -1.0,
+        letterSpacing: 0,
       ),
-      headlineMedium: GoogleFonts.inter(
+      headlineMedium: TextStyle(
+        fontFamily: fontFamilyArabic,
         fontSize: 28,
         fontWeight: FontWeight.w700,
         color: primary,
-        letterSpacing: -0.5,
+        letterSpacing: 0,
       ),
-      titleLarge: GoogleFonts.inter(
+      titleLarge: TextStyle(
+        fontFamily: fontFamilyArabic,
         fontSize: 22,
         fontWeight: FontWeight.w700,
         color: primary,
+        letterSpacing: 0,
       ),
-      titleMedium: GoogleFonts.inter(
+      titleMedium: TextStyle(
+        fontFamily: fontFamilyArabic,
         fontSize: 18,
         fontWeight: FontWeight.w600,
         color: primary,
+        letterSpacing: 0,
       ),
-      bodyLarge: GoogleFonts.inter(
+      bodyLarge: TextStyle(
+        fontFamily: fontFamilyArabic,
         fontSize: 16,
         fontWeight: FontWeight.w500,
         color: primary,
+        letterSpacing: 0,
       ),
-      bodyMedium: GoogleFonts.inter(
+      bodyMedium: TextStyle(
+        fontFamily: fontFamilyArabic,
         fontSize: 14,
         fontWeight: FontWeight.w400,
         color: primary,
+        letterSpacing: 0,
       ),
-      bodySmall: GoogleFonts.inter(
+      bodySmall: TextStyle(
+        fontFamily: fontFamilyArabic,
         fontSize: 12,
         fontWeight: FontWeight.w500,
         color: secondary,
+        letterSpacing: 0,
       ),
-      labelLarge: GoogleFonts.inter(
+      labelLarge: TextStyle(
+        fontFamily: fontFamilyArabic,
         fontSize: 14,
         fontWeight: FontWeight.w600,
         color: primary,
+        letterSpacing: 0,
       ),
     );
 
@@ -358,24 +418,34 @@ class AppTheme {
   }
 
   static InputDecorationTheme _inputThemeDark() => InputDecorationTheme(
-    filled: true,
-    fillColor: aiCardElevated,
-    contentPadding: const EdgeInsets.all(20),
-    hintStyle: GoogleFonts.inter(color: aiTextMuted, fontWeight: FontWeight.w400),
-    labelStyle: GoogleFonts.inter(color: aiTextSecondary, fontWeight: FontWeight.w500),
-    border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(radiusMedium),
-      borderSide: const BorderSide(color: aiCardBorder),
-    ),
-    enabledBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(radiusMedium),
-      borderSide: const BorderSide(color: aiCardBorder),
-    ),
-    focusedBorder: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(radiusMedium),
-      borderSide: const BorderSide(color: aiBlue, width: 2),
-    ),
-  );
+        filled: true,
+        fillColor: aiCardElevated,
+        contentPadding: const EdgeInsets.all(20),
+        hintStyle: const TextStyle(
+          fontFamily: fontFamilyArabic,
+          color: aiTextMuted,
+          fontWeight: FontWeight.w400,
+          letterSpacing: 0,
+        ),
+        labelStyle: const TextStyle(
+          fontFamily: fontFamilyArabic,
+          color: aiTextSecondary,
+          fontWeight: FontWeight.w500,
+          letterSpacing: 0,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusMedium),
+          borderSide: const BorderSide(color: aiCardBorder),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusMedium),
+          borderSide: const BorderSide(color: aiCardBorder),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(radiusMedium),
+          borderSide: const BorderSide(color: aiBlue, width: 2),
+        ),
+      );
 
   // ─────────────────────────────────────────────
   // Compatibility Layer (Maintained for existing screens)
@@ -394,20 +464,28 @@ class AppTheme {
   static const String fontFamily = 'Inter';
 
   // Helper Methods (Maintained for legacy screens)
-  static bool isDark(BuildContext context) => Theme.of(context).brightness == Brightness.dark;
-  static Color surfaceFor(BuildContext context) => isDark(context) ? aiCard : lightSurface;
-  static Color surfaceAltFor(BuildContext context) => isDark(context) ? aiCardElevated : lightSurfaceMuted;
-  static Color backgroundFor(BuildContext context) => isDark(context) ? aiDeep : lightBackground;
-  static Color borderFor(BuildContext context) => isDark(context) ? aiCardBorder : lightBorder;
-  static Color textSecondaryFor(BuildContext context) => isDark(context) ? aiTextSecondary : lightTextSecondary;
+  static bool isDark(BuildContext context) =>
+      Theme.of(context).brightness == Brightness.dark;
+  static Color surfaceFor(BuildContext context) =>
+      isDark(context) ? aiCard : lightSurface;
+  static Color surfaceAltFor(BuildContext context) =>
+      isDark(context) ? aiCardElevated : lightSurfaceMuted;
+  static Color backgroundFor(BuildContext context) =>
+      isDark(context) ? aiDeep : lightBackground;
+  static Color borderFor(BuildContext context) =>
+      isDark(context) ? aiCardBorder : lightBorder;
+  static Color textSecondaryFor(BuildContext context) =>
+      isDark(context) ? aiTextSecondary : lightTextSecondary;
 
   static List<BoxShadow> softShadow(BuildContext context) => [
-    BoxShadow(
-      color: isDark(context) ? Colors.black.withValues(alpha: 0.3) : accentBlue.withValues(alpha: 0.04),
-      blurRadius: 12,
-      offset: const Offset(0, 4),
-    ),
-  ];
+        BoxShadow(
+          color: isDark(context)
+              ? Colors.black.withValues(alpha: 0.3)
+              : accentBlue.withValues(alpha: 0.04),
+          blurRadius: 12,
+          offset: const Offset(0, 4),
+        ),
+      ];
 
   static LinearGradient commandGradient(BuildContext context) {
     return isDark(context)
@@ -429,32 +507,33 @@ class AppTheme {
           );
   }
 
-  static Color navBarBackground(BuildContext context) => isDark(context) ? aiNavy : lightBackgroundDeep;
+  static Color navBarBackground(BuildContext context) =>
+      isDark(context) ? aiNavy : lightBackgroundDeep;
 
   static List<BoxShadow> shadowStrong(BuildContext context) => [
-    BoxShadow(
-      color: isDark(context) ? Colors.black.withValues(alpha: 0.3) : Colors.black.withValues(alpha: 0.08),
-      blurRadius: 16,
-      offset: const Offset(0, 8),
-    ),
-  ];
+        BoxShadow(
+          color: isDark(context)
+              ? Colors.black.withValues(alpha: 0.3)
+              : Colors.black.withValues(alpha: 0.08),
+          blurRadius: 16,
+          offset: const Offset(0, 8),
+        ),
+      ];
 
   static List<BoxShadow> shadowGlow(BuildContext context, Color glowColor) => [
-    BoxShadow(
-      color: glowColor.withValues(alpha: 0.25),
-      blurRadius: 12,
-      spreadRadius: 2,
-      offset: const Offset(0, 0),
-    ),
-  ];
+        BoxShadow(
+          color: glowColor.withValues(alpha: 0.12),
+          blurRadius: 10,
+          spreadRadius: 1,
+          offset: const Offset(0, 0),
+        ),
+      ];
 
   static List<BoxShadow> haloShadow(Color glowColor) => [
-    BoxShadow(
-      color: glowColor.withValues(alpha: 0.2),
-      blurRadius: 24,
-      spreadRadius: 4,
-    ),
-  ];
+        BoxShadow(
+          color: glowColor.withValues(alpha: 0.10),
+          blurRadius: 16,
+          spreadRadius: 2,
+        ),
+      ];
 }
-
-

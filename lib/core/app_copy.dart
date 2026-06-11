@@ -18,8 +18,8 @@ class AppCopy {
   String customerBalanceLine(String phone, String amount) => phone.isEmpty
       ? (isEnglish ? 'Outstanding balance $amount' : 'الرصيد المستحق $amount')
       : (isEnglish
-      ? '$phone - Outstanding balance $amount'
-      : '$phone - الرصيد المستحق $amount');
+          ? '$phone - Outstanding balance $amount'
+          : '$phone - الرصيد المستحق $amount');
 
   String customerStatementTitle(String name) =>
       isEnglish ? 'Statement: $name' : 'كشف $name';
@@ -43,8 +43,7 @@ class AppCopy {
   String salesHistoryProductFallback() =>
       isEnglish ? 'Unnamed product' : 'بدون اسم صنف';
 
-  String salesHistoryQty(int qty) =>
-      isEnglish ? 'Qty: $qty' : 'الكمية: $qty';
+  String salesHistoryQty(int qty) => isEnglish ? 'Qty: $qty' : 'الكمية: $qty';
 
   String salesHistoryUnitPrice(String value) =>
       isEnglish ? 'Unit price: $value' : 'سعر الوحدة: $value';
@@ -61,14 +60,16 @@ class AppCopy {
   String sellAvailableStock(int qty, String unit) =>
       isEnglish ? 'Available stock: $qty $unit' : 'المخزون المتاح: $qty $unit';
 
-  String sellDefaultPrice(String value) =>
-      isEnglish ? 'Default selling price: $value' : 'سعر البيع الافتراضي: $value';
+  String sellDefaultPrice(String value) => isEnglish
+      ? 'Default selling price: $value'
+      : 'سعر البيع الافتراضي: $value';
 
   String sellUnitCost(String value) =>
       isEnglish ? 'Unit cost: $value' : 'تكلفة الوحدة: $value';
 
-  String sellExpectedProfit(String value) =>
-      isEnglish ? 'Expected unit profit: $value' : 'الربح المتوقع للوحدة: $value';
+  String sellExpectedProfit(String value) => isEnglish
+      ? 'Expected unit profit: $value'
+      : 'الربح المتوقع للوحدة: $value';
 
   String productDetailsUnitLine(String unit) =>
       isEnglish ? 'Unit: $unit' : 'الوحدة: $unit';
@@ -86,8 +87,8 @@ class AppCopy {
   String trialBalanceAccountSubtitle(String code, String category) =>
       isEnglish ? 'Code $code - $category' : 'الكود $code - $category';
 
-  String dashboardLowStockAlertSubtitle(int count) => isEnglish 
-      ? '$count products are below critical threshold.' 
+  String dashboardLowStockAlertSubtitle(int count) => isEnglish
+      ? '$count products are below critical threshold.'
       : 'هناك $count أصناف تحت الحد الحرج للمخزون لمنع نفاد البضاعة.';
 
   String dashboardLocalModeSubtitle() => isEnglish
@@ -98,8 +99,9 @@ class AppCopy {
       ? 'Restored $count products from the cloud backup.'
       : 'تمت استعادة $count صنفًا من النسخة السحابية.';
 
-  String dashboardLowStockCount(int count) =>
-      isEnglish ? '$count items need attention' : 'لديك $count أصناف تحتاج متابعة';
+  String dashboardLowStockCount(int count) => isEnglish
+      ? '$count items need attention'
+      : 'لديك $count أصناف تحتاج متابعة';
 
   String dashboardRecentSalesCount(int count) =>
       isEnglish ? 'Latest $count sales' : 'آخر $count عمليات بيع';
@@ -120,11 +122,14 @@ class AppCopy {
     final prefix = customerName.trim().isNotEmpty
         ? (isEnglish ? 'Customer $customerName - ' : 'العميل $customerName - ')
         : '';
-    return isEnglish ? '$prefix Qty $qty - $date' : '$prefixالكمية $qty - $date';
+    return isEnglish
+        ? '$prefix Qty $qty - $date'
+        : '$prefixالكمية $qty - $date';
   }
 
-  String documentsAddPaymentTitle(String number) =>
-      isEnglish ? 'Payment for ${number.isEmpty ? "-" : number}' : 'دفعة على ${number.isEmpty ? "-" : number}';
+  String documentsAddPaymentTitle(String number) => isEnglish
+      ? 'Payment for ${number.isEmpty ? "-" : number}'
+      : 'دفعة على ${number.isEmpty ? "-" : number}';
 
   String documentsDeleteInvoiceSuccess() =>
       isEnglish ? 'Invoice deleted successfully.' : 'تم حذف الفاتورة بنجاح.';
@@ -135,8 +140,7 @@ class AppCopy {
   String documentsPaymentSavedSuccess() =>
       isEnglish ? 'Payment recorded successfully.' : 'تم تسجيل الدفعة بنجاح.';
 
-  String documentsCustomerFallback() =>
-      isEnglish ? 'No customer' : 'بدون عميل';
+  String documentsCustomerFallback() => isEnglish ? 'No customer' : 'بدون عميل';
 
   String documentsChipLine(String label, String value) => '$label: $value';
 
@@ -148,24 +152,32 @@ class AppCopy {
     final prefix = customerName.trim().isNotEmpty
         ? (isEnglish ? 'Customer $customerName - ' : 'العميل $customerName - ')
         : '';
-    return isEnglish ? '$prefix Qty $qty - $date' : '$prefixالكمية $qty - $date';
+    return isEnglish
+        ? '$prefix Qty $qty - $date'
+        : '$prefixالكمية $qty - $date';
   }
 
   String reportsBestSellingSubtitle(int soldQuantity, String profit) =>
-      isEnglish ? 'Qty $soldQuantity - Profit $profit' : 'الكمية $soldQuantity - الربح $profit';
+      isEnglish
+          ? 'Qty $soldQuantity - Profit $profit'
+          : 'الكمية $soldQuantity - الربح $profit';
 
   String reportsLowStockSubtitle(int stockQty, String unit) =>
       isEnglish ? 'Quantity $stockQty $unit' : 'الكمية $stockQty من $unit';
 
   String reportsBalancedStatus(bool balanced) => isEnglish
-      ? (balanced ? 'The balance is currently balanced.' : 'The balance needs review.')
+      ? (balanced
+          ? 'The balance is currently balanced.'
+          : 'The balance needs review.')
       : (balanced ? 'الميزان متوازن حاليًا.' : 'الميزان يحتاج مراجعة.');
 
-  String businessLogoAction(bool hasLogo) =>
-      isEnglish ? (hasLogo ? 'Change logo' : 'Choose logo') : (hasLogo ? 'تغيير الشعار' : 'اختيار الشعار');
+  String businessLogoAction(bool hasLogo) => isEnglish
+      ? (hasLogo ? 'Change logo' : 'Choose logo')
+      : (hasLogo ? 'تغيير الشعار' : 'اختيار الشعار');
 
-  String fieldCannotBeNegative(String field) =>
-      isEnglish ? '$field cannot be negative.' : '$field لا يمكن أن يكون سالبًا.';
+  String fieldCannotBeNegative(String field) => isEnglish
+      ? '$field cannot be negative.'
+      : '$field لا يمكن أن يكون سالبًا.';
 
   String whatsappReminderTemplate(String name, String amount) => isEnglish
       ? 'Hello $name, a friendly reminder of an outstanding balance of $amount. Please arrange payment at your earliest convenience.'
@@ -180,7 +192,8 @@ class AppCopy {
       'smartCalculator': 'المساعد الذكي',
       'reports': 'التقارير',
       'noProductsYet': 'لا توجد أصناف بعد',
-      'startByAddingProduct': 'أضف أول صنف لبدء إدارة المخزون والتكلفة والربحية.',
+      'startByAddingProduct':
+          'أضف أول صنف لبدء إدارة المخزون والتكلفة والربحية.',
       'smartCopilot': 'المساعد الذكي',
       'smartCopilotSubtitle': 'مركز التحكم الذكي في أعمالك التجارية.',
       'navInventory': 'المخزون',
@@ -188,6 +201,12 @@ class AppCopy {
       'navTransactions': 'العمليات',
       'navSmart': 'الذكي',
       'navReports': 'التقارير',
+      'navCustomersInvoices': 'العملاء والفواتير',
+      'collectionCenter': 'مركز التحصيل',
+      'quickAdd': 'إضافة سريعة',
+      'aiAccountant': 'المحاسب الذكي',
+      'brandName': 'حاسوب',
+      'brandSubtitle': 'نظام إدارة مالية',
       'addProduct': 'إضافة منتج',
       'createInvoice': 'إنشاء فاتورة',
       'addCustomer': 'إضافة عميل',
@@ -215,49 +234,62 @@ class AppCopy {
       'newInvoice': 'فاتورة جديدة',
       'newCustomer': 'عميل جديد',
       'restoreFromCloud': 'استعادة من السحابة',
-      'restoreFromCloudSubtitle': 'تُستخدم فقط عندما تكون البيانات المحلية فارغة وبعد تأكيدك.',
+      'restoreFromCloudSubtitle':
+          'تُستخدم فقط عندما تكون البيانات المحلية فارغة وبعد تأكيدك.',
       'restoreUsed': 'تم استخدام الاستعادة على هذا الجهاز',
       'restoreUnused': 'لم تُستخدم الاستعادة بعد على هذا الجهاز',
       'stockAlerts': 'تنبيهات المخزون',
       'stockAlertsSubtitle': 'متابعة سريعة للأصناف التي تحتاج انتباهًا.',
       'noLowStockNow': 'لا توجد أصناف منخفضة المخزون حاليًا.',
-      'reviewLowStock': 'راجع الأصناف منخفضة المخزون أو النافدة قبل تأثر البيع.',
+      'reviewLowStock':
+          'راجع الأصناف منخفضة المخزون أو النافدة قبل تأثر البيع.',
       'outOfStock': 'نافد',
       'lowStock': 'منخفض',
       'recentSales': 'آخر المبيعات',
       'recentSalesSubtitle': 'ملخص سريع لآخر العمليات المنفذة.',
       'noSalesYet': 'لا توجد عمليات بيع حتى الآن.',
       'professionalDashboard': 'لوحة تحكم محترفة',
-      'dashboardHero': 'تابع المخزون والمبيعات والوثائق من نفس الواجهة بترتيب أوضح وقراءة أهدأ.',
+      'dashboardHero':
+          'تابع المخزون والمبيعات والوثائق من نفس الواجهة بترتيب أوضح وقراءة أهدأ.',
       'helpTitle': 'دليل الاستخدام',
       'helpHeroTitle': 'إرشادات سريعة للعمل داخل التطبيق',
-      'helpHeroBody': 'هذا الدليل يساعدك على فهم الأقسام الأساسية واستخدامها بشكل واضح ومنظم.',
+      'helpHeroBody':
+          'هذا الدليل يساعدك على فهم الأقسام الأساسية واستخدامها بشكل واضح ومنظم.',
       'helpDashboardTitle': 'لوحة التحكم',
-      'helpDashboardBody': 'تعرض مؤشرات سريعة عن المبيعات والمخزون والربحية، وتوفر اختصارات للوصول إلى أهم الأقسام بسرعة.',
+      'helpDashboardBody':
+          'تعرض مؤشرات سريعة عن المبيعات والمخزون والربحية، وتوفر اختصارات للوصول إلى أهم الأقسام بسرعة.',
       'helpInventoryTitle': 'المخزون',
-      'helpInventoryBody': 'استخدم البحث والفلاتر لمراجعة الأصناف، متابعة النواقص، معرفة الربحية، ثم فتح البيع السريع أو تفاصيل المنتج.',
+      'helpInventoryBody':
+          'استخدم البحث والفلاتر لمراجعة الأصناف، متابعة النواقص، معرفة الربحية، ثم فتح البيع السريع أو تفاصيل المنتج.',
       'helpDocumentsTitle': 'الوثائق',
-      'helpDocumentsBody': 'من هنا تُدار الفواتير وعروض الأسعار. يمكنك إنشاء وثيقة جديدة، متابعة الحالات، وتسجيل الدفعات على الفواتير.',
+      'helpDocumentsBody':
+          'من هنا تُدار الفواتير وعروض الأسعار. يمكنك إنشاء وثيقة جديدة، متابعة الحالات، وتسجيل الدفعات على الفواتير.',
       'helpInvoicesTitle': 'الفواتير وعروض الأسعار',
-      'helpInvoicesBody': 'ابدأ باختيار العميل ثم أضف البنود وحدد الأسعار والكميات. يمكن حفظ الفاتورة كمسودة أو إصدارها مباشرة، كما يمكن تحويل عرض السعر إلى فاتورة.',
+      'helpInvoicesBody':
+          'ابدأ باختيار العميل ثم أضف البنود وحدد الأسعار والكميات. يمكن حفظ الفاتورة كمسودة أو إصدارها مباشرة، كما يمكن تحويل عرض السعر إلى فاتورة.',
       'helpSyncTitle': 'المزامنة والاستعادة',
-      'helpSyncBody': 'تعمل المزامنة تلقائيًا بعد تسجيل الدخول عند توفر الإعداد. أما الاستعادة من السحابة فتُستخدم فقط عندما تكون البيانات المحلية فارغة.',
+      'helpSyncBody':
+          'تعمل المزامنة تلقائيًا بعد تسجيل الدخول عند توفر الإعداد. أما الاستعادة من السحابة فتُستخدم فقط عندما تكون البيانات المحلية فارغة.',
       'helpTipTitle': 'نصيحة سريعة',
-      'helpTipBody': 'ابدأ بإضافة الأصناف والعملاء، ثم أنشئ عروض الأسعار أو الفواتير حسب دورة العمل لديك. راقب التنبيهات دوريًا لتفادي نفاد المخزون.',
+      'helpTipBody':
+          'ابدأ بإضافة الأصناف والعملاء، ثم أنشئ عروض الأسعار أو الفواتير حسب دورة العمل لديك. راقب التنبيهات دوريًا لتفادي نفاد المخزون.',
       'loginTitle': 'تسجيل الدخول',
-      'loginSubtitle': 'ادخل إلى المخزون والتقارير والمبيعات باستخدام حسابك المحمي عبر Firebase.',
+      'loginSubtitle':
+          'ادخل إلى المخزون والتقارير والمبيعات باستخدام حسابك المحمي عبر Firebase.',
       'email': 'البريد الإلكتروني',
       'password': 'كلمة المرور',
       'signIn': 'دخول',
       'openSignUp': 'ليس لديك حساب؟ أنشئ حسابًا جديدًا',
       'signUpTitle': 'إنشاء حساب',
-      'signUpSubtitle': 'أنشئ حسابًا آمنًا للوصول إلى النظام من خلال البريد الإلكتروني وكلمة المرور.',
+      'signUpSubtitle':
+          'أنشئ حسابًا آمنًا للوصول إلى النظام من خلال البريد الإلكتروني وكلمة المرور.',
       'passwordHelper': 'ستة أحرف على الأقل',
       'confirmPassword': 'تأكيد كلمة المرور',
       'createAccount': 'إنشاء الحساب',
       'openLogin': 'لديك حساب بالفعل؟ سجل الدخول',
       'accountCreated': 'تم إنشاء الحساب بنجاح.',
-      'authHero': 'نظام عربي لإدارة المخزون والمبيعات والمحاسبة بواجهة احترافية متوافقة مع سطح المكتب.',
+      'authHero':
+          'نظام عربي لإدارة المخزون والمبيعات والمحاسبة بواجهة احترافية متوافقة مع سطح المكتب.',
       'invalidEmail': 'يرجى إدخال بريد إلكتروني صحيح.',
       'passwordMin': 'كلمة المرور يجب أن تكون 6 أحرف على الأقل.',
       'passwordMismatch': 'كلمتا المرور غير متطابقتين.',
@@ -307,14 +339,16 @@ class AppCopy {
       'productDetails': 'تفاصيل الصنف',
       'adjustment': 'تسوية',
       'pricingAndStock': 'بيانات التسعير والمخزون',
-      'pricingAndStockSubtitle': 'ملخص تشغيلي سريع لهيكل التكلفة والكمية والتنبيه.',
+      'pricingAndStockSubtitle':
+          'ملخص تشغيلي سريع لهيكل التكلفة والكمية والتنبيه.',
       'purchasePrice': 'سعر الشراء',
       'extraCosts': 'المصاريف الإضافية',
       'landedCost': 'التكلفة النهائية للوحدة',
       'currentQuantity': 'الكمية الحالية',
       'lowStockThreshold': 'حد التنبيه المنخفض',
       'salesPerformance': 'الأداء البيعي',
-      'salesPerformanceSubtitle': 'ملخص البيع الفعلي والربحية المحققة لهذا الصنف.',
+      'salesPerformanceSubtitle':
+          'ملخص البيع الفعلي والربحية المحققة لهذا الصنف.',
       'salesCount': 'عدد مرات البيع',
       'soldQuantity': 'إجمالي الكمية المباعة',
       'realizedSales': 'إجمالي المبيعات',
@@ -364,7 +398,8 @@ class AppCopy {
       'noDataAvailable': 'لا توجد بيانات متاحة حاليًا.',
       'performanceSummary': 'ملخص الأداء',
       'filtersAffectResults': 'النتائج أدناه تعكس الفلاتر الحالية.',
-      'currentSnapshotSummary': 'قراءة سريعة للمخزون والمبيعات والربحية الحالية.',
+      'currentSnapshotSummary':
+          'قراءة سريعة للمخزون والمبيعات والربحية الحالية.',
       'clearFilters': 'مسح الفلاتر',
       'salesAcrossTime': 'المبيعات عبر الزمن',
       'profitTrend': 'اتجاه الربح',
@@ -391,17 +426,21 @@ class AppCopy {
       'pdfNotFound': 'تعذر العثور على ملف PDF.',
       'trialBalance': 'ميزان المراجعة',
       'trialBalanceSummary': 'ملخص الميزان',
-      'trialBalanceSummarySubtitle': 'يعرض إجمالي المدين والدائن وحالة التوازن الحالية.',
+      'trialBalanceSummarySubtitle':
+          'يعرض إجمالي المدين والدائن وحالة التوازن الحالية.',
       'totalDebit': 'إجمالي المدين',
       'totalCredit': 'إجمالي الدائن',
       'entriesCount': 'عدد القيود',
       'balanceStatus': 'حالة الميزان',
       'balanced': 'متوازن',
       'unbalanced': 'غير متوازن',
-      'balancedHelp': 'القيود الحالية متوازنة ويمكن البناء عليها لتقارير الأرباح والخسائر والميزانية العمومية.',
-      'unbalancedHelp': 'هناك فرق بين المدين والدائن. يفضل مراجعة القيود قبل الاعتماد على التقارير المالية القادمة.',
+      'balancedHelp':
+          'القيود الحالية متوازنة ويمكن البناء عليها لتقارير الأرباح والخسائر والميزانية العمومية.',
+      'unbalancedHelp':
+          'هناك فرق بين المدين والدائن. يفضل مراجعة القيود قبل الاعتماد على التقارير المالية القادمة.',
       'accounts': 'الحسابات',
-      'accountsSubtitle': 'تم إعداد الهيكل المحاسبي ليكون جاهزاً لتقارير الأرباح والخسائر والميزانية العمومية ودفتر اليومية.',
+      'accountsSubtitle':
+          'تم إعداد الهيكل المحاسبي ليكون جاهزاً لتقارير الأرباح والخسائر والميزانية العمومية ودفتر اليومية.',
       'asset': 'أصل',
       'liability': 'التزام',
       'revenue': 'إيراد',
@@ -435,9 +474,11 @@ class AppCopy {
       'loadInventoryError': 'تعذر تحميل بيانات المخزون.',
       'loadDashboardRestoreError': 'تعذرت الاستعادة من السحابة.',
       'restoreDialogTitle': 'استعادة من السحابة',
-      'restoreDialogBody': 'سيتم تنفيذ الاستعادة فقط إذا كانت البيانات المحلية التجارية فارغة. لن يتم دمج البيانات أو حل التعارضات. هل تريد المتابعة؟',
+      'restoreDialogBody':
+          'سيتم تنفيذ الاستعادة فقط إذا كانت البيانات المحلية التجارية فارغة. لن يتم دمج البيانات أو حل التعارضات. هل تريد المتابعة؟',
       'cloudProductsMissing': 'لا توجد بيانات منتجات متاحة في النسخة السحابية.',
-      'restoreOnlyWhenEmpty': 'الاستعادة من السحابة متاحة فقط عندما تكون البيانات المحلية فارغة.',
+      'restoreOnlyWhenEmpty':
+          'الاستعادة من السحابة متاحة فقط عندما تكون البيانات المحلية فارغة.',
       'businessProfileSaved': 'تم حفظ بيانات الشركة',
       'logo': 'الشعار',
       'uploadBusinessLogo': 'رفع شعار الشركة',
@@ -468,7 +509,8 @@ class AppCopy {
       'lineTotal': 'الإجمالي: {value}',
       'invoiceFromQuotationTitle': 'تحويل عرض السعر إلى فاتورة',
       'createInvoiceTitle': 'إنشاء فاتورة',
-      'quotationLoadedBanner': 'تم تحميل بيانات عرض السعر تلقائيًا. يمكنك إصدار الفاتورة مباشرة أو تعديل بعض التفاصيل قبل الحفظ.',
+      'quotationLoadedBanner':
+          'تم تحميل بيانات عرض السعر تلقائيًا. يمكنك إصدار الفاتورة مباشرة أو تعديل بعض التفاصيل قبل الحفظ.',
       'invoiceInfo': 'بيانات الفاتورة',
       'collectionMethod': 'طريقة التحصيل',
       'noPayment': 'بدون دفعة',
@@ -525,9 +567,11 @@ class AppCopy {
       'editProductTitle': 'تعديل الصنف',
       'updateProductSuccess': 'تم تحديث بيانات الصنف بنجاح.',
       'updateProductError': 'تعذر تحديث بيانات الصنف.',
-      'editBlockedAccounting': 'تعديل الكمية أو تكلفة الشراء أو المصاريف الإضافية من شاشة التعديل موقوف حاليًا حتى لا يحدث انحراف محاسبي. استخدم تدفق تسوية أو جرد مخصص لهذه التغييرات.',
+      'editBlockedAccounting':
+          'تعديل الكمية أو تكلفة الشراء أو المصاريف الإضافية من شاشة التعديل موقوف حاليًا حتى لا يحدث انحراف محاسبي. استخدم تدفق تسوية أو جرد مخصص لهذه التغييرات.',
       'fieldInvalid': 'قيمة {field} غير صحيحة',
-      'editWarning': 'ملاحظة: تعديل الكمية أو تكلفة الشراء أو المصاريف الإضافية من هذه الشاشة ممنوع حاليًا لحماية سلامة القيود المحاسبية. استخدم شاشة التسوية عند الحاجة.',
+      'editWarning':
+          'ملاحظة: تعديل الكمية أو تكلفة الشراء أو المصاريف الإضافية من هذه الشاشة ممنوع حاليًا لحماية سلامة القيود المحاسبية. استخدم شاشة التسوية عند الحاجة.',
       'saving': 'جارٍ الحفظ...',
       'saveChanges': 'حفظ التعديلات',
       'adjustInventoryCostTitle': 'تسوية المخزون والتكلفة',
@@ -544,8 +588,10 @@ class AppCopy {
       'adjustReasonRequired': 'يرجى إدخال سبب التسوية.',
       'adjustSaved': 'تم حفظ التسوية بنجاح.',
       'adjustSaveError': 'تعذر حفظ التسوية.',
-      'stockAdjustHelp': 'زيادة المخزون تُحمّل على المخزون مقابل الموردين، وخفضه يُحمّل على تكلفة البضاعة المباعة مقابل المخزون.',
-      'costAdjustHelp': 'تسوية التكلفة تعدّل قيمة المخزون الحالي فقط، مع قيد مقابل على الموردين عند الزيادة أو العكس عند الخفض.',
+      'stockAdjustHelp':
+          'زيادة المخزون تُحمّل على المخزون مقابل الموردين، وخفضه يُحمّل على تكلفة البضاعة المباعة مقابل المخزون.',
+      'costAdjustHelp':
+          'تسوية التكلفة تعدّل قيمة المخزون الحالي فقط، مع قيد مقابل على الموردين عند الزيادة أو العكس عند الخفض.',
       'saveAdjustment': 'حفظ التسوية',
       'checkProductQtyPrice': 'تحقق من الصنف والكمية والسعر قبل إضافة البند.',
       'signInFirst': 'يجب تسجيل الدخول أولًا.',
@@ -634,21 +680,28 @@ class AppCopy {
       'dashboardSecureSession': 'جلسة خادم الذكاء المالي آمنة ونشطة',
       'dashboardAiGreeting': 'ما القرار المالي الأفضل اليوم؟',
       'dashboardAiTitle': 'المستشار المالي نشط',
-      'dashboardAiSuggestion': 'يقوم المستشار المالي الآن بفحص وتحليل التدفق النقدي، الفواتير المستحقة، مستويات المخزون والمصروفات ليقترح لك أفضل خطوة تالية لعملك.',
+      'dashboardAiSuggestion':
+          'يقوم المستشار المالي الآن بفحص وتحليل التدفق النقدي، الفواتير المستحقة، مستويات المخزون والمصروفات ليقترح لك أفضل خطوة تالية لعملك.',
       'dashboardHealthScore': 'مؤشر الصحة المالية',
       'dashboardHealthExcellent': 'ممتاز جداً',
-      'dashboardHealthDesc1': 'الكفاءة التشغيلية والسيولة النقدية ممتازة اليوم.',
-      'dashboardHealthDesc2': 'مستوى السيولة النقدية يغطي المصروفات بنسبة 85% أعلى من الشهر الماضي. الاحتياطي المالي في أمان.',
+      'dashboardHealthDesc1':
+          'الكفاءة التشغيلية والسيولة النقدية ممتازة اليوم.',
+      'dashboardHealthDesc2':
+          'مستوى السيولة النقدية يغطي المصروفات بنسبة 85% أعلى من الشهر الماضي. الاحتياطي المالي في أمان.',
       'dashboardRecommendationsTitle': 'ما الخطوات الموصى بها اليوم؟',
-      'dashboardRec1': 'تابع تحصيل الفاتورة المستحقة رقم #1024 لتأمين السيولة قبل الأسبوع القادم.',
-      'dashboardRec2': 'أعد طلب كميات إضافية من المنظفات (المخزون الحالي 3 وحدات وهو تحت الحد الأدنى).',
+      'dashboardRec1':
+          'تابع تحصيل الفاتورة المستحقة رقم #1024 لتأمين السيولة قبل الأسبوع القادم.',
+      'dashboardRec2':
+          'أعد طلب كميات إضافية من المنظفات (المخزون الحالي 3 وحدات وهو تحت الحد الأدنى).',
       'dashboardCashFlowPulse': 'نبض التدفق النقدي',
       'dashboardCashInflow': 'المقبوضات النقدية',
       'dashboardCashOutflow': 'المدفوعات والمصروفات',
       'dashboardAiSimulation': 'محاكاة القرارات المالية',
       'dashboardSimulationReady': 'جاهز للمحاكاة',
-      'dashboardSimulationScenario': 'سيناريو المحاكاة النشط: شراء مخزون ومشتريات بقيمة 5,000 ر.س اليوم.',
-      'dashboardSimulationResult': 'الأثر المتوقع: ستنخفض السيولة النقدية المتاحة بنسبة 12%، بينما ستزداد الأرباح التشغيلية المقدرة بنسبة 18% خلال 30 يوماً.',
+      'dashboardSimulationScenario':
+          'سيناريو المحاكاة النشط: شراء مخزون ومشتريات بقيمة 5,000 ر.س اليوم.',
+      'dashboardSimulationResult':
+          'الأثر المتوقع: ستنخفض السيولة النقدية المتاحة بنسبة 12%، بينما ستزداد الأرباح التشغيلية المقدرة بنسبة 18% خلال 30 يوماً.',
       'dashboardObligations': 'الالتزامات والمدفوعات القادمة',
       'dashboardObligation1': 'مستحقات وفواتير الموردين',
       'dashboardTomorrow': 'غداً',
@@ -694,7 +747,8 @@ class AppCopy {
       'smartCalculator': 'Smart Advisor',
       'reports': 'Reports',
       'noProductsYet': 'No products yet',
-      'startByAddingProduct': 'Add first product to start managing inventory, costs, and profitability.',
+      'startByAddingProduct':
+          'Add first product to start managing inventory, costs, and profitability.',
       'smartCopilot': 'Smart Copilot',
       'smartCopilotSubtitle': 'Your intelligent business command center.',
       'navInventory': 'Inventory',
@@ -702,6 +756,12 @@ class AppCopy {
       'navTransactions': 'Transactions',
       'navSmart': 'Smart',
       'navReports': 'Reports',
+      'navCustomersInvoices': 'Customers & Invoices',
+      'collectionCenter': 'Collection Center',
+      'quickAdd': 'Quick Add',
+      'aiAccountant': 'AI Accountant',
+      'brandName': 'HASOOB',
+      'brandSubtitle': 'Financial Management System',
       'addProduct': 'Add Product',
       'createInvoice': 'Create Invoice',
       'addCustomer': 'Add Customer',
@@ -729,49 +789,62 @@ class AppCopy {
       'newInvoice': 'New Invoice',
       'newCustomer': 'New Customer',
       'restoreFromCloud': 'Restore From Cloud',
-      'restoreFromCloudSubtitle': 'Only use this when local data is empty and after confirmation.',
+      'restoreFromCloudSubtitle':
+          'Only use this when local data is empty and after confirmation.',
       'restoreUsed': 'Restore has already been used on this device',
       'restoreUnused': 'Restore has not been used on this device yet',
       'stockAlerts': 'Stock Alerts',
       'stockAlertsSubtitle': 'A quick view of products that need attention.',
       'noLowStockNow': 'There are no low-stock products right now.',
-      'reviewLowStock': 'Review low-stock or out-of-stock items before sales are affected.',
+      'reviewLowStock':
+          'Review low-stock or out-of-stock items before sales are affected.',
       'outOfStock': 'Out of stock',
       'lowStock': 'Low stock',
       'recentSales': 'Recent Sales',
       'recentSalesSubtitle': 'A quick summary of the latest completed sales.',
       'noSalesYet': 'There are no sales yet.',
       'professionalDashboard': 'Professional Dashboard',
-      'dashboardHero': 'Track inventory, sales, and documents from one place with a clearer and calmer layout.',
+      'dashboardHero':
+          'Track inventory, sales, and documents from one place with a clearer and calmer layout.',
       'helpTitle': 'User Guide',
       'helpHeroTitle': 'Quick guidance for using the app',
-      'helpHeroBody': 'This guide helps you understand the main sections and use them clearly and confidently.',
+      'helpHeroBody':
+          'This guide helps you understand the main sections and use them clearly and confidently.',
       'helpDashboardTitle': 'Dashboard',
-      'helpDashboardBody': 'Shows quick indicators for sales, stock, and profitability, with shortcuts to the most important sections.',
+      'helpDashboardBody':
+          'Shows quick indicators for sales, stock, and profitability, with shortcuts to the most important sections.',
       'helpInventoryTitle': 'Inventory',
-      'helpInventoryBody': 'Use search and filters to review products, track shortages, check profitability, and open quick sell or product details.',
+      'helpInventoryBody':
+          'Use search and filters to review products, track shortages, check profitability, and open quick sell or product details.',
       'helpDocumentsTitle': 'Documents',
-      'helpDocumentsBody': 'Manage invoices and quotations here. You can create new documents, track statuses, and record invoice payments.',
+      'helpDocumentsBody':
+          'Manage invoices and quotations here. You can create new documents, track statuses, and record invoice payments.',
       'helpInvoicesTitle': 'Invoices and Quotations',
-      'helpInvoicesBody': 'Start by choosing the customer, then add items and set prices and quantities. You can save an invoice as a draft or issue it directly, and you can convert a quotation into an invoice.',
+      'helpInvoicesBody':
+          'Start by choosing the customer, then add items and set prices and quantities. You can save an invoice as a draft or issue it directly, and you can convert a quotation into an invoice.',
       'helpSyncTitle': 'Sync and Restore',
-      'helpSyncBody': 'Sync runs automatically after sign-in when setup is available. Cloud restore should only be used when local data is empty.',
+      'helpSyncBody':
+          'Sync runs automatically after sign-in when setup is available. Cloud restore should only be used when local data is empty.',
       'helpTipTitle': 'Quick Tip',
-      'helpTipBody': 'Start by adding products and customers, then create quotations or invoices based on your workflow. Check alerts regularly to avoid stockouts.',
+      'helpTipBody':
+          'Start by adding products and customers, then create quotations or invoices based on your workflow. Check alerts regularly to avoid stockouts.',
       'loginTitle': 'Sign In',
-      'loginSubtitle': 'Access inventory, reports, and sales with your protected Firebase account.',
+      'loginSubtitle':
+          'Access inventory, reports, and sales with your protected Firebase account.',
       'email': 'Email',
       'password': 'Password',
       'signIn': 'Sign In',
       'openSignUp': 'Don\'t have an account? Create one',
       'signUpTitle': 'Create Account',
-      'signUpSubtitle': 'Create a secure account to access the system with email and password.',
+      'signUpSubtitle':
+          'Create a secure account to access the system with email and password.',
       'passwordHelper': 'At least 6 characters',
       'confirmPassword': 'Confirm Password',
       'createAccount': 'Create Account',
       'openLogin': 'Already have an account? Sign in',
       'accountCreated': 'Account created successfully.',
-      'authHero': 'An Arabic-first system for inventory, sales, and accounting with a professional desktop-friendly interface.',
+      'authHero':
+          'An Arabic-first system for inventory, sales, and accounting with a professional desktop-friendly interface.',
       'invalidEmail': 'Please enter a valid email address.',
       'passwordMin': 'Password must be at least 6 characters.',
       'passwordMismatch': 'Passwords do not match.',
@@ -798,7 +871,8 @@ class AppCopy {
       'documentsTabQuotations': 'Quotations',
       'inventoryTitle': 'Inventory',
       'searchInventoryHint': 'Search by product name, unit, or barcode',
-      'searchInventoryHelp': 'You can paste a barcode to open the product directly.',
+      'searchInventoryHelp':
+          'You can paste a barcode to open the product directly.',
       'productFilter': 'Product Filter',
       'sortBy': 'Sort By',
       'ascendingSort': 'Ascending Order',
@@ -821,21 +895,24 @@ class AppCopy {
       'productDetails': 'Product Details',
       'adjustment': 'Adjustment',
       'pricingAndStock': 'Pricing and Stock',
-      'pricingAndStockSubtitle': 'A quick operational summary of cost structure, quantity, and alert level.',
+      'pricingAndStockSubtitle':
+          'A quick operational summary of cost structure, quantity, and alert level.',
       'purchasePrice': 'Purchase Price',
       'extraCosts': 'Extra Costs',
       'landedCost': 'Landed Cost',
       'currentQuantity': 'Current Quantity',
       'lowStockThreshold': 'Low-Stock Threshold',
       'salesPerformance': 'Sales Performance',
-      'salesPerformanceSubtitle': 'A summary of actual sales and realized profitability for this product.',
+      'salesPerformanceSubtitle':
+          'A summary of actual sales and realized profitability for this product.',
       'salesCount': 'Sales Count',
       'soldQuantity': 'Total Sold Quantity',
       'realizedSales': 'Realized Sales',
       'realizedProfit': 'Realized Profit',
       'stockMovements': 'Recent Stock Movements',
       'stockMovementsSubtitle': 'Latest changes to this product balance.',
-      'noStockMovements': 'There are no stock movements recorded for this product.',
+      'noStockMovements':
+          'There are no stock movements recorded for this product.',
       'latestSales': 'Recent Sales',
       'latestSalesSubtitle': 'Latest sales records for this product.',
       'noProductSales': 'There are no recorded sales for this product.',
@@ -878,7 +955,8 @@ class AppCopy {
       'noDataAvailable': 'No data is currently available.',
       'performanceSummary': 'Performance Summary',
       'filtersAffectResults': 'The results below reflect the current filters.',
-      'currentSnapshotSummary': 'A quick reading of current inventory, sales, and profitability.',
+      'currentSnapshotSummary':
+          'A quick reading of current inventory, sales, and profitability.',
       'clearFilters': 'Clear Filters',
       'salesAcrossTime': 'Sales Over Time',
       'profitTrend': 'Profit Trend',
@@ -905,17 +983,21 @@ class AppCopy {
       'pdfNotFound': 'PDF file was not found.',
       'trialBalance': 'Trial Balance',
       'trialBalanceSummary': 'Balance Summary',
-      'trialBalanceSummarySubtitle': 'Shows total debits, credits, and current balance status.',
+      'trialBalanceSummarySubtitle':
+          'Shows total debits, credits, and current balance status.',
       'totalDebit': 'Total Debit',
       'totalCredit': 'Total Credit',
       'entriesCount': 'Entries Count',
       'balanceStatus': 'Balance Status',
       'balanced': 'Balanced',
       'unbalanced': 'Unbalanced',
-      'balancedHelp': 'The current entries are balanced and can support upcoming profit and loss and balance sheet reports.',
-      'unbalancedHelp': 'There is a difference between debit and credit. Review entries before depending on upcoming financial reports.',
+      'balancedHelp':
+          'The current entries are balanced and can support upcoming profit and loss and balance sheet reports.',
+      'unbalancedHelp':
+          'There is a difference between debit and credit. Review entries before depending on upcoming financial reports.',
       'accounts': 'Accounts',
-      'accountsSubtitle': 'The accounting structure is prepared for profit and loss, balance sheet, and journal reports.',
+      'accountsSubtitle':
+          'The accounting structure is prepared for profit and loss, balance sheet, and journal reports.',
       'asset': 'Asset',
       'liability': 'Liability',
       'revenue': 'Revenue',
@@ -944,18 +1026,23 @@ class AppCopy {
       'customerInvoices': 'Invoices',
       'customerPayments': 'Payments',
       'noCustomerInvoices': 'There are no invoices for this customer yet.',
-      'noCustomerPayments': 'There are no recorded payments for this customer yet.',
+      'noCustomerPayments':
+          'There are no recorded payments for this customer yet.',
       'status': 'Status',
       'remainingAmount': 'Remaining',
       'loadDashboardRestoreError': 'Cloud restore failed.',
       'restoreDialogTitle': 'Restore From Cloud',
-      'restoreDialogBody': 'Restore will run only when local business data is empty. Data will not be merged and conflicts will not be resolved. Do you want to continue?',
-      'cloudProductsMissing': 'There is no product data available in the cloud snapshot.',
-      'restoreOnlyWhenEmpty': 'Cloud restore is available only when local data is empty.',
+      'restoreDialogBody':
+          'Restore will run only when local business data is empty. Data will not be merged and conflicts will not be resolved. Do you want to continue?',
+      'cloudProductsMissing':
+          'There is no product data available in the cloud snapshot.',
+      'restoreOnlyWhenEmpty':
+          'Cloud restore is available only when local data is empty.',
       'businessProfileSaved': 'Business profile saved successfully.',
       'logo': 'Logo',
       'uploadBusinessLogo': 'Upload business logo',
-      'logoHelp': 'A square image or transparent background is preferred. It will be displayed fully without cropping.',
+      'logoHelp':
+          'A square image or transparent background is preferred. It will be displayed fully without cropping.',
       'basicInfo': 'Basic Information',
       'contactInfo': 'Contact Information',
       'officialInfo': 'Official Information',
@@ -982,7 +1069,8 @@ class AppCopy {
       'lineTotal': 'Total: {value}',
       'invoiceFromQuotationTitle': 'Convert Quotation to Invoice',
       'createInvoiceTitle': 'Create Invoice',
-      'quotationLoadedBanner': 'Quotation data was loaded automatically. You can issue the invoice directly or adjust some details before saving.',
+      'quotationLoadedBanner':
+          'Quotation data was loaded automatically. You can issue the invoice directly or adjust some details before saving.',
       'invoiceInfo': 'Invoice Information',
       'collectionMethod': 'Collection Method',
       'noPayment': 'No Payment',
@@ -1002,7 +1090,8 @@ class AppCopy {
       'previewOrShareNow': 'Do you want to preview or share it now?',
       'customerRequired': 'Please select a customer.',
       'atLeastOneItem': 'At least one item is required.',
-      'partialPaymentValid': 'Enter a valid partial payment or change the payment type.',
+      'partialPaymentValid':
+          'Enter a valid partial payment or change the payment type.',
       'invoiceDraftSaved': 'Invoice saved as draft.',
       'invoiceSavedPdf': 'Invoice issued and PDF saved.',
       'invoiceSavedNotFound': 'Unable to find the invoice after saving.',
@@ -1023,7 +1112,8 @@ class AppCopy {
       'quotationSavedPdf': 'Quotation saved and PDF created.',
       'quotationDetailsTitle': 'Quotation Details',
       'quotationNotFound': 'Quotation not found.',
-      'quotationCannotBeConverted': 'This quotation cannot be converted to an invoice.',
+      'quotationCannotBeConverted':
+          'This quotation cannot be converted to an invoice.',
       'statusDraft': 'Draft',
       'statusSent': 'Sent',
       'statusAccepted': 'Accepted',
@@ -1039,9 +1129,11 @@ class AppCopy {
       'editProductTitle': 'Edit Product',
       'updateProductSuccess': 'Product updated successfully.',
       'updateProductError': 'Failed to update product.',
-      'editBlockedAccounting': 'Editing quantity, purchase cost, or extra costs from this screen is currently blocked to avoid accounting inconsistencies. Use the dedicated adjustment flow for those changes.',
+      'editBlockedAccounting':
+          'Editing quantity, purchase cost, or extra costs from this screen is currently blocked to avoid accounting inconsistencies. Use the dedicated adjustment flow for those changes.',
       'fieldInvalid': 'Invalid {field} value',
-      'editWarning': 'Note: editing quantity, purchase cost, or extra costs from this screen is currently disabled to protect accounting integrity. Use the adjustment screen when needed.',
+      'editWarning':
+          'Note: editing quantity, purchase cost, or extra costs from this screen is currently disabled to protect accounting integrity. Use the adjustment screen when needed.',
       'saving': 'Saving...',
       'saveChanges': 'Save Changes',
       'adjustInventoryCostTitle': 'Adjust Inventory and Cost',
@@ -1054,14 +1146,18 @@ class AppCopy {
       'currentValue': 'Current: {value}',
       'newExtraCosts': 'New Extra Costs',
       'adjustReason': 'Adjustment Reason',
-      'adjustReasonHelp': 'Required for documenting the movement and accounting entries.',
+      'adjustReasonHelp':
+          'Required for documenting the movement and accounting entries.',
       'adjustReasonRequired': 'Please enter an adjustment reason.',
       'adjustSaved': 'Adjustment saved successfully.',
       'adjustSaveError': 'Failed to save adjustment.',
-      'stockAdjustHelp': 'Increasing stock is posted to inventory against payables, while decreasing it is posted to cost of goods sold against inventory.',
-      'costAdjustHelp': 'Cost adjustment only changes the value of current inventory, with an offsetting payable entry when increased or the reverse when decreased.',
+      'stockAdjustHelp':
+          'Increasing stock is posted to inventory against payables, while decreasing it is posted to cost of goods sold against inventory.',
+      'costAdjustHelp':
+          'Cost adjustment only changes the value of current inventory, with an offsetting payable entry when increased or the reverse when decreased.',
       'saveAdjustment': 'Save Adjustment',
-      'checkProductQtyPrice': 'Check the product, quantity, and price before adding the item.',
+      'checkProductQtyPrice':
+          'Check the product, quantity, and price before adding the item.',
       'signInFirst': 'You must sign in first.',
       'syncNow': 'Sync Now',
       'syncPending': 'Data pending synchronization',
@@ -1103,10 +1199,13 @@ class AppCopy {
       'attributes': 'Attributes & Specs',
       'productSettings': 'Selling Options',
       'advanced': 'Advanced Options',
-      'pricingSubtitle': 'Manage selling prices, wholesale, discounts, and taxes.',
+      'pricingSubtitle':
+          'Manage selling prices, wholesale, discounts, and taxes.',
       'inventorySubtitle': 'Manage stock levels, locations, and alerts.',
-      'attributesSubtitle': 'Add technical details like color, size, and weight.',
-      'settingsSubtitle': 'Control product status and visibility in the system.',
+      'attributesSubtitle':
+          'Add technical details like color, size, and weight.',
+      'settingsSubtitle':
+          'Control product status and visibility in the system.',
       'image': 'Product Image',
       'gallery': 'Image Gallery',
       'wholesalePrice': 'Wholesale Price',
@@ -1148,21 +1247,27 @@ class AppCopy {
       'dashboardSecureSession': 'Secure AI Session Active',
       'dashboardAiGreeting': 'What is the best financial decision today?',
       'dashboardAiTitle': 'FINANCIAL ADVISOR ACTIVE',
-      'dashboardAiSuggestion': 'Analyzing cash flow, outstanding invoices, obligations, and stock levels to calculate optimal steps.',
+      'dashboardAiSuggestion':
+          'Analyzing cash flow, outstanding invoices, obligations, and stock levels to calculate optimal steps.',
       'dashboardHealthScore': 'Financial Health Score',
       'dashboardHealthExcellent': 'Excellent',
       'dashboardHealthDesc1': 'SaaS operating efficiency is optimal.',
-      'dashboardHealthDesc2': 'Cash flow cover is 85% higher than last month. Current reserves are safe.',
+      'dashboardHealthDesc2':
+          'Cash flow cover is 85% higher than last month. Current reserves are safe.',
       'dashboardRecommendationsTitle': 'What should I do today?',
-      'dashboardRec1': 'Follow up invoice #1024 to secure cash reserves before next week.',
-      'dashboardRec2': 'Reorder top-selling detergent carton (stock count is below 4).',
+      'dashboardRec1':
+          'Follow up invoice #1024 to secure cash reserves before next week.',
+      'dashboardRec2':
+          'Reorder top-selling detergent carton (stock count is below 4).',
       'dashboardCashFlowPulse': 'Cash Flow Pulse',
       'dashboardCashInflow': 'Cash Inflow',
       'dashboardCashOutflow': 'Cash Outflow',
       'dashboardAiSimulation': 'AI Decision Simulation',
       'dashboardSimulationReady': 'Ready',
-      'dashboardSimulationScenario': 'Simulation Scenario: Purchase inventory worth 5,000 SAR.',
-      'dashboardSimulationResult': 'Result: Liquid cash decreases by 12%. Estimated net profit margin increases by 18% over 30 days.',
+      'dashboardSimulationScenario':
+          'Simulation Scenario: Purchase inventory worth 5,000 SAR.',
+      'dashboardSimulationResult':
+          'Result: Liquid cash decreases by 12%. Estimated net profit margin increases by 18% over 30 days.',
       'dashboardObligations': 'Upcoming Obligations',
       'dashboardObligation1': 'Suppliers Invoices Due',
       'dashboardTomorrow': 'Tomorrow',

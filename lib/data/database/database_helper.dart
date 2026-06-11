@@ -12,7 +12,7 @@ import 'package:hasoob_app/data/services/database_initializer.dart';
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
-  static const _databaseVersion = 23;
+  static const _databaseVersion = 24;
 
   static const _cashAccountCode = '101';
   static const _inventoryAccountCode = '102';
@@ -193,6 +193,10 @@ class DBHelper {
             await _upgradeToV23(db);
           }
 
+          if (oldVersion < 24) {
+            await _upgradeToV24(db);
+          }
+
           await _repairAccountNamesForV12(db);
         },
         onOpen: (db) async {
@@ -257,7 +261,11 @@ class DBHelper {
         credit_account_id INTEGER,
         amount REAL,
         description TEXT,
-        date TEXT
+        date TEXT,
+        entry_type TEXT,
+        source_type TEXT,
+        source_id TEXT,
+        metadata_json TEXT
       )
     ''');
 
@@ -504,6 +512,8 @@ class DBHelper {
         branch_id TEXT
       )
     ''');
+
+    await _createPricingSimulationsTable(db);
 
     await db.execute('''
       CREATE TABLE IF NOT EXISTS audit_logs(
@@ -1479,6 +1489,515 @@ class DBHelper {
     }
 
     return result;
+  }
+
+  static Future<Map<String, dynamic>> resolveAiProductMatch({
+    required String businessId,
+    String? productId,
+    String? productName,
+  }) async {
+    final db = await database();
+    final trimmedId = productId?.trim() ?? '';
+    final trimmedName = productName?.trim() ?? '';
+
+    if (trimmedId.isNotEmpty) {
+      final product = await getProductById(businessId, trimmedId);
+      return {
+        'status': product == null ? 'product_id_not_found' : 'matched',
+        'matchType': 'product_id',
+        'product': product,
+        'productId': trimmedId,
+      };
+    }
+
+    if (trimmedName.isEmpty) {
+      return {
+        'status': 'requires_user_confirmation',
+        'matchType': 'missing_identity',
+        'message': 'Missing product id. Product name alone was not provided.',
+        'candidates': <Map<String, dynamic>>[],
+      };
+    }
+
+    final rows = await db.query(
+      'products',
+      where: 'businessId = ? AND LOWER(TRIM(name)) = LOWER(TRIM(?))',
+      whereArgs: [businessId, trimmedName],
+      limit: 10,
+    );
+
+    if (rows.length == 1) {
+      return {
+        'status': 'matched',
+        'matchType': 'strong_name',
+        'product': rows.first,
+        'metadata': {
+          'matchedBy': 'exact_normalized_name',
+          'inputName': trimmedName,
+          'matchedProductId': rows.first['id'],
+          'matchedProductName': rows.first['name'],
+        },
+      };
+    }
+
+    return {
+      'status': 'requires_user_confirmation',
+      'matchType': rows.isEmpty ? 'no_name_match' : 'ambiguous_name',
+      'message': rows.isEmpty
+          ? 'No product matched the provided name.'
+          : 'Multiple products matched the provided name.',
+      'candidates': rows
+          .map((row) => {
+                'id': row['id'],
+                'name': row['name'],
+                'stock_qty': row['stock_qty'],
+                'selling_price': row['selling_price'],
+              })
+          .toList(),
+    };
+  }
+
+  static Future<List<String>> missingAiAccountCodes(
+    String businessId,
+    List<String> semanticCodes,
+  ) async {
+    final db = await database();
+    final rows = await db.query(
+      'accounts',
+      columns: ['code'],
+      where:
+          'businessId = ? AND code IN (${List.filled(semanticCodes.length, '?').join(',')})',
+      whereArgs: [businessId, ...semanticCodes],
+    );
+    final existing = rows.map((row) => row['code']?.toString()).toSet();
+    return semanticCodes.where((code) => !existing.contains(code)).toList();
+  }
+
+  static List<String> aiRequiredAccountCodesFor(String actionType) {
+    switch (actionType) {
+      case 'purchase':
+        return [_inventoryAccountCode, _payablesAccountCode];
+      case 'sale':
+        return [
+          _receivablesAccountCode,
+          _inventoryAccountCode,
+          _salesAccountCode,
+          _cogsAccountCode,
+        ];
+      default:
+        return const [];
+    }
+  }
+
+  static Future<Map<String, dynamic>> executeAiPurchase({
+    required String businessId,
+    required String productId,
+    required String productName,
+    required int quantity,
+    required double costPrice,
+    required String explanation,
+    Map<String, dynamic>? matchMetadata,
+  }) async {
+    if (quantity <= 0 || costPrice < 0) {
+      throw Exception('Invalid AI purchase quantity or cost.');
+    }
+
+    final db = await database();
+    final timestamp = DateTime.now().toIso8601String();
+    final branchId = BranchContext().currentBranchId;
+    final result = <String, dynamic>{};
+
+    await db.transaction((txn) async {
+      final inventoryAccountId = await _requireAccountId(
+        txn,
+        _inventoryAccountCode,
+        businessId,
+      );
+      final payablesAccountId =
+          await _requireAccountId(txn, _payablesAccountCode, businessId);
+
+      final existingRows = await txn.query(
+        'products',
+        where: 'id = ? AND businessId = ?',
+        whereArgs: [productId, businessId],
+        limit: 1,
+      );
+      final amount = costPrice * quantity;
+      final createdProduct = existingRows.isEmpty;
+      late final Map<String, dynamic> productPayload;
+
+      if (createdProduct) {
+        productPayload = await _filterToExistingColumns(txn, 'products', {
+          'id': productId,
+          'businessId': businessId,
+          'branch_id': branchId,
+          'name': productName,
+          'unit': 'carton',
+          'purchase_price': costPrice,
+          'extra_costs': 0.0,
+          'selling_price': costPrice * 1.25,
+          'stock_qty': quantity,
+          'low_stock_threshold': 5,
+          'created_at': timestamp,
+          'updated_at': timestamp,
+          'status': 'active',
+        });
+        await txn.insert('products', productPayload);
+      } else {
+        final existing = existingRows.first;
+        final nextQty = _toInt(existing['stock_qty']) + quantity;
+        await txn.update(
+          'products',
+          {
+            'stock_qty': nextQty,
+            'purchase_price': costPrice,
+            'updated_at': timestamp,
+          },
+          where: 'id = ? AND businessId = ?',
+          whereArgs: [productId, businessId],
+        );
+        productPayload = {
+          ...existing,
+          'stock_qty': nextQty,
+          'purchase_price': costPrice,
+          'updated_at': timestamp,
+        };
+      }
+
+      await _recordProductMovement(
+        txn,
+        businessId: businessId,
+        productId: productId,
+        movementType: 'ai_purchase',
+        quantity: quantity,
+        balanceAfter: _toInt(productPayload['stock_qty']),
+        referenceType: 'ai_accountant',
+        referenceId: productId,
+        notes: explanation,
+      );
+
+      final journalEntryId = await _postJournalEntry(
+        txn,
+        businessId: businessId,
+        debitAccountId: inventoryAccountId,
+        creditAccountId: payablesAccountId,
+        amount: amount,
+        description: 'AI purchase: $explanation',
+        date: timestamp,
+        entryType: 'purchase',
+        sourceType: 'ai_accountant',
+        sourceId: productId,
+        metadata: {
+          'classification': 'inventory_purchase',
+          'productId': productId,
+          'productName': productName,
+          'quantity': quantity,
+          'match': matchMetadata,
+        },
+      );
+
+      await _enqueueSyncOperation(
+        txn,
+        entityName: 'products',
+        entityId: productId,
+        type: createdProduct ? 'create' : 'update',
+        payload: productPayload,
+      );
+
+      result.addAll({
+        'product': {
+          'id': productId,
+          'name': productName,
+          'created': createdProduct,
+          'quantity': quantity,
+        },
+        'journalEntry': {
+          'id': journalEntryId,
+          'code': 'JE-$journalEntryId',
+          'entryType': 'purchase',
+        },
+        'syncQueue': {'status': 'queued'},
+      });
+    });
+
+    return result;
+  }
+
+  static Future<Map<String, dynamic>> executeAiSale({
+    required String businessId,
+    required String productId,
+    required int quantity,
+    required double unitPrice,
+    required String explanation,
+    String? customerId,
+    String? customerName,
+    Map<String, dynamic>? matchMetadata,
+  }) async {
+    if (quantity <= 0 || unitPrice < 0) {
+      throw Exception('Invalid AI sale quantity or unit price.');
+    }
+
+    final db = await database();
+    final invoiceId = _newTextId('INV');
+    final timestamp = DateTime.now().toIso8601String();
+    final branchId = BranchContext().currentBranchId;
+    final result = <String, dynamic>{};
+    late final String invoiceNumber;
+
+    await db.transaction((txn) async {
+      final receivablesAccountId = await _requireAccountId(
+        txn,
+        _receivablesAccountCode,
+        businessId,
+      );
+      final inventoryAccountId = await _requireAccountId(
+        txn,
+        _inventoryAccountCode,
+        businessId,
+      );
+      final salesAccountId =
+          await _requireAccountId(txn, _salesAccountCode, businessId);
+      final cogsAccountId =
+          await _requireAccountId(txn, _cogsAccountCode, businessId);
+
+      final productRows = await txn.query(
+        'products',
+        where: 'id = ? AND businessId = ?',
+        whereArgs: [productId, businessId],
+        limit: 1,
+      );
+      if (productRows.isEmpty) {
+        throw Exception(
+            'Product id $productId was not found for this business.');
+      }
+
+      final product = productRows.first;
+      final currentQty = _toInt(product['stock_qty']);
+      if (currentQty < quantity) {
+        throw Exception('Insufficient stock for AI sale.');
+      }
+
+      final productName = product['name']?.toString() ?? productId;
+      final landedCost = _toDouble(product['purchase_price']) +
+          _toDouble(product['extra_costs']);
+      final total = unitPrice * quantity;
+      final totalCogs = landedCost * quantity;
+      final updatedQty = currentQty - quantity;
+      invoiceNumber = await _nextDocumentNumber(txn, prefix: 'INV');
+      final resolvedCustomerId = customerId?.trim().isNotEmpty == true
+          ? customerId!.trim()
+          : 'AI-DIRECT';
+
+      await txn.update(
+        'products',
+        {'stock_qty': updatedQty, 'updated_at': timestamp},
+        where: 'id = ? AND businessId = ?',
+        whereArgs: [productId, businessId],
+      );
+
+      await txn.insert('invoices', {
+        'id': invoiceId,
+        'businessId': businessId,
+        'branch_id': branchId,
+        'invoice_number': invoiceNumber,
+        'customer_id': resolvedCustomerId,
+        'status': 'issued',
+        'issue_date': timestamp,
+        'subtotal': total,
+        'total': total,
+        'paid_amount': 0,
+        'remaining_amount': total,
+        'notes': explanation,
+        'currency_code': 'USD',
+        'payment_method': 'on_account',
+        'accounting_posted': 1,
+      });
+
+      await txn.insert('invoice_items', {
+        'businessId': businessId,
+        'invoice_id': invoiceId,
+        'product_id': productId,
+        'product_name': productName,
+        'quantity': quantity,
+        'unit_price': unitPrice,
+        'line_total': total,
+        'landed_cost': landedCost,
+      });
+
+      await _recordProductMovement(
+        txn,
+        businessId: businessId,
+        productId: productId,
+        movementType: 'ai_sale',
+        quantity: -quantity,
+        balanceAfter: updatedQty,
+        referenceType: 'invoice',
+        referenceId: invoiceId,
+        notes: explanation,
+      );
+
+      final saleJournalEntryId = await _postJournalEntry(
+        txn,
+        businessId: businessId,
+        debitAccountId: receivablesAccountId,
+        creditAccountId: salesAccountId,
+        amount: total,
+        description: 'AI sale invoice $invoiceNumber: $explanation',
+        date: timestamp,
+        entryType: 'sale',
+        sourceType: 'ai_accountant',
+        sourceId: invoiceId,
+        metadata: {
+          'classification': 'sales_revenue',
+          'productId': productId,
+          'productName': productName,
+          'quantity': quantity,
+          'customerName': customerName,
+          'match': matchMetadata,
+        },
+      );
+
+      int? cogsJournalEntryId;
+      if (totalCogs > 0) {
+        cogsJournalEntryId = await _postJournalEntry(
+          txn,
+          businessId: businessId,
+          debitAccountId: cogsAccountId,
+          creditAccountId: inventoryAccountId,
+          amount: totalCogs,
+          description: 'AI sale COGS $invoiceNumber: $productName',
+          date: timestamp,
+          entryType: 'cost_of_goods_sold',
+          sourceType: 'ai_accountant',
+          sourceId: invoiceId,
+          metadata: {
+            'classification': 'cost_of_goods_sold',
+            'productId': productId,
+            'productName': productName,
+            'quantity': quantity,
+          },
+        );
+      }
+
+      final invoicePayload = {
+        'id': invoiceId,
+        'businessId': businessId,
+        'branch_id': branchId,
+        'invoice_number': invoiceNumber,
+        'customer_id': resolvedCustomerId,
+        'customer_name': customerName,
+        'status': 'issued',
+        'issue_date': timestamp,
+        'subtotal': total,
+        'total': total,
+        'paid_amount': 0,
+        'remaining_amount': total,
+        'notes': explanation,
+        'currency_code': 'USD',
+        'payment_method': 'on_account',
+        'accounting_posted': 1,
+        'items': [
+          {
+            'product_id': productId,
+            'product_name': productName,
+            'quantity': quantity,
+            'unit_price': unitPrice,
+            'line_total': total,
+            'landed_cost': landedCost,
+          }
+        ],
+      };
+      await _enqueueSyncOperation(
+        txn,
+        entityName: 'invoices',
+        entityId: invoiceId,
+        type: 'create',
+        payload: invoicePayload,
+      );
+      await _enqueueSyncOperation(
+        txn,
+        entityName: 'products',
+        entityId: productId,
+        type: 'update',
+        payload: {...product, 'stock_qty': updatedQty, 'updated_at': timestamp},
+      );
+
+      result.addAll({
+        'product': {
+          'id': productId,
+          'name': productName,
+          'quantity': quantity,
+        },
+        'invoice': {
+          'id': invoiceId,
+          'number': invoiceNumber,
+          'total': total,
+        },
+        'journalEntry': {
+          'id': saleJournalEntryId,
+          'code': 'JE-$saleJournalEntryId',
+          if (cogsJournalEntryId != null) 'cogsId': cogsJournalEntryId,
+        },
+        'syncQueue': {'status': 'queued'},
+      });
+    });
+
+    return result;
+  }
+
+  static Future<Map<String, dynamic>> saveAiPricingSimulation({
+    required String businessId,
+    required Map<String, dynamic> pricingPayload,
+  }) async {
+    final db = await database();
+    final id = _newTextId('PRS');
+    final createdAt = DateTime.now().toIso8601String();
+    final costs = {
+      'itemBasePrice': _toDouble(pricingPayload['itemBasePrice']),
+      'landedCostPerUnit': _toDouble(pricingPayload['landedCostPerUnit']),
+      'shippingCost': _toDouble(pricingPayload['shippingCost']),
+      'customsCost': _toDouble(pricingPayload['customsCost']),
+      'totalBatchVolumeCbm': _toDouble(pricingPayload['totalBatchVolumeCbm']),
+      'itemVolumeCbm': _toDouble(pricingPayload['itemVolumeCbm']),
+    };
+    final payload = {
+      'id': id,
+      'businessId': businessId,
+      'costs_json': jsonEncode(costs),
+      'margin': _toDouble(pricingPayload['targetMarginPercentage']),
+      'destination': pricingPayload['destination']?.toString(),
+      'suggested_price': _toDouble(pricingPayload['suggestedPricePerUnit']),
+      'created_at': createdAt,
+    };
+
+    await db.transaction((txn) async {
+      await txn.insert('pricing_simulations', payload);
+      await _enqueueSyncOperation(
+        txn,
+        entityName: 'pricing_simulations',
+        entityId: id,
+        type: 'create',
+        payload: {
+          'id': id,
+          'businessId': businessId,
+          'costs': costs,
+          'margin': payload['margin'],
+          'destination': payload['destination'],
+          'suggestedPrice': payload['suggested_price'],
+          'createdAt': createdAt,
+        },
+      );
+    });
+
+    return {
+      'pricingSimulation': {
+        'id': id,
+        'destination': payload['destination'],
+        'suggestedPrice': payload['suggested_price'],
+        'createdAt': createdAt,
+      },
+      'syncQueue': {'status': 'queued'},
+    };
   }
 
   static Future<int> deleteProduct(String businessId, String id) async {
@@ -3841,6 +4360,10 @@ class DBHelper {
     required double amount,
     required String description,
     required String date,
+    String? entryType,
+    String? sourceType,
+    String? sourceId,
+    Map<String, dynamic>? metadata,
   }) async {
     final branchId = BranchContext().currentBranchId;
     final payload = {
@@ -3851,8 +4374,15 @@ class DBHelper {
       'amount': amount,
       'description': description,
       'date': date,
+      'entry_type': entryType,
+      'source_type': sourceType,
+      'source_id': sourceId,
+      'metadata_json': metadata == null ? null : jsonEncode(metadata),
     };
-    final journalEntryId = await db.insert('journal_entries', payload);
+    final journalEntryId = await db.insert(
+      'journal_entries',
+      await _filterToExistingColumns(db, 'journal_entries', payload),
+    );
 
     await db.execute(
       'UPDATE accounts SET balance = balance + ? WHERE id = ? AND businessId = ?',
@@ -4016,6 +4546,52 @@ class DBHelper {
     await _createAiCopilotTables(db);
   }
 
+  static Future<void> _upgradeToV24(Database db) async {
+    await _ensureColumn(
+      db,
+      table: 'journal_entries',
+      column: 'entry_type',
+      definition: 'TEXT',
+    );
+    await _ensureColumn(
+      db,
+      table: 'journal_entries',
+      column: 'source_type',
+      definition: 'TEXT',
+    );
+    await _ensureColumn(
+      db,
+      table: 'journal_entries',
+      column: 'source_id',
+      definition: 'TEXT',
+    );
+    await _ensureColumn(
+      db,
+      table: 'journal_entries',
+      column: 'metadata_json',
+      definition: 'TEXT',
+    );
+    await _createPricingSimulationsTable(db);
+  }
+
+  static Future<void> _createPricingSimulationsTable(
+      DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS pricing_simulations(
+        id TEXT PRIMARY KEY,
+        businessId TEXT,
+        costs_json TEXT,
+        margin REAL,
+        destination TEXT,
+        suggested_price REAL,
+        created_at TEXT
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_pricing_simulations_business_created ON pricing_simulations(businessId, created_at)',
+    );
+  }
+
   static Future<void> _createAiCopilotTables(DatabaseExecutor db) async {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS ai_threads(
@@ -4086,10 +4662,15 @@ class DBHelper {
       )
     ''');
 
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_threads_bus_upd ON ai_threads(businessId, updatedAt)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_messages_thread_crt ON ai_messages(threadId, createdAt)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_memory_items_bus_key ON ai_memory_items(businessId, key)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_action_drafts_bus_stat ON ai_action_drafts(businessId, status)');
-    await db.execute('CREATE INDEX IF NOT EXISTS idx_ai_action_logs_draft_crt ON ai_action_logs(draftId, createdAt)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_ai_threads_bus_upd ON ai_threads(businessId, updatedAt)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_ai_messages_thread_crt ON ai_messages(threadId, createdAt)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_ai_memory_items_bus_key ON ai_memory_items(businessId, key)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_ai_action_drafts_bus_stat ON ai_action_drafts(businessId, status)');
+    await db.execute(
+        'CREATE INDEX IF NOT EXISTS idx_ai_action_logs_draft_crt ON ai_action_logs(draftId, createdAt)');
   }
 }

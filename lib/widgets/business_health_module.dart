@@ -53,12 +53,12 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
     // Deduct for low stock (max 30% reduction)
     final lowStockCount = widget.snapshot.lowStockItems.length;
     healthScore -= (lowStockCount * 8).clamp(0, 30);
-    
+
     // Deduct if trial balance is not balanced
     if (!widget.snapshot.trialBalanceSummary.isBalanced) {
       healthScore -= 15;
     }
-    
+
     healthScore = healthScore.clamp(30, 100);
 
     // Determine status text & colors based on score
@@ -68,18 +68,25 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
     final Color glowColor;
 
     if (healthScore >= 90) {
-      statusText = isAr ? "كل الأنظمة تعمل بكفاءة" : "All Systems Nominal";
-      subtitleText = isAr ? "حالة العمل ممتازة" : "Excellent performance";
+      statusText = isAr
+          ? "ظƒظ„ ط§ظ„ط£ظ†ط¸ظ…ط© طھط¹ظ…ظ„ ط¨ظƒظپط§ط،ط©"
+          : "All Systems Nominal";
+      subtitleText =
+          isAr ? "ط­ط§ظ„ط© ط§ظ„ط¹ظ…ظ„ ظ…ظ…طھط§ط²ط©" : "Excellent performance";
       healthColor = AppTheme.aiGreen;
       glowColor = AppTheme.aiGreen.withValues(alpha: 0.3);
     } else if (healthScore >= 75) {
-      statusText = isAr ? "حالة العمل مستقرة" : "Business State Stable";
-      subtitleText = isAr ? "انتباه بسيط مطلوب" : "Minor attention requested";
+      statusText =
+          isAr ? "ط­ط§ظ„ط© ط§ظ„ط¹ظ…ظ„ ظ…ط³طھظ‚ط±ط©" : "Business State Stable";
+      subtitleText = isAr
+          ? "ط§ظ†طھط¨ط§ظ‡ ط¨ط³ظٹط· ظ…ط·ظ„ظˆط¨"
+          : "Minor attention requested";
       healthColor = AppTheme.aiGold;
       glowColor = AppTheme.aiGold.withValues(alpha: 0.3);
     } else {
-      statusText = isAr ? "يحتاج انتباهك" : "Needs Attention";
-      subtitleText = isAr ? "مطلوب إجراء فوري" : "Immediate action required";
+      statusText = isAr ? "ظٹط­طھط§ط¬ ط§ظ†طھط¨ط§ظ‡ظƒ" : "Needs Attention";
+      subtitleText =
+          isAr ? "ظ…ط·ظ„ظˆط¨ ط¥ط¬ط±ط§ط، ظپظˆط±ظٹ" : "Immediate action required";
       healthColor = AppTheme.aiRed;
       glowColor = AppTheme.aiRed.withValues(alpha: 0.3);
     }
@@ -171,11 +178,11 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
                                 fontSize: 18,
                                 fontWeight: FontWeight.w900,
                                 color: healthColor,
-                                letterSpacing: -0.5,
+                                letterSpacing: 0,
                               ),
                             ),
                             Text(
-                              isAr ? "الحالة" : "HEALTH",
+                              isAr ? "ط§ظ„ط­ط§ظ„ط©" : "HEALTH",
                               style: TextStyle(
                                 fontSize: 8,
                                 fontWeight: FontWeight.bold,
@@ -195,7 +202,9 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
                         Text(
-                          isAr ? "مركز قيادة الأعمال" : "AI Business Core",
+                          isAr
+                              ? "ظ…ط±ظƒط² ظ‚ظٹط§ط¯ط© ط§ظ„ط£ط¹ظ…ط§ظ„"
+                              : "AI Business Core",
                           style: const TextStyle(
                             fontSize: 10,
                             fontWeight: FontWeight.bold,
@@ -206,17 +215,19 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
                         const SizedBox(height: 6),
                         Text(
                           statusText,
-                          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                fontSize: 16,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 16,
+                                  ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           subtitleText,
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                fontSize: 11,
-                              ),
+                          style:
+                              Theme.of(context).textTheme.bodySmall?.copyWith(
+                                    fontSize: 11,
+                                  ),
                         ),
                       ],
                     ),
@@ -237,24 +248,29 @@ class _BusinessHealthModuleState extends State<BusinessHealthModule>
                         context,
                         icon: Icons.trending_up,
                         iconColor: AppTheme.aiBlue,
-                        label: isAr ? "المبيعات" : "Sales",
-                        value: AppFormatters.currency(widget.snapshot.totalSales),
+                        label: isAr ? "ط§ظ„ظ…ط¨ظٹط¹ط§طھ" : "Sales",
+                        value:
+                            AppFormatters.currency(widget.snapshot.totalSales),
                       ),
                       const SizedBox(height: 8),
                       _buildMiniKpi(
                         context,
                         icon: Icons.warning_amber_rounded,
-                        iconColor: lowStockCount > 0 ? AppTheme.aiRed : AppTheme.aiGreen,
-                        label: isAr ? "نواقص المخزون" : "Low Stock",
-                        value: isAr ? "$lowStockCount مواد" : "$lowStockCount items",
+                        iconColor: lowStockCount > 0
+                            ? AppTheme.aiRed
+                            : AppTheme.aiGreen,
+                        label: isAr ? "ظ†ظˆط§ظ‚طµ ط§ظ„ظ…ط®ط²ظˆظ†" : "Low Stock",
+                        value: isAr
+                            ? "$lowStockCount ظ…ظˆط§ط¯"
+                            : "$lowStockCount items",
                       ),
                       const SizedBox(height: 8),
                       _buildMiniKpi(
                         context,
                         icon: Icons.sync,
                         iconColor: AppTheme.aiGreen,
-                        label: isAr ? "المزامنة" : "Sync",
-                        value: isAr ? "مستقرة" : "Stable",
+                        label: isAr ? "ط§ظ„ظ…ط²ط§ظ…ظ†ط©" : "Sync",
+                        value: isAr ? "ظ…ط³طھظ‚ط±ط©" : "Stable",
                       ),
                     ],
                   ),
