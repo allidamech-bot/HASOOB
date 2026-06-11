@@ -47,6 +47,22 @@ enum AiChatMessageType {
   error,
 }
 
+enum _AdvisorIntent {
+  generalHelp,
+  greeting,
+  exportAdvice,
+  pricingAdvice,
+  marginDiscussion,
+  scenarioComparison,
+  profitabilityDiscussion,
+  inventoryDiscussion,
+  customerDiscussion,
+  cashflowDiscussion,
+  transactionPreparation,
+  executionFollowUp,
+  unknown,
+}
+
 class AiChatMessage {
   final String id;
   final AiChatRole role;
@@ -80,6 +96,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _textController = TextEditingController();
   final _chatScrollController = ScrollController();
   final _repository = AiAccountantRepositoryFactory.make();
+  final _advisorContext = _AdvisorSessionContext();
 
   bool _isAnalyzing = false;
   bool _isCommitting = false;
@@ -99,12 +116,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       role: AiChatRole.assistant,
       type: AiChatMessageType.question,
       text:
-          'Tell me what you want to decide or record. I can discuss pricing, export strategy, margins, cash impact, purchases, and sales. I will not change your books until a clear proposal is reviewed and approved.',
+          'Welcome. I can help with pricing, exports, inventory, customer balances, profitability, and preparing accounting operations for review. What would you like to work on?',
       timestamp: DateTime(2026, 6, 11),
       suggestedReplies: [
-        'I want to export chocolate to Saudi Arabia',
-        'Is a 25% margin suitable?',
-        'Prepare a purchase proposal',
+        'Price a shipment',
+        'Compare three scenarios',
+        'Prepare a purchase',
       ],
     ),
   ];
@@ -196,6 +213,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
       setState(() {
         _activeProposal = proposal;
+        _advisorContext.latestProposal = proposal;
+        _rememberProposalContext(proposal);
         _addPreviewLedgerRow(proposal);
       });
       _appendMessage(
@@ -228,6 +247,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       'convert',
       'quotation',
       'quote',
+      'حول',
+      'حولها',
     ]);
     final proposal = _activeProposal ?? _confirmationProposal;
 
@@ -384,6 +405,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         if (clearActive && !result.requiresUserConfirmation) {
           _activeProposal = null;
         }
+        _advisorContext.latestTopic = _AdvisorIntent.executionFollowUp;
         _isCommitting = false;
         _markPreviewRow(result.success);
       });
@@ -1384,6 +1406,83 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   _AdvisorResponse? _buildAdvisoryResponse(String text) {
     final normalized = _normalized(text);
+    if (_isClearTransactionCommand(normalized) &&
+        !_isPreparationRequest(normalized)) {
+      return null;
+    }
+
+    final numericFollowUp = _buildNumericFollowUpResponse(text);
+    if (numericFollowUp != null) return numericFollowUp;
+
+    final intent = _classifyAdvisorIntent(normalized);
+    _rememberContextFromText(text, intent);
+
+    switch (intent) {
+      case _AdvisorIntent.greeting:
+        _advisorContext.latestTopic = intent;
+        return const _AdvisorResponse(
+          type: AiChatMessageType.normal,
+          text:
+              'Welcome. I can help you with pricing, exports, inventory, customer balances, profitability, and preparing accounting operations for review. What would you like to work on?',
+          suggestedReplies: [
+            'Price a shipment',
+            'Review profitability',
+            'Analyze inventory risk',
+          ],
+        );
+      case _AdvisorIntent.generalHelp:
+        _advisorContext.latestTopic = intent;
+        return const _AdvisorResponse(
+          type: AiChatMessageType.recommendation,
+          text:
+              'I can help in five practical areas: pricing shipments, reviewing profitability, preparing purchases or sales for approval, checking inventory risks, and discussing customer balances. Choose one and I will guide you step by step.',
+          suggestedReplies: [
+            'Price a shipment',
+            'Compare three scenarios',
+            'Prepare a purchase',
+          ],
+        );
+      case _AdvisorIntent.exportAdvice:
+        _advisorContext.latestTopic = intent;
+        return _exportAdviceResponse();
+      case _AdvisorIntent.pricingAdvice:
+        _advisorContext.latestTopic = intent;
+        return _pricingAdviceResponse();
+      case _AdvisorIntent.marginDiscussion:
+        _advisorContext.latestTopic = intent;
+        return _marginDiscussionResponse();
+      case _AdvisorIntent.scenarioComparison:
+        _advisorContext.latestTopic = intent;
+        return _scenarioComparisonResponse();
+      case _AdvisorIntent.profitabilityDiscussion:
+        _advisorContext.latestTopic = intent;
+        return _profitabilityResponse();
+      case _AdvisorIntent.inventoryDiscussion:
+        _advisorContext.latestTopic = intent;
+        return _inventoryResponse();
+      case _AdvisorIntent.customerDiscussion:
+        _advisorContext.latestTopic = intent;
+        return _customerResponse();
+      case _AdvisorIntent.cashflowDiscussion:
+        _advisorContext.latestTopic = intent;
+        return _cashflowResponse();
+      case _AdvisorIntent.transactionPreparation:
+        _advisorContext.latestTopic = intent;
+        return _transactionPreparationResponse(normalized);
+      case _AdvisorIntent.executionFollowUp:
+        _advisorContext.latestTopic = intent;
+        return _executionFollowUpResponse();
+      case _AdvisorIntent.unknown:
+        if (_looksLikeAdvisorDiscussion(normalized)) {
+          _advisorContext.latestTopic = intent;
+          return _unknownAdvisorResponse();
+        }
+        return _buildLegacyAdvisoryResponse(text);
+    }
+  }
+
+  _AdvisorResponse? _buildLegacyAdvisoryResponse(String text) {
+    final normalized = _normalized(text);
     if (_isClearTransactionCommand(normalized)) return null;
 
     if (_containsAny(normalized, [
@@ -1461,6 +1560,492 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     return null;
   }
 
+  _AdvisorIntent _classifyAdvisorIntent(String normalized) {
+    if (_containsAny(normalized, [
+      'hello',
+      'hi',
+      'hey',
+      'good morning',
+      'good evening',
+      'مرحبا',
+      'أهلا',
+      'اهلا',
+      'السلام عليكم',
+    ])) {
+      return _AdvisorIntent.greeting;
+    }
+    if (_containsAny(normalized, [
+      'how can you help',
+      'what can you do',
+      'help me',
+      'ساعدني',
+      'ماذا تستطيع',
+      'شو بتقدر',
+    ])) {
+      return _AdvisorIntent.generalHelp;
+    }
+    if (_containsAny(normalized, [
+      'scenario',
+      'scenarios',
+      'compare three',
+      'compare margins',
+      'conservative',
+      'balanced',
+      'aggressive',
+      'سيناريو',
+      'سيناريوهات',
+      'قارن',
+      'محافظ',
+      'متوازن',
+      'هجومي',
+    ])) {
+      return _AdvisorIntent.scenarioComparison;
+    }
+    if (_containsAny(normalized, [
+      'export',
+      'saudi',
+      'market entry',
+      'shipping',
+      'customs',
+      'تصدير',
+      'السعودية',
+      'دخول السوق',
+      'شحن',
+      'جمارك',
+    ])) {
+      return _AdvisorIntent.exportAdvice;
+    }
+    if (_containsAny(normalized, [
+      'margin',
+      '25%',
+      '25 percent',
+      'markup',
+      'هامش',
+      'ربح',
+      'مناسب',
+    ])) {
+      return _AdvisorIntent.marginDiscussion;
+    }
+    if (_containsAny(normalized, [
+      'price',
+      'pricing',
+      'landed cost',
+      'quote price',
+      'سعر',
+      'تسعير',
+      'تكلفة واصلة',
+    ])) {
+      return _AdvisorIntent.pricingAdvice;
+    }
+    if (_containsAny(normalized, [
+      'profit',
+      'profitability',
+      'gross profit',
+      'net profit',
+      'ربحية',
+      'صافي الربح',
+      'مجمل الربح',
+    ])) {
+      return _AdvisorIntent.profitabilityDiscussion;
+    }
+    if (_containsAny(normalized, [
+      'inventory',
+      'stock',
+      'slow moving',
+      'out of stock',
+      'مخزون',
+      'كمية',
+      'بضاعة',
+      'نفاد',
+    ])) {
+      return _AdvisorIntent.inventoryDiscussion;
+    }
+    if (_containsAny(normalized, [
+      'customer',
+      'balance',
+      'payment history',
+      'receivable',
+      'عميل',
+      'زبون',
+      'رصيد',
+      'تحصيل',
+      'مديونية',
+    ])) {
+      return _AdvisorIntent.customerDiscussion;
+    }
+    if (_containsAny(normalized, [
+      'cash flow',
+      'cashflow',
+      'cash',
+      'liquidity',
+      'due invoices',
+      'تدفق نقدي',
+      'سيولة',
+      'كاش',
+      'نقد',
+      'فواتير مستحقة',
+    ])) {
+      return _AdvisorIntent.cashflowDiscussion;
+    }
+    if (_containsAny(normalized, [
+      'prepare',
+      'create proposal',
+      'purchase proposal',
+      'sale proposal',
+      'pricing simulation',
+      'جهز',
+      'حضّر',
+      'حضر',
+      'مقترح',
+      'عملية شراء',
+      'عملية بيع',
+    ])) {
+      return _AdvisorIntent.transactionPreparation;
+    }
+    if (_containsAny(normalized, [
+      'what happened',
+      'what is missing',
+      'explain the impact',
+      'impact',
+      'ماذا حدث',
+      'ما الناقص',
+      'اشرح الأثر',
+    ])) {
+      return _AdvisorIntent.executionFollowUp;
+    }
+    return _AdvisorIntent.unknown;
+  }
+
+  _AdvisorResponse? _buildNumericFollowUpResponse(String text) {
+    final amount = _firstNumber(text);
+    if (amount == null) return null;
+    final topic = _advisorContext.latestTopic;
+    if (topic != _AdvisorIntent.exportAdvice &&
+        topic != _AdvisorIntent.pricingAdvice &&
+        topic != _AdvisorIntent.marginDiscussion &&
+        topic != _AdvisorIntent.scenarioComparison) {
+      return null;
+    }
+
+    final normalized = _normalized(text);
+    if (_containsAny(normalized, ['%', 'percent', 'هامش', 'ربح'])) {
+      _advisorContext.currentMargin = amount;
+      return _marginDiscussionResponse();
+    }
+    return _rememberedCostResponse(amount);
+  }
+
+  _AdvisorResponse _exportAdviceResponse() {
+    final product = _advisorContext.currentProduct ?? 'the product';
+    final destination =
+        _advisorContext.currentDestination ?? 'the target market';
+    return _AdvisorResponse(
+      type: AiChatMessageType.question,
+      text:
+          'Good. Let us build the export decision for $product to $destination step by step. I need the carton cost, estimated shipping cost, customs or import fees, and your goal: fast market entry or higher margin.',
+      suggestedReplies: const [
+        'Carton cost is 45 dollars',
+        'My goal is fast market entry',
+        'Compare three scenarios',
+      ],
+    );
+  }
+
+  _AdvisorResponse _pricingAdviceResponse() {
+    final product = _advisorContext.currentProduct ?? 'this product';
+    return _AdvisorResponse(
+      type: AiChatMessageType.question,
+      text:
+          'For pricing $product, I need four inputs: landed cost or purchase cost, target margin, competitor price range, and currency. Then I can suggest conservative, balanced, and aggressive options without recording anything.',
+      suggestedReplies: const [
+        'Cost is 45 dollars',
+        'Target margin is 25%',
+        'Compare three scenarios',
+      ],
+    );
+  }
+
+  _AdvisorResponse _marginDiscussionResponse() {
+    final margin = _advisorContext.currentMargin?.toStringAsFixed(0) ?? '25';
+    return _AdvisorResponse(
+      type: AiChatMessageType.scenarioComparison,
+      text:
+          '$margin% can be suitable if demand is stable and competition is not aggressive. For a new market, I recommend comparing three scenarios: conservative, balanced, and aggressive. Conservative protects entry speed, balanced protects both sales and profit, and aggressive only works when the product has clear differentiation.',
+      suggestedReplies: const [
+        'Compare three scenarios',
+        'Use fast market entry',
+        'Use higher margin',
+      ],
+    );
+  }
+
+  _AdvisorResponse _scenarioComparisonResponse() {
+    final product = _advisorContext.currentProduct ?? 'the product';
+    final destination = _advisorContext.currentDestination;
+    final destinationPart = destination == null ? '' : ' for $destination';
+    _advisorContext.latestScenarioType = 'three_scenarios';
+    return _AdvisorResponse(
+      type: AiChatMessageType.scenarioComparison,
+      text:
+          'Here is a practical scenario comparison for $product$destinationPart:\n\nConservative: margin direction 15-18%. Advantage: easier market entry and faster customer testing. Risk: weak profit buffer if shipping or returns rise. Use it when you need first orders or distributor adoption.\n\nBalanced: margin direction 22-25%. Advantage: protects profit while keeping the offer realistic. Risk: may be average if competitors are discounting hard. Use it when demand is stable and you want repeatable sales.\n\nAggressive: margin direction 30%+. Advantage: stronger profit per carton. Risk: slower sales and higher rejection from price-sensitive buyers. Use it only when supply is limited, quality is differentiated, or the customer has urgency.',
+      suggestedReplies: const [
+        'Use balanced scenario',
+        'Prepare pricing simulation',
+        'Review profitability',
+      ],
+    );
+  }
+
+  _AdvisorResponse _profitabilityResponse() {
+    return const _AdvisorResponse(
+      type: AiChatMessageType.question,
+      text:
+          'To review profitability, separate gross profit from cash timing. I need selling price, purchase or landed cost, expected quantity, discounts, and any shipping or customs costs not already included.',
+      suggestedReplies: [
+        'Compare three scenarios',
+        'Cost is 45 dollars',
+        'Target margin is 25%',
+      ],
+    );
+  }
+
+  _AdvisorResponse _inventoryResponse() {
+    return const _AdvisorResponse(
+      type: AiChatMessageType.question,
+      text:
+          'For inventory risk, I need the product name, current stock quantity, average sales speed, and next replenishment date. The key question is whether the risk is stockout, slow movement, or cash tied up in stock.',
+      suggestedReplies: [
+        'Analyze inventory risk',
+        'Review slow-moving stock',
+        'Prepare a purchase',
+      ],
+    );
+  }
+
+  _AdvisorResponse _customerResponse() {
+    return const _AdvisorResponse(
+      type: AiChatMessageType.question,
+      text:
+          'For customer balance discussion, I need the customer name, current balance, oldest unpaid invoice, and recent payment behavior. Then we can decide whether to offer credit, request payment first, or continue normally.',
+      suggestedReplies: [
+        'Review customer balance',
+        'Discuss payment terms',
+        'Prepare a sale',
+      ],
+    );
+  }
+
+  _AdvisorResponse _cashflowResponse() {
+    return const _AdvisorResponse(
+      type: AiChatMessageType.question,
+      text:
+          'For cash flow, focus on timing. I need available cash, due customer invoices, upcoming supplier payments, and planned purchases. Then we can decide what can be paid now and what should wait.',
+      suggestedReplies: [
+        'Review due invoices',
+        'Plan upcoming purchases',
+        'Discuss cash risk',
+      ],
+    );
+  }
+
+  _AdvisorResponse _transactionPreparationResponse(String normalized) {
+    if (_containsAny(normalized, ['sale', 'بيع', 'عملية بيع'])) {
+      return const _AdvisorResponse(
+        type: AiChatMessageType.question,
+        text:
+            'I can prepare a sale proposal for review. Please provide product, quantity, selling price, customer name, and whether payment is cash or credit. I will not execute it until you approve the proposal card.',
+        suggestedReplies: [
+          'Prepare a sale',
+          'Discuss customer balance',
+          'Analyze inventory risk',
+        ],
+      );
+    }
+    if (_containsAny(normalized, ['pricing', 'تسعير', 'price'])) {
+      return _pricingAdviceResponse();
+    }
+    return const _AdvisorResponse(
+      type: AiChatMessageType.question,
+      text:
+          'I can prepare a purchase proposal for review. Please provide product, quantity, unit cost or total amount, supplier if available, and whether it was paid cash or remains payable.',
+      suggestedReplies: [
+        'Prepare a purchase',
+        'Price a shipment',
+        'Compare three scenarios',
+      ],
+    );
+  }
+
+  _AdvisorResponse _executionFollowUpResponse() {
+    final proposal = _advisorContext.latestProposal;
+    if (proposal == null) {
+      return const _AdvisorResponse(
+        type: AiChatMessageType.confirmation,
+        text:
+            'There is no completed proposal in this conversation yet. We can prepare a purchase, sale, or pricing simulation first, then you can approve it after review.',
+        suggestedReplies: [
+          'Prepare a purchase',
+          'Prepare a sale',
+          'Run pricing simulation',
+        ],
+      );
+    }
+    return _AdvisorResponse(
+      type: AiChatMessageType.recommendation,
+      text:
+          'The latest proposal is a ${proposal.actionType}. Review the proposal card details first: product, quantity, amount, and any required confirmation. If it looks correct, use approve or save and it will continue through the guarded execution flow.',
+      suggestedReplies: const [
+        'Approve',
+        'Change details',
+        'Explain accounting impact',
+      ],
+    );
+  }
+
+  _AdvisorResponse _rememberedCostResponse(double amount) {
+    _advisorContext.currentCost = amount;
+    final product = _advisorContext.currentProduct ?? 'the product';
+    final destination = _advisorContext.currentDestination;
+    final route = destination == null ? '' : ' for $destination';
+    return _AdvisorResponse(
+      type: AiChatMessageType.question,
+      text:
+          'Got it. I will treat ${amount.toStringAsFixed(2)} as the carton cost for $product$route. To continue pricing safely, I still need estimated shipping cost, customs or import fees, currency, and whether your goal is fast entry or higher margin.',
+      suggestedReplies: const [
+        'Shipping is 1200 dollars',
+        'Customs are 300 dollars',
+        'Compare three scenarios',
+      ],
+    );
+  }
+
+  _AdvisorResponse _unknownAdvisorResponse() {
+    return const _AdvisorResponse(
+      type: AiChatMessageType.question,
+      text:
+          'I can help, but I need to know the business area first. Are we discussing pricing, export, profitability, inventory, customer balances, cash flow, or preparing a purchase or sale for review?',
+      suggestedReplies: [
+        'Price a shipment',
+        'Review profitability',
+        'Analyze inventory risk',
+      ],
+    );
+  }
+
+  void _rememberContextFromText(String text, _AdvisorIntent intent) {
+    final normalized = _normalized(text);
+    final product = _extractProduct(normalized);
+    if (product != null) _advisorContext.currentProduct = product;
+    final destination = _extractDestination(normalized);
+    if (destination != null) _advisorContext.currentDestination = destination;
+    final margin = _extractMargin(normalized);
+    if (margin != null) _advisorContext.currentMargin = margin;
+    final customer = _extractCustomer(text);
+    if (customer != null) _advisorContext.latestCustomer = customer;
+    if (intent == _AdvisorIntent.scenarioComparison) {
+      _advisorContext.latestScenarioType = 'three_scenarios';
+    }
+  }
+
+  void _rememberProposalContext(AiProposalModel proposal) {
+    final inventory = proposal.inventoryPayload;
+    final customer = proposal.customerPayload;
+    final pricing = proposal.pricingPayload;
+    if (inventory != null) {
+      final name = inventory['name']?.toString();
+      if (name != null && name.trim().isNotEmpty) {
+        _advisorContext.currentProduct = name.trim();
+      }
+    }
+    if (customer != null) {
+      final name = customer['name']?.toString();
+      if (name != null && name.trim().isNotEmpty) {
+        _advisorContext.latestCustomer = name.trim();
+      }
+    }
+    if (pricing != null) {
+      final destination = pricing['destination']?.toString();
+      if (destination != null && destination.trim().isNotEmpty) {
+        _advisorContext.currentDestination = destination.trim();
+      }
+      final margin = (pricing['targetMarginPercentage'] as num?)?.toDouble();
+      if (margin != null) _advisorContext.currentMargin = margin;
+    }
+  }
+
+  String? _extractProduct(String normalized) {
+    final products = <String, String>{
+      'chocolate': 'chocolate',
+      'شوكولاتة': 'chocolate',
+      'شوكولاته': 'chocolate',
+      'carton': 'cartons',
+      'كرتون': 'cartons',
+    };
+    for (final entry in products.entries) {
+      if (normalized.contains(entry.key)) return entry.value;
+    }
+    return null;
+  }
+
+  String? _extractDestination(String normalized) {
+    if (normalized.contains('saudi') || normalized.contains('السعودية')) {
+      return 'Saudi Arabia';
+    }
+    if (normalized.contains('afghanistan') ||
+        normalized.contains('أفغانستان') ||
+        normalized.contains('افغانستان')) {
+      return 'Afghanistan';
+    }
+    if (normalized.contains('turkey') || normalized.contains('تركيا')) {
+      return 'Turkey';
+    }
+    return null;
+  }
+
+  double? _extractMargin(String normalized) {
+    if (!normalized.contains('%') &&
+        !normalized.contains('percent') &&
+        !normalized.contains('margin') &&
+        !normalized.contains('هامش')) {
+      return null;
+    }
+    return _firstNumber(normalized);
+  }
+
+  String? _extractCustomer(String text) {
+    final match = RegExp(
+      r'(?:customer|client|عميل|زبون)\s+([A-Za-z\u0600-\u06FF ]{2,32})',
+      caseSensitive: false,
+    ).firstMatch(text);
+    return match?.group(1)?.trim();
+  }
+
+  double? _firstNumber(String text) {
+    final match = RegExp(r'(\d+(?:[.,]\d+)?)').firstMatch(text);
+    if (match == null) return null;
+    return double.tryParse(match.group(1)!.replaceAll(',', '.'));
+  }
+
+  bool _looksLikeAdvisorDiscussion(String normalized) {
+    if (normalized.length < 3) return false;
+    if (_containsAny(normalized, [
+      '?',
+      'what',
+      'why',
+      'how',
+      'should',
+      'can i',
+      'هل',
+      'كيف',
+      'ماذا',
+      'ليش',
+      'ممكن',
+    ])) {
+      return true;
+    }
+    return !_isClearTransactionCommand(normalized);
+  }
+
   bool _isExecutionIntent(String text) {
     final normalized = _normalized(text);
     return _containsAny(normalized, [
@@ -1470,6 +2055,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       'commit',
       'confirm',
       'convert',
+      'حول',
+      'حولها',
       'نفذ',
       'اعتمد',
       'احفظ',
@@ -1502,6 +2089,31 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       'عرض سعر',
       'تسعير',
       'احسب سعر',
+      'اشتريت',
+      'اشتر',
+      'شراء',
+      'بعت',
+      'بيع',
+      'فاتورة',
+      'عرض سعر',
+      'تسعير',
+      'احسب سعر',
+    ]);
+  }
+
+  bool _isPreparationRequest(String normalized) {
+    return _containsAny(normalized, [
+      'prepare',
+      'create proposal',
+      'purchase proposal',
+      'sale proposal',
+      'prepare purchase',
+      'prepare sale',
+      'prepare pricing',
+      'جهز',
+      'حضّر',
+      'حضر',
+      'مقترح',
     ]);
   }
 
@@ -1615,4 +2227,15 @@ class _AdvisorResponse {
     required this.text,
     this.suggestedReplies = const [],
   });
+}
+
+class _AdvisorSessionContext {
+  String? currentProduct;
+  String? currentDestination;
+  double? currentMargin;
+  double? currentCost;
+  String? latestScenarioType;
+  AiProposalModel? latestProposal;
+  String? latestCustomer;
+  _AdvisorIntent? latestTopic;
 }
