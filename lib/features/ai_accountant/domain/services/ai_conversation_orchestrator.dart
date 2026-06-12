@@ -7,6 +7,7 @@ import '../../../../core/business/business_context.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/tools/financial_tools.dart';
 import 'ai_evidence_bundle.dart';
+import 'ai_response_metadata.dart';
 import 'ai_tool_executor.dart';
 import 'ai_tool_planner.dart';
 import 'financial_reasoning_engine.dart';
@@ -131,6 +132,7 @@ class AiAdvisorResponse {
   final List<AiDecisionOption> decisionOptions;
   final AiConversationMemory memory;
   final bool shouldPrepareProposal;
+  final AiResponseMetadata? metadata;
 
   const AiAdvisorResponse({
     required this.mode,
@@ -139,7 +141,29 @@ class AiAdvisorResponse {
     this.suggestedReplies = const [],
     this.decisionOptions = const [],
     this.shouldPrepareProposal = false,
+    this.metadata,
   });
+
+  AiAdvisorResponse copyWith({
+    AiAdvisorMode? mode,
+    String? text,
+    List<String>? suggestedReplies,
+    List<AiDecisionOption>? decisionOptions,
+    AiConversationMemory? memory,
+    bool? shouldPrepareProposal,
+    AiResponseMetadata? metadata,
+  }) {
+    return AiAdvisorResponse(
+      mode: mode ?? this.mode,
+      text: text ?? this.text,
+      suggestedReplies: suggestedReplies ?? this.suggestedReplies,
+      decisionOptions: decisionOptions ?? this.decisionOptions,
+      memory: memory ?? this.memory,
+      shouldPrepareProposal:
+          shouldPrepareProposal ?? this.shouldPrepareProposal,
+      metadata: metadata ?? this.metadata,
+    );
+  }
 }
 
 class AiConversationOrchestrator {
@@ -177,7 +201,13 @@ class AiConversationOrchestrator {
     );
 
     if (plan.intent == AiAccountantIntent.executionIntent) {
-      final response = _executionGuardResponse(activeProposal);
+      final response = _executionGuardResponse(activeProposal).copyWith(
+        metadata: AiResponseMetadata.low(
+          missingEvidence: activeProposal == null
+              ? const ['active complete proposal']
+              : const [],
+        ),
+      );
       _rememberAssistant(response);
       return response;
     }
@@ -189,10 +219,12 @@ class AiConversationOrchestrator {
         text: '',
         memory: _memory,
         shouldPrepareProposal: true,
+        metadata: AiResponseMetadata.low(),
       );
     }
 
     final evidence = await _buildEvidenceBundle(plan);
+    final metadata = AiResponseMetadata.fromEvidence(evidence);
     final llmResponse = await _tryGenerateLlmResponse(
       userText: userText,
       plan: plan,
@@ -200,7 +232,8 @@ class AiConversationOrchestrator {
       activeProposal: activeProposal,
     );
     final response =
-        llmResponse ?? _fallbackResponse(normalized, plan, evidence);
+        (llmResponse ?? _fallbackResponse(normalized, plan, evidence))
+            .copyWith(metadata: metadata);
     _rememberAssistant(response);
     return response;
   }

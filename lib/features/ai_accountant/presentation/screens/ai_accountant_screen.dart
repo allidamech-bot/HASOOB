@@ -10,6 +10,8 @@ import '../../../../screens/settings_screen.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
 import '../../domain/services/ai_conversation_orchestrator.dart';
+import '../../domain/services/ai_evidence_bundle.dart';
+import '../../domain/services/ai_response_metadata.dart';
 import '../../domain/services/proposal_execution_engine.dart';
 
 class LedgerEntry {
@@ -59,6 +61,7 @@ class AiChatMessage {
   final List<AiDecisionOption> decisionOptions;
   final AiConversationMemory? memory;
   final List<String> suggestedReplies;
+  final AiResponseMetadata? metadata;
 
   const AiChatMessage({
     required this.id,
@@ -71,6 +74,7 @@ class AiChatMessage {
     this.decisionOptions = const [],
     this.memory,
     this.suggestedReplies = const [],
+    this.metadata,
   });
 }
 
@@ -180,6 +184,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           decisionOptions: advisorResponse.decisionOptions,
           memory: advisorResponse.memory,
           suggestedReplies: advisorResponse.suggestedReplies,
+          metadata: advisorResponse.metadata,
         );
       }
       return;
@@ -193,6 +198,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         decisionOptions: advisorResponse.decisionOptions,
         memory: advisorResponse.memory,
         suggestedReplies: advisorResponse.suggestedReplies,
+        metadata: advisorResponse.metadata,
       );
       return;
     }
@@ -293,6 +299,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     List<AiDecisionOption> decisionOptions = const [],
     AiConversationMemory? memory,
     List<String> suggestedReplies = const [],
+    AiResponseMetadata? metadata,
   }) {
     setState(() {
       _messages.add(
@@ -307,6 +314,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           decisionOptions: decisionOptions,
           memory: memory,
           suggestedReplies: suggestedReplies,
+          metadata: metadata,
         ),
       );
     });
@@ -1391,6 +1399,10 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                     const SizedBox(height: 12),
                     _buildExecutionResultCard(message.executionResult!),
                   ],
+                  if (!isUser && message.metadata != null) ...[
+                    const SizedBox(height: 12),
+                    _buildResponseMetadata(message.metadata!),
+                  ],
                 ],
               ),
             ),
@@ -1400,6 +1412,172 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildResponseMetadata(AiResponseMetadata metadata) {
+    final isMobile = MediaQuery.sizeOf(context).width < 700;
+    final confidenceColor = _confidenceColor(metadata.confidenceLevel);
+    final summary = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _metadataPill(
+          Icons.verified_user_outlined,
+          'Confidence: ${metadata.confidenceLabel}',
+          confidenceColor,
+        ),
+        _metadataPill(
+          Icons.dataset_outlined,
+          'Evidence: ${metadata.evidenceCount} records',
+          textSecondary,
+        ),
+        _metadataPill(
+          Icons.construction_outlined,
+          'Tools Used: ${metadata.executedTools.length}',
+          textSecondary,
+        ),
+      ],
+    );
+
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        summary,
+        if (metadata.executedTools.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _metadataPanel(
+            title: 'Tools Used',
+            rows: metadata.executedToolLabels,
+            icon: Icons.check_circle_outline_rounded,
+            color: tealSuccess,
+          ),
+        ],
+        if (metadata.missingEvidence.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _metadataPanel(
+            title: 'Missing Information',
+            rows: metadata.missingEvidence,
+            icon: Icons.info_outline_rounded,
+            color: goldAccent,
+          ),
+        ],
+      ],
+    );
+
+    if (!isMobile) return details;
+
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.aiCardElevated.withValues(alpha: 0.58),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: premiumStroke),
+        ),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 10),
+          childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+          iconColor: textSecondary,
+          collapsedIconColor: textSecondary,
+          title: summary,
+          children: [
+            if (metadata.executedTools.isNotEmpty)
+              _metadataPanel(
+                title: 'Tools Used',
+                rows: metadata.executedToolLabels,
+                icon: Icons.check_circle_outline_rounded,
+                color: tealSuccess,
+              ),
+            if (metadata.missingEvidence.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _metadataPanel(
+                title: 'Missing Information',
+                rows: metadata.missingEvidence,
+                icon: Icons.info_outline_rounded,
+                color: goldAccent,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _metadataPanel({
+    required String title,
+    required List<String> rows,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.aiCardElevated.withValues(alpha: 0.58),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...rows.map((row) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Icon(icon, color: color, size: 14),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      row,
+                      style: const TextStyle(
+                        color: textSecondary,
+                        fontSize: 11,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _metadataPill(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 13),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -2314,6 +2492,17 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         return AppTheme.aiRed;
       case AiChatMessageType.normal:
         return textSecondary;
+    }
+  }
+
+  Color _confidenceColor(AiEvidenceConfidence confidence) {
+    switch (confidence) {
+      case AiEvidenceConfidence.high:
+        return tealSuccess;
+      case AiEvidenceConfidence.medium:
+        return goldAccent;
+      case AiEvidenceConfidence.low:
+        return AppTheme.aiRed;
     }
   }
 }
