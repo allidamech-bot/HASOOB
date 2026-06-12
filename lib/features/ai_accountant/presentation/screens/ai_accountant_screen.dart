@@ -108,6 +108,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   bool _isCommitting = false;
   AiProposalModel? _activeProposal;
   AiProposalModel? _confirmationProposal;
+  int _contextTabIndex = 0;
 
   static const Color darkBg = AppTheme.aiDeep;
   static const Color darkSurface = AppTheme.aiCard;
@@ -590,29 +591,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               child: Column(
                 children: [
                   _buildPremiumHeader(isDesktop: isDesktop),
-                  Expanded(
-                    child: Padding(
-                      padding: EdgeInsets.fromLTRB(
-                        isDesktop ? 20 : 12,
-                        12,
-                        isDesktop ? 20 : 12,
-                        isDesktop ? 20 : 12,
-                      ),
-                      child: isDesktop
-                          ? Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Expanded(flex: 7, child: _buildAiPanel()),
-                                const SizedBox(width: 16),
-                                SizedBox(
-                                  width: 390,
-                                  child: _buildContextPanel(),
-                                ),
-                              ],
-                            )
-                          : _buildMobileWorkspace(constraints.maxHeight),
-                    ),
-                  ),
+                  Expanded(child: _buildCommandCenter(isDesktop: isDesktop)),
                 ],
               ),
             );
@@ -622,14 +601,424 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  Widget _buildMobileWorkspace(double maxHeight) {
-    return Column(
+  Widget _buildCommandCenter({required bool isDesktop}) {
+    final horizontalPadding = isDesktop ? 20.0 : 12.0;
+    return SingleChildScrollView(
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        12,
+        horizontalPadding,
+        isDesktop ? 20 : 12,
+      ),
+      child: Center(
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 1440),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildBusinessHealthCommandHero(isDesktop: isDesktop),
+              const SizedBox(height: 14),
+              _buildAiDetectedCommandSection(),
+              const SizedBox(height: 14),
+              _buildAiRecommendationsCommandSection(isDesktop: isDesktop),
+              const SizedBox(height: 14),
+              _buildAskAiCommandSection(isDesktop: isDesktop),
+              const SizedBox(height: 14),
+              _buildContextTabsCommandSection(isDesktop: isDesktop),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBusinessHealthCommandHero({required bool isDesktop}) {
+    final score = _businessHealthScore();
+    final hasEvidence = score != null;
+    final statusCards = [
+      _ExecutiveKpiData(
+        label: 'Revenue Status',
+        value: hasEvidence
+            ? _statusForRisk(_latestRisks(), 'profit')
+            : 'No Data Available',
+        icon: Icons.trending_up_rounded,
+        color: hasEvidence ? tealSuccess : textSecondary,
+      ),
+      _ExecutiveKpiData(
+        label: 'Cashflow Status',
+        value:
+            hasEvidence ? _cashflowStatus(_latestRisks()) : 'No Data Available',
+        icon: Icons.payments_outlined,
+        color: hasEvidence ? goldAccent : textSecondary,
+      ),
+      _ExecutiveKpiData(
+        label: 'Inventory Status',
+        value: hasEvidence
+            ? _inventoryStatus(_latestRisks())
+            : 'No Data Available',
+        icon: Icons.inventory_2_outlined,
+        color: hasEvidence ? tealSuccess : textSecondary,
+      ),
+      _ExecutiveKpiData(
+        label: 'Receivables Status',
+        value: hasEvidence
+            ? _receivablesStatus(_latestRisks())
+            : 'No Data Available',
+        icon: Icons.receipt_long_outlined,
+        color: hasEvidence ? AppTheme.warning : textSecondary,
+      ),
+    ];
+
+    return Container(
+      padding: EdgeInsets.all(isDesktop ? 26 : 18),
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: premiumStroke),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.22),
+            blurRadius: 30,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: isDesktop
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(flex: 4, child: _buildScoreStatement(score)),
+                const SizedBox(width: 18),
+                Expanded(flex: 6, child: _buildHealthKpiGrid(statusCards, 4)),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildScoreStatement(score),
+                const SizedBox(height: 16),
+                _buildHealthKpiGrid(statusCards, 2),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildScoreStatement(int? score) {
+    final hasScore = score != null;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppTheme.aiDeep.withValues(alpha: 0.52),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasScore ? goldAccent.withValues(alpha: 0.3) : premiumStroke,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'Business Health Score',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 12),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              hasScore ? '$score / 100' : 'Insufficient Data',
+              style: TextStyle(
+                color: hasScore ? Colors.white : textSecondary,
+                fontSize: hasScore ? 58 : 32,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0,
+              ),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            hasScore
+                ? 'Calculated from existing confidence metadata and detected financial risks.'
+                : 'Ask for a business analysis to load confirmed evidence before scoring.',
+            style: const TextStyle(
+              color: textSecondary,
+              fontSize: 12,
+              height: 1.45,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealthKpiGrid(List<_ExecutiveKpiData> cards, int columns) {
+    return GridView.count(
+      crossAxisCount: columns,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: columns == 4 ? 1.18 : 1.08,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: cards.map((data) => _ExecutiveKpiCard(data: data)).toList(),
+    );
+  }
+
+  Widget _buildAiDetectedCommandSection() {
+    final findings = _executiveFindings();
+    return _CommandSection(
+      title: 'AI Detected',
+      subtitle: 'Automatic findings from existing risks and insights.',
+      trailing: _statusPill(
+        findings.isEmpty ? 'Clear' : '${findings.length} findings',
+        findings.isEmpty ? tealSuccess : goldAccent,
+      ),
+      child: findings.isEmpty
+          ? const _ExecutiveEmptyLine(
+              icon: Icons.verified_outlined,
+              label: 'No critical issues detected',
+            )
+          : Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: findings
+                  .map((finding) => _ExecutiveFindingTile(label: finding))
+                  .toList(),
+            ),
+    );
+  }
+
+  Widget _buildAiRecommendationsCommandSection({required bool isDesktop}) {
+    final recommendations = _latestRecommendations().take(3).toList();
+    if (recommendations.isEmpty) {
+      return const _CommandSection(
+        title: 'AI Recommendations',
+        subtitle: 'Top executive actions will appear after evidence is loaded.',
+        child: _ExecutiveEmptyLine(
+          icon: Icons.lightbulb_outline,
+          label: 'No Data Available',
+        ),
+      );
+    }
+
+    return _CommandSection(
+      title: 'AI Recommendations',
+      subtitle: 'Top 3 actions only.',
+      trailing: _statusPill('Top 3', tealSuccess),
+      child: GridView.count(
+        crossAxisCount: isDesktop ? 3 : 1,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: isDesktop ? 3.1 : 4.1,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        children: recommendations
+            .map((item) => _ExecutiveRecommendationCard(item: item))
+            .toList(),
+      ),
+    );
+  }
+
+  Widget _buildAskAiCommandSection({required bool isDesktop}) {
+    return _CommandSection(
+      title: 'Ask AI Accountant',
+      subtitle: 'Discuss, analyze, or prepare proposals for guarded review.',
+      trailing: _activeProposal != null
+          ? _statusPill('Proposal ready', goldAccent)
+          : _statusPill('Advisory mode', tealSuccess),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildQuickActions(),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: isDesktop ? 460 : 420,
+            child: Container(
+              decoration: BoxDecoration(
+                color: darkBg.withValues(alpha: 0.52),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: premiumStroke),
+              ),
+              child: _messages.isEmpty
+                  ? _buildPremiumEmptyState()
+                  : _buildChatTimeline(),
+            ),
+          ),
+          if (_isAnalyzing) _buildTypingIndicator(),
+          const SizedBox(height: 12),
+          _buildInputField(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContextTabsCommandSection({required bool isDesktop}) {
+    return _CommandSection(
+      title: 'Context Tabs',
+      subtitle:
+          'Overview, memory, and ledger are separated into one view at a time.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildContextTabBar(),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: isDesktop ? 330 : 300,
+            child: _buildContextTabBody(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContextTabBar() {
+    final tabs = [
+      (Icons.dashboard_outlined, 'Overview'),
+      (Icons.memory_outlined, 'Memory'),
+      (Icons.account_balance_outlined, 'Ledger'),
+    ];
+    return Row(
       children: [
-        Expanded(child: _buildAiPanel(isMobile: true)),
-        const SizedBox(height: 10),
-        _buildMobileContextPanel(maxHeight),
+        for (var i = 0; i < tabs.length; i++) ...[
+          Expanded(
+            child: _ExecutiveTabButton(
+              icon: tabs[i].$1,
+              label: tabs[i].$2,
+              selected: _contextTabIndex == i,
+              onPressed: () => setState(() => _contextTabIndex = i),
+            ),
+          ),
+          if (i != tabs.length - 1) const SizedBox(width: 8),
+        ],
       ],
     );
+  }
+
+  Widget _buildContextTabBody() {
+    switch (_contextTabIndex) {
+      case 1:
+        return SingleChildScrollView(
+          child: _buildBusinessMemoryPanel(_orchestrator.businessMemory),
+        );
+      case 2:
+        return _buildLedgerPanel(isCompact: true, embedded: true);
+      case 0:
+      default:
+        return SingleChildScrollView(
+            child: _buildContextSummary(compact: true));
+    }
+  }
+
+  int? _businessHealthScore() {
+    final metadata = _latestMetadata();
+    if (metadata == null || metadata.evidenceCount == 0) return null;
+
+    var score = switch (metadata.confidenceLevel) {
+      AiEvidenceConfidence.high => 87,
+      AiEvidenceConfidence.medium => 74,
+      AiEvidenceConfidence.low => 58,
+    };
+
+    for (final risk in _latestRisks()) {
+      switch (risk.level) {
+        case AiFinancialRiskLevel.high:
+          score -= 18;
+          break;
+        case AiFinancialRiskLevel.medium:
+          score -= 10;
+          break;
+        case AiFinancialRiskLevel.low:
+          if (risk.title != 'No major risk detected') score -= 4;
+          break;
+      }
+    }
+    return score.clamp(0, 100);
+  }
+
+  AiResponseMetadata? _latestMetadata() {
+    for (final message in _messages.reversed) {
+      if (message.metadata != null) return message.metadata;
+    }
+    return null;
+  }
+
+  String _latestConfidenceLabel() {
+    final metadata = _latestMetadata();
+    return metadata == null ? 'Pending evidence' : metadata.confidenceLabel;
+  }
+
+  List<AiFinancialRisk> _latestRisks() {
+    for (final message in _messages.reversed) {
+      if (message.risks.isNotEmpty) return message.risks;
+    }
+    return const [];
+  }
+
+  List<AiFinancialInsight> _latestInsights() {
+    for (final message in _messages.reversed) {
+      if (message.insights.isNotEmpty) return message.insights;
+    }
+    return const [];
+  }
+
+  List<AiFinancialRecommendation> _latestRecommendations() {
+    for (final message in _messages.reversed) {
+      if (message.recommendations.isNotEmpty) {
+        return message.recommendations;
+      }
+    }
+    return const [];
+  }
+
+  List<String> _executiveFindings() {
+    final risks = _latestRisks()
+        .where((risk) => risk.title != 'No major risk detected')
+        .map((risk) => risk.title)
+        .toList();
+    final insights = _latestInsights().map((insight) => insight.title).toList();
+    return [...risks, ...insights].take(5).toList(growable: false);
+  }
+
+  String _statusForRisk(List<AiFinancialRisk> risks, String keyword) {
+    final lowerKeyword = keyword.toLowerCase();
+    final hasRisk = risks.any((risk) {
+      final text = '${risk.title} ${risk.description}'.toLowerCase();
+      return text.contains(lowerKeyword);
+    });
+    return hasRisk ? 'Needs Review' : 'Stable';
+  }
+
+  String _cashflowStatus(List<AiFinancialRisk> risks) {
+    final hasRisk = risks.any((risk) {
+      final text = '${risk.title} ${risk.description}'.toLowerCase();
+      return text.contains('cash') ||
+          text.contains('invoice') ||
+          text.contains('balance');
+    });
+    return hasRisk ? 'Watch Closely' : 'Stable';
+  }
+
+  String _inventoryStatus(List<AiFinancialRisk> risks) {
+    final hasRisk = risks.any((risk) {
+      final text = '${risk.title} ${risk.description}'.toLowerCase();
+      return text.contains('stock') || text.contains('inventory');
+    });
+    return hasRisk ? 'Needs Attention' : 'Healthy';
+  }
+
+  String _receivablesStatus(List<AiFinancialRisk> risks) {
+    final hasRisk = risks.any((risk) {
+      final text = '${risk.title} ${risk.description}'.toLowerCase();
+      return text.contains('invoice') ||
+          text.contains('customer') ||
+          text.contains('receivable') ||
+          text.contains('balance');
+    });
+    return hasRisk ? 'Needs Follow-Up' : 'Stable';
   }
 
   Widget _buildPremiumHeader({required bool isDesktop}) {
@@ -710,7 +1099,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ),
           ),
           if (isDesktop) ...[
-            _headerMetric('Confidence', '--'),
+            _headerMetric('Confidence', _latestConfidenceLabel()),
             const SizedBox(width: 10),
           ],
           _statusPill(
@@ -795,6 +1184,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildContextPanel() {
     return Container(
       decoration: BoxDecoration(
@@ -812,6 +1202,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildMobileContextPanel(double maxHeight) {
     return Container(
       constraints: BoxConstraints(maxHeight: maxHeight < 720 ? 230 : 300),
@@ -886,33 +1277,37 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             Icons.business_outlined,
             'Business',
             BusinessContext.businessId.isEmpty
-                ? 'Current business'
+                ? 'No Data Available'
                 : BusinessContext.businessId,
           ),
           _contextRow(
             Icons.person_outline,
             'Customer',
-            memory.latestCustomer ?? '-',
+            memory.latestCustomer ?? 'No Data Available',
           ),
           _contextRow(
             Icons.inventory_2_outlined,
             'Product',
-            memory.currentProduct ?? '-',
+            memory.currentProduct ?? 'No Data Available',
           ),
           _contextRow(
             Icons.fact_check_outlined,
             'Active proposal',
             _activeProposal?.actionType ??
                 _confirmationProposal?.actionType ??
-                'None',
+                'No Active Proposal',
           ),
           _contextRow(
             Icons.route_outlined,
             'Active workflow',
-            workflow == null ? 'None' : _workflowTitle(workflow.workflowType),
+            workflow == null
+                ? 'No Active Workflow'
+                : _workflowTitle(workflow.workflowType),
           ),
-          const SizedBox(height: 8),
-          _buildBusinessMemoryPanel(businessMemory),
+          if (!compact) ...[
+            const SizedBox(height: 8),
+            _buildBusinessMemoryPanel(businessMemory),
+          ],
         ],
       ),
     );
@@ -920,13 +1315,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Widget _buildBusinessMemoryPanel(AiBusinessMemory businessMemory) {
     final recentProduct = businessMemory.recentProducts.isEmpty
-        ? '-'
+        ? 'No Data Available'
         : businessMemory.recentProducts.first;
     final recentCustomer = businessMemory.recentCustomers.isEmpty
-        ? '-'
+        ? 'No Data Available'
         : businessMemory.recentCustomers.first;
     final recentTopic = businessMemory.recentTopics.isEmpty
-        ? '-'
+        ? 'No Data Available'
         : businessMemory.recentTopics.first;
 
     return Container(
@@ -1125,7 +1520,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                               Text(
                                 row.debit > 0
                                     ? row.debit.toStringAsFixed(2)
-                                    : '-',
+                                    : '0.00',
                                 style: const TextStyle(
                                   color: AppTheme.aiRed,
                                   fontSize: 11,
@@ -1137,7 +1532,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                               Text(
                                 row.credit > 0
                                     ? row.credit.toStringAsFixed(2)
-                                    : '-',
+                                    : '0.00',
                                 style: const TextStyle(
                                   color: tealSuccess,
                                   fontSize: 11,
@@ -1170,6 +1565,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildAiPanel({bool isMobile = false}) {
     return Container(
       decoration: BoxDecoration(
@@ -1243,15 +1639,35 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   Widget _buildQuickInsights({required bool isMobile}) {
     final insights = [
       const _InsightData(
-          'Revenue', '\$--', Icons.trending_up_rounded, tealSuccess),
+        'Revenue',
+        'No Data Available',
+        Icons.trending_up_rounded,
+        tealSuccess,
+      ),
       const _InsightData(
-          'Expenses', '\$--', Icons.trending_down_rounded, AppTheme.aiRed),
+        'Expenses',
+        'No Data Available',
+        Icons.trending_down_rounded,
+        AppTheme.aiRed,
+      ),
       const _InsightData(
-          'Profit', '\$--', Icons.account_balance_wallet_outlined, goldAccent),
-      const _InsightData('Pending Invoices', '--', Icons.receipt_long_outlined,
-          AppTheme.warning),
+        'Profit',
+        'No Data Available',
+        Icons.account_balance_wallet_outlined,
+        goldAccent,
+      ),
       const _InsightData(
-          'Low Stock', '--', Icons.inventory_2_outlined, tealSuccess),
+        'Pending Invoices',
+        'No Data Available',
+        Icons.receipt_long_outlined,
+        AppTheme.warning,
+      ),
+      const _InsightData(
+        'Low Stock',
+        'No Data Available',
+        Icons.inventory_2_outlined,
+        tealSuccess,
+      ),
     ];
 
     if (isMobile) {
@@ -2334,7 +2750,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             : AppTheme.aiRed;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppTheme.aiCardElevated,
         borderRadius: BorderRadius.circular(8),
@@ -2856,6 +3272,327 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       case AiEvidenceConfidence.low:
         return AppTheme.aiRed;
     }
+  }
+}
+
+class _CommandSection extends StatelessWidget {
+  const _CommandSection({
+    required this.title,
+    required this.child,
+    this.subtitle,
+    this.trailing,
+  });
+
+  final String title;
+  final String? subtitle;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _AiAccountantScreenState.premiumPanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _AiAccountantScreenState.premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle!,
+                        style: const TextStyle(
+                          color: _AiAccountantScreenState.textSecondary,
+                          fontSize: 12,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: 12),
+                trailing!,
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _ExecutiveKpiData {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _ExecutiveKpiData({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
+  });
+}
+
+class _ExecutiveKpiCard extends StatelessWidget {
+  const _ExecutiveKpiCard({required this.data});
+
+  final _ExecutiveKpiData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color:
+            _AiAccountantScreenState.premiumPanelSoft.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _AiAccountantScreenState.premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: data.color.withValues(alpha: 0.11),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(data.icon, color: data.color, size: 16),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            data.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: _AiAccountantScreenState.textSecondary,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            data.value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExecutiveFindingTile extends StatelessWidget {
+  const _ExecutiveFindingTile({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 220, maxWidth: 360),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _AiAccountantScreenState.goldAccent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _AiAccountantScreenState.goldAccent.withValues(alpha: 0.24),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.auto_awesome_outlined,
+            color: _AiAccountantScreenState.goldAccent,
+            size: 17,
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                height: 1.25,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExecutiveEmptyLine extends StatelessWidget {
+  const _ExecutiveEmptyLine({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _AiAccountantScreenState.premiumPanelSoft.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _AiAccountantScreenState.premiumStroke),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: _AiAccountantScreenState.textSecondary, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _AiAccountantScreenState.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExecutiveRecommendationCard extends StatelessWidget {
+  const _ExecutiveRecommendationCard({required this.item});
+
+  final AiFinancialRecommendation item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color:
+            _AiAccountantScreenState.premiumPanelSoft.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _AiAccountantScreenState.tealSuccess.withValues(alpha: 0.24),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.task_alt_rounded,
+            color: _AiAccountantScreenState.tealSuccess,
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  item.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _AiAccountantScreenState.textSecondary,
+                    fontSize: 11,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExecutiveTabButton extends StatelessWidget {
+  const _ExecutiveTabButton({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onPressed,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected
+        ? _AiAccountantScreenState.goldAccent
+        : _AiAccountantScreenState.textSecondary;
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 15),
+      label: Text(label, overflow: TextOverflow.ellipsis),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: color,
+        side: BorderSide(
+          color: selected
+              ? _AiAccountantScreenState.goldAccent.withValues(alpha: 0.36)
+              : _AiAccountantScreenState.premiumStroke,
+        ),
+        backgroundColor: selected
+            ? _AiAccountantScreenState.goldAccent.withValues(alpha: 0.1)
+            : _AiAccountantScreenState.premiumPanelSoft.withValues(alpha: 0.72),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+      ),
+    );
   }
 }
 
