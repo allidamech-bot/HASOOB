@@ -98,6 +98,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   static const Color textSecondary = AppTheme.aiTextSecondary;
   static const Color borderTerminal = AppTheme.aiCardBorder;
   static const Color tealSuccess = AppTheme.aiGreen;
+  static const Color premiumPanel = Color(0xFF101826);
+  static const Color premiumPanelSoft = Color(0xFF142033);
+  static const Color premiumStroke = Color(0xFF243044);
 
   final List<AiChatMessage> _messages = [
     AiChatMessage(
@@ -545,31 +548,35 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         body: LayoutBuilder(
           builder: (context, constraints) {
             final isDesktop = constraints.maxWidth >= 1000;
-            return Column(
-              children: [
-                _buildTopFinancialRibbon(),
-                Expanded(
-                  child: isDesktop
-                      ? Row(
-                          children: [
-                            Expanded(flex: 3, child: _buildAiPanel()),
-                            Expanded(flex: 2, child: _buildLedgerPanel()),
-                          ],
-                        )
-                      : Column(
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: _buildAiPanel(isMobile: true),
-                            ),
-                            SizedBox(
-                              height: constraints.maxHeight < 700 ? 220 : 280,
-                              child: _buildLedgerPanel(isCompact: true),
-                            ),
-                          ],
-                        ),
-                ),
-              ],
+            return SafeArea(
+              child: Column(
+                children: [
+                  _buildPremiumHeader(isDesktop: isDesktop),
+                  Expanded(
+                    child: Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        isDesktop ? 20 : 12,
+                        12,
+                        isDesktop ? 20 : 12,
+                        isDesktop ? 20 : 12,
+                      ),
+                      child: isDesktop
+                          ? Row(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Expanded(flex: 7, child: _buildAiPanel()),
+                                const SizedBox(width: 16),
+                                SizedBox(
+                                  width: 390,
+                                  child: _buildContextPanel(),
+                                ),
+                              ],
+                            )
+                          : _buildMobileWorkspace(constraints.maxHeight),
+                    ),
+                  ),
+                ],
+              ),
             );
           },
         ),
@@ -577,6 +584,143 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  Widget _buildMobileWorkspace(double maxHeight) {
+    return Column(
+      children: [
+        Expanded(child: _buildAiPanel(isMobile: true)),
+        const SizedBox(height: 10),
+        _buildMobileContextPanel(maxHeight),
+      ],
+    );
+  }
+
+  Widget _buildPremiumHeader({required bool isDesktop}) {
+    return Container(
+      margin:
+          EdgeInsets.fromLTRB(isDesktop ? 20 : 12, 12, isDesktop ? 20 : 12, 0),
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 20 : 14,
+        vertical: isDesktop ? 18 : 14,
+      ),
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: premiumStroke),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.24),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: goldAccent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
+            ),
+            child: const Icon(
+              Icons.account_balance_wallet_outlined,
+              color: goldAccent,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'AI Accountant',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 19,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _miniStatusDot(tealSuccess),
+                    const Text(
+                      'Ready',
+                      style: TextStyle(color: textSecondary, fontSize: 12),
+                    ),
+                    const Text(
+                      '•',
+                      style:
+                          TextStyle(color: AppTheme.aiTextMuted, fontSize: 12),
+                    ),
+                    const Text(
+                      'Context Loaded',
+                      style: TextStyle(color: textSecondary, fontSize: 12),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (isDesktop) ...[
+            _headerMetric('Confidence', '--'),
+            const SizedBox(width: 10),
+          ],
+          _statusPill(
+            _activeProposal != null ? 'Proposal ready' : 'Safe advisory mode',
+            _activeProposal != null ? goldAccent : tealSuccess,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniStatusDot(Color color) {
+    return Container(
+      width: 7,
+      height: 7,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+
+  Widget _headerMetric(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: premiumPanelSoft,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: textSecondary, fontSize: 11),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ignore: unused_element
   Widget _buildTopFinancialRibbon() {
     return SafeArea(
       bottom: false,
@@ -613,19 +757,165 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  Widget _buildLedgerPanel({bool isCompact = false}) {
+  Widget _buildContextPanel() {
+    return Container(
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        children: [
+          _buildContextSummary(),
+          const Divider(color: premiumStroke, height: 1),
+          Expanded(child: _buildLedgerPanel(isCompact: true, embedded: true)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileContextPanel(double maxHeight) {
+    return Container(
+      constraints: BoxConstraints(maxHeight: maxHeight < 720 ? 230 : 300),
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: false,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          iconColor: goldAccent,
+          collapsedIconColor: textSecondary,
+          title: const Text(
+            'Context & ledger',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 14,
+            ),
+          ),
+          subtitle: Text(
+            _activeProposal != null
+                ? 'Active proposal ready'
+                : 'Business context loaded',
+            style: const TextStyle(color: textSecondary, fontSize: 11),
+          ),
+          children: [
+            _buildContextSummary(compact: true),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 170,
+              child: _buildLedgerPanel(isCompact: true, embedded: true),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContextSummary({bool compact = false}) {
+    final memory = _orchestrator.memory;
+    return Padding(
+      padding: EdgeInsets.all(compact ? 12 : 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!compact) ...[
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'CFO context',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                _statusPill('Live', tealSuccess),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+          _contextRow(
+            Icons.business_outlined,
+            'Business',
+            BusinessContext.businessId.isEmpty
+                ? 'Current business'
+                : BusinessContext.businessId,
+          ),
+          _contextRow(
+            Icons.person_outline,
+            'Customer',
+            memory.latestCustomer ?? '-',
+          ),
+          _contextRow(
+            Icons.inventory_2_outlined,
+            'Product',
+            memory.currentProduct ?? '-',
+          ),
+          _contextRow(
+            Icons.fact_check_outlined,
+            'Active proposal',
+            _activeProposal?.actionType ??
+                _confirmationProposal?.actionType ??
+                'None',
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _contextRow(IconData icon, String label, String value) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        children: [
+          Icon(icon, color: textSecondary, size: 16),
+          const SizedBox(width: 9),
+          SizedBox(
+            width: 94,
+            child: Text(
+              label,
+              style: const TextStyle(color: textSecondary, fontSize: 11),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLedgerPanel({bool isCompact = false, bool embedded = false}) {
     return Container(
       padding: EdgeInsets.all(isCompact ? 12 : 16),
       decoration: BoxDecoration(
-        color: darkBg,
-        border: Border(
-          left: isCompact
-              ? BorderSide.none
-              : const BorderSide(color: borderTerminal),
-          top: isCompact
-              ? const BorderSide(color: borderTerminal)
-              : BorderSide.none,
-        ),
+        color: embedded ? Colors.transparent : darkBg,
+        border: embedded
+            ? null
+            : Border(
+                left: isCompact
+                    ? BorderSide.none
+                    : const BorderSide(color: borderTerminal),
+                top: isCompact
+                    ? const BorderSide(color: borderTerminal)
+                    : BorderSide.none,
+              ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -784,42 +1074,139 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Widget _buildAiPanel({bool isMobile = false}) {
     return Container(
-      color: AppTheme.aiNavy,
-      padding: EdgeInsets.all(isMobile ? 14 : 20),
+      decoration: BoxDecoration(
+        color: AppTheme.aiNavy,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: premiumStroke),
+      ),
+      padding: EdgeInsets.all(isMobile ? 12 : 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Advisor chat',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+          _buildWorkspaceIntro(),
+          const SizedBox(height: 14),
+          _buildQuickInsights(isMobile: isMobile),
+          const SizedBox(height: 12),
+          _buildQuickActions(),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: darkBg.withValues(alpha: 0.42),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: premiumStroke),
               ),
-              if (_activeProposal != null)
-                _statusPill('Proposal ready', goldAccent)
-              else
-                _statusPill('Conversation safe', tealSuccess),
-            ],
+              child: _messages.isEmpty
+                  ? _buildPremiumEmptyState()
+                  : _buildChatTimeline(),
+            ),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Discuss decisions freely. Clear purchase, sale, and pricing commands become reviewable proposal cards.',
-            style: TextStyle(color: textSecondary, fontSize: 12, height: 1.4),
-          ),
-          const Divider(color: borderTerminal, height: 22),
-          Expanded(child: _buildChatTimeline()),
           if (_isAnalyzing) _buildTypingIndicator(),
-          const SizedBox(height: 10),
-          _buildQuickPromptsStrip(),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _buildInputField(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWorkspaceIntro() {
+    return Row(
+      children: [
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'AI CFO workspace',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Ask, compare, prepare proposals, then approve through the guarded accounting flow.',
+                style:
+                    TextStyle(color: textSecondary, fontSize: 12, height: 1.35),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        if (_activeProposal != null)
+          _statusPill('Proposal ready', goldAccent)
+        else
+          _statusPill('Advisory only', tealSuccess),
+      ],
+    );
+  }
+
+  Widget _buildQuickInsights({required bool isMobile}) {
+    final insights = [
+      const _InsightData(
+          'Revenue', '\$--', Icons.trending_up_rounded, tealSuccess),
+      const _InsightData(
+          'Expenses', '\$--', Icons.trending_down_rounded, AppTheme.aiRed),
+      const _InsightData(
+          'Profit', '\$--', Icons.account_balance_wallet_outlined, goldAccent),
+      const _InsightData('Pending Invoices', '--', Icons.receipt_long_outlined,
+          AppTheme.warning),
+      const _InsightData(
+          'Low Stock', '--', Icons.inventory_2_outlined, tealSuccess),
+    ];
+
+    if (isMobile) {
+      return SizedBox(
+        height: 78,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: insights.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (context, index) => _InsightCard(data: insights[index]),
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GridView.count(
+          crossAxisCount: constraints.maxWidth > 820 ? 5 : 3,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: constraints.maxWidth > 820 ? 2.45 : 2.25,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: insights.map((data) => _InsightCard(data: data)).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildQuickActions() {
+    final actions = [
+      ('Analyze Profitability', Icons.analytics_outlined),
+      ('Cash Flow', Icons.payments_outlined),
+      ('Low Stock', Icons.inventory_outlined),
+      ('Customer Balances', Icons.people_alt_outlined),
+      ('Top Products', Icons.leaderboard_outlined),
+    ];
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: actions.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final action = actions[index];
+          return _QuickActionChip(
+            label: action.$1,
+            icon: action.$2,
+            onPressed: _isAnalyzing || _isCommitting
+                ? null
+                : () => _processAiCommand(customText: action.$1),
+          );
+        },
       ),
     );
   }
@@ -827,10 +1214,76 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   Widget _buildChatTimeline() {
     return ListView.separated(
       controller: _chatScrollController,
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(14),
       itemCount: _messages.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => const SizedBox(height: 16),
       itemBuilder: (context, index) => _buildChatMessage(_messages[index]),
+    );
+  }
+
+  Widget _buildPremiumEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: goldAccent.withValues(alpha: 0.11),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
+              ),
+              child: const Icon(
+                Icons.account_balance_outlined,
+                color: goldAccent,
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Welcome to AI Accountant',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Start with profitability, cash flow, stock risk, customer balances, or a transaction proposal.',
+              textAlign: TextAlign.center,
+              style:
+                  TextStyle(color: textSecondary, fontSize: 12, height: 1.45),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                _QuickActionChip(
+                  label: 'Analyze Profitability',
+                  icon: Icons.analytics_outlined,
+                  onPressed: () => _processAiCommand(
+                    customText: 'Analyze Profitability',
+                  ),
+                ),
+                _QuickActionChip(
+                  label: 'Price a shipment',
+                  icon: Icons.price_check_outlined,
+                  onPressed: () => _processAiCommand(
+                    customText: 'Price a shipment',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -838,9 +1291,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final isUser = message.role == AiChatRole.user;
     final alignment = isUser ? Alignment.centerRight : Alignment.centerLeft;
     final bubbleColor =
-        isUser ? goldAccent.withValues(alpha: 0.16) : darkSurface;
+        isUser ? goldAccent.withValues(alpha: 0.14) : premiumPanel;
     final borderColor =
-        isUser ? goldAccent.withValues(alpha: 0.34) : borderTerminal;
+        isUser ? goldAccent.withValues(alpha: 0.34) : premiumStroke;
     final maxWidth = MediaQuery.sizeOf(context).width >= 1000 ? 680.0 : 560.0;
 
     return Align(
@@ -852,11 +1305,23 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
                 color: bubbleColor,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(14),
+                  topRight: const Radius.circular(14),
+                  bottomLeft: Radius.circular(isUser ? 14 : 4),
+                  bottomRight: Radius.circular(isUser ? 4 : 14),
+                ),
                 border: Border.all(color: borderColor),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.12),
+                    blurRadius: 16,
+                    offset: const Offset(0, 8),
+                  ),
+                ],
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -873,15 +1338,30 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
-                          isUser ? 'You' : 'AI Accountant',
-                          style: TextStyle(
-                            color: isUser
-                                ? goldAccent
-                                : _messageColor(message.type),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                          ),
+                        child: Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                isUser ? 'You' : 'AI Accountant',
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: isUser
+                                      ? goldAccent
+                                      : _messageColor(message.type),
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            Text(
+                              _timeLabel(message.timestamp),
+                              style: const TextStyle(
+                                color: AppTheme.aiTextMuted,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -891,8 +1371,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                     message.text,
                     style: const TextStyle(
                       color: Colors.white,
-                      fontSize: 13,
-                      height: 1.45,
+                      fontSize: 13.5,
+                      height: 1.5,
                     ),
                   ),
                   if (message.memory?.hasVisibleContext == true) ...[
@@ -1088,21 +1568,30 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   Widget _buildTypingIndicator() {
-    return const Padding(
-      padding: EdgeInsets.only(top: 8),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 14,
-            height: 14,
-            child: CircularProgressIndicator(color: goldAccent, strokeWidth: 2),
-          ),
-          SizedBox(width: 8),
-          Text(
-            'Preparing a safe response...',
-            style: TextStyle(color: textSecondary, fontSize: 12),
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: premiumPanel,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: premiumStroke),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 14,
+              height: 14,
+              child:
+                  CircularProgressIndicator(color: goldAccent, strokeWidth: 2),
+            ),
+            SizedBox(width: 9),
+            Text(
+              'AI Accountant is preparing a safe response...',
+              style: TextStyle(color: textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -1112,16 +1601,27 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final pricing = proposal.pricingPayload ?? const <String, dynamic>{};
     final inventory = proposal.inventoryPayload ?? const <String, dynamic>{};
     final financial = proposal.financialPayload ?? const <String, dynamic>{};
+    final impactArea = isPricing ? 'Pricing strategy' : 'Ledger and inventory';
+    final riskLevel = proposal.confidenceScore >= 0.85
+        ? 'Low'
+        : proposal.confidenceScore >= 0.65
+            ? 'Medium'
+            : 'High';
+    final riskColor = riskLevel == 'Low'
+        ? tealSuccess
+        : riskLevel == 'Medium'
+            ? AppTheme.warning
+            : AppTheme.aiRed;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.aiCardElevated,
-        borderRadius: BorderRadius.circular(8),
+        color: premiumPanelSoft,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isPricing
-              ? tealSuccess.withValues(alpha: 0.6)
-              : goldAccent.withValues(alpha: 0.55),
+              ? tealSuccess.withValues(alpha: 0.42)
+              : goldAccent.withValues(alpha: 0.42),
         ),
       ),
       child: Column(
@@ -1129,22 +1629,41 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         children: [
           Row(
             children: [
-              Icon(
-                isPricing
-                    ? Icons.price_check_outlined
-                    : Icons.fact_check_outlined,
-                color: isPricing ? tealSuccess : goldAccent,
-                size: 18,
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: (isPricing ? tealSuccess : goldAccent)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isPricing
+                      ? Icons.price_check_outlined
+                      : Icons.fact_check_outlined,
+                  color: isPricing ? tealSuccess : goldAccent,
+                  size: 19,
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  isPricing ? 'Pricing proposal' : 'Accounting proposal',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isPricing ? 'Pricing proposal' : 'Accounting proposal',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    const Text(
+                      'Review required before execution',
+                      style: TextStyle(color: textSecondary, fontSize: 11),
+                    ),
+                  ],
                 ),
               ),
               _statusPill(
@@ -1153,11 +1672,22 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ],
           ),
-          const Divider(color: borderTerminal, height: 22),
+          const SizedBox(height: 14),
           Text(
             proposal.explanation,
-            style:
-                const TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
+            style: const TextStyle(
+                color: Colors.white, fontSize: 12.5, height: 1.5),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _proposalMetaChip(
+                  Icons.domain_verification_outlined, impactArea, tealSuccess),
+              _proposalMetaChip(
+                  Icons.shield_outlined, 'Risk: $riskLevel', riskColor),
+            ],
           ),
           const SizedBox(height: 14),
           if (isPricing) ...[
@@ -1241,6 +1771,32 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 label: const Text('Dismiss'),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _proposalMetaChip(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
           ),
         ],
       ),
@@ -1491,6 +2047,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildQuickPromptsStrip() {
     final prompts = [
       'I want to export chocolate to Saudi Arabia. What do you recommend?',
@@ -1667,6 +2224,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     return value.toLowerCase().trim();
   }
 
+  String _timeLabel(DateTime timestamp) {
+    final hour = timestamp.hour.toString().padLeft(2, '0');
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
+  }
+
   Map<String, dynamic> _asMap(dynamic value) {
     if (value is Map<String, dynamic>) return value;
     if (value is Map) return Map<String, dynamic>.from(value);
@@ -1752,5 +2315,107 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       case AiChatMessageType.normal:
         return textSecondary;
     }
+  }
+}
+
+class _InsightData {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _InsightData(this.label, this.value, this.icon, this.color);
+}
+
+class _InsightCard extends StatelessWidget {
+  const _InsightCard({required this.data});
+
+  final _InsightData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 148,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _AiAccountantScreenState.premiumPanel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _AiAccountantScreenState.premiumStroke),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: data.color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(data.icon, color: data.color, size: 17),
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  data.label,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _AiAccountantScreenState.textSecondary,
+                    fontSize: 10.5,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  data.value,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActionChip extends StatelessWidget {
+  const _QuickActionChip({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 15),
+      label: Text(
+        label,
+        overflow: TextOverflow.ellipsis,
+      ),
+      style: OutlinedButton.styleFrom(
+        foregroundColor: Colors.white,
+        disabledForegroundColor: _AiAccountantScreenState.textSecondary,
+        side: const BorderSide(color: _AiAccountantScreenState.premiumStroke),
+        backgroundColor:
+            _AiAccountantScreenState.premiumPanelSoft.withValues(alpha: 0.82),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+      ),
+    );
   }
 }
