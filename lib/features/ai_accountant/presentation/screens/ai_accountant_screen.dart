@@ -11,7 +11,9 @@ import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
 import '../../domain/services/ai_conversation_orchestrator.dart';
 import '../../domain/services/ai_evidence_bundle.dart';
+import '../../domain/services/ai_insight_generator.dart';
 import '../../domain/services/ai_response_metadata.dart';
+import '../../domain/services/ai_risk_detector.dart';
 import '../../domain/services/proposal_execution_engine.dart';
 
 class LedgerEntry {
@@ -62,6 +64,9 @@ class AiChatMessage {
   final AiConversationMemory? memory;
   final List<String> suggestedReplies;
   final AiResponseMetadata? metadata;
+  final List<AiFinancialInsight> insights;
+  final List<AiFinancialRisk> risks;
+  final List<AiFinancialRecommendation> recommendations;
 
   const AiChatMessage({
     required this.id,
@@ -75,6 +80,9 @@ class AiChatMessage {
     this.memory,
     this.suggestedReplies = const [],
     this.metadata,
+    this.insights = const [],
+    this.risks = const [],
+    this.recommendations = const [],
   });
 }
 
@@ -185,6 +193,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           memory: advisorResponse.memory,
           suggestedReplies: advisorResponse.suggestedReplies,
           metadata: advisorResponse.metadata,
+          insights: advisorResponse.insights,
+          risks: advisorResponse.risks,
+          recommendations: advisorResponse.recommendations,
         );
       }
       return;
@@ -199,6 +210,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         memory: advisorResponse.memory,
         suggestedReplies: advisorResponse.suggestedReplies,
         metadata: advisorResponse.metadata,
+        insights: advisorResponse.insights,
+        risks: advisorResponse.risks,
+        recommendations: advisorResponse.recommendations,
       );
       return;
     }
@@ -300,6 +314,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     AiConversationMemory? memory,
     List<String> suggestedReplies = const [],
     AiResponseMetadata? metadata,
+    List<AiFinancialInsight> insights = const [],
+    List<AiFinancialRisk> risks = const [],
+    List<AiFinancialRecommendation> recommendations = const [],
   }) {
     setState(() {
       _messages.add(
@@ -315,6 +332,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           memory: memory,
           suggestedReplies: suggestedReplies,
           metadata: metadata,
+          insights: insights,
+          risks: risks,
+          recommendations: recommendations,
         ),
       );
     });
@@ -1403,6 +1423,17 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                     const SizedBox(height: 12),
                     _buildResponseMetadata(message.metadata!),
                   ],
+                  if (!isUser &&
+                      (message.insights.isNotEmpty ||
+                          message.risks.isNotEmpty ||
+                          message.recommendations.isNotEmpty)) ...[
+                    const SizedBox(height: 12),
+                    _buildAiInsightsPanel(
+                      insights: message.insights,
+                      risks: message.risks,
+                      recommendations: message.recommendations,
+                    ),
+                  ],
                 ],
               ),
             ),
@@ -1413,6 +1444,144 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildAiInsightsPanel({
+    required List<AiFinancialInsight> insights,
+    required List<AiFinancialRisk> risks,
+    required List<AiFinancialRecommendation> recommendations,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.aiCardElevated.withValues(alpha: 0.62),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: tealSuccess.withValues(alpha: 0.26)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'AI Insights',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          if (insights.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: insights.take(4).map(_insightCard).toList(),
+            ),
+          ],
+          if (risks.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _insightSection(
+              title: 'Risks',
+              rows: risks
+                  .take(3)
+                  .map((risk) => '${risk.levelLabel}: ${risk.title}')
+                  .toList(),
+              icon: Icons.warning_amber_rounded,
+              color: goldAccent,
+            ),
+          ],
+          if (recommendations.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _insightSection(
+              title: 'Recommendations',
+              rows: recommendations.take(3).map((item) => item.title).toList(),
+              icon: Icons.task_alt_rounded,
+              color: tealSuccess,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _insightCard(AiFinancialInsight insight) {
+    return Container(
+      width: 190,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: premiumPanelSoft.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            insight.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            insight.description,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: textSecondary,
+              fontSize: 10.5,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _insightSection({
+    required String title,
+    required List<String> rows,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: textSecondary,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 6),
+        ...rows.map((row) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 5),
+            child: Row(
+              children: [
+                Icon(icon, color: color, size: 14),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    row,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
     );
   }
 

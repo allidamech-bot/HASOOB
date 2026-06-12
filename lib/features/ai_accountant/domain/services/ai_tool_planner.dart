@@ -112,8 +112,13 @@ class AiToolPlanner {
       'how is the business',
       'financial overview',
       'business doing',
+      'analyze business',
+      'business report',
       'overview',
       'summary',
+      'كيف وضع',
+      'أعطني تقرير',
+      'حلل النشاط',
       'وضع الشركة',
       'ملخص مالي',
     ])) {
@@ -233,6 +238,12 @@ class AiToolPlanner {
             reason: 'Check inventory exposure and stock risk.',
             required: false,
             parameters: {...base, 'lowStockOnly': true, 'limit': 20},
+          ),
+          AiToolStep(
+            toolName: 'getCustomers',
+            reason: 'Check customer balance and receivables risk.',
+            required: false,
+            parameters: {...base, 'limit': 20},
           ),
         ];
       case AiAccountantIntent.profitabilityAnalysis:

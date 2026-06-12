@@ -7,7 +7,10 @@ import '../../../../core/business/business_context.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/tools/financial_tools.dart';
 import 'ai_evidence_bundle.dart';
+import 'ai_financial_snapshot.dart';
+import 'ai_insight_generator.dart';
 import 'ai_response_metadata.dart';
+import 'ai_risk_detector.dart';
 import 'ai_tool_executor.dart';
 import 'ai_tool_planner.dart';
 import 'financial_reasoning_engine.dart';
@@ -133,6 +136,10 @@ class AiAdvisorResponse {
   final AiConversationMemory memory;
   final bool shouldPrepareProposal;
   final AiResponseMetadata? metadata;
+  final AiFinancialSnapshot? financialSnapshot;
+  final List<AiFinancialInsight> insights;
+  final List<AiFinancialRisk> risks;
+  final List<AiFinancialRecommendation> recommendations;
 
   const AiAdvisorResponse({
     required this.mode,
@@ -142,6 +149,10 @@ class AiAdvisorResponse {
     this.decisionOptions = const [],
     this.shouldPrepareProposal = false,
     this.metadata,
+    this.financialSnapshot,
+    this.insights = const [],
+    this.risks = const [],
+    this.recommendations = const [],
   });
 
   AiAdvisorResponse copyWith({
@@ -152,6 +163,10 @@ class AiAdvisorResponse {
     AiConversationMemory? memory,
     bool? shouldPrepareProposal,
     AiResponseMetadata? metadata,
+    AiFinancialSnapshot? financialSnapshot,
+    List<AiFinancialInsight>? insights,
+    List<AiFinancialRisk>? risks,
+    List<AiFinancialRecommendation>? recommendations,
   }) {
     return AiAdvisorResponse(
       mode: mode ?? this.mode,
@@ -162,6 +177,10 @@ class AiAdvisorResponse {
       shouldPrepareProposal:
           shouldPrepareProposal ?? this.shouldPrepareProposal,
       metadata: metadata ?? this.metadata,
+      financialSnapshot: financialSnapshot ?? this.financialSnapshot,
+      insights: insights ?? this.insights,
+      risks: risks ?? this.risks,
+      recommendations: recommendations ?? this.recommendations,
     );
   }
 }
@@ -170,11 +189,15 @@ class AiConversationOrchestrator {
   AiConversationOrchestrator({FinancialTools? financialTools})
       : _toolExecutor = AiToolExecutor(tools: financialTools),
         _toolPlanner = AiToolPlanner(),
-        _reasoningEngine = FinancialReasoningEngine();
+        _reasoningEngine = FinancialReasoningEngine(),
+        _insightGenerator = AiInsightGenerator(),
+        _riskDetector = AiRiskDetector();
 
   final AiToolExecutor _toolExecutor;
   final AiToolPlanner _toolPlanner;
   final FinancialReasoningEngine _reasoningEngine;
+  final AiInsightGenerator _insightGenerator;
+  final AiRiskDetector _riskDetector;
   final List<AiConversationTurn> _history = [];
   AiConversationMemory _memory = const AiConversationMemory();
 
@@ -225,15 +248,38 @@ class AiConversationOrchestrator {
 
     final evidence = await _buildEvidenceBundle(plan);
     final metadata = AiResponseMetadata.fromEvidence(evidence);
+    final snapshot = plan.intent == AiAccountantIntent.financialOverview
+        ? AiFinancialSnapshot.fromEvidence(evidence)
+        : null;
+    final risks =
+        snapshot == null ? <AiFinancialRisk>[] : _riskDetector.detect(snapshot);
+    final insights = snapshot == null
+        ? <AiFinancialInsight>[]
+        : _insightGenerator.generateInsights(snapshot);
+    final recommendations = snapshot == null
+        ? <AiFinancialRecommendation>[]
+        : _insightGenerator.generateRecommendations(
+            snapshot: snapshot,
+            risks: risks,
+          );
     final llmResponse = await _tryGenerateLlmResponse(
       userText: userText,
       plan: plan,
       evidence: evidence,
+      snapshot: snapshot,
+      insights: insights,
+      risks: risks,
+      recommendations: recommendations,
       activeProposal: activeProposal,
     );
     final response =
-        (llmResponse ?? _fallbackResponse(normalized, plan, evidence))
-            .copyWith(metadata: metadata);
+        (llmResponse ?? _fallbackResponse(normalized, plan, evidence)).copyWith(
+      metadata: metadata,
+      financialSnapshot: snapshot,
+      insights: insights,
+      risks: risks,
+      recommendations: recommendations,
+    );
     _rememberAssistant(response);
     return response;
   }
@@ -301,6 +347,10 @@ class AiConversationOrchestrator {
     required String userText,
     required AiToolPlan plan,
     required AiEvidenceBundle evidence,
+    required AiFinancialSnapshot? snapshot,
+    required List<AiFinancialInsight> insights,
+    required List<AiFinancialRisk> risks,
+    required List<AiFinancialRecommendation> recommendations,
     required AiProposalModel? activeProposal,
   }) async {
     const apiKey = String.fromEnvironment(
@@ -322,6 +372,10 @@ class AiConversationOrchestrator {
           userText: userText,
           plan: plan,
           evidence: evidence,
+          snapshot: snapshot,
+          insights: insights,
+          risks: risks,
+          recommendations: recommendations,
           activeProposal: activeProposal,
         )),
       ]);
@@ -612,6 +666,10 @@ class AiConversationOrchestrator {
     required String userText,
     required AiToolPlan plan,
     required AiEvidenceBundle evidence,
+    required AiFinancialSnapshot? snapshot,
+    required List<AiFinancialInsight> insights,
+    required List<AiFinancialRisk> risks,
+    required List<AiFinancialRecommendation> recommendations,
     required AiProposalModel? activeProposal,
   }) {
     return jsonEncode({
@@ -633,6 +691,40 @@ class AiConversationOrchestrator {
         'safetyLevel': plan.safetyLevel.name,
       },
       'evidence': evidence.toJson(),
+      'financialSnapshot': snapshot == null
+          ? null
+          : {
+              'revenue': snapshot.revenue,
+              'expenses': snapshot.expenses,
+              'profit': snapshot.profit,
+              'pendingInvoices': snapshot.pendingInvoices,
+              'overdueInvoices': snapshot.overdueInvoices,
+              'inventoryHealth': snapshot.inventoryHealth,
+              'lowStockProducts': snapshot.lowStockProducts,
+              'customerRisk': snapshot.customerRisk,
+              'confidence': snapshot.confidence.name,
+              'missingData': snapshot.missingData,
+            },
+      'generatedInsights': insights
+          .map((insight) => {
+                'category': insight.category.name,
+                'title': insight.title,
+                'description': insight.description,
+              })
+          .toList(),
+      'detectedRisks': risks
+          .map((risk) => {
+                'level': risk.level.name,
+                'title': risk.title,
+                'description': risk.description,
+              })
+          .toList(),
+      'generatedRecommendations': recommendations
+          .map((recommendation) => {
+                'title': recommendation.title,
+                'description': recommendation.description,
+              })
+          .toList(),
       'recentHistory': _history.take(12).map((turn) => turn.toJson()).toList(),
       'responseContract': {
         'mode':

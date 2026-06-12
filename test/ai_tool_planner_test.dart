@@ -22,6 +22,19 @@ void main() {
         plan.steps.map((step) => step.toolName),
         contains('getFinancialSummary'),
       );
+      expect(plan.steps.map((step) => step.toolName), contains('getInvoices'));
+      expect(plan.steps.map((step) => step.toolName), contains('getProducts'));
+      expect(plan.steps.map((step) => step.toolName), contains('getCustomers'));
+    });
+
+    test('classifies analyze business as automatic financial overview', () {
+      final plan = planner.plan(
+        userText: 'Analyze business',
+        businessId: 'business-1',
+      );
+
+      expect(plan.intent, AiAccountantIntent.financialOverview);
+      expect(plan.requiresTools, isTrue);
     });
 
     test('execution intent requires guard and no read tools', () {

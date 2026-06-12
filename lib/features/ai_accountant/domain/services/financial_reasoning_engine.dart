@@ -1,4 +1,7 @@
 import 'ai_evidence_bundle.dart';
+import 'ai_financial_snapshot.dart';
+import 'ai_insight_generator.dart';
+import 'ai_risk_detector.dart';
 import 'ai_tool_planner.dart';
 
 class FinancialReasoningEngine {
@@ -34,18 +37,24 @@ class FinancialReasoningEngine {
   }
 
   String _financialOverview(AiEvidenceBundle evidence) {
-    final summary = _summary(evidence, 'getFinancialSummary');
-    final invoices = _summary(evidence, 'getInvoices');
-    final products = _summary(evidence, 'getProducts');
+    final snapshot = AiFinancialSnapshot.fromEvidence(evidence);
+    final risks = AiRiskDetector().detect(snapshot);
+    final generator = AiInsightGenerator();
+    final recommendations = generator.generateRecommendations(
+      snapshot: snapshot,
+      risks: risks,
+    );
     if (evidence.confidenceLevel == AiEvidenceConfidence.low) {
       return _notEnoughData(evidence,
-          checked: 'financial summary, invoices, and inventory');
+          checked: 'financial summary, invoices, inventory, and customers');
     }
     return [
-      'What I checked: financial summary, invoices, and inventory.',
-      'What I found: income ${_value(summary, 'totalIncome')}, expenses ${_value(summary, 'totalExpenses')}, profit ${_value(summary, 'totalProfit')}, receivables ${_value(summary, 'accountsReceivable')}, invoices ${_value(invoices, 'count')}, low-stock records ${_value(products, 'count')}.',
-      'Risk: watch receivables and stock exposure before committing to new purchases.',
-      'Recommendation: review cash collection first, then decide whether growth should come from faster-moving stock or improved margin.',
+      'Business Overview',
+      'What I checked: financial summary, invoices, inventory, and customer balances.',
+      'What I found: revenue ${_format(snapshot.revenue)}, expenses ${_format(snapshot.expenses)}, profit ${_format(snapshot.profit)}, pending invoices ${_format(snapshot.pendingInvoices)}, overdue invoices ${snapshot.overdueInvoices ?? 'not available'}, inventory health ${snapshot.inventoryHealth ?? 'not available'}, customer risk ${snapshot.customerRisk ?? 'not available'}.',
+      'Risks: ${risks.map((risk) => '${risk.levelLabel} - ${risk.title}: ${risk.description}').join(' ')}',
+      'Recommendations: ${recommendations.map((item) => '${item.title}: ${item.description}').join(' ')}',
+      'Next Actions: collect overdue balances first, review low-stock items, then decide whether to improve margin or prepare a guarded proposal.',
       _missingLine(evidence),
     ].where((line) => line.isNotEmpty).join('\n');
   }
@@ -152,6 +161,11 @@ class FinancialReasoningEngine {
     if (value == null) return 'not available';
     if (value is num) return value.toStringAsFixed(value % 1 == 0 ? 0 : 2);
     return value.toString();
+  }
+
+  String _format(num? value) {
+    if (value == null) return 'not available';
+    return value.toStringAsFixed(value % 1 == 0 ? 0 : 2);
   }
 
   String _missingLine(AiEvidenceBundle evidence) {
