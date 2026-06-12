@@ -6,6 +6,10 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import '../../../../core/business/business_context.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/tools/financial_tools.dart';
+import 'ai_evidence_bundle.dart';
+import 'ai_tool_executor.dart';
+import 'ai_tool_planner.dart';
+import 'financial_reasoning_engine.dart';
 
 enum AiAdvisorMode {
   chat,
@@ -140,9 +144,13 @@ class AiAdvisorResponse {
 
 class AiConversationOrchestrator {
   AiConversationOrchestrator({FinancialTools? financialTools})
-      : _financialTools = financialTools ?? FinancialTools();
+      : _toolExecutor = AiToolExecutor(tools: financialTools),
+        _toolPlanner = AiToolPlanner(),
+        _reasoningEngine = FinancialReasoningEngine();
 
-  final FinancialTools _financialTools;
+  final AiToolExecutor _toolExecutor;
+  final AiToolPlanner _toolPlanner;
+  final FinancialReasoningEngine _reasoningEngine;
   final List<AiConversationTurn> _history = [];
   AiConversationMemory _memory = const AiConversationMemory();
 
@@ -161,13 +169,21 @@ class AiConversationOrchestrator {
     _remember(userText, activeProposal: activeProposal);
 
     final normalized = _normalized(userText);
-    if (_isExecutionIntent(normalized)) {
+    final plan = _toolPlanner.plan(
+      userText: userText,
+      businessId: BusinessContext.businessId,
+      currentProduct: _memory.currentProduct,
+      latestCustomer: _memory.latestCustomer,
+    );
+
+    if (plan.intent == AiAccountantIntent.executionIntent) {
       final response = _executionGuardResponse(activeProposal);
       _rememberAssistant(response);
       return response;
     }
     if (_isClearTransactionCommand(normalized) &&
-        !_isPreparationRequest(normalized)) {
+        !_isPreparationRequest(normalized) &&
+        !plan.requiresTools) {
       return AiAdvisorResponse(
         mode: AiAdvisorMode.proposalReview,
         text: '',
@@ -176,14 +192,15 @@ class AiConversationOrchestrator {
       );
     }
 
-    final groundedContext = await _buildGroundedContext(normalized);
+    final evidence = await _buildEvidenceBundle(plan);
     final llmResponse = await _tryGenerateLlmResponse(
       userText: userText,
-      groundedContext: groundedContext,
+      plan: plan,
+      evidence: evidence,
       activeProposal: activeProposal,
     );
     final response =
-        llmResponse ?? _fallbackResponse(normalized, groundedContext);
+        llmResponse ?? _fallbackResponse(normalized, plan, evidence);
     _rememberAssistant(response);
     return response;
   }
@@ -221,62 +238,36 @@ class AiConversationOrchestrator {
     _memory = _memory.copyWith(latestTopic: 'execution_follow_up');
   }
 
-  Future<Map<String, dynamic>?> _buildGroundedContext(String normalized) async {
-    if (!_asksForBusinessData(normalized)) return null;
+  Future<AiEvidenceBundle> _buildEvidenceBundle(AiToolPlan plan) async {
+    if (!plan.requiresTools) return AiEvidenceBundle.empty(plan: plan);
+
     try {
-      final businessId = BusinessContext.businessId;
-      if (_containsAny(normalized, ['inventory', 'stock', 'product'])) {
-        final result = await _financialTools.getProducts(
-          businessId: businessId,
-          searchQuery: _memory.currentProduct,
-          lowStockOnly: normalized.contains('low'),
-          limit: 12,
+      final results = <AiExecutedToolEvidence>[];
+      for (final step in plan.steps) {
+        final result = await _toolExecutor.executeTool(
+          ToolCall(name: step.toolName, arguments: step.parameters),
         );
-        return {
-          'tool': 'getProducts',
-          'success': result.success,
-          'data': result.data
-        };
+        results.add(AiExecutedToolEvidence(
+          toolName: result.toolName,
+          success: result.success,
+          reason: step.reason,
+          data: result.data,
+          error: result.error,
+        ));
       }
-      if (_containsAny(normalized, ['customer', 'balance', 'receivable'])) {
-        final result = await _financialTools.getCustomers(
-          businessId: businessId,
-          searchQuery: _memory.latestCustomer,
-          limit: 12,
-        );
-        return {
-          'tool': 'getCustomers',
-          'success': result.success,
-          'data': result.data
-        };
-      }
-      if (_containsAny(normalized, ['invoice', 'due', 'cash'])) {
-        final result = await _financialTools.getInvoices(
-          businessId: businessId,
-          limit: 20,
-        );
-        return {
-          'tool': 'getInvoices',
-          'success': result.success,
-          'data': result.data
-        };
-      }
-      final result = await _financialTools.getFinancialSummary(
-        businessId: businessId,
-      );
-      return {
-        'tool': 'getFinancialSummary',
-        'success': result.success,
-        'data': result.data,
-      };
+      return AiEvidenceBundle.fromToolResults(plan: plan, tools: results);
     } catch (e) {
-      return {'success': false, 'error': 'Financial data is not available: $e'};
+      return AiEvidenceBundle.empty(
+        plan: plan,
+        missingEvidence: ['Financial data is not available: $e'],
+      );
     }
   }
 
   Future<AiAdvisorResponse?> _tryGenerateLlmResponse({
     required String userText,
-    required Map<String, dynamic>? groundedContext,
+    required AiToolPlan plan,
+    required AiEvidenceBundle evidence,
     required AiProposalModel? activeProposal,
   }) async {
     const apiKey = String.fromEnvironment(
@@ -296,7 +287,8 @@ class AiConversationOrchestrator {
       final response = await model.generateContent([
         Content.text(_buildPrompt(
           userText: userText,
-          groundedContext: groundedContext,
+          plan: plan,
+          evidence: evidence,
           activeProposal: activeProposal,
         )),
       ]);
@@ -313,7 +305,8 @@ class AiConversationOrchestrator {
 
   AiAdvisorResponse _fallbackResponse(
     String normalized,
-    Map<String, dynamic>? groundedContext,
+    AiToolPlan plan,
+    AiEvidenceBundle evidence,
   ) {
     if (_containsAny(normalized, ['hello', 'hi', 'hey', 'مرحبا', 'اهلا'])) {
       return AiAdvisorResponse(
@@ -392,17 +385,62 @@ class AiConversationOrchestrator {
         ),
       );
     }
-    if (groundedContext != null) {
+    if (plan.requiresTools) {
       return AiAdvisorResponse(
         mode: AiAdvisorMode.analysis,
-        text:
-            'I checked the available system context. Use this as confirmed system data only where the tool returned records; if a number is missing, we should ask for it before deciding. ${_summarizeGroundedContext(groundedContext)}',
+        text: _reasoningEngine.buildGroundedResponse(
+          plan: plan,
+          evidence: evidence,
+        ),
         suggestedReplies: const [
           'Explain the risk',
           'Compare options',
           'Prepare a proposal',
         ],
         memory: _memory,
+      );
+    }
+    if (plan.intent == AiAccountantIntent.purchasePreparation ||
+        plan.intent == AiAccountantIntent.salePreparation) {
+      return AiAdvisorResponse(
+        mode: AiAdvisorMode.proposalReview,
+        text: _reasoningEngine.buildGroundedResponse(
+          plan: plan,
+          evidence: evidence,
+        ),
+        suggestedReplies: plan.intent == AiAccountantIntent.purchasePreparation
+            ? const [
+                'Product and quantity',
+                'Add unit cost',
+                'Explain purchase impact',
+              ]
+            : const [
+                'Product and quantity',
+                'Add selling price',
+                'Explain sale impact',
+              ],
+        memory: _memory.copyWith(missingData: plan.missingInputs),
+      );
+    }
+    if (plan.intent == AiAccountantIntent.pricingDecision ||
+        plan.intent == AiAccountantIntent.exportDecision) {
+      return AiAdvisorResponse(
+        mode: plan.intent == AiAccountantIntent.exportDecision
+            ? AiAdvisorMode.export
+            : AiAdvisorMode.pricing,
+        text: _reasoningEngine.buildGroundedResponse(
+          plan: plan,
+          evidence: evidence,
+        ),
+        decisionOptions: plan.intent == AiAccountantIntent.pricingDecision
+            ? _scenarioOptions()
+            : const [],
+        suggestedReplies: const [
+          'Compare three scenarios',
+          'Share missing costs',
+          'Prepare pricing simulation',
+        ],
+        memory: _memory.copyWith(missingData: plan.missingInputs),
       );
     }
     return AiAdvisorResponse(
@@ -539,14 +577,29 @@ class AiConversationOrchestrator {
 
   String _buildPrompt({
     required String userText,
-    required Map<String, dynamic>? groundedContext,
+    required AiToolPlan plan,
+    required AiEvidenceBundle evidence,
     required AiProposalModel? activeProposal,
   }) {
     return jsonEncode({
       'userText': userText,
       'memory': _memory.toJson(),
       'activeProposal': activeProposal?.toMap(),
-      'groundedContext': groundedContext,
+      'toolPlan': {
+        'intent': plan.intent.name,
+        'requiresTools': plan.requiresTools,
+        'steps': plan.steps
+            .map((step) => {
+                  'toolName': step.toolName,
+                  'reason': step.reason,
+                  'required': step.required,
+                  'parameters': step.parameters,
+                })
+            .toList(),
+        'missingInputs': plan.missingInputs,
+        'safetyLevel': plan.safetyLevel.name,
+      },
+      'evidence': evidence.toJson(),
       'recentHistory': _history.take(12).map((turn) => turn.toJson()).toList(),
       'responseContract': {
         'mode':
@@ -593,36 +646,7 @@ Return only JSON matching the response contract.
     }).toList();
   }
 
-  String _summarizeGroundedContext(Map<String, dynamic> context) {
-    if (context['success'] != true) {
-      return 'The available tool did not return usable data.';
-    }
-    final data = context['data'];
-    if (data is Map) {
-      final count = data['count'];
-      final total = data['total'] ?? data['totalAmount'] ?? data['totalValue'];
-      return 'Tool: ${context['tool']}. Records: ${count ?? '-'}. Total: ${total ?? '-'}.';
-    }
-    return 'Tool: ${context['tool']}. Data is available for review.';
-  }
-
-  bool _asksForBusinessData(String normalized) {
-    return _containsAny(normalized, [
-      'actual',
-      'current',
-      'how much',
-      'balance',
-      'inventory',
-      'stock',
-      'invoice',
-      'income',
-      'expense',
-      'cash',
-      'customer',
-    ]);
-  }
-
-  bool _isExecutionIntent(String normalized) {
+  bool isExecutionIntent(String normalized) {
     return _containsAny(normalized, [
       'execute',
       'approve',
