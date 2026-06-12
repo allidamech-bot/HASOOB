@@ -13,6 +13,8 @@ import 'ai_response_metadata.dart';
 import 'ai_risk_detector.dart';
 import 'ai_tool_executor.dart';
 import 'ai_tool_planner.dart';
+import 'ai_workflow_manager.dart';
+import 'ai_workflow_session.dart';
 import 'financial_reasoning_engine.dart';
 
 enum AiAdvisorMode {
@@ -140,6 +142,8 @@ class AiAdvisorResponse {
   final List<AiFinancialInsight> insights;
   final List<AiFinancialRisk> risks;
   final List<AiFinancialRecommendation> recommendations;
+  final AiWorkflowSession? workflowSession;
+  final String? proposalDraftText;
 
   const AiAdvisorResponse({
     required this.mode,
@@ -153,6 +157,8 @@ class AiAdvisorResponse {
     this.insights = const [],
     this.risks = const [],
     this.recommendations = const [],
+    this.workflowSession,
+    this.proposalDraftText,
   });
 
   AiAdvisorResponse copyWith({
@@ -167,6 +173,8 @@ class AiAdvisorResponse {
     List<AiFinancialInsight>? insights,
     List<AiFinancialRisk>? risks,
     List<AiFinancialRecommendation>? recommendations,
+    AiWorkflowSession? workflowSession,
+    String? proposalDraftText,
   }) {
     return AiAdvisorResponse(
       mode: mode ?? this.mode,
@@ -181,6 +189,8 @@ class AiAdvisorResponse {
       insights: insights ?? this.insights,
       risks: risks ?? this.risks,
       recommendations: recommendations ?? this.recommendations,
+      workflowSession: workflowSession ?? this.workflowSession,
+      proposalDraftText: proposalDraftText ?? this.proposalDraftText,
     );
   }
 }
@@ -191,18 +201,21 @@ class AiConversationOrchestrator {
         _toolPlanner = AiToolPlanner(),
         _reasoningEngine = FinancialReasoningEngine(),
         _insightGenerator = AiInsightGenerator(),
-        _riskDetector = AiRiskDetector();
+        _riskDetector = AiRiskDetector(),
+        _workflowManager = AiWorkflowManager();
 
   final AiToolExecutor _toolExecutor;
   final AiToolPlanner _toolPlanner;
   final FinancialReasoningEngine _reasoningEngine;
   final AiInsightGenerator _insightGenerator;
   final AiRiskDetector _riskDetector;
+  final AiWorkflowManager _workflowManager;
   final List<AiConversationTurn> _history = [];
   AiConversationMemory _memory = const AiConversationMemory();
 
   AiConversationMemory get memory => _memory;
   List<AiConversationTurn> get history => List.unmodifiable(_history);
+  AiWorkflowSession? get activeWorkflow => _workflowManager.activeSession;
 
   Future<AiAdvisorResponse> generateResponse({
     required String userText,
@@ -216,6 +229,24 @@ class AiConversationOrchestrator {
     _remember(userText, activeProposal: activeProposal);
 
     final normalized = _normalized(userText);
+    final workflowResult = _workflowManager.handleMessage(userText);
+    if (workflowResult != null) {
+      final response = AiAdvisorResponse(
+        mode: workflowResult.isComplete
+            ? AiAdvisorMode.proposalReview
+            : AiAdvisorMode.advice,
+        text: workflowResult.responseText,
+        memory: _memory,
+        suggestedReplies: workflowResult.suggestedReplies,
+        shouldPrepareProposal: workflowResult.proposalDraftText != null,
+        metadata: AiResponseMetadata.low(),
+        workflowSession: workflowResult.session,
+        proposalDraftText: workflowResult.proposalDraftText,
+      );
+      _rememberAssistant(response);
+      return response;
+    }
+
     final plan = _toolPlanner.plan(
       userText: userText,
       businessId: BusinessContext.businessId,

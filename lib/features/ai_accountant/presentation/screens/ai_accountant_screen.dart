@@ -14,6 +14,8 @@ import '../../domain/services/ai_evidence_bundle.dart';
 import '../../domain/services/ai_insight_generator.dart';
 import '../../domain/services/ai_response_metadata.dart';
 import '../../domain/services/ai_risk_detector.dart';
+import '../../domain/services/ai_data_collection_state.dart';
+import '../../domain/services/ai_workflow_session.dart';
 import '../../domain/services/proposal_execution_engine.dart';
 
 class LedgerEntry {
@@ -67,6 +69,7 @@ class AiChatMessage {
   final List<AiFinancialInsight> insights;
   final List<AiFinancialRisk> risks;
   final List<AiFinancialRecommendation> recommendations;
+  final AiWorkflowSession? workflowSession;
 
   const AiChatMessage({
     required this.id,
@@ -83,6 +86,7 @@ class AiChatMessage {
     this.insights = const [],
     this.risks = const [],
     this.recommendations = const [],
+    this.workflowSession,
   });
 }
 
@@ -196,6 +200,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           insights: advisorResponse.insights,
           risks: advisorResponse.risks,
           recommendations: advisorResponse.recommendations,
+          workflowSession: advisorResponse.workflowSession,
         );
       }
       return;
@@ -213,6 +218,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         insights: advisorResponse.insights,
         risks: advisorResponse.risks,
         recommendations: advisorResponse.recommendations,
+        workflowSession: advisorResponse.workflowSession,
       );
       return;
     }
@@ -223,7 +229,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     });
 
     try {
-      final proposal = await _repository.parseNaturalLanguage(text);
+      final proposalText = advisorResponse.proposalDraftText ?? text;
+      final proposal = await _repository.parseNaturalLanguage(proposalText);
       if (!mounted) return;
 
       if (proposal.actionType == 'unknown') {
@@ -317,6 +324,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     List<AiFinancialInsight> insights = const [],
     List<AiFinancialRisk> risks = const [],
     List<AiFinancialRecommendation> recommendations = const [],
+    AiWorkflowSession? workflowSession,
   }) {
     setState(() {
       _messages.add(
@@ -335,6 +343,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           insights: insights,
           risks: risks,
           recommendations: recommendations,
+          workflowSession: workflowSession,
         ),
       );
     });
@@ -1403,6 +1412,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                       height: 1.5,
                     ),
                   ),
+                  if (message.workflowSession != null &&
+                      !message.workflowSession!.isComplete) ...[
+                    const SizedBox(height: 12),
+                    _buildWorkflowCard(message.workflowSession!),
+                  ],
                   if (message.memory?.hasVisibleContext == true) ...[
                     const SizedBox(height: 12),
                     _buildMemoryCard(message.memory!),
@@ -1768,6 +1782,97 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               : () => _processAiCommand(customText: reply),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildWorkflowCard(AiWorkflowSession session) {
+    final collected = session.collectedData.keys
+        .map(AiWorkflowField.label)
+        .toList(growable: false);
+    final waiting = session.waitingField == null
+        ? 'Review'
+        : AiWorkflowField.label(session.waitingField!);
+    final step = session.currentStep.clamp(1, session.totalSteps);
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: goldAccent.withValues(alpha: 0.07),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.route_outlined, color: goldAccent, size: 16),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  '${_workflowTitle(session.workflowType)} Workflow',
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              _statusPill('Step $step of ${session.totalSteps}', goldAccent),
+            ],
+          ),
+          const SizedBox(height: 10),
+          if (collected.isNotEmpty)
+            _workflowLine(
+              Icons.check_circle_outline_rounded,
+              'Collected',
+              collected.join(', '),
+              tealSuccess,
+            ),
+          _workflowLine(
+            Icons.hourglass_empty_rounded,
+            'Waiting',
+            waiting,
+            goldAccent,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _workflowLine(
+    IconData icon,
+    String label,
+    String value,
+    Color color,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 7),
+          SizedBox(
+            width: 72,
+            child: Text(
+              label,
+              style: const TextStyle(color: textSecondary, fontSize: 11),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -2569,6 +2674,23 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   String _normalized(String value) {
     return value.toLowerCase().trim();
+  }
+
+  String _workflowTitle(AiWorkflowType type) {
+    switch (type) {
+      case AiWorkflowType.purchase:
+        return 'Purchase';
+      case AiWorkflowType.sale:
+        return 'Sale';
+      case AiWorkflowType.pricing:
+        return 'Pricing';
+      case AiWorkflowType.inventoryAdjustment:
+        return 'Inventory Adjustment';
+      case AiWorkflowType.customerBalanceInquiry:
+        return 'Customer Balance';
+      case AiWorkflowType.supplierInquiry:
+        return 'Supplier';
+    }
   }
 
   String _timeLabel(DateTime timestamp) {
