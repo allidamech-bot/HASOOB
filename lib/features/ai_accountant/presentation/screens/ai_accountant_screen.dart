@@ -9,6 +9,7 @@ import '../../../../screens/product_details_screen.dart';
 import '../../../../screens/settings_screen.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
+import '../../domain/services/ai_business_memory.dart';
 import '../../domain/services/ai_conversation_orchestrator.dart';
 import '../../domain/services/ai_evidence_bundle.dart';
 import '../../domain/services/ai_insight_generator.dart';
@@ -856,6 +857,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Widget _buildContextSummary({bool compact = false}) {
     final memory = _orchestrator.memory;
+    final businessMemory = _orchestrator.businessMemory;
+    final workflow = _orchestrator.activeWorkflow;
     return Padding(
       padding: EdgeInsets.all(compact ? 12 : 16),
       child: Column(
@@ -903,6 +906,64 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 _confirmationProposal?.actionType ??
                 'None',
           ),
+          _contextRow(
+            Icons.route_outlined,
+            'Active workflow',
+            workflow == null ? 'None' : _workflowTitle(workflow.workflowType),
+          ),
+          const SizedBox(height: 8),
+          _buildBusinessMemoryPanel(businessMemory),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessMemoryPanel(AiBusinessMemory businessMemory) {
+    final recentProduct = businessMemory.recentProducts.isEmpty
+        ? '-'
+        : businessMemory.recentProducts.first;
+    final recentCustomer = businessMemory.recentCustomers.isEmpty
+        ? '-'
+        : businessMemory.recentCustomers.first;
+    final recentTopic = businessMemory.recentTopics.isEmpty
+        ? '-'
+        : businessMemory.recentTopics.first;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.aiCardElevated.withValues(alpha: 0.48),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Business Memory',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() => _orchestrator.clearBusinessMemory());
+                },
+                child: const Text('Clear Memory'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          _contextRow(
+              Icons.inventory_2_outlined, 'Recent Product', recentProduct),
+          _contextRow(Icons.person_outline, 'Recent Customer', recentCustomer),
+          _contextRow(Icons.topic_outlined, 'Recent Topic', recentTopic),
         ],
       ),
     );

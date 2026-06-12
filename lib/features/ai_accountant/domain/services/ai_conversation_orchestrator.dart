@@ -6,6 +6,9 @@ import 'package:google_generative_ai/google_generative_ai.dart';
 import '../../../../core/business/business_context.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/tools/financial_tools.dart';
+import 'ai_business_memory.dart';
+import 'ai_business_memory_manager.dart';
+import 'ai_data_collection_state.dart';
 import 'ai_evidence_bundle.dart';
 import 'ai_financial_snapshot.dart';
 import 'ai_insight_generator.dart';
@@ -202,7 +205,8 @@ class AiConversationOrchestrator {
         _reasoningEngine = FinancialReasoningEngine(),
         _insightGenerator = AiInsightGenerator(),
         _riskDetector = AiRiskDetector(),
-        _workflowManager = AiWorkflowManager();
+        _workflowManager = AiWorkflowManager(),
+        _businessMemoryManager = AiBusinessMemoryManager();
 
   final AiToolExecutor _toolExecutor;
   final AiToolPlanner _toolPlanner;
@@ -210,12 +214,18 @@ class AiConversationOrchestrator {
   final AiInsightGenerator _insightGenerator;
   final AiRiskDetector _riskDetector;
   final AiWorkflowManager _workflowManager;
+  final AiBusinessMemoryManager _businessMemoryManager;
   final List<AiConversationTurn> _history = [];
   AiConversationMemory _memory = const AiConversationMemory();
 
   AiConversationMemory get memory => _memory;
+  AiBusinessMemory get businessMemory => _businessMemoryManager.memory;
   List<AiConversationTurn> get history => List.unmodifiable(_history);
   AiWorkflowSession? get activeWorkflow => _workflowManager.activeSession;
+
+  void clearBusinessMemory() {
+    _businessMemoryManager.clear();
+  }
 
   Future<AiAdvisorResponse> generateResponse({
     required String userText,
@@ -227,15 +237,25 @@ class AiConversationOrchestrator {
       timestamp: DateTime.now(),
     ));
     _remember(userText, activeProposal: activeProposal);
+    _businessMemoryManager.updateFromConversation(
+      text: userText,
+      topic: _memory.latestTopic,
+      product: _memory.currentProduct,
+      customer: _memory.latestCustomer,
+    );
 
     final normalized = _normalized(userText);
     final workflowResult = _workflowManager.handleMessage(userText);
     if (workflowResult != null) {
+      final workflowSession = workflowResult.session;
+      if (workflowResult.isComplete && workflowSession != null) {
+        _businessMemoryManager.updateFromWorkflow(workflowSession);
+      }
       final response = AiAdvisorResponse(
         mode: workflowResult.isComplete
             ? AiAdvisorMode.proposalReview
             : AiAdvisorMode.advice,
-        text: workflowResult.responseText,
+        text: _decorateWorkflowResponse(workflowResult),
         memory: _memory,
         suggestedReplies: workflowResult.suggestedReplies,
         shouldPrepareProposal: workflowResult.proposalDraftText != null,
@@ -342,6 +362,7 @@ class AiConversationOrchestrator {
         currentMargin: margin,
       );
     }
+    _businessMemoryManager.updateFromProposal(proposal);
   }
 
   void markExecutionFollowUp() {
@@ -372,6 +393,19 @@ class AiConversationOrchestrator {
         missingEvidence: ['Financial data is not available: $e'],
       );
     }
+  }
+
+  String _decorateWorkflowResponse(AiWorkflowTurnResult result) {
+    final session = result.session;
+    if (session == null || session.isComplete) return result.responseText;
+    final recentProducts = _businessMemoryManager.memory.recentProducts;
+    final rememberedProduct =
+        recentProducts.isEmpty ? null : recentProducts.first;
+    if (session.waitingField == AiWorkflowField.product &&
+        rememberedProduct != null) {
+      return '${result.responseText}\nهل تقصد المنتج الذي ناقشناه سابقاً: $rememberedProduct؟ إذا نعم، اكتب اسمه أو أعد تأكيده.';
+    }
+    return result.responseText;
   }
 
   Future<AiAdvisorResponse?> _tryGenerateLlmResponse({
@@ -706,6 +740,10 @@ class AiConversationOrchestrator {
     return jsonEncode({
       'userText': userText,
       'memory': _memory.toJson(),
+      'businessMemory': {
+        'summary': _businessMemoryManager.summarizeSafely(),
+        'facts': _businessMemoryManager.memory.toSafeJson(),
+      },
       'activeProposal': activeProposal?.toMap(),
       'toolPlan': {
         'intent': plan.intent.name,
