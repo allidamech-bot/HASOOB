@@ -8,8 +8,12 @@ import '../../data/models/ai_proposal_model.dart';
 import '../../data/tools/financial_tools.dart';
 import 'ai_business_memory.dart';
 import 'ai_business_memory_manager.dart';
+import 'ai_cfo_policy.dart';
+import 'ai_decision_questionnaire.dart';
+import 'ai_decision_scenario.dart';
 import 'ai_data_collection_state.dart';
 import 'ai_evidence_bundle.dart';
+import 'ai_financial_decision_engine.dart';
 import 'ai_financial_snapshot.dart';
 import 'ai_insight_generator.dart';
 import 'ai_response_metadata.dart';
@@ -206,7 +210,10 @@ class AiConversationOrchestrator {
         _insightGenerator = AiInsightGenerator(),
         _riskDetector = AiRiskDetector(),
         _workflowManager = AiWorkflowManager(),
-        _businessMemoryManager = AiBusinessMemoryManager();
+        _businessMemoryManager = AiBusinessMemoryManager(),
+        _decisionEngine = AiFinancialDecisionEngine(),
+        _decisionQuestionnaire = AiDecisionQuestionnaire(),
+        _cfoPolicy = AiCfoPolicy();
 
   final AiToolExecutor _toolExecutor;
   final AiToolPlanner _toolPlanner;
@@ -215,6 +222,9 @@ class AiConversationOrchestrator {
   final AiRiskDetector _riskDetector;
   final AiWorkflowManager _workflowManager;
   final AiBusinessMemoryManager _businessMemoryManager;
+  final AiFinancialDecisionEngine _decisionEngine;
+  final AiDecisionQuestionnaire _decisionQuestionnaire;
+  final AiCfoPolicy _cfoPolicy;
   final List<AiConversationTurn> _history = [];
   AiConversationMemory _memory = const AiConversationMemory();
 
@@ -245,6 +255,12 @@ class AiConversationOrchestrator {
     );
 
     final normalized = _normalized(userText);
+    final decisionResponse = await _tryHandleFinancialDecision(userText);
+    if (decisionResponse != null) {
+      _rememberAssistant(decisionResponse);
+      return decisionResponse;
+    }
+
     final workflowResult = _workflowManager.handleMessage(userText);
     if (workflowResult != null) {
       final workflowSession = workflowResult.session;
@@ -393,6 +409,154 @@ class AiConversationOrchestrator {
         missingEvidence: ['Financial data is not available: $e'],
       );
     }
+  }
+
+  Future<AiAdvisorResponse?> _tryHandleFinancialDecision(
+      String userText) async {
+    final activeDecision = _decisionQuestionnaire.activeState;
+    final isContinuingDecision =
+        activeDecision != null && !activeDecision.isComplete;
+    final isNewDecision = _decisionEngine.isDecisionRequest(userText);
+
+    if (!isContinuingDecision && !isNewDecision) return null;
+
+    AiDecisionQuestionnaireState state;
+    AiFinancialDecisionType decisionType;
+    if (isContinuingDecision) {
+      state = _decisionQuestionnaire.continueWith(userText)!;
+      decisionType = _decisionTypeFromName(state.decisionType);
+    } else {
+      decisionType = _decisionEngine.detectDecisionType(userText);
+      state = _decisionQuestionnaire.start(
+        decisionType: decisionType.name,
+        requiredInputs: _decisionEngine.requiredInputsFor(decisionType),
+        seedInputs: _decisionSeedInputs(userText, decisionType),
+      );
+    }
+
+    final plan = _toolPlanner.plan(
+      userText: userText,
+      businessId: BusinessContext.businessId,
+      currentProduct: _memory.currentProduct,
+      latestCustomer: _memory.latestCustomer,
+    );
+    final evidence = await _buildEvidenceBundle(plan);
+    final result = _decisionEngine.evaluate(
+      decisionType: decisionType,
+      inputs: state.collectedInputs,
+      evidence: evidence,
+      questionnaire: _decisionQuestionnaire,
+    );
+    final policy = _cfoPolicy.evaluate(
+      decisionType: decisionType,
+      inputs: state.collectedInputs,
+    );
+
+    final response = _decisionResponseFromResult(
+      result: result,
+      policyRationale: policy.rationale,
+      policyBlocks: policy.blocksRecommendation,
+      evidence: evidence,
+    );
+    if (!result.needsMoreInformation) _decisionQuestionnaire.clear();
+    return response;
+  }
+
+  AiAdvisorResponse _decisionResponseFromResult({
+    required AiFinancialDecisionResult result,
+    required String policyRationale,
+    required bool policyBlocks,
+    required AiEvidenceBundle evidence,
+  }) {
+    final recommendation =
+        policyBlocks ? policyRationale : result.recommendation;
+    final missing =
+        result.missingInputs.isEmpty ? 'None' : result.missingInputs.join(', ');
+    final scenarioText = result.scenarios.isEmpty
+        ? ''
+        : '\n\nScenarios:\n${result.scenarios.map(_scenarioLine).join('\n')}';
+    final text = [
+          'CFO View',
+          '',
+          'Recommendation:',
+          recommendation,
+          '',
+          'Risk:',
+          result.riskLevel.name.toUpperCase(),
+          '',
+          'Missing Information:',
+          missing,
+          '',
+          'Next Question:',
+          result.nextQuestion ??
+              'No further question. Review the scenarios before acting.',
+          '',
+          'Rationale:',
+          result.rationaleSummary,
+        ].join('\n') +
+        scenarioText;
+
+    return AiAdvisorResponse(
+      mode: AiAdvisorMode.advice,
+      text: text,
+      memory: _memory.copyWith(
+        latestTopic: 'cfo_decision',
+        missingData: result.missingInputs,
+      ),
+      suggestedReplies: result.nextQuestion == null
+          ? const [
+              'Compare smaller option',
+              'Explain cash risk',
+              'Prepare a proposal',
+            ]
+          : const [
+              'I have this number',
+              'Use conservative assumption',
+              'Cancel decision review',
+            ],
+      metadata: AiResponseMetadata.fromEvidence(evidence),
+    );
+  }
+
+  String _scenarioLine(AiDecisionScenario scenario) {
+    final revenue = scenario.estimatedRevenue == null
+        ? 'unknown revenue'
+        : 'revenue ${scenario.estimatedRevenue!.toStringAsFixed(2)}';
+    final cost = scenario.estimatedCost == null
+        ? 'unknown cost'
+        : 'cost ${scenario.estimatedCost!.toStringAsFixed(2)}';
+    final margin = scenario.margin == null
+        ? 'unknown margin'
+        : 'margin ${scenario.margin!.toStringAsFixed(1)}%';
+    return '- ${scenario.title}: $revenue, $cost, $margin, risk ${scenario.riskLabel}.';
+  }
+
+  Map<AiDecisionInputField, dynamic> _decisionSeedInputs(
+    String userText,
+    AiFinancialDecisionType decisionType,
+  ) {
+    final number = _firstNumber(_normalized(userText));
+    if (number == null) return const {};
+    switch (decisionType) {
+      case AiFinancialDecisionType.inventoryPurchase:
+      case AiFinancialDecisionType.reorderInventory:
+      case AiFinancialDecisionType.importShipment:
+      case AiFinancialDecisionType.stockIncrease:
+      case AiFinancialDecisionType.dealProfitability:
+      case AiFinancialDecisionType.unknown:
+        return {AiDecisionInputField.quantity: number};
+      case AiFinancialDecisionType.pricingChange:
+        return {AiDecisionInputField.proposedPrice: number};
+      case AiFinancialDecisionType.customerCreditSale:
+        return const {};
+    }
+  }
+
+  AiFinancialDecisionType _decisionTypeFromName(String name) {
+    return AiFinancialDecisionType.values.firstWhere(
+      (value) => value.name == name,
+      orElse: () => AiFinancialDecisionType.unknown,
+    );
   }
 
   String _decorateWorkflowResponse(AiWorkflowTurnResult result) {
