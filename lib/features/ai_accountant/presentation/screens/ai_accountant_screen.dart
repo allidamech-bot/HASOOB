@@ -92,7 +92,12 @@ class AiChatMessage {
 }
 
 class AiAccountantScreen extends StatefulWidget {
-  const AiAccountantScreen({super.key});
+  final bool workspaceMode;
+
+  const AiAccountantScreen({
+    super.key,
+    this.workspaceMode = false,
+  });
 
   @override
   State<AiAccountantScreen> createState() => _AiAccountantScreenState();
@@ -580,6 +585,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.workspaceMode) {
+      return _buildWorkspaceView();
+    }
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Scaffold(
@@ -596,6 +604,131 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             );
           },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWorkspaceView() {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: darkBg,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildWorkspaceHeader(),
+              const SizedBox(height: 12),
+              _buildQuickActions(),
+              const SizedBox(height: 12),
+              Expanded(
+                child: Container(
+                  margin: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: darkBg.withValues(alpha: 0.42),
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: premiumStroke),
+                  ),
+                  child: _messages.isEmpty
+                      ? _buildPremiumEmptyState()
+                      : _buildChatTimeline(),
+                ),
+              ),
+              if (_isAnalyzing && _messages.isNotEmpty) _buildWorkspaceTypingIndicator(),
+              Padding(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                child: _buildInputField(),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildWorkspaceHeader() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: goldAccent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
+            ),
+            child: const Icon(
+              Icons.account_balance_wallet_outlined,
+              color: goldAccent,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: const [
+                Text(
+                  'AI Accountant',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Conversation-first workspace',
+                  style: TextStyle(
+                    color: AppTheme.aiTextSecondary,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _statusPill(
+            _activeProposal != null ? 'Proposal ready' : 'Advisory mode',
+            _activeProposal != null ? goldAccent : tealSuccess,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildWorkspaceTypingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: premiumPanel,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: premiumStroke),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(color: goldAccent, strokeWidth: 2),
+            ),
+            SizedBox(width: 9),
+            Text(
+              'AI Accountant is preparing a safe response...',
+              style: TextStyle(color: textSecondary, fontSize: 12),
+            ),
+          ],
         ),
       ),
     );

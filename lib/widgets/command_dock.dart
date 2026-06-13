@@ -19,37 +19,43 @@ class CommandDock extends StatelessWidget {
     final items = [
       _DockItemData(
         index: 0,
+        icon: Icons.psychology_rounded,
+        selectedIcon: Icons.psychology_rounded,
+        label: copy.t('aiAccountant'),
+      ),
+      _DockItemData(
+        index: 1,
         icon: Icons.dashboard_outlined,
         selectedIcon: Icons.dashboard,
         label: copy.t('navDashboard'),
       ),
       _DockItemData(
-        index: 1,
+        index: 2,
         icon: Icons.inventory_2_outlined,
         selectedIcon: Icons.inventory_2,
         label: copy.t('navInventory'),
       ),
       _DockItemData(
-        index: 2,
+        index: 3,
         icon: Icons.add,
         selectedIcon: Icons.add,
         label: copy.t('navAdd'),
         isCenter: true,
       ),
       _DockItemData(
-        index: 3,
+        index: 4,
         icon: Icons.receipt_long_outlined,
         selectedIcon: Icons.receipt_long,
         label: copy.t('navTransactions'),
       ),
       _DockItemData(
-        index: 4,
+        index: 5,
         icon: Icons.auto_awesome_outlined,
         selectedIcon: Icons.auto_awesome,
         label: copy.t('navSmart'),
       ),
       _DockItemData(
-        index: 5,
+        index: 6,
         icon: Icons.analytics_outlined,
         selectedIcon: Icons.analytics,
         label: copy.t('navReports'),
