@@ -615,37 +615,151 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       child: Scaffold(
         backgroundColor: darkBg,
         body: SafeArea(
-          child: Column(
-            children: [
-              _buildWorkspaceHeader(),
-              const SizedBox(height: 12),
-              _buildQuickActions(),
-              const SizedBox(height: 12),
-              Expanded(
-                child: Container(
-                  margin: const EdgeInsets.symmetric(horizontal: 12),
-                  decoration: BoxDecoration(
-                    color: darkBg.withValues(alpha: 0.42),
-                    borderRadius: BorderRadius.circular(14),
-                    border: Border.all(color: premiumStroke),
-                  ),
-                  child: _messages.isEmpty
-                      ? _buildPremiumEmptyState()
-                      : _buildChatTimeline(),
-                ),
-              ),
-              if (_isAnalyzing && _messages.isNotEmpty) _buildWorkspaceTypingIndicator(),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-                child: _buildInputField(),
-              ),
-            ],
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop = constraints.maxWidth >= 1000;
+              return _buildConversationDominantShell(isDesktop: isDesktop);
+            },
           ),
         ),
       ),
     );
   }
 
+  Widget _buildConversationDominantShell({required bool isDesktop}) {
+    final padding = EdgeInsets.fromLTRB(
+      isDesktop ? 18 : 10,
+      isDesktop ? 14 : 8,
+      isDesktop ? 18 : 10,
+      isDesktop ? 14 : 10,
+    );
+
+    if (!isDesktop) {
+      return Padding(
+        padding: padding,
+        child: _buildConversationPanel(isDesktop: false),
+      );
+    }
+
+    return Padding(
+      padding: padding,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 72,
+            child: _buildConversationPanel(isDesktop: true),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            flex: 24,
+            child: _buildRightContextPanel(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConversationPanel({required bool isDesktop}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: darkBg.withValues(alpha: 0.68),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        children: [
+          _buildConversationTopBar(isDesktop: isDesktop),
+          Expanded(
+            child: _messages.isEmpty
+                ? _buildPremiumEmptyState()
+                : _buildChatTimeline(),
+          ),
+          if (_isAnalyzing && _messages.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+              child: _buildTypingIndicator(),
+            ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(14, 0, 14, isDesktop ? 14 : 10),
+            child: _buildInputField(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConversationTopBar({required bool isDesktop}) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(isDesktop ? 18 : 12, 12, 12, 10),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: premiumStroke)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: goldAccent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
+            ),
+            child: const Icon(
+              Icons.account_balance_wallet_outlined,
+              color: goldAccent,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'AI Accountant',
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          if (!isDesktop)
+            IconButton(
+              tooltip: 'Context',
+              icon:
+                  const Icon(Icons.view_sidebar_outlined, color: textSecondary),
+              onPressed: _showMobileContextSheet,
+            )
+          else
+            _statusPill(
+              _activeProposal != null ? 'Proposal ready' : 'Advisory mode',
+              _activeProposal != null ? goldAccent : tealSuccess,
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showMobileContextSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return SafeArea(
+          child: FractionallySizedBox(
+            heightFactor: 0.82,
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: _buildRightContextPanel(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ignore: unused_element
   Widget _buildWorkspaceHeader() {
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 12),
@@ -672,11 +786,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          Expanded(
+          const Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisSize: MainAxisSize.min,
-              children: const [
+              children: [
                 Text(
                   'AI Accountant',
                   overflow: TextOverflow.ellipsis,
@@ -706,6 +820,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildWorkspaceTypingIndicator() {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
@@ -721,7 +836,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             SizedBox(
               width: 14,
               height: 14,
-              child: CircularProgressIndicator(color: goldAccent, strokeWidth: 2),
+              child:
+                  CircularProgressIndicator(color: goldAccent, strokeWidth: 2),
             ),
             SizedBox(width: 9),
             Text(
@@ -735,36 +851,10 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   Widget _buildCommandCenter({required bool isDesktop}) {
-    final horizontalPadding = isDesktop ? 20.0 : 12.0;
-    return SingleChildScrollView(
-      padding: EdgeInsets.fromLTRB(
-        horizontalPadding,
-        12,
-        horizontalPadding,
-        isDesktop ? 20 : 12,
-      ),
-      child: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1440),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildAiFirstHero(isDesktop: isDesktop),
-              const SizedBox(height: 14),
-              _buildAskAiCommandSection(isDesktop: isDesktop),
-              const SizedBox(height: 14),
-              _buildAiDetectedCommandSection(),
-              const SizedBox(height: 14),
-              _buildAiRecommendationsCommandSection(isDesktop: isDesktop),
-              const SizedBox(height: 14),
-              _buildContextTabsCommandSection(isDesktop: isDesktop),
-            ],
-          ),
-        ),
-      ),
-    );
+    return _buildConversationDominantShell(isDesktop: isDesktop);
   }
 
+  // ignore: unused_element
   Widget _buildAiFirstHero({required bool isDesktop}) {
     final score = _businessHealthScore();
     final hasEvidence = score != null;
@@ -946,6 +1036,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildAiDetectedCommandSection() {
     final findings = _executiveFindings();
     return _CommandSection(
@@ -970,6 +1061,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildAiRecommendationsCommandSection({required bool isDesktop}) {
     final recommendations = _latestRecommendations().take(3).toList();
     if (recommendations.isEmpty) {
@@ -1002,6 +1094,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildAskAiCommandSection({required bool isDesktop}) {
     return _CommandSection(
       title: 'Ask AI Accountant',
@@ -1048,6 +1141,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildContextTabsCommandSection({required bool isDesktop}) {
     return _CommandSection(
       title: 'Context Tabs',
@@ -1392,6 +1486,202 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildRightContextPanel() {
+    final score = _businessHealthScore();
+    final risks = _latestRisks();
+    final insights = _latestInsights();
+    final recommendations = _latestRecommendations();
+    final workflow = _orchestrator.activeWorkflow;
+    final proposal = _activeProposal ?? _confirmationProposal;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _contextModule(
+              title: 'Business Health',
+              icon: Icons.query_stats_outlined,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    score == null ? 'Ready to analyze' : '$score / 100',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    score == null
+                        ? 'Ask a business question to generate a live CFO view.'
+                        : _businessHealthLabel(score),
+                    style: const TextStyle(
+                      color: textSecondary,
+                      fontSize: 11,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            _contextModule(
+              title: 'Risks',
+              icon: Icons.warning_amber_rounded,
+              child: _contextRows(
+                risks
+                    .where((risk) => risk.title != 'No major risk detected')
+                    .take(4)
+                    .map((risk) => '${risk.levelLabel}: ${risk.title}')
+                    .toList(),
+                empty: 'No active risk signal',
+              ),
+            ),
+            _contextModule(
+              title: 'Insights',
+              icon: Icons.lightbulb_outline,
+              child: _contextRows(
+                insights.take(4).map((item) => item.title).toList(),
+                empty: 'No insight generated yet',
+              ),
+            ),
+            _contextModule(
+              title: 'Recommendations',
+              icon: Icons.task_alt_outlined,
+              child: _contextRows(
+                recommendations.take(4).map((item) => item.title).toList(),
+                empty: 'Ask for analysis to generate actions',
+              ),
+            ),
+            _contextModule(
+              title: 'Memory',
+              icon: Icons.memory_outlined,
+              child: _buildContextSummary(compact: true),
+            ),
+            _contextModule(
+              title: 'Active Proposal',
+              icon: Icons.fact_check_outlined,
+              child: _contextRows(
+                [
+                  if (proposal != null) proposal.actionType,
+                  if (proposal != null) proposal.explanation,
+                ],
+                empty: 'No Active Proposal',
+              ),
+            ),
+            _contextModule(
+              title: 'Active Workflow',
+              icon: Icons.route_outlined,
+              child: _contextRows(
+                [
+                  if (workflow != null)
+                    '${_workflowTitle(workflow.workflowType)}: step ${workflow.currentStep.clamp(1, workflow.totalSteps)} of ${workflow.totalSteps}',
+                  if (workflow?.waitingField != null)
+                    'Waiting for ${AiWorkflowField.label(workflow!.waitingField!)}',
+                ],
+                empty: 'No Active Workflow',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _contextModule({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: premiumPanelSoft.withValues(alpha: 0.58),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: goldAccent, size: 15),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  title,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          child,
+        ],
+      ),
+    );
+  }
+
+  Widget _contextRows(List<String> rows, {required String empty}) {
+    final visibleRows = rows.where((row) => row.trim().isNotEmpty).toList();
+    if (visibleRows.isEmpty) {
+      return Text(
+        empty,
+        style: const TextStyle(color: textSecondary, fontSize: 11),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: visibleRows.take(4).map((row) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 7),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: 5),
+                child: Icon(Icons.circle, color: textSecondary, size: 5),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  row,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _businessHealthLabel(int score) {
+    if (score >= 80) return 'Healthy. Continue monitoring cash and exposure.';
+    if (score >= 65) return 'Stable with items worth reviewing.';
+    return 'Needs attention before major commitments.';
   }
 
   // ignore: unused_element
@@ -1920,9 +2210,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   Widget _buildChatTimeline() {
     return ListView.separated(
       controller: _chatScrollController,
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
       itemCount: _messages.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 16),
+      separatorBuilder: (_, __) => const SizedBox(height: 14),
       itemBuilder: (context, index) => _buildChatMessage(_messages[index]),
     );
   }
@@ -1997,10 +2287,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final isUser = message.role == AiChatRole.user;
     final alignment = isUser ? Alignment.centerRight : Alignment.centerLeft;
     final bubbleColor =
-        isUser ? goldAccent.withValues(alpha: 0.14) : premiumPanel;
+        isUser ? goldAccent.withValues(alpha: 0.16) : Colors.transparent;
     final borderColor =
-        isUser ? goldAccent.withValues(alpha: 0.34) : premiumStroke;
-    final maxWidth = MediaQuery.sizeOf(context).width >= 1000 ? 680.0 : 560.0;
+        isUser ? goldAccent.withValues(alpha: 0.34) : Colors.transparent;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final maxWidth = isUser
+        ? (screenWidth >= 1000 ? 430.0 : screenWidth * 0.78)
+        : (screenWidth >= 1000 ? 900.0 : screenWidth * 0.96);
 
     return Align(
       alignment: alignment,
@@ -2011,114 +2304,20 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(15),
+              padding: EdgeInsets.all(isUser ? 12 : 0),
               decoration: BoxDecoration(
                 color: bubbleColor,
                 borderRadius: BorderRadius.only(
-                  topLeft: const Radius.circular(14),
+                  topLeft: Radius.circular(isUser ? 14 : 6),
                   topRight: const Radius.circular(14),
-                  bottomLeft: Radius.circular(isUser ? 14 : 4),
+                  bottomLeft: Radius.circular(isUser ? 14 : 6),
                   bottomRight: Radius.circular(isUser ? 4 : 14),
                 ),
                 border: Border.all(color: borderColor),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.12),
-                    blurRadius: 16,
-                    offset: const Offset(0, 8),
-                  ),
-                ],
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        isUser
-                            ? Icons.person_outline
-                            : _messageIcon(message.type),
-                        color:
-                            isUser ? goldAccent : _messageColor(message.type),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Row(
-                          children: [
-                            Flexible(
-                              child: Text(
-                                isUser ? 'You' : 'AI Accountant',
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: isUser
-                                      ? goldAccent
-                                      : _messageColor(message.type),
-                                  fontSize: 11,
-                                  fontWeight: FontWeight.w900,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            Text(
-                              _timeLabel(message.timestamp),
-                              style: const TextStyle(
-                                color: AppTheme.aiTextMuted,
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    message.text,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13.5,
-                      height: 1.5,
-                    ),
-                  ),
-                  if (message.workflowSession != null &&
-                      !message.workflowSession!.isComplete) ...[
-                    const SizedBox(height: 12),
-                    _buildWorkflowCard(message.workflowSession!),
-                  ],
-                  if (message.memory?.hasVisibleContext == true) ...[
-                    const SizedBox(height: 12),
-                    _buildMemoryCard(message.memory!),
-                  ],
-                  if (message.decisionOptions.isNotEmpty) ...[
-                    const SizedBox(height: 12),
-                    _buildDecisionOptions(message.decisionOptions),
-                  ],
-                  if (message.proposal != null) ...[
-                    const SizedBox(height: 12),
-                    _buildProposalCard(message.proposal!),
-                  ],
-                  if (message.executionResult != null) ...[
-                    const SizedBox(height: 12),
-                    _buildExecutionResultCard(message.executionResult!),
-                  ],
-                  if (!isUser && message.metadata != null) ...[
-                    const SizedBox(height: 12),
-                    _buildResponseMetadata(message.metadata!),
-                  ],
-                  if (!isUser &&
-                      (message.insights.isNotEmpty ||
-                          message.risks.isNotEmpty ||
-                          message.recommendations.isNotEmpty)) ...[
-                    const SizedBox(height: 12),
-                    _buildAiInsightsPanel(
-                      insights: message.insights,
-                      risks: message.risks,
-                      recommendations: message.recommendations,
-                    ),
-                  ],
-                ],
-              ),
+              child: isUser
+                  ? _buildUserMessageContent(message)
+                  : _buildAssistantMessageContent(message),
             ),
             if (!isUser && message.suggestedReplies.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -2130,6 +2329,254 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  Widget _buildUserMessageContent(AiChatMessage message) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          message.text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            height: 1.38,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          _timeLabel(message.timestamp),
+          style: const TextStyle(
+            color: AppTheme.aiTextMuted,
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAssistantMessageContent(AiChatMessage message) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Icon(
+              _messageIcon(message.type),
+              color: _messageColor(message.type),
+              size: 16,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'AI Accountant',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: _messageColor(message.type),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Text(
+              _timeLabel(message.timestamp),
+              style: const TextStyle(
+                color: AppTheme.aiTextMuted,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _messageSectionTitle('Summary'),
+        Text(
+          message.text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            height: 1.55,
+          ),
+        ),
+        if (message.decisionOptions.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _messageSectionTitle('Reasoning'),
+          _buildDecisionOptions(message.decisionOptions),
+        ],
+        if (message.recommendations.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _messageSectionTitle('Recommendations'),
+          _plainMessageRows(
+            message.recommendations.take(4).map((item) => item.title).toList(),
+            icon: Icons.task_alt_outlined,
+            color: tealSuccess,
+          ),
+        ],
+        if (message.proposal != null || message.executionResult != null) ...[
+          const SizedBox(height: 14),
+          _messageSectionTitle('Actions'),
+          if (message.proposal != null) _buildProposalCard(message.proposal!),
+          if (message.executionResult != null)
+            _buildExecutionResultCard(message.executionResult!),
+        ],
+        if (_hasExpandableMessageDetails(message)) ...[
+          const SizedBox(height: 12),
+          _buildMessageExpandableSections(message),
+        ],
+      ],
+    );
+  }
+
+  Widget _messageSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: textSecondary,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
+  Widget _plainMessageRows(
+    List<String> rows, {
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: rows.map((row) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 7),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(top: 2),
+                child: Icon(icon, color: color, size: 14),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  row,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  bool _hasExpandableMessageDetails(AiChatMessage message) {
+    return message.metadata != null ||
+        message.workflowSession != null ||
+        message.memory?.hasVisibleContext == true ||
+        message.insights.isNotEmpty ||
+        message.risks.isNotEmpty;
+  }
+
+  Widget _buildMessageExpandableSections(AiChatMessage message) {
+    final metadata = message.metadata;
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (message.insights.isNotEmpty || message.risks.isNotEmpty)
+            _messageExpansion(
+              title: 'Evidence',
+              icon: Icons.dataset_outlined,
+              child: _plainMessageRows(
+                [
+                  ...message.insights.take(3).map((item) => item.title),
+                  ...message.risks
+                      .where((risk) => risk.title != 'No major risk detected')
+                      .take(3)
+                      .map((risk) => '${risk.levelLabel}: ${risk.title}'),
+                  if (metadata != null)
+                    'Evidence records: ${metadata.evidenceCount}',
+                  if (metadata != null && metadata.missingEvidence.isNotEmpty)
+                    'Missing: ${metadata.missingEvidence.join(', ')}',
+                ],
+                icon: Icons.circle_outlined,
+                color: textSecondary,
+              ),
+            ),
+          if (metadata != null)
+            _messageExpansion(
+              title: 'Confidence',
+              icon: Icons.verified_user_outlined,
+              child: _plainMessageRows(
+                ['${metadata.confidenceLabel} confidence'],
+                icon: Icons.verified_user_outlined,
+                color: _confidenceColor(metadata.confidenceLevel),
+              ),
+            ),
+          if (metadata != null && metadata.executedTools.isNotEmpty)
+            _messageExpansion(
+              title: 'Tools Used',
+              icon: Icons.construction_outlined,
+              child: _plainMessageRows(
+                metadata.executedToolLabels,
+                icon: Icons.check_circle_outline_rounded,
+                color: tealSuccess,
+              ),
+            ),
+          if (message.workflowSession != null)
+            _messageExpansion(
+              title: 'Workflow State',
+              icon: Icons.route_outlined,
+              child: _buildWorkflowCard(message.workflowSession!),
+            ),
+          if (message.memory?.hasVisibleContext == true)
+            _messageExpansion(
+              title: 'Memory',
+              icon: Icons.memory_outlined,
+              child: _buildMemoryCard(message.memory!),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _messageExpansion({
+    required String title,
+    required IconData icon,
+    required Widget child,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(top: 7),
+      decoration: BoxDecoration(
+        color: premiumPanelSoft.withValues(alpha: 0.42),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: ExpansionTile(
+        tilePadding: const EdgeInsets.symmetric(horizontal: 10),
+        childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+        iconColor: textSecondary,
+        collapsedIconColor: textSecondary,
+        leading: Icon(icon, color: textSecondary, size: 15),
+        title: Text(
+          title,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+          ),
+        ),
+        children: [child],
+      ),
+    );
+  }
+
+  // ignore: unused_element
   Widget _buildAiInsightsPanel({
     required List<AiFinancialInsight> insights,
     required List<AiFinancialRisk> risks,
@@ -2268,6 +2715,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildResponseMetadata(AiResponseMetadata metadata) {
     final isMobile = MediaQuery.sizeOf(context).width < 700;
     final confidenceColor = _confidenceColor(metadata.confidenceLevel);

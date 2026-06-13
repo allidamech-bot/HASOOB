@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:hasoob_app/core/app_theme.dart';
 import 'package:hasoob_app/features/ai_accountant/presentation/screens/ai_accountant_screen.dart';
 import 'package:hasoob_app/widgets/command_dock.dart';
@@ -52,8 +51,9 @@ class _AiWorkspaceScreenState extends State<AiWorkspaceScreen> {
           return Row(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildDesktopSidebar(context),
-              const VerticalDivider(width: 1, thickness: 1, color: AppTheme.aiCardBorder),
+              _buildDesktopSidebar(context, constraints.maxWidth),
+              const VerticalDivider(
+                  width: 1, thickness: 1, color: AppTheme.aiCardBorder),
               Expanded(
                 child: IndexedStack(
                   index: _selectedIndex,
@@ -81,8 +81,8 @@ class _AiWorkspaceScreenState extends State<AiWorkspaceScreen> {
     );
   }
 
-  Widget _buildDesktopSidebar(BuildContext context) {
-    final items = [
+  Widget _buildDesktopSidebar(BuildContext context, double screenWidth) {
+    const items = [
       _SidebarNavItemData(
         index: 0,
         icon: Icons.psychology_rounded,
@@ -121,7 +121,7 @@ class _AiWorkspaceScreenState extends State<AiWorkspaceScreen> {
     ];
 
     return Container(
-      width: 260,
+      width: (screenWidth * 0.16).clamp(240.0, 300.0),
       decoration: const BoxDecoration(
         color: AppTheme.aiNavy,
         border: Border(
@@ -130,17 +130,21 @@ class _AiWorkspaceScreenState extends State<AiWorkspaceScreen> {
       ),
       child: Column(
         children: [
-          SafeArea(
+          const SafeArea(
             bottom: false,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 16, 10),
+              padding: EdgeInsets.fromLTRB(16, 14, 16, 10),
               child: Row(
-                children: const [
-                  Icon(Icons.psychology_rounded, color: AppTheme.aiGold, size: 22),
+                children: [
+                  Icon(Icons.psychology_rounded,
+                      color: AppTheme.aiGold, size: 22),
                   SizedBox(width: 10),
                   Text(
                     'AI Workspace',
-                    style: TextStyle(color: AppTheme.aiGold, fontSize: 16, fontWeight: FontWeight.w900),
+                    style: TextStyle(
+                        color: AppTheme.aiGold,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900),
                   ),
                 ],
               ),
@@ -148,7 +152,9 @@ class _AiWorkspaceScreenState extends State<AiWorkspaceScreen> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 14),
-            child: Divider(color: AppTheme.aiCardBorder.withValues(alpha: 0.5), thickness: 1.2),
+            child: Divider(
+                color: AppTheme.aiCardBorder.withValues(alpha: 0.5),
+                thickness: 1.2),
           ),
           const SizedBox(height: 8),
           Expanded(
@@ -220,7 +226,9 @@ class _WorkspaceSidebarItem extends StatelessWidget {
                 : null,
             borderRadius: BorderRadius.circular(12),
             border: Border.all(
-              color: isSelected ? AppTheme.aiGold.withValues(alpha: 0.34) : Colors.transparent,
+              color: isSelected
+                  ? AppTheme.aiGold.withValues(alpha: 0.34)
+                  : Colors.transparent,
               width: 1,
             ),
           ),
@@ -236,7 +244,8 @@ class _WorkspaceSidebarItem extends StatelessWidget {
                 child: Text(
                   label,
                   style: TextStyle(
-                    color: isSelected ? AppTheme.aiGold : AppTheme.aiTextSecondary,
+                    color:
+                        isSelected ? AppTheme.aiGold : AppTheme.aiTextSecondary,
                     fontSize: 13,
                     fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
                   ),
