@@ -1,4 +1,5 @@
 import 'ai_evidence_bundle.dart';
+import 'ai_customer_credit_intelligence.dart';
 import 'ai_financial_snapshot.dart';
 import 'ai_insight_generator.dart';
 import 'ai_risk_detector.dart';
@@ -89,15 +90,35 @@ class FinancialReasoningEngine {
   }
 
   String _customerBalances(AiEvidenceBundle evidence) {
-    final customers = _summary(evidence, 'getCustomers');
+    final report = AiCustomerCreditIntelligence().analyze(evidence);
+    final top = report.riskiestCustomer;
     if (evidence.confidenceLevel == AiEvidenceConfidence.low) {
-      return _notEnoughData(evidence, checked: 'customer balances');
+      return _notEnoughData(
+        evidence,
+        checked: 'customer balances and invoice payment history',
+      );
     }
+    if (top == null) {
+      return [
+        'Customer Credit Intelligence',
+        'What I checked: customer balances and invoice payment history.',
+        'What I found: no customer records were available for credit scoring.',
+        'Scoring Model: ${report.scoringModel}',
+        _missingLine(evidence),
+      ].where((line) => line.isNotEmpty).join('\n');
+    }
+    final watchlist = report.customers.take(3).map((customer) {
+      return '${customer.customerName}: ${customer.riskScore}/100, ${customer.riskLabel}, outstanding ${_format(customer.outstandingBalance)}, overdue ${customer.overdueCount}/${customer.invoiceCount}.';
+    }).join(' ');
     return [
-      'What I checked: customer balance records.',
-      'What I found: customer count ${_value(customers, 'count')}, outstanding balance ${_value(customers, 'totalOutstanding')}.',
-      'Risk: high receivables can weaken cash even when sales look healthy.',
-      'Recommendation: prioritize collection terms before extending more credit.',
+      'Customer Credit Intelligence',
+      'Scoring Model: ${report.scoringModel}',
+      'Highest Risk Customer: ${top.customerName} - ${top.riskScore}/100 (${top.riskLabel}).',
+      'Explanation: ${top.explanation}',
+      'Evidence: ${top.evidence.join('; ')}.',
+      'Confidence: ${top.confidence.name.toUpperCase()} from ${report.evidenceSources.join('; ')}.',
+      'Recommended Action: ${top.recommendedAction}',
+      'Watchlist: $watchlist',
       _missingLine(evidence),
     ].where((line) => line.isNotEmpty).join('\n');
   }

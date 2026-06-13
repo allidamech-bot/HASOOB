@@ -168,6 +168,13 @@ class AiToolPlanner {
     if (_containsAny(normalized, [
       'customer balance',
       'customers',
+      'customer risk',
+      'risky customer',
+      'risky customers',
+      'credit risk',
+      'credit analyst',
+      'stop extending credit',
+      'owes me the most',
       'receivable',
       'customer balances',
       'رصيد عميل',
@@ -279,13 +286,20 @@ class AiToolPlanner {
         return [
           AiToolStep(
             toolName: 'getCustomers',
-            reason: 'Review customer balances and receivables.',
+            reason: 'Review customer balances and receivables exposure.',
             required: true,
             parameters: {
               ...base,
               'searchQuery': latestCustomer,
               'limit': 100,
             },
+          ),
+          AiToolStep(
+            toolName: 'getInvoices',
+            reason:
+                'Review invoice history, overdue frequency, and payment delays.',
+            required: true,
+            parameters: {...base, 'limit': 100},
           ),
         ];
       case AiAccountantIntent.cashFlowAnalysis:
