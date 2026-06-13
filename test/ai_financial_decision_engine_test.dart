@@ -22,6 +22,14 @@ void main() {
       expect(engine.isDecisionRequest('Should I buy 500 cartons?'), isTrue);
     });
 
+    test('does not treat broad CFO action question as transaction decision',
+        () {
+      expect(
+        engine.isDecisionRequest('What should I do this week as CFO?'),
+        isFalse,
+      );
+    });
+
     test('missing evidence asks one next question', () {
       final state = questionnaire.start(
         decisionType: AiFinancialDecisionType.inventoryPurchase.name,

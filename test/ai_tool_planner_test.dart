@@ -37,6 +37,24 @@ void main() {
       expect(plan.requiresTools, isTrue);
     });
 
+    test('classifies executive CFO questions as evidence-backed overview', () {
+      for (final question in [
+        'What is my current business health?',
+        'What are my top risks?',
+        'What should I do this week as CFO?',
+        'What decisions need my approval?',
+      ]) {
+        final plan = planner.plan(
+          userText: question,
+          businessId: 'business-1',
+        );
+
+        expect(plan.intent, AiAccountantIntent.financialOverview);
+        expect(plan.requiresTools, isTrue);
+        expect(plan.safetyLevel, AiToolSafetyLevel.readOnly);
+      }
+    });
+
     test('execution intent requires guard and no read tools', () {
       final plan = planner.plan(
         userText: 'execute',

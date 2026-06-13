@@ -112,6 +112,14 @@ class AiFinancialDecisionEngine {
 
   bool isDecisionRequest(String userText) {
     final normalized = userText.toLowerCase().trim();
+    if (_containsAny(normalized, [
+      'what should i do',
+      'what should we do',
+      'what do i do',
+      'what do we do',
+    ])) {
+      return false;
+    }
     return _containsAny(normalized, [
       'should i',
       'do you recommend',

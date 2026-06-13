@@ -51,6 +51,16 @@ void main() {
         'getInvoices',
       ]);
     });
+
+    test('planner detects delayed customer payment questions', () {
+      final plan = AiToolPlanner().plan(
+        userText: 'What happens if customer payments are delayed?',
+        businessId: 'b1',
+      );
+
+      expect(plan.intent, AiAccountantIntent.customerBalanceAnalysis);
+      expect(plan.requiresTools, isTrue);
+    });
   });
 }
 
