@@ -616,13 +616,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildBusinessHealthCommandHero(isDesktop: isDesktop),
+              _buildAiFirstHero(isDesktop: isDesktop),
+              const SizedBox(height: 14),
+              _buildAskAiCommandSection(isDesktop: isDesktop),
               const SizedBox(height: 14),
               _buildAiDetectedCommandSection(),
               const SizedBox(height: 14),
               _buildAiRecommendationsCommandSection(isDesktop: isDesktop),
-              const SizedBox(height: 14),
-              _buildAskAiCommandSection(isDesktop: isDesktop),
               const SizedBox(height: 14),
               _buildContextTabsCommandSection(isDesktop: isDesktop),
             ],
@@ -632,7 +632,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  Widget _buildBusinessHealthCommandHero({required bool isDesktop}) {
+  Widget _buildAiFirstHero({required bool isDesktop}) {
     final score = _businessHealthScore();
     final hasEvidence = score != null;
     final statusCards = [
@@ -640,14 +640,15 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         label: 'Revenue Status',
         value: hasEvidence
             ? _statusForRisk(_latestRisks(), 'profit')
-            : 'No Data Available',
+            : 'Ask about revenue',
         icon: Icons.trending_up_rounded,
         color: hasEvidence ? tealSuccess : textSecondary,
       ),
       _ExecutiveKpiData(
         label: 'Cashflow Status',
-        value:
-            hasEvidence ? _cashflowStatus(_latestRisks()) : 'No Data Available',
+        value: hasEvidence
+            ? _cashflowStatus(_latestRisks())
+            : 'Ask about cash flow',
         icon: Icons.payments_outlined,
         color: hasEvidence ? goldAccent : textSecondary,
       ),
@@ -655,7 +656,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         label: 'Inventory Status',
         value: hasEvidence
             ? _inventoryStatus(_latestRisks())
-            : 'No Data Available',
+            : 'Ask about inventory',
         icon: Icons.inventory_2_outlined,
         color: hasEvidence ? tealSuccess : textSecondary,
       ),
@@ -663,7 +664,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         label: 'Receivables Status',
         value: hasEvidence
             ? _receivablesStatus(_latestRisks())
-            : 'No Data Available',
+            : 'Ask about balances',
         icon: Icons.receipt_long_outlined,
         color: hasEvidence ? AppTheme.warning : textSecondary,
       ),
@@ -687,26 +688,28 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           ? Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(flex: 4, child: _buildScoreStatement(score)),
+                Expanded(
+                  flex: 5,
+                  child: _buildAiHeroStatement(
+                    score,
+                    compact: false,
+                  ),
+                ),
                 const SizedBox(width: 18),
                 Expanded(flex: 6, child: _buildHealthKpiGrid(statusCards, 4)),
               ],
             )
-          : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                _buildScoreStatement(score),
-                const SizedBox(height: 16),
-                _buildHealthKpiGrid(statusCards, 2),
-              ],
+          : _buildAiHeroStatement(
+              score,
+              compact: true,
             ),
     );
   }
 
-  Widget _buildScoreStatement(int? score) {
+  Widget _buildAiHeroStatement(int? score, {required bool compact}) {
     final hasScore = score != null;
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: EdgeInsets.all(compact ? 14 : 18),
       decoration: BoxDecoration(
         color: AppTheme.aiDeep.withValues(alpha: 0.52),
         borderRadius: BorderRadius.circular(12),
@@ -719,38 +722,37 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Text(
-            'Business Health Score',
+            'AI Accountant',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 18,
+              fontSize: 24,
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 12),
-          FittedBox(
-            fit: BoxFit.scaleDown,
-            alignment: Alignment.centerLeft,
-            child: Text(
-              hasScore ? '$score / 100' : 'Insufficient Data',
-              style: TextStyle(
-                color: hasScore ? Colors.white : textSecondary,
-                fontSize: hasScore ? 58 : 32,
-                fontWeight: FontWeight.w900,
-                letterSpacing: 0,
-              ),
+          const SizedBox(height: 5),
+          const Text(
+            'Your financial advisor inside HASOOB',
+            style: TextStyle(
+              color: goldAccent,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Text(
             hasScore
-                ? 'Calculated from existing confidence metadata and detected financial risks.'
-                : 'Ask for a business analysis to load confirmed evidence before scoring.',
+                ? 'Business health: $score / 100. Ask me what changed, what is risky, or what to do next.'
+                : 'Talk to me like your accountant. I can analyze profitability, monitor cash flow, detect risks, review balances, track inventory, and prepare proposals safely.',
             style: const TextStyle(
               color: textSecondary,
               fontSize: 12,
               height: 1.45,
             ),
+            maxLines: compact ? 4 : null,
+            overflow: compact ? TextOverflow.ellipsis : null,
           ),
+          SizedBox(height: compact ? 10 : 14),
+          _buildStarterPromptWrap(compact: compact),
         ],
       ),
     );
@@ -765,6 +767,49 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       shrinkWrap: true,
       physics: const NeverScrollableScrollPhysics(),
       children: cards.map((data) => _ExecutiveKpiCard(data: data)).toList(),
+    );
+  }
+
+  Widget _buildStarterPromptWrap({required bool compact}) {
+    final prompts = [
+      ('How is my business today?', Icons.query_stats_outlined),
+      ('Analyze profitability', Icons.analytics_outlined),
+      ('Show cash flow risks', Icons.payments_outlined),
+      ('Review customer balances', Icons.people_alt_outlined),
+      ('Check inventory health', Icons.inventory_2_outlined),
+    ];
+    if (compact) {
+      return SizedBox(
+        height: 38,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: prompts.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            final prompt = prompts[index];
+            return _StarterQuestionChip(
+              label: prompt.$1,
+              icon: prompt.$2,
+              onPressed: _isAnalyzing || _isCommitting
+                  ? null
+                  : () => _processAiCommand(customText: prompt.$1),
+            );
+          },
+        ),
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: prompts.map((prompt) {
+        return _StarterQuestionChip(
+          label: prompt.$1,
+          icon: prompt.$2,
+          onPressed: _isAnalyzing || _isCommitting
+              ? null
+              : () => _processAiCommand(customText: prompt.$1),
+        );
+      }).toList(),
     );
   }
 
@@ -797,10 +842,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     if (recommendations.isEmpty) {
       return const _CommandSection(
         title: 'AI Recommendations',
-        subtitle: 'Top executive actions will appear after evidence is loaded.',
+        subtitle:
+            'Ask the AI Accountant for analysis to generate next actions.',
         child: _ExecutiveEmptyLine(
           icon: Icons.lightbulb_outline,
-          label: 'No Data Available',
+          label: 'Try: "How is my business doing?"',
         ),
       );
     }
@@ -826,17 +872,20 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   Widget _buildAskAiCommandSection({required bool isDesktop}) {
     return _CommandSection(
       title: 'Ask AI Accountant',
-      subtitle: 'Discuss, analyze, or prepare proposals for guarded review.',
+      subtitle:
+          'Type a question, ask for analysis, or prepare a guarded proposal.',
       trailing: _activeProposal != null
           ? _statusPill('Proposal ready', goldAccent)
           : _statusPill('Advisory mode', tealSuccess),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          _buildDominantInput(),
+          const SizedBox(height: 12),
           _buildQuickActions(),
           const SizedBox(height: 12),
           SizedBox(
-            height: isDesktop ? 460 : 420,
+            height: isDesktop ? 390 : 360,
             child: Container(
               decoration: BoxDecoration(
                 color: darkBg.withValues(alpha: 0.52),
@@ -849,10 +898,20 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ),
           ),
           if (_isAnalyzing) _buildTypingIndicator(),
-          const SizedBox(height: 12),
-          _buildInputField(),
         ],
       ),
+    );
+  }
+
+  Widget _buildDominantInput() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: goldAccent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: goldAccent.withValues(alpha: 0.26)),
+      ),
+      child: _buildInputField(),
     );
   }
 
@@ -948,7 +1007,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   String _latestConfidenceLabel() {
     final metadata = _latestMetadata();
-    return metadata == null ? 'Pending evidence' : metadata.confidenceLabel;
+    return metadata == null ? 'Ready to analyze' : metadata.confidenceLabel;
   }
 
   List<AiFinancialRisk> _latestRisks() {
@@ -1277,18 +1336,18 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             Icons.business_outlined,
             'Business',
             BusinessContext.businessId.isEmpty
-                ? 'No Data Available'
+                ? 'Open a business profile'
                 : BusinessContext.businessId,
           ),
           _contextRow(
             Icons.person_outline,
             'Customer',
-            memory.latestCustomer ?? 'No Data Available',
+            memory.latestCustomer ?? 'Ask about a customer',
           ),
           _contextRow(
             Icons.inventory_2_outlined,
             'Product',
-            memory.currentProduct ?? 'No Data Available',
+            memory.currentProduct ?? 'Ask about a product',
           ),
           _contextRow(
             Icons.fact_check_outlined,
@@ -1315,13 +1374,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Widget _buildBusinessMemoryPanel(AiBusinessMemory businessMemory) {
     final recentProduct = businessMemory.recentProducts.isEmpty
-        ? 'No Data Available'
+        ? 'Discuss a product'
         : businessMemory.recentProducts.first;
     final recentCustomer = businessMemory.recentCustomers.isEmpty
-        ? 'No Data Available'
+        ? 'Discuss a customer'
         : businessMemory.recentCustomers.first;
     final recentTopic = businessMemory.recentTopics.isEmpty
-        ? 'No Data Available'
+        ? 'Ask for analysis'
         : businessMemory.recentTopics.first;
 
     return Container(
@@ -1640,31 +1699,31 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final insights = [
       const _InsightData(
         'Revenue',
-        'No Data Available',
+        'Ask about revenue',
         Icons.trending_up_rounded,
         tealSuccess,
       ),
       const _InsightData(
         'Expenses',
-        'No Data Available',
+        'Ask about expenses',
         Icons.trending_down_rounded,
         AppTheme.aiRed,
       ),
       const _InsightData(
         'Profit',
-        'No Data Available',
+        'Ask about profit',
         Icons.account_balance_wallet_outlined,
         goldAccent,
       ),
       const _InsightData(
         'Pending Invoices',
-        'No Data Available',
+        'Ask about invoices',
         Icons.receipt_long_outlined,
         AppTheme.warning,
       ),
       const _InsightData(
         'Low Stock',
-        'No Data Available',
+        'Ask about stock',
         Icons.inventory_2_outlined,
         tealSuccess,
       ),
@@ -3591,6 +3650,40 @@ class _ExecutiveTabButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
+      ),
+    );
+  }
+}
+
+class _StarterQuestionChip extends StatelessWidget {
+  const _StarterQuestionChip({
+    required this.label,
+    required this.icon,
+    required this.onPressed,
+  });
+
+  final String label;
+  final IconData icon;
+  final VoidCallback? onPressed;
+
+  @override
+  Widget build(BuildContext context) {
+    return FilledButton.icon(
+      onPressed: onPressed,
+      icon: Icon(icon, size: 15),
+      label: Text(
+        label,
+        overflow: TextOverflow.ellipsis,
+      ),
+      style: FilledButton.styleFrom(
+        foregroundColor: Colors.black,
+        disabledForegroundColor: _AiAccountantScreenState.textSecondary,
+        backgroundColor: _AiAccountantScreenState.goldAccent,
+        disabledBackgroundColor:
+            _AiAccountantScreenState.premiumPanelSoft.withValues(alpha: 0.8),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
+        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
       ),
     );
   }
