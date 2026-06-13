@@ -1,6 +1,7 @@
 import 'ai_decision_questionnaire.dart';
 import 'ai_decision_scenario.dart';
 import 'ai_evidence_bundle.dart';
+import 'ai_import_export_cfo_advisor.dart';
 
 enum AiFinancialDecisionType {
   inventoryPurchase,
@@ -28,6 +29,7 @@ class AiFinancialDecisionResult {
   final String? nextQuestion;
   final String rationaleSummary;
   final List<AiDecisionScenario> scenarios;
+  final AiShipmentDecisionResult? shipmentDecision;
 
   const AiFinancialDecisionResult({
     required this.decisionType,
@@ -38,6 +40,7 @@ class AiFinancialDecisionResult {
     required this.nextQuestion,
     required this.rationaleSummary,
     this.scenarios = const [],
+    this.shipmentDecision,
   });
 
   bool get needsMoreInformation => nextQuestion != null;
@@ -193,6 +196,26 @@ class AiFinancialDecisionEngine {
       );
     }
 
+    if (decisionType == AiFinancialDecisionType.importShipment) {
+      final shipmentDecision = AiImportExportCfoAdvisor().evaluateShipment(
+        _shipmentInputFromDecision(inputs),
+      );
+      return AiFinancialDecisionResult(
+        decisionType: decisionType,
+        recommendation: shipmentDecision.recommendedAction,
+        confidence: _combinedConfidence(
+          evidence.confidenceLevel,
+          shipmentDecision.confidence,
+        ),
+        riskLevel: _decisionRiskFromTrade(shipmentDecision.riskLevel),
+        missingInputs: const [],
+        nextQuestion: null,
+        rationaleSummary: _shipmentRationale(shipmentDecision),
+        scenarios: _shipmentScenarios(shipmentDecision),
+        shipmentDecision: shipmentDecision,
+      );
+    }
+
     final scenarios = compareScenarios(
       decisionType: decisionType,
       inputs: inputs,
@@ -246,7 +269,12 @@ class AiFinancialDecisionEngine {
 
     return quantities.map((qty) {
       final revenue = qty * price;
-      final cost = qty * unitCost;
+      final importCosts = decisionType == AiFinancialDecisionType.importShipment
+          ? (_number(inputs[AiDecisionInputField.importCosts]) ?? 0)
+          : 0;
+      final allocatedImportCost =
+          quantity == 0 ? 0 : importCosts * (qty / quantity);
+      final cost = (qty * unitCost) + allocatedImportCost;
       final margin = revenue == 0 ? 0.0 : ((revenue - cost) / revenue) * 100;
       return AiDecisionScenario(
         title: '${qty.toStringAsFixed(0)} units/cartons',
@@ -341,6 +369,114 @@ class AiFinancialDecisionEngine {
         _number(inputs[AiDecisionInputField.currentPrice]);
     if (unitCost == null || price == null || price <= 0) return null;
     return ((price - unitCost) / price) * 100;
+  }
+
+  AiShipmentDecisionInput _shipmentInputFromDecision(
+    Map<AiDecisionInputField, dynamic> inputs,
+  ) {
+    return AiShipmentDecisionInput(
+      purchaseCostPerUnit: _number(inputs[AiDecisionInputField.unitCost]) ?? 0,
+      freightCost: _number(inputs[AiDecisionInputField.importCosts]) ?? 0,
+      customsCost: 0,
+      storageCost: 0,
+      sellingPricePerUnit:
+          _number(inputs[AiDecisionInputField.expectedSellingPrice]) ?? 0,
+      expectedVolume: _number(inputs[AiDecisionInputField.quantity]) ?? 0,
+      evidence: const [
+        'conversation quantity',
+        'conversation purchase cost',
+        'conversation import costs',
+        'conversation expected selling price',
+      ],
+      assumptions: const [
+        'Conversation import costs are treated as combined freight/customs/storage until a detailed split is provided.',
+      ],
+    );
+  }
+
+  AiEvidenceConfidence _combinedConfidence(
+    AiEvidenceConfidence evidenceConfidence,
+    AiEvidenceConfidence shipmentConfidence,
+  ) {
+    if (evidenceConfidence == AiEvidenceConfidence.high &&
+        shipmentConfidence == AiEvidenceConfidence.high) {
+      return AiEvidenceConfidence.high;
+    }
+    if (shipmentConfidence == AiEvidenceConfidence.low) {
+      return AiEvidenceConfidence.low;
+    }
+    return AiEvidenceConfidence.medium;
+  }
+
+  AiDecisionRiskLevel _decisionRiskFromTrade(AiTradeRiskLevel risk) {
+    switch (risk) {
+      case AiTradeRiskLevel.low:
+        return AiDecisionRiskLevel.low;
+      case AiTradeRiskLevel.medium:
+        return AiDecisionRiskLevel.medium;
+      case AiTradeRiskLevel.high:
+      case AiTradeRiskLevel.critical:
+        return AiDecisionRiskLevel.high;
+    }
+  }
+
+  List<AiDecisionScenario> _shipmentScenarios(
+    AiShipmentDecisionResult decision,
+  ) {
+    return decision.scenarios.map((scenario) {
+      return AiDecisionScenario(
+        title: scenario.name,
+        estimatedRevenue: scenario.expectedRevenue,
+        estimatedCost: scenario.totalLandedCost,
+        margin: scenario.marginPercent,
+        cashImpact:
+            'Expected profit ${scenario.expectedProfit.toStringAsFixed(2)}.',
+        inventoryImpact:
+            'Recommendation: ${_tradeRecommendationLabel(scenario.recommendation)}.',
+        risk: _scenarioRiskFromTrade(scenario.riskLevel),
+      );
+    }).toList();
+  }
+
+  AiDecisionScenarioRisk _scenarioRiskFromTrade(AiTradeRiskLevel risk) {
+    switch (risk) {
+      case AiTradeRiskLevel.low:
+        return AiDecisionScenarioRisk.low;
+      case AiTradeRiskLevel.medium:
+        return AiDecisionScenarioRisk.medium;
+      case AiTradeRiskLevel.high:
+      case AiTradeRiskLevel.critical:
+        return AiDecisionScenarioRisk.high;
+    }
+  }
+
+  String _shipmentRationale(AiShipmentDecisionResult decision) {
+    return [
+      'Shipment profitability analysis:',
+      'expected revenue ${decision.expectedRevenue.toStringAsFixed(2)}',
+      'total landed cost ${decision.totalLandedCost.toStringAsFixed(2)}',
+      'landed cost per unit ${decision.landedCostPerUnit.toStringAsFixed(2)}',
+      'expected profit ${decision.expectedProfit.toStringAsFixed(2)}',
+      'margin ${decision.marginPercent.toStringAsFixed(2)}%',
+      'break-even point ${decision.breakEvenPointUnits} units',
+      'risk ${decision.riskLabel}',
+      'assumptions ${decision.assumptions.join('; ')}',
+      'evidence ${decision.evidence.join('; ')}',
+      'confidence ${decision.confidence.name.toUpperCase()}',
+    ].join('. ');
+  }
+
+  String _tradeRecommendationLabel(AiTradeRecommendation recommendation) {
+    switch (recommendation) {
+      case AiTradeRecommendation.proceed:
+        return 'proceed';
+      case AiTradeRecommendation.proceedWithCaution:
+        return 'proceed with caution';
+      case AiTradeRecommendation.renegotiate:
+        return 'renegotiate';
+      case AiTradeRecommendation.reject:
+        return 'reject';
+    }
   }
 
   double? _number(dynamic value) {

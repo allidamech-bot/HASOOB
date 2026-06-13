@@ -15,6 +15,7 @@ import 'ai_data_collection_state.dart';
 import 'ai_evidence_bundle.dart';
 import 'ai_financial_decision_engine.dart';
 import 'ai_financial_snapshot.dart';
+import 'ai_import_export_cfo_advisor.dart';
 import 'ai_insight_generator.dart';
 import 'ai_response_metadata.dart';
 import 'ai_risk_detector.dart';
@@ -472,6 +473,9 @@ class AiConversationOrchestrator {
         policyBlocks ? policyRationale : result.recommendation;
     final missing =
         result.missingInputs.isEmpty ? 'None' : result.missingInputs.join(', ');
+    final shipmentText = result.shipmentDecision == null
+        ? ''
+        : '\n\nShipment Metrics:\n${_shipmentDecisionLines(result.shipmentDecision!).join('\n')}';
     final scenarioText = result.scenarios.isEmpty
         ? ''
         : '\n\nScenarios:\n${result.scenarios.map(_scenarioLine).join('\n')}';
@@ -494,6 +498,7 @@ class AiConversationOrchestrator {
           'Rationale:',
           result.rationaleSummary,
         ].join('\n') +
+        shipmentText +
         scenarioText;
 
     return AiAdvisorResponse(
@@ -529,6 +534,21 @@ class AiConversationOrchestrator {
         ? 'unknown margin'
         : 'margin ${scenario.margin!.toStringAsFixed(1)}%';
     return '- ${scenario.title}: $revenue, $cost, $margin, risk ${scenario.riskLabel}.';
+  }
+
+  List<String> _shipmentDecisionLines(AiShipmentDecisionResult decision) {
+    return [
+      '- Expected revenue: ${decision.expectedRevenue.toStringAsFixed(2)}',
+      '- Total landed cost: ${decision.totalLandedCost.toStringAsFixed(2)}',
+      '- Expected profit: ${decision.expectedProfit.toStringAsFixed(2)}',
+      '- Margin: ${decision.marginPercent.toStringAsFixed(2)}%',
+      '- Break-even point: ${decision.breakEvenPointUnits} units',
+      '- Risk level: ${decision.riskLabel}',
+      '- Assumptions: ${decision.assumptions.join('; ')}',
+      '- Evidence: ${decision.evidence.join('; ')}',
+      '- Confidence: ${decision.confidence.name.toUpperCase()}',
+      '- Recommended action: ${decision.recommendedAction}',
+    ];
   }
 
   Map<AiDecisionInputField, dynamic> _decisionSeedInputs(
