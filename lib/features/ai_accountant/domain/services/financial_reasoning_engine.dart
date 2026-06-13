@@ -1,5 +1,6 @@
 import 'ai_evidence_bundle.dart';
 import 'ai_customer_credit_intelligence.dart';
+import 'ai_executive_cfo_autonomy.dart';
 import 'ai_financial_snapshot.dart';
 import 'ai_insight_generator.dart';
 import 'ai_risk_detector.dart';
@@ -45,6 +46,12 @@ class FinancialReasoningEngine {
       snapshot: snapshot,
       risks: risks,
     );
+    final briefing = AiExecutiveCfoAutonomy().generateBriefing(
+      snapshot: snapshot,
+      evidence: evidence,
+      risks: risks,
+      recommendations: recommendations,
+    );
     if (evidence.confidenceLevel == AiEvidenceConfidence.low) {
       return _notEnoughData(evidence,
           checked: 'financial summary, invoices, inventory, and customers');
@@ -55,6 +62,8 @@ class FinancialReasoningEngine {
       'What I found: revenue ${_format(snapshot.revenue)}, expenses ${_format(snapshot.expenses)}, profit ${_format(snapshot.profit)}, pending invoices ${_format(snapshot.pendingInvoices)}, overdue invoices ${snapshot.overdueInvoices ?? 'not available'}, inventory health ${snapshot.inventoryHealth ?? 'not available'}, customer risk ${snapshot.customerRisk ?? 'not available'}.',
       'Risks: ${risks.map((risk) => '${risk.levelLabel} - ${risk.title}: ${risk.description}').join(' ')}',
       'Recommendations: ${recommendations.map((item) => '${item.title}: ${item.description}').join(' ')}',
+      'Executive Briefing: ${briefing.businessHealthSummary} Cash status: ${briefing.cashStatus} Urgent decisions: ${briefing.urgentDecisionsRequired.join(' | ')} Confidence score: ${briefing.confidenceScore}.',
+      'Decision Packs: ${briefing.recommendedExecutiveActions.map((pack) => '${pack.riskLabel} - ${pack.summary}: ${pack.recommendedNextStep}').join(' ')}',
       'Next Actions: collect overdue balances first, review low-stock items, then decide whether to improve margin or prepare a guarded proposal.',
       _missingLine(evidence),
     ].where((line) => line.isNotEmpty).join('\n');
