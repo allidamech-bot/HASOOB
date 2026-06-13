@@ -28,7 +28,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _index = 0;
 
   void _onDestinationSelected(int index) {
-    if (index == 2) {
+    if (index == 3) {
       _openAddMenu();
       return;
     }
@@ -198,6 +198,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     final localeKey = Localizations.localeOf(context).languageCode;
     final screens = <Widget>[
+      const AiAccountantScreen(workspaceMode: true),
       const DashboardScreen(),
       const InventoryScreen(),
       const SizedBox(),
