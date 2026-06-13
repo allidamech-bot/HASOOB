@@ -1,3 +1,67 @@
+import 'ai_evidence_bundle.dart';
+
+enum AiCfoMemoryCategory {
+  operational,
+  financial,
+  customer,
+  inventory,
+  recommendation,
+  tradeImportExport,
+}
+
+class AiCfoMemoryItem {
+  final String id;
+  final AiCfoMemoryCategory category;
+  final String summary;
+  final String source;
+  final String sourceType;
+  final DateTime timestamp;
+  final AiEvidenceConfidence confidence;
+  final String? relatedEntity;
+  final List<String> evidenceReferences;
+
+  const AiCfoMemoryItem({
+    required this.id,
+    required this.category,
+    required this.summary,
+    required this.source,
+    required this.sourceType,
+    required this.timestamp,
+    required this.confidence,
+    this.relatedEntity,
+    required this.evidenceReferences,
+  });
+
+  String get categoryLabel {
+    switch (category) {
+      case AiCfoMemoryCategory.operational:
+        return 'operational memory';
+      case AiCfoMemoryCategory.financial:
+        return 'financial memory';
+      case AiCfoMemoryCategory.customer:
+        return 'customer memory';
+      case AiCfoMemoryCategory.inventory:
+        return 'inventory memory';
+      case AiCfoMemoryCategory.recommendation:
+        return 'recommendation memory';
+      case AiCfoMemoryCategory.tradeImportExport:
+        return 'trade/import-export memory';
+    }
+  }
+
+  Map<String, dynamic> toSafeJson() => {
+        'id': id,
+        'category': category.name,
+        'summary': summary,
+        'source': source,
+        'sourceType': sourceType,
+        'timestamp': timestamp.toIso8601String(),
+        'confidence': confidence.name,
+        'relatedEntity': relatedEntity,
+        'evidenceReferences': evidenceReferences,
+      };
+}
+
 class AiBusinessMemory {
   final List<String> recentProducts;
   final List<String> recentCustomers;
@@ -7,6 +71,7 @@ class AiBusinessMemory {
   final String? lastPricingContext;
   final String? lastExportContext;
   final String? lastProposalContext;
+  final List<AiCfoMemoryItem> longTermMemories;
   final DateTime updatedAt;
 
   const AiBusinessMemory({
@@ -18,6 +83,7 @@ class AiBusinessMemory {
     this.lastPricingContext,
     this.lastExportContext,
     this.lastProposalContext,
+    this.longTermMemories = const [],
     required this.updatedAt,
   });
 
@@ -34,6 +100,7 @@ class AiBusinessMemory {
     String? lastPricingContext,
     String? lastExportContext,
     String? lastProposalContext,
+    List<AiCfoMemoryItem>? longTermMemories,
     DateTime? updatedAt,
   }) {
     return AiBusinessMemory(
@@ -45,6 +112,7 @@ class AiBusinessMemory {
       lastPricingContext: lastPricingContext ?? this.lastPricingContext,
       lastExportContext: lastExportContext ?? this.lastExportContext,
       lastProposalContext: lastProposalContext ?? this.lastProposalContext,
+      longTermMemories: longTermMemories ?? this.longTermMemories,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
@@ -57,7 +125,8 @@ class AiBusinessMemory {
         recentWorkflowTypes.isNotEmpty ||
         lastPricingContext != null ||
         lastExportContext != null ||
-        lastProposalContext != null;
+        lastProposalContext != null ||
+        longTermMemories.isNotEmpty;
   }
 
   Map<String, dynamic> toSafeJson() => {
@@ -69,6 +138,8 @@ class AiBusinessMemory {
         'lastPricingContext': lastPricingContext,
         'lastExportContext': lastExportContext,
         'lastProposalContext': lastProposalContext,
+        'longTermMemories':
+            longTermMemories.map((item) => item.toSafeJson()).toList(),
         'updatedAt': updatedAt.toIso8601String(),
       };
 }

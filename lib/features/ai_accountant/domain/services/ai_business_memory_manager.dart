@@ -1,6 +1,13 @@
 import '../../data/models/ai_proposal_model.dart';
 import 'ai_business_memory.dart';
+import 'ai_customer_credit_intelligence.dart';
 import 'ai_data_collection_state.dart';
+import 'ai_evidence_bundle.dart';
+import 'ai_financial_decision_engine.dart';
+import 'ai_financial_snapshot.dart';
+import 'ai_insight_generator.dart';
+import 'ai_risk_detector.dart';
+import 'ai_tool_planner.dart';
 import 'ai_workflow_session.dart';
 
 class AiBusinessMemoryManager {
@@ -13,6 +20,121 @@ class AiBusinessMemoryManager {
 
   void clear() {
     _memory = AiBusinessMemory.empty();
+  }
+
+  bool rememberLongTerm(AiCfoMemoryItem item) {
+    if (!_isSupportedMemory(item)) return false;
+    final existing = _memory.longTermMemories;
+    if (existing.any((memory) => _isDuplicate(memory, item))) return false;
+    _memory = _memory.copyWith(
+      longTermMemories: [item, ...existing].take(50).toList(),
+      updatedAt: DateTime.now(),
+    );
+    return true;
+  }
+
+  void extractFromAnalysis({
+    required AiToolPlan plan,
+    required AiEvidenceBundle evidence,
+    AiFinancialSnapshot? snapshot,
+    List<AiFinancialRisk> risks = const [],
+    List<AiFinancialRecommendation> recommendations = const [],
+    DateTime? timestamp,
+  }) {
+    final at = timestamp ?? DateTime.now();
+    if (plan.intent == AiAccountantIntent.customerBalanceAnalysis) {
+      _extractCustomerCreditMemory(evidence, at);
+    }
+    _extractRiskMemories(plan: plan, evidence: evidence, risks: risks, at: at);
+    _extractRecommendationMemories(
+      plan: plan,
+      evidence: evidence,
+      recommendations: recommendations,
+      at: at,
+    );
+    _extractSnapshotMemories(
+      snapshot: snapshot,
+      evidence: evidence,
+      at: at,
+    );
+  }
+
+  void extractFromDecision({
+    required AiFinancialDecisionResult result,
+    DateTime? timestamp,
+  }) {
+    final decision = result.shipmentDecision;
+    if (decision == null) return;
+    final at = timestamp ?? DateTime.now();
+    rememberLongTerm(AiCfoMemoryItem(
+      id: _stableId(
+        category: AiCfoMemoryCategory.tradeImportExport,
+        sourceType: 'import_export_decision',
+        summary:
+            'Shipment analysis was ${decision.riskLabel} with action ${decision.recommendedAction}.',
+        relatedEntity: 'shipment',
+      ),
+      category: AiCfoMemoryCategory.tradeImportExport,
+      summary:
+          'This type of shipment was ${decision.riskLabel.toLowerCase()} in prior analysis; recommended action was ${decision.recommendedAction}.',
+      source: 'Import / Export CFO Advisor',
+      sourceType: 'import_export_decision',
+      timestamp: at,
+      confidence: decision.confidence,
+      relatedEntity: 'shipment',
+      evidenceReferences: [
+        'expected revenue ${decision.expectedRevenue.toStringAsFixed(2)}',
+        'total landed cost ${decision.totalLandedCost.toStringAsFixed(2)}',
+        'margin ${decision.marginPercent.toStringAsFixed(2)}%',
+        'break-even ${decision.breakEvenPointUnits} units',
+      ],
+    ));
+  }
+
+  List<AiCfoMemoryItem> retrieveRelevant({
+    required AiAccountantIntent intent,
+    String? userText,
+    String? relatedEntity,
+    int limit = 3,
+  }) {
+    final normalized = userText?.toLowerCase() ?? '';
+    final categories = _categoriesForIntent(intent, normalized);
+    final scored = _memory.longTermMemories
+        .map((memory) => MapEntry(
+            memory,
+            _memoryScore(
+              memory: memory,
+              categories: categories,
+              normalized: normalized,
+              relatedEntity: relatedEntity,
+            )))
+        .where((entry) => entry.value > 0)
+        .toList()
+      ..sort((a, b) {
+        final score = b.value.compareTo(a.value);
+        if (score != 0) return score;
+        return b.key.timestamp.compareTo(a.key.timestamp);
+      });
+    return scored.map((entry) => entry.key).take(limit).toList();
+  }
+
+  String summarizeRelevant({
+    required AiAccountantIntent intent,
+    String? userText,
+    String? relatedEntity,
+    int limit = 3,
+  }) {
+    final memories = retrieveRelevant(
+      intent: intent,
+      userText: userText,
+      relatedEntity: relatedEntity,
+      limit: limit,
+    );
+    if (memories.isEmpty) return '';
+    return memories.map((memory) {
+      return '${memory.categoryLabel}: ${memory.summary} '
+          '(source: ${memory.source}, confidence: ${memory.confidence.name.toUpperCase()})';
+    }).join('\n');
   }
 
   void updateFromConversation({
@@ -141,8 +263,241 @@ class AiBusinessMemoryManager {
         'last export context: ${_memory.lastExportContext}',
       if (_memory.lastProposalContext != null)
         'last proposal context: ${_memory.lastProposalContext}',
+      if (_memory.longTermMemories.isNotEmpty)
+        'long-term memories: ${_memory.longTermMemories.take(3).map((item) => item.summary).join(' | ')}',
     ];
     return parts.join('; ');
+  }
+
+  void _extractCustomerCreditMemory(
+    AiEvidenceBundle evidence,
+    DateTime at,
+  ) {
+    final report = AiCustomerCreditIntelligence().analyze(evidence);
+    final customer = report.riskiestCustomer;
+    if (customer == null || customer.overdueCount <= 0) return;
+    rememberLongTerm(AiCfoMemoryItem(
+      id: _stableId(
+        category: AiCfoMemoryCategory.customer,
+        sourceType: 'customer_credit_analysis',
+        summary:
+            '${customer.customerName} has delayed payments before (${customer.overdueCount} overdue invoices).',
+        relatedEntity: customer.customerName,
+      ),
+      category: AiCfoMemoryCategory.customer,
+      summary:
+          '${customer.customerName} has delayed payments before: ${customer.overdueCount} overdue invoices and ${customer.outstandingBalance.toStringAsFixed(2)} outstanding.',
+      source: 'Customer Credit Intelligence',
+      sourceType: 'customer_credit_analysis',
+      timestamp: at,
+      confidence: customer.confidence,
+      relatedEntity: customer.customerName,
+      evidenceReferences: customer.evidence,
+    ));
+  }
+
+  void _extractRiskMemories({
+    required AiToolPlan plan,
+    required AiEvidenceBundle evidence,
+    required List<AiFinancialRisk> risks,
+    required DateTime at,
+  }) {
+    for (final risk in risks) {
+      if (risk.title == 'No major risk detected' ||
+          risk.title == 'Missing evidence') {
+        continue;
+      }
+      final category = switch (risk.title) {
+        'Overdue invoices' => AiCfoMemoryCategory.financial,
+        'Low stock' => AiCfoMemoryCategory.inventory,
+        'Customer balances' => AiCfoMemoryCategory.customer,
+        _ => AiCfoMemoryCategory.operational,
+      };
+      rememberLongTerm(AiCfoMemoryItem(
+        id: _stableId(
+          category: category,
+          sourceType: 'risk_detection',
+          summary: '${risk.title}: ${risk.description}',
+          relatedEntity: null,
+        ),
+        category: category,
+        summary: '${risk.title}: ${risk.description}',
+        source: 'AI Risk Detector',
+        sourceType: 'risk_detection',
+        timestamp: at,
+        confidence: evidence.confidenceLevel,
+        evidenceReferences: _evidenceReferences(evidence, plan),
+      ));
+    }
+  }
+
+  void _extractRecommendationMemories({
+    required AiToolPlan plan,
+    required AiEvidenceBundle evidence,
+    required List<AiFinancialRecommendation> recommendations,
+    required DateTime at,
+  }) {
+    for (final recommendation in recommendations) {
+      if (recommendation.title == 'Keep monitoring') continue;
+      rememberLongTerm(AiCfoMemoryItem(
+        id: _stableId(
+          category: AiCfoMemoryCategory.recommendation,
+          sourceType: 'cfo_recommendation',
+          summary: '${recommendation.title}: ${recommendation.description}',
+          relatedEntity: null,
+        ),
+        category: AiCfoMemoryCategory.recommendation,
+        summary:
+            'This recommendation repeats a previous CFO warning: ${recommendation.title}. ${recommendation.description}',
+        source: 'AI Insight Generator',
+        sourceType: 'cfo_recommendation',
+        timestamp: at,
+        confidence: evidence.confidenceLevel,
+        evidenceReferences: _evidenceReferences(evidence, plan),
+      ));
+    }
+  }
+
+  void _extractSnapshotMemories({
+    required AiFinancialSnapshot? snapshot,
+    required AiEvidenceBundle evidence,
+    required DateTime at,
+  }) {
+    if (snapshot == null || snapshot.pendingInvoices == null) return;
+    if (snapshot.pendingInvoices! <= 0) return;
+    rememberLongTerm(AiCfoMemoryItem(
+      id: _stableId(
+        category: AiCfoMemoryCategory.financial,
+        sourceType: 'financial_snapshot',
+        summary:
+            'Cash reserve risk previously included pending invoices ${snapshot.pendingInvoices!.toStringAsFixed(2)}.',
+        relatedEntity: 'cashflow',
+      ),
+      category: AiCfoMemoryCategory.financial,
+      summary:
+          'You had a similar cash reserve risk previously: pending invoices were ${snapshot.pendingInvoices!.toStringAsFixed(2)}.',
+      source: 'AI Financial Snapshot',
+      sourceType: 'financial_snapshot',
+      timestamp: at,
+      confidence: snapshot.confidence,
+      relatedEntity: 'cashflow',
+      evidenceReferences: [
+        'pending invoices ${snapshot.pendingInvoices!.toStringAsFixed(2)}',
+        if (snapshot.overdueInvoices != null)
+          'overdue invoices ${snapshot.overdueInvoices}',
+      ],
+    ));
+  }
+
+  bool _isSupportedMemory(AiCfoMemoryItem item) {
+    return item.summary.trim().isNotEmpty &&
+        item.source.trim().isNotEmpty &&
+        item.sourceType.trim().isNotEmpty &&
+        item.evidenceReferences.isNotEmpty &&
+        item.confidence != AiEvidenceConfidence.low;
+  }
+
+  bool _isDuplicate(AiCfoMemoryItem a, AiCfoMemoryItem b) {
+    return a.category == b.category &&
+        a.sourceType == b.sourceType &&
+        (a.relatedEntity ?? '').toLowerCase() ==
+            (b.relatedEntity ?? '').toLowerCase() &&
+        _fingerprint(a.summary) == _fingerprint(b.summary);
+  }
+
+  List<String> _evidenceReferences(AiEvidenceBundle evidence, AiToolPlan plan) {
+    final refs = evidence.executedTools
+        .where((tool) => tool.success)
+        .map((tool) => '${tool.toolName}: ${tool.reason}')
+        .toList();
+    if (refs.isNotEmpty) return refs;
+    return plan.steps
+        .map((step) => '${step.toolName}: ${step.reason}')
+        .toList();
+  }
+
+  Set<AiCfoMemoryCategory> _categoriesForIntent(
+    AiAccountantIntent intent,
+    String normalized,
+  ) {
+    final categories = <AiCfoMemoryCategory>{
+      AiCfoMemoryCategory.recommendation,
+    };
+    switch (intent) {
+      case AiAccountantIntent.customerBalanceAnalysis:
+        categories.add(AiCfoMemoryCategory.customer);
+      case AiAccountantIntent.cashFlowAnalysis:
+      case AiAccountantIntent.financialOverview:
+      case AiAccountantIntent.invoiceAnalysis:
+        categories.add(AiCfoMemoryCategory.financial);
+        categories.add(AiCfoMemoryCategory.customer);
+      case AiAccountantIntent.inventoryAnalysis:
+        categories.add(AiCfoMemoryCategory.inventory);
+      case AiAccountantIntent.exportDecision:
+      case AiAccountantIntent.pricingDecision:
+        categories.add(AiCfoMemoryCategory.tradeImportExport);
+      case AiAccountantIntent.profitabilityAnalysis:
+        categories.add(AiCfoMemoryCategory.financial);
+      case AiAccountantIntent.generalAdvice:
+      case AiAccountantIntent.unknown:
+      case AiAccountantIntent.purchasePreparation:
+      case AiAccountantIntent.salePreparation:
+      case AiAccountantIntent.executionIntent:
+        categories.add(AiCfoMemoryCategory.operational);
+    }
+    if (normalized.contains('cash')) {
+      categories.add(AiCfoMemoryCategory.financial);
+    }
+    if (normalized.contains('customer') || normalized.contains('credit')) {
+      categories.add(AiCfoMemoryCategory.customer);
+    }
+    if (normalized.contains('shipment') ||
+        normalized.contains('import') ||
+        normalized.contains('export')) {
+      categories.add(AiCfoMemoryCategory.tradeImportExport);
+    }
+    if (normalized.contains('inventory') || normalized.contains('stock')) {
+      categories.add(AiCfoMemoryCategory.inventory);
+    }
+    return categories;
+  }
+
+  int _memoryScore({
+    required AiCfoMemoryItem memory,
+    required Set<AiCfoMemoryCategory> categories,
+    required String normalized,
+    required String? relatedEntity,
+  }) {
+    var score = 0;
+    if (categories.contains(memory.category)) score += 4;
+    final entity = relatedEntity?.toLowerCase().trim();
+    if (entity != null &&
+        entity.isNotEmpty &&
+        (memory.relatedEntity ?? '').toLowerCase().contains(entity)) {
+      score += 3;
+    }
+    final summary = memory.summary.toLowerCase();
+    for (final token in normalized.split(RegExp(r'\s+'))) {
+      if (token.length >= 4 && summary.contains(token)) score += 1;
+    }
+    return score;
+  }
+
+  String _stableId({
+    required AiCfoMemoryCategory category,
+    required String sourceType,
+    required String summary,
+    required String? relatedEntity,
+  }) {
+    return 'cfo_${category.name}_${sourceType}_${_fingerprint('${relatedEntity ?? ''}|$summary')}';
+  }
+
+  String _fingerprint(String value) {
+    return value
+        .toLowerCase()
+        .replaceAll(RegExp(r'[^a-z0-9]+'), '_')
+        .replaceAll(RegExp(r'_+'), '_')
+        .replaceAll(RegExp(r'^_|_$'), '');
   }
 
   List<String> _remember(List<String> current, String value) {

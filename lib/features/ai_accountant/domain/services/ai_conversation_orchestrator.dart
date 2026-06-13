@@ -340,11 +340,23 @@ class AiConversationOrchestrator {
       recommendations: recommendations,
       activeProposal: activeProposal,
     );
-    final response =
+    final baseResponse =
         (llmResponse ?? _fallbackResponse(normalized, plan, evidence)).copyWith(
       metadata: metadata,
       financialSnapshot: snapshot,
       insights: insights,
+      risks: risks,
+      recommendations: recommendations,
+    );
+    final response = _withRelevantMemory(
+      baseResponse,
+      plan: plan,
+      userText: userText,
+    );
+    _businessMemoryManager.extractFromAnalysis(
+      plan: plan,
+      evidence: evidence,
+      snapshot: snapshot,
       risks: risks,
       recommendations: recommendations,
     );
@@ -459,8 +471,29 @@ class AiConversationOrchestrator {
       policyBlocks: policy.blocksRecommendation,
       evidence: evidence,
     );
+    if (!result.needsMoreInformation) {
+      _businessMemoryManager.extractFromDecision(result: result);
+    }
     if (!result.needsMoreInformation) _decisionQuestionnaire.clear();
     return response;
+  }
+
+  AiAdvisorResponse _withRelevantMemory(
+    AiAdvisorResponse response, {
+    required AiToolPlan plan,
+    required String userText,
+  }) {
+    final memorySummary = _businessMemoryManager.summarizeRelevant(
+      intent: plan.intent,
+      userText: userText,
+      relatedEntity: _memory.latestCustomer ?? _memory.currentProduct,
+    );
+    if (memorySummary.isEmpty || response.text.contains('Relevant Memory:')) {
+      return response;
+    }
+    return response.copyWith(
+      text: '${response.text}\n\nRelevant Memory:\n$memorySummary',
+    );
   }
 
   AiAdvisorResponse _decisionResponseFromResult({
