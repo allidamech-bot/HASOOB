@@ -131,7 +131,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       role: AiChatRole.assistant,
       type: AiChatMessageType.question,
       text:
-          'Welcome. I can help with pricing, exports, inventory, customer balances, profitability, and preparing accounting operations for review. What would you like to work on?',
+          'Welcome. I can help with pricing, exports, inventory, customer balances, profitability, and preparing accounting operations for review. Add invoices, customers, products, expenses, and shipment costs to unlock evidence-backed CFO analysis. What would you like to work on?',
       timestamp: DateTime(2026, 6, 11),
       suggestedReplies: [
         'Price a shipment',
@@ -186,10 +186,29 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       text: text,
     );
 
-    final advisorResponse = await _orchestrator.generateResponse(
-      userText: text,
-      activeProposal: _activeProposal ?? _confirmationProposal,
-    );
+    AiAdvisorResponse advisorResponse;
+    try {
+      advisorResponse = await _orchestrator.generateResponse(
+        userText: text,
+        activeProposal: _activeProposal ?? _confirmationProposal,
+      );
+    } catch (e, stack) {
+      debugPrint('[AiAccountantScreen] Safe AI response fallback: $e');
+      debugPrint('$stack');
+      if (!mounted) return;
+      _appendMessage(
+        role: AiChatRole.assistant,
+        type: AiChatMessageType.error,
+        text:
+            'I could not prepare a reliable CFO answer from the available data. Please try again, or ask for a narrower analysis such as cash flow, customer risk, inventory, or shipment pricing.',
+        suggestedReplies: const [
+          'Check business health',
+          'Review customer risk',
+          'Price a shipment',
+        ],
+      );
+      return;
+    }
 
     if (_isExecutionIntent(text)) {
       final proposal = _activeProposal ?? _confirmationProposal;
@@ -269,11 +288,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         suggestedReplies: _proposalSuggestedReplies(proposal),
       );
     } catch (e) {
+      debugPrint('[AiAccountantScreen] Proposal parsing stopped safely: $e');
       if (!mounted) return;
       _appendMessage(
         role: AiChatRole.assistant,
         type: AiChatMessageType.error,
-        text: 'I could not analyze that request safely: $e',
+        text:
+            'I could not prepare a safe proposal from that request. Please add the transaction type, product, quantity, amount, and customer or supplier when relevant.',
         suggestedReplies: const [
           'Try as a purchase',
           'Try as a sale',
@@ -486,10 +507,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ],
       );
     } catch (e) {
+      debugPrint('[AiAccountantScreen] Guarded execution failed safely: $e');
       if (!mounted) return;
-      final result = ProposalExecutionResult(
+      const result = ProposalExecutionResult(
         success: false,
-        error: 'Could not execute safely: $e',
+        error:
+            'The guarded execution flow stopped this action before anything was committed.',
       );
       setState(() {
         _confirmationProposal = null;
@@ -723,6 +746,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
           ),
+          _statusPill('AI CFO Beta', goldAccent),
+          const SizedBox(width: 8),
           if (!isDesktop)
             IconButton(
               tooltip: 'Context',
@@ -1379,6 +1404,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                       'Context Loaded',
                       style: TextStyle(color: textSecondary, fontSize: 12),
                     ),
+                    _statusPill('AI CFO Beta', goldAccent),
                   ],
                 ),
               ],
@@ -2102,7 +2128,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
               SizedBox(height: 4),
               Text(
-                'Ask, compare, prepare proposals, then approve through the guarded accounting flow.',
+                'Ask, compare, prepare proposals, then approve through the guarded accounting flow. Add invoices, customers, products, expenses, and shipment costs when analysis says data is missing.',
                 style:
                     TextStyle(color: textSecondary, fontSize: 12, height: 1.35),
               ),
@@ -2110,10 +2136,18 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           ),
         ),
         const SizedBox(width: 10),
-        if (_activeProposal != null)
-          _statusPill('Proposal ready', goldAccent)
-        else
-          _statusPill('Advisory only', tealSuccess),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.end,
+          children: [
+            _statusPill('AI CFO Beta', goldAccent),
+            if (_activeProposal != null)
+              _statusPill('Proposal ready', goldAccent)
+            else
+              _statusPill('Advisory only', tealSuccess),
+          ],
+        ),
       ],
     );
   }
@@ -2250,7 +2284,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ),
             const SizedBox(height: 8),
             const Text(
-              'Start with profitability, cash flow, stock risk, customer balances, or a transaction proposal.',
+              'Start with profitability, cash flow, stock risk, customer balances, or a transaction proposal. Add invoices, customers, products, expenses, and shipment costs to unlock evidence-backed CFO analysis.',
               textAlign: TextAlign.center,
               style:
                   TextStyle(color: textSecondary, fontSize: 12, height: 1.45),
