@@ -47,6 +47,7 @@ class UITokens {
   static const double blurSoft = 10;
   static const double blurMedium = 14;
   static const double blurStrong = 16;
+  static const double blurGlow = 20;
 
   // ------------------------------------------------------------
   // SIDEBAR

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/app_theme.dart';
+import '../core/ui/ui_tokens.dart';
 
 class OrbitNodeCard extends StatelessWidget {
   final String title;
@@ -28,10 +29,10 @@ class OrbitNodeCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppTheme.aiCard : Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        borderRadius: BorderRadius.circular(UITokens.radiusXl),
         border: Border.all(
           color: isDark ? color.withValues(alpha: 0.2) : AppTheme.lightBorder,
-          width: 1,
+          width: UITokens.borderWidthThin,
         ),
         gradient: isDark
             ? LinearGradient(
@@ -48,14 +49,14 @@ class OrbitNodeCard extends StatelessWidget {
             ? [
                 BoxShadow(
                   color: color.withValues(alpha: 0.08),
-                  blurRadius: 20,
-                  offset: const Offset(0, 6),
+                  blurRadius: UITokens.blurGlow,
+                  offset: const Offset(0, UITokens.spaceXs),
                 ),
               ]
             : AppTheme.softShadow(context),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        borderRadius: BorderRadius.circular(UITokens.radiusXl),
         child: Stack(
           children: [
             // Ambient subtle glow circle
@@ -98,8 +99,8 @@ class OrbitNodeCard extends StatelessWidget {
                     height: 42,
                     decoration: BoxDecoration(
                       color: color.withValues(alpha: 0.12),
-                      borderRadius:
-                          BorderRadius.circular(AppTheme.radiusMedium),
+borderRadius:
+                           BorderRadius.circular(UITokens.radiusLg),
                       border: Border.all(
                         color: color.withValues(alpha: 0.25),
                         width: 1,
@@ -155,8 +156,8 @@ class OrbitNodeCard extends StatelessWidget {
                         color: isTrendUp == true
                             ? AppTheme.aiGreen.withValues(alpha: 0.12)
                             : AppTheme.aiRed.withValues(alpha: 0.12),
-                        borderRadius:
-                            BorderRadius.circular(AppTheme.radiusSmall),
+borderRadius:
+                             BorderRadius.circular(UITokens.radiusSm),
                       ),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
