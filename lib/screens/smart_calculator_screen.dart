@@ -5,6 +5,7 @@ import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
+import '../core/ui/responsive.dart';
 import '../data/models/smart_assistant_models.dart';
 import '../data/services/smart_calculator_service.dart';
 import '../widgets/premium/premium_card.dart';
@@ -166,7 +167,7 @@ class _SmartCalculatorScreenState extends State<SmartCalculatorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+    final isDesktop = UIResponsive.isDesktop(context);
 
     return Scaffold(
       extendBody: true,

@@ -11,6 +11,7 @@ import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
 import '../core/app_web_utils.dart';
+import '../core/ui/responsive.dart';
 import '../data/services/export_service.dart';
 import '../data/services/reports/report_models.dart';
 import '../data/services/reports/report_service.dart';
@@ -287,7 +288,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         const SkeletonCard(height: 120),
         const SizedBox(height: 20),
         GridView.count(
-          crossAxisCount: MediaQuery.of(context).size.width < 420 ? 1 : 2,
+          crossAxisCount: UIResponsive.isPhone(context) ? 1 : 2,
           crossAxisSpacing: 12,
           mainAxisSpacing: 12,
           shrinkWrap: true,
@@ -312,7 +313,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
     ];
 
-    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+    final isDesktop = UIResponsive.isDesktop(context);
 
     final contentList = [
       AppSectionHeader(
@@ -604,7 +605,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _metrics(ReportsSnapshot data, AppCopy copy) {
     return GridView.count(
-      crossAxisCount: MediaQuery.sizeOf(context).width < 420 ? 2 : 4,
+      crossAxisCount: UIResponsive.isPhone(context) ? 2 : 4,
       crossAxisSpacing: 12,
       mainAxisSpacing: 12,
       shrinkWrap: true,
@@ -1105,7 +1106,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         final summary = snapshot.data;
         if (summary == null) return const SizedBox.shrink();
 
-        final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+        final isDesktop = UIResponsive.isDesktop(context);
         final chartPoints = summary.monthlySales.entries
             .toList()
             .asMap()
@@ -1126,7 +1127,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
             GridView.count(
               crossAxisCount: isDesktop
                   ? 3
-                  : (MediaQuery.sizeOf(context).width < 420 ? 1 : 2),
+                  : (UIResponsive.isPhone(context) ? 1 : 2),
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               shrinkWrap: true,

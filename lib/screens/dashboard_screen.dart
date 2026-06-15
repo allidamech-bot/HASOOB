@@ -6,6 +6,7 @@ import 'package:hasoob_app/core/app_formatters.dart';
 import 'package:hasoob_app/core/app_messages.dart';
 import 'package:hasoob_app/core/app_theme.dart';
 import 'package:hasoob_app/core/business/business_context.dart';
+import 'package:hasoob_app/core/ui/responsive.dart';
 import 'package:hasoob_app/data/database/database_helper.dart';
 import 'package:hasoob_app/data/services/auth_service.dart';
 import 'package:hasoob_app/data/services/cloud_sync_service.dart';
@@ -311,7 +312,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildContent(BuildContext context, AppCopy copy, DashboardSummaryModel summary) {
     final data = _cachedData ?? ReportsSnapshot.empty();
     final lowStockPreview = data.lowStockItems.take(3).toList();
-    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+    final isDesktop = UIResponsive.isDesktop(context);
 
     if (!isDesktop) {
       return AiMobilePageShell(

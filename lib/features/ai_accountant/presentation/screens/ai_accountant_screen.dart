@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/app_theme.dart';
 import '../../../../core/business/business_context.dart';
+import '../../../../core/ui/responsive.dart';
 import '../../../../data/repositories/product_repository.dart';
 import '../../../../screens/invoice_details_screen.dart';
 import '../../../../screens/product_details_screen.dart';
@@ -617,7 +618,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         backgroundColor: darkBg,
         body: LayoutBuilder(
           builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 1000;
+            final isDesktop =
+                UIResponsive.isWideDesktopWidth(constraints.maxWidth);
             return SafeArea(
               child: Column(
                 children: [
@@ -640,7 +642,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         body: SafeArea(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth >= 1000;
+              final isDesktop =
+                  UIResponsive.isWideDesktopWidth(constraints.maxWidth);
               return _buildConversationDominantShell(isDesktop: isDesktop);
             },
           ),

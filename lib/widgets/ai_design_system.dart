@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
+import '../core/ui/responsive.dart';
 
 /// Calm dark card with optional emphasis border.
 class AiGlassCard extends StatelessWidget {
@@ -410,7 +411,7 @@ class AiEmptyState extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isSmall = MediaQuery.sizeOf(context).width < 420;
+    final isSmall = UIResponsive.isPhone(context);
 
     return Container(
       width: double.infinity,
