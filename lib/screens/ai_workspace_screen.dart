@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:hasoob_app/core/app_theme.dart';
 import 'package:hasoob_app/features/ai_accountant/presentation/screens/ai_accountant_screen.dart';
+import 'package:hasoob_app/features/ai_accountant/presentation/state/ai_workspace_controller.dart';
+import 'package:hasoob_app/features/ai_accountant/presentation/state/ai_workspace_provider.dart';
 import 'package:hasoob_app/widgets/command_dock.dart';
 import 'dashboard_screen.dart';
 import 'inventory_screen.dart';
@@ -18,16 +20,19 @@ class AiWorkspaceScreen extends StatefulWidget {
 
 class _AiWorkspaceScreenState extends State<AiWorkspaceScreen> {
   int _selectedIndex = 0;
+  final AiWorkspaceController _workspaceController = AiWorkspaceController();
 
-  final List<Widget> _screens = const [
-    AiAccountantScreen(workspaceMode: true),
-    DashboardScreen(),
-    InventoryScreen(),
-    SalesHistoryScreen(),
-    SmartCalculatorScreen(),
-    ReportsScreen(),
-    SettingsScreen(),
-  ];
+  List<Widget> _buildScreens() {
+    return [
+      const AiAccountantScreen(workspaceMode: true),
+      const DashboardScreen(),
+      const InventoryScreen(),
+      const SalesHistoryScreen(),
+      const SmartCalculatorScreen(),
+      const ReportsScreen(),
+      const SettingsScreen(),
+    ];
+  }
 
   void _onDestinationSelected(int index) {
     setState(() => _selectedIndex = index);
@@ -35,48 +40,52 @@ class _AiWorkspaceScreenState extends State<AiWorkspaceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppTheme.aiDeep,
-      body: LayoutBuilder(
-        builder: (context, constraints) {
-          final isDesktop = constraints.maxWidth >= 1024;
+    final screens = _buildScreens();
+    return AiWorkspaceProvider(
+      controller: _workspaceController,
+      child: Scaffold(
+        backgroundColor: AppTheme.aiDeep,
+        body: LayoutBuilder(
+          builder: (context, constraints) {
+            final isDesktop = constraints.maxWidth >= 1024;
 
-          if (!isDesktop) {
-            return IndexedStack(
-              index: _selectedIndex,
-              children: _screens,
-            );
-          }
+            if (!isDesktop) {
+              return IndexedStack(
+                index: _selectedIndex,
+                children: screens,
+              );
+            }
 
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildDesktopSidebar(context, constraints.maxWidth),
-              const VerticalDivider(
-                  width: 1, thickness: 1, color: AppTheme.aiCardBorder),
-              Expanded(
-                child: IndexedStack(
-                  index: _selectedIndex,
-                  children: _screens,
+            return Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildDesktopSidebar(context, constraints.maxWidth),
+                const VerticalDivider(
+                    width: 1, thickness: 1, color: AppTheme.aiCardBorder),
+                Expanded(
+                  child: IndexedStack(
+                    index: _selectedIndex,
+                    children: screens,
+                  ),
                 ),
-              ),
-            ],
-          );
-        },
-      ),
-      bottomNavigationBar: LayoutBuilder(
-        builder: (context, constraints) {
-          final isDesktop = constraints.maxWidth >= 1024;
-          if (isDesktop) return const SizedBox.shrink();
+              ],
+            );
+          },
+        ),
+        bottomNavigationBar: LayoutBuilder(
+          builder: (context, constraints) {
+            final isDesktop = constraints.maxWidth >= 1024;
+            if (isDesktop) return const SizedBox.shrink();
 
-          return SafeArea(
-            minimum: const EdgeInsets.fromLTRB(10, 0, 10, 8),
-            child: CommandDock(
-              selectedIndex: _selectedIndex,
-              onDestinationSelected: _onDestinationSelected,
-            ),
-          );
-        },
+            return SafeArea(
+              minimum: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+              child: CommandDock(
+                selectedIndex: _selectedIndex,
+                onDestinationSelected: _onDestinationSelected,
+              ),
+            );
+          },
+        ),
       ),
     );
   }
