@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/app_theme.dart';
 import '../widgets/command360/command360_quick_action_chip.dart';
+import '../widgets/command360/command360_starter_question_chip.dart';
 import '../../../../core/business/business_context.dart';
 import '../../../../core/ui/responsive.dart';
 import '../../../../data/repositories/product_repository.dart';
@@ -1039,7 +1040,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           separatorBuilder: (_, __) => const SizedBox(width: 8),
           itemBuilder: (context, index) {
             final prompt = prompts[index];
-            return _StarterQuestionChip(
+            return Command360StarterQuestionChip(
               label: prompt.$1,
               icon: prompt.$2,
               onPressed: _isAnalyzing || _isCommitting
@@ -1054,7 +1055,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       spacing: 8,
       runSpacing: 8,
       children: prompts.map((prompt) {
-        return _StarterQuestionChip(
+        return Command360StarterQuestionChip(
           label: prompt.$1,
           icon: prompt.$2,
           onPressed: _isAnalyzing || _isCommitting
@@ -4269,40 +4270,6 @@ class _ExecutiveTabButton extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
-      ),
-    );
-  }
-}
-
-class _StarterQuestionChip extends StatelessWidget {
-  const _StarterQuestionChip({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return FilledButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 15),
-      label: Text(
-        label,
-        overflow: TextOverflow.ellipsis,
-      ),
-      style: FilledButton.styleFrom(
-        foregroundColor: Colors.black,
-        disabledForegroundColor: _AiAccountantScreenState.textSecondary,
-        backgroundColor: _AiAccountantScreenState.goldAccent,
-        disabledBackgroundColor:
-            _AiAccountantScreenState.premiumPanelSoft.withValues(alpha: 0.8),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900),
       ),
     );
   }
