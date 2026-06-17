@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../../../../core/app_theme.dart';
 import '../widgets/command360/command360_context_module.dart';
+import '../widgets/command360/command360_context_row.dart';
 import '../widgets/command360/command360_executive_tab_button.dart';
 import '../widgets/command360/command360_quick_action_chip.dart';
 import '../widgets/command360/command360_starter_question_chip.dart';
@@ -1749,37 +1750,32 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ),
             const SizedBox(height: 12),
           ],
-          _contextRow(
-            Icons.business_outlined,
-            'Business',
-            BusinessContext.businessId.isEmpty
-                ? 'Open a business profile'
-                : BusinessContext.businessId,
-          ),
-          _contextRow(
-            Icons.person_outline,
-            'Customer',
-            memory.latestCustomer ?? 'Ask about a customer',
-          ),
-          _contextRow(
-            Icons.inventory_2_outlined,
-            'Product',
-            memory.currentProduct ?? 'Ask about a product',
-          ),
-          _contextRow(
-            Icons.fact_check_outlined,
-            'Active proposal',
-            _activeProposal?.actionType ??
-                _confirmationProposal?.actionType ??
-                'No Active Proposal',
-          ),
-          _contextRow(
-            Icons.route_outlined,
-            'Active workflow',
-            workflow == null
-                ? 'No Active Workflow'
-                : _workflowTitle(workflow.workflowType),
-          ),
+          Command360ContextRow(
+              icon: Icons.business_outlined,
+              label: 'Business',
+              value: BusinessContext.businessId.isEmpty
+                  ? 'Open a business profile'
+                  : BusinessContext.businessId),
+          Command360ContextRow(
+              icon: Icons.person_outline,
+              label: 'Customer',
+              value: memory.latestCustomer ?? 'Ask about a customer'),
+          Command360ContextRow(
+              icon: Icons.inventory_2_outlined,
+              label: 'Product',
+              value: memory.currentProduct ?? 'Ask about a product'),
+          Command360ContextRow(
+              icon: Icons.fact_check_outlined,
+              label: 'Active proposal',
+              value: _activeProposal?.actionType ??
+                  _confirmationProposal?.actionType ??
+                  'No Active Proposal'),
+          Command360ContextRow(
+              icon: Icons.route_outlined,
+              label: 'Active workflow',
+              value: workflow == null
+                  ? 'No Active Workflow'
+                  : _workflowTitle(workflow.workflowType)),
           if (!compact) ...[
             const SizedBox(height: 8),
             _buildBusinessMemoryPanel(businessMemory),
@@ -1831,44 +1827,23 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ],
           ),
           const SizedBox(height: 6),
-          _contextRow(
-              Icons.inventory_2_outlined, 'Recent Product', recentProduct),
-          _contextRow(Icons.person_outline, 'Recent Customer', recentCustomer),
-          _contextRow(Icons.topic_outlined, 'Recent Topic', recentTopic),
+          Command360ContextRow(
+              icon: Icons.inventory_2_outlined,
+              label: 'Recent Product',
+              value: recentProduct),
+          Command360ContextRow(
+              icon: Icons.person_outline,
+              label: 'Recent Customer',
+              value: recentCustomer),
+          Command360ContextRow(
+              icon: Icons.topic_outlined,
+              label: 'Recent Topic',
+              value: recentTopic),
         ],
       ),
     );
   }
 
-  Widget _contextRow(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 10),
-      child: Row(
-        children: [
-          Icon(icon, color: textSecondary, size: 16),
-          const SizedBox(width: 9),
-          SizedBox(
-            width: 94,
-            child: Text(
-              label,
-              style: const TextStyle(color: textSecondary, fontSize: 11),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 12,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _buildLedgerPanel({bool isCompact = false, bool embedded = false}) {
     return Container(
