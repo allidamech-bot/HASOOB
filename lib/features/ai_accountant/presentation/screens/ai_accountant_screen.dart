@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/app_theme.dart';
+import '../widgets/command360/command360_executive_tab_button.dart';
 import '../widgets/command360/command360_quick_action_chip.dart';
 import '../widgets/command360/command360_starter_question_chip.dart';
 import '../../../../core/business/business_context.dart';
@@ -1201,7 +1202,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       children: [
         for (var i = 0; i < tabs.length; i++) ...[
           Expanded(
-            child: _ExecutiveTabButton(
+            child: Command360ExecutiveTabButton(
               icon: tabs[i].$1,
               label: tabs[i].$2,
               selected: _contextTabIndex == i,
@@ -4230,46 +4231,6 @@ class _ExecutiveRecommendationCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _ExecutiveTabButton extends StatelessWidget {
-  const _ExecutiveTabButton({
-    required this.icon,
-    required this.label,
-    required this.selected,
-    required this.onPressed,
-  });
-
-  final IconData icon;
-  final String label;
-  final bool selected;
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    final color = selected
-        ? _AiAccountantScreenState.goldAccent
-        : _AiAccountantScreenState.textSecondary;
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 15),
-      label: Text(label, overflow: TextOverflow.ellipsis),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: color,
-        side: BorderSide(
-          color: selected
-              ? _AiAccountantScreenState.goldAccent.withValues(alpha: 0.36)
-              : _AiAccountantScreenState.premiumStroke,
-        ),
-        backgroundColor: selected
-            ? _AiAccountantScreenState.goldAccent.withValues(alpha: 0.1)
-            : _AiAccountantScreenState.premiumPanelSoft.withValues(alpha: 0.72),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
       ),
     );
   }
