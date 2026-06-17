@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/app_theme.dart';
+import '../widgets/command360/command360_context_module.dart';
 import '../widgets/command360/command360_executive_tab_button.dart';
 import '../widgets/command360/command360_quick_action_chip.dart';
 import '../widgets/command360/command360_starter_question_chip.dart';
@@ -1539,7 +1540,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _contextModule(
+            Command360ContextModule(
               title: 'Business Health',
               icon: Icons.query_stats_outlined,
               child: Column(
@@ -1567,7 +1568,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 ],
               ),
             ),
-            _contextModule(
+            Command360ContextModule(
               title: 'Risks',
               icon: Icons.warning_amber_rounded,
               child: _contextRows(
@@ -1579,7 +1580,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 empty: 'No active risk signal',
               ),
             ),
-            _contextModule(
+            Command360ContextModule(
               title: 'Insights',
               icon: Icons.lightbulb_outline,
               child: _contextRows(
@@ -1587,7 +1588,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 empty: 'No insight generated yet',
               ),
             ),
-            _contextModule(
+            Command360ContextModule(
               title: 'Recommendations',
               icon: Icons.task_alt_outlined,
               child: _contextRows(
@@ -1595,12 +1596,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 empty: 'Ask for analysis to generate actions',
               ),
             ),
-            _contextModule(
+            Command360ContextModule(
               title: 'Memory',
               icon: Icons.memory_outlined,
               child: _buildContextSummary(compact: true),
             ),
-            _contextModule(
+            Command360ContextModule(
               title: 'Active Proposal',
               icon: Icons.fact_check_outlined,
               child: _contextRows(
@@ -1611,7 +1612,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 empty: 'No Active Proposal',
               ),
             ),
-            _contextModule(
+            Command360ContextModule(
               title: 'Active Workflow',
               icon: Icons.route_outlined,
               child: _contextRows(
@@ -1630,45 +1631,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  Widget _contextModule({
-    required String title,
-    required IconData icon,
-    required Widget child,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: premiumPanelSoft.withValues(alpha: 0.58),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: premiumStroke),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(icon, color: goldAccent, size: 15),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  title,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          child,
-        ],
-      ),
-    );
-  }
 
   Widget _contextRows(List<String> rows, {required String empty}) {
     final visibleRows = rows.where((row) => row.trim().isNotEmpty).toList();
