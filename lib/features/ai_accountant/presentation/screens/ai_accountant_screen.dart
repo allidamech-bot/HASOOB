@@ -7,6 +7,7 @@ import '../widgets/command360/command360_context_row.dart';
 import '../widgets/command360/command360_executive_tab_button.dart';
 import '../widgets/command360/command360_quick_action_chip.dart';
 import '../widgets/command360/command360_starter_question_chip.dart';
+import '../widgets/command360/command360_message_expansion.dart';
 import '../../../../core/business/business_context.dart';
 import '../../../../core/ui/responsive.dart';
 import '../../../../data/repositories/product_repository.dart';
@@ -2466,7 +2467,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           if (message.insights.isNotEmpty || message.risks.isNotEmpty)
-            _messageExpansion(
+            Command360MessageExpansion(
               title: 'Evidence',
               icon: Icons.dataset_outlined,
               child: _plainMessageRows(
@@ -2486,7 +2487,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
           if (metadata != null)
-            _messageExpansion(
+            Command360MessageExpansion(
               title: 'Confidence',
               icon: Icons.verified_user_outlined,
               child: _plainMessageRows(
@@ -2496,7 +2497,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
           if (metadata != null && metadata.executedTools.isNotEmpty)
-            _messageExpansion(
+            Command360MessageExpansion(
               title: 'Tools Used',
               icon: Icons.construction_outlined,
               child: _plainMessageRows(
@@ -2506,13 +2507,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
           if (message.workflowSession != null)
-            _messageExpansion(
+            Command360MessageExpansion(
               title: 'Workflow State',
               icon: Icons.route_outlined,
               child: _buildWorkflowCard(message.workflowSession!),
             ),
           if (message.memory?.hasVisibleContext == true)
-            _messageExpansion(
+            Command360MessageExpansion(
               title: 'Memory',
               icon: Icons.memory_outlined,
               child: _buildMemoryCard(message.memory!),
@@ -2522,36 +2523,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  Widget _messageExpansion({
-    required String title,
-    required IconData icon,
-    required Widget child,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(top: 7),
-      decoration: BoxDecoration(
-        color: premiumPanelSoft.withValues(alpha: 0.42),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: premiumStroke),
-      ),
-      child: ExpansionTile(
-        tilePadding: const EdgeInsets.symmetric(horizontal: 10),
-        childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-        iconColor: textSecondary,
-        collapsedIconColor: textSecondary,
-        leading: Icon(icon, color: textSecondary, size: 15),
-        title: Text(
-          title,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 11,
-            fontWeight: FontWeight.w900,
-          ),
-        ),
-        children: [child],
-      ),
-    );
-  }
 
   // ignore: unused_element
   Widget _buildAiInsightsPanel({
