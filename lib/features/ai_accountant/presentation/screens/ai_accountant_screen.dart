@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/app_theme.dart';
+import '../widgets/command360/command360_quick_action_chip.dart';
 import '../../../../core/business/business_context.dart';
 import '../../../../core/ui/responsive.dart';
 import '../../../../data/repositories/product_repository.dart';
@@ -2232,7 +2233,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         separatorBuilder: (_, __) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final action = actions[index];
-          return _QuickActionChip(
+          return Command360QuickActionChip(
             label: action.$1,
             icon: action.$2,
             onPressed: _isAnalyzing || _isCommitting
@@ -2298,14 +2299,14 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _QuickActionChip(
+                Command360QuickActionChip(
                   label: 'Analyze Profitability',
                   icon: Icons.analytics_outlined,
                   onPressed: () => _processAiCommand(
                     customText: 'Analyze Profitability',
                   ),
                 ),
-                _QuickActionChip(
+                Command360QuickActionChip(
                   label: 'Price a shipment',
                   icon: Icons.price_check_outlined,
                   onPressed: () => _processAiCommand(
@@ -4370,40 +4371,6 @@ class _InsightCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _QuickActionChip extends StatelessWidget {
-  const _QuickActionChip({
-    required this.label,
-    required this.icon,
-    required this.onPressed,
-  });
-
-  final String label;
-  final IconData icon;
-  final VoidCallback? onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return OutlinedButton.icon(
-      onPressed: onPressed,
-      icon: Icon(icon, size: 15),
-      label: Text(
-        label,
-        overflow: TextOverflow.ellipsis,
-      ),
-      style: OutlinedButton.styleFrom(
-        foregroundColor: Colors.white,
-        disabledForegroundColor: _AiAccountantScreenState.textSecondary,
-        side: const BorderSide(color: _AiAccountantScreenState.premiumStroke),
-        backgroundColor:
-            _AiAccountantScreenState.premiumPanelSoft.withValues(alpha: 0.82),
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(999)),
-        textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w800),
       ),
     );
   }
