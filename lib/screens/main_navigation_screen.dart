@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 
 import '../core/app_copy.dart';
 import '../core/app_theme.dart';
+import '../core/ui/responsive.dart';
 import '../widgets/command_dock.dart';
 import '../widgets/desktop_sidebar.dart';
 import 'add_product_screen.dart';
@@ -28,7 +29,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   int _index = 0;
 
   void _onDestinationSelected(int index) {
-    if (index == 2) {
+    if (index == 3) {
       _openAddMenu();
       return;
     }
@@ -198,6 +199,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
   Widget build(BuildContext context) {
     final localeKey = Localizations.localeOf(context).languageCode;
     final screens = <Widget>[
+      const AiAccountantScreen(workspaceMode: true),
       const DashboardScreen(),
       const InventoryScreen(),
       const SizedBox(),
@@ -224,7 +226,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           extendBody: false,
           body: LayoutBuilder(
             builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth >= 800;
+              final isDesktop =
+                  UIResponsive.isDesktopWidth(constraints.maxWidth);
               if (isDesktop) {
                 return Directionality(
                   textDirection:
@@ -254,7 +257,8 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
           ),
           bottomNavigationBar: LayoutBuilder(
             builder: (context, constraints) {
-              final isDesktop = constraints.maxWidth >= 800;
+              final isDesktop =
+                  UIResponsive.isDesktopWidth(constraints.maxWidth);
               if (isDesktop) return const SizedBox.shrink();
 
               return SafeArea(

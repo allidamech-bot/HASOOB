@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
+import '../core/ui/responsive.dart';
 
 class PremiumSplashScreen extends StatefulWidget {
   const PremiumSplashScreen({super.key});
@@ -121,7 +122,8 @@ class _PremiumSplashScreenState extends State<PremiumSplashScreen> with TickerPr
                     scale: _scaleAnimation.value,
                     child: LayoutBuilder(
                       builder: (context, constraints) {
-                        final isDesktop = constraints.maxWidth > 800;
+                        final isDesktop = constraints.maxWidth >
+                            UIResponsive.smallDesktopBreakpoint;
                         if (isDesktop) {
                           return _buildDesktopLayout();
                         }

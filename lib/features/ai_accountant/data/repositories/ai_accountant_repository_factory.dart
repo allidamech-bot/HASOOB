@@ -7,8 +7,11 @@ class AiAccountantRepositoryFactory {
   static AiAccountantRepository make() {
     if (AppConfig.isTestingMode) {
       return MockAiAccountantRepository();
-    } else {
+    }
+    try {
       return FirestoreAiAccountantRepository();
+    } catch (_) {
+      return MockAiAccountantRepository();
     }
   }
 }

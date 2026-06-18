@@ -5,6 +5,7 @@ import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
+import '../core/ui/responsive.dart';
 import '../core/permissions/permissions.dart';
 import '../data/models/product_model.dart';
 import '../data/repositories/product_repository.dart';
@@ -155,7 +156,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
-    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+    final isDesktop = UIResponsive.isDesktop(context);
 
     return Scaffold(
       backgroundColor: AppTheme.aiDeep,

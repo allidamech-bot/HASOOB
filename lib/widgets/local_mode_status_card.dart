@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
+import '../core/ui/ui_tokens.dart';
 
 class LocalModeStatusCard extends StatelessWidget {
   const LocalModeStatusCard({super.key});
@@ -11,7 +12,7 @@ class LocalModeStatusCard extends StatelessWidget {
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: AppTheme.surfaceSecondary.withValues(alpha: 0.5),
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(UITokens.radius3xl),
         border: Border.all(color: AppTheme.accentCyan.withValues(alpha: 0.2)),
       ),
       child: Row(

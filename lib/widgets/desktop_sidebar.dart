@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../core/app_theme.dart';
 import '../core/app_copy.dart';
-import '../screens/collection_center_screen.dart';
 
 class DesktopSidebar extends StatelessWidget {
   final int selectedIndex;
@@ -141,58 +140,53 @@ class DesktopSidebar extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                _SidebarItem(
-                  icon: Icons.grid_view_rounded,
-                  label: copy.t('navDashboard'),
+                 _SidebarItem(
+                  icon: Icons.psychology_rounded,
+                  label: copy.t('aiAccountant'),
                   isSelected: selectedIndex == 0,
                   onTap: () => onDestinationSelected(0),
                 ),
                 const SizedBox(height: 10),
                 _SidebarItem(
-                  icon: Icons.psychology_rounded,
-                  label: copy.t('navSmart'),
-                  isSelected: selectedIndex == 4,
-                  onTap: () => onDestinationSelected(4),
-                ),
-                const SizedBox(height: 10),
-                _SidebarItem(
-                  icon: Icons.people_alt_rounded,
-                  label: copy.t('navCustomersInvoices'),
-                  isSelected: selectedIndex == 3,
-                  onTap: () => onDestinationSelected(3),
-                ),
-                const SizedBox(height: 10),
-                _SidebarItem(
-                  icon: Icons.account_balance_wallet_rounded,
-                  label: copy.t('collectionCenter'),
-                  isSelected: false,
-                  onTap: () {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const CollectionCenterScreen()));
-                  },
-                ),
-                const SizedBox(height: 10),
-                _SidebarItem(
-                  icon: Icons.inventory_2_rounded,
-                  label: copy.t('navInventory'),
+                  icon: Icons.grid_view_rounded,
+                  label: copy.t('navDashboard'),
                   isSelected: selectedIndex == 1,
                   onTap: () => onDestinationSelected(1),
                 ),
                 const SizedBox(height: 10),
                 _SidebarItem(
-                  icon: Icons.analytics_rounded,
-                  label: copy.t('navReports'),
+                  icon: Icons.inventory_2_rounded,
+                  label: copy.t('navInventory'),
+                  isSelected: selectedIndex == 2,
+              onTap: () => onDestinationSelected(3),
+                ),
+                const SizedBox(height: 10),
+                _SidebarItem(
+                  icon: Icons.receipt_long_rounded,
+                  label: copy.t('navTransactions'),
+                  isSelected: selectedIndex == 4,
+                  onTap: () => onDestinationSelected(4),
+                ),
+                const SizedBox(height: 10),
+                _SidebarItem(
+                  icon: Icons.auto_awesome_rounded,
+                  label: copy.t('navSmart'),
                   isSelected: selectedIndex == 5,
                   onTap: () => onDestinationSelected(5),
                 ),
                 const SizedBox(height: 10),
                 _SidebarItem(
-                  icon: Icons.settings_suggest_rounded,
-                  label: copy.t('settings'),
+                  icon: Icons.analytics_rounded,
+                  label: copy.t('navReports'),
                   isSelected: selectedIndex == 6,
                   onTap: () => onDestinationSelected(6),
+                ),
+                const SizedBox(height: 10),
+                _SidebarItem(
+                  icon: Icons.settings_suggest_rounded,
+                  label: copy.t('settings'),
+                  isSelected: selectedIndex == 7,
+                  onTap: () => onDestinationSelected(7),
                 ),
               ],
             ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../core/app_theme.dart';
+import '../core/ui/ui_tokens.dart';
 
 class MetricCard extends StatelessWidget {
   const MetricCard({
@@ -26,10 +27,10 @@ class MetricCard extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         color: isDark ? AppTheme.aiCard : Colors.white,
-        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        borderRadius: BorderRadius.circular(UITokens.radiusXl),
         border: Border.all(
           color: isDark ? color.withValues(alpha: 0.18) : AppTheme.lightBorder,
-          width: 1,
+          width: UITokens.borderWidthThin,
         ),
         gradient: isDark
             ? LinearGradient(
@@ -46,7 +47,7 @@ class MetricCard extends StatelessWidget {
             isDark ? AppTheme.haloShadow(color) : AppTheme.softShadow(context),
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(AppTheme.radiusLarge),
+        borderRadius: BorderRadius.circular(UITokens.radiusXl),
         child: Stack(
           children: [
             // Top Accent Rail
@@ -91,29 +92,29 @@ class MetricCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Glass Icon Capsule
-                      Container(
-                        padding: const EdgeInsets.all(6),
-                        decoration: BoxDecoration(
-                          color: isDark
-                              ? Colors.white.withValues(alpha: 0.03)
-                              : color.withValues(alpha: 0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(
-                            color: isDark
-                                ? Colors.white.withValues(alpha: 0.05)
-                                : color.withValues(alpha: 0.2),
-                          ),
-                        ),
-                        child: Icon(icon, color: color, size: 16),
-                      ),
+Container(
+                         padding: const EdgeInsets.all(6),
+                         decoration: BoxDecoration(
+                           color: isDark
+                               ? Colors.white.withValues(alpha: 0.03)
+                               : color.withValues(alpha: 0.1),
+                           borderRadius: BorderRadius.circular(UITokens.radiusSm),
+                           border: Border.all(
+                             color: isDark
+                                 ? Colors.white.withValues(alpha: 0.05)
+                                 : color.withValues(alpha: 0.2),
+                           ),
+                         ),
+                         child: Icon(icon, color: color, size: 16),
+                       ),
                       if (caption != null && caption!.isNotEmpty)
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: color.withValues(alpha: 0.1),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
+Container(
+                           padding: const EdgeInsets.symmetric(
+                               horizontal: 6, vertical: 2),
+                           decoration: BoxDecoration(
+                             color: color.withValues(alpha: 0.1),
+                             borderRadius: BorderRadius.circular(UITokens.radiusXs),
+                           ),
                           child: Text(
                             caption!,
                             style: GoogleFonts.inter(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../core/app_copy.dart';
 import '../core/app_theme.dart';
+import '../core/ui/ui_tokens.dart';
 import '../data/services/sync_manager.dart';
 import '../data/repositories/sync_queue_repository.dart';
 import '../core/services/connectivity_service.dart';
@@ -56,13 +57,13 @@ class SyncHealthCard extends StatelessWidget {
                   healthIcon = Icons.cloud_done_rounded;
                 }
 
-                return Card(
-                  margin: EdgeInsets.zero,
-                  child: InkWell(
-                    onTap: () => Navigator.pushNamed(context, '/sync'),
-                    borderRadius: BorderRadius.circular(AppTheme.radiusMedium),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
+return Card(
+                   margin: EdgeInsets.zero,
+                   child: InkWell(
+                     onTap: () => Navigator.pushNamed(context, '/sync'),
+                     borderRadius: BorderRadius.circular(UITokens.radiusLg),
+                     child: Padding(
+                       padding: const EdgeInsets.all(16),
                       child: Column(
                         children: [
                           Row(
@@ -132,7 +133,7 @@ class SyncHealthCard extends StatelessWidget {
       padding: const EdgeInsets.all(8),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(10),
+        borderRadius: BorderRadius.circular(UITokens.radiusMd),
       ),
       child: Icon(icon, color: color, size: 20),
     );
@@ -144,7 +145,7 @@ class SyncHealthCard extends StatelessWidget {
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
           color: AppTheme.surfaceAltFor(context),
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(UITokens.radiusSm),
           border: Border.all(color: AppTheme.borderFor(context)),
         ),
         child: Row(
@@ -155,7 +156,7 @@ class SyncHealthCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
               decoration: BoxDecoration(
                 color: color,
-                borderRadius: BorderRadius.circular(4),
+                borderRadius: BorderRadius.circular(UITokens.radiusXs),
               ),
               child: Text(
                 value,

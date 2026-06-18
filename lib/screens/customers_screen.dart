@@ -4,6 +4,7 @@ import '../core/app_copy.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
+import '../core/ui/responsive.dart';
 import '../data/repositories/customer_repository.dart';
 import '../core/utils/perf_logger.dart';
 import '../widgets/skeleton_loader.dart';
@@ -172,7 +173,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
               return _buildEmptyState(context, copy);
             }
 
-            final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+            final isDesktop = UIResponsive.isDesktop(context);
             return isDesktop
               ? ListView(
                   padding: const EdgeInsets.all(16),
@@ -438,7 +439,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context, AppCopy copy) {
-    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+    final isDesktop = UIResponsive.isDesktop(context);
     if (!isDesktop) {
       return Padding(
         padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),

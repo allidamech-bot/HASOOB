@@ -6,6 +6,7 @@ import '../core/app_formatters.dart';
 import '../core/app_messages.dart';
 import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
+import '../core/ui/responsive.dart';
 import '../data/repositories/invoice_repository.dart';
 import '../widgets/premium/premium_card.dart';
 import '../widgets/ai_design_system.dart';
@@ -170,7 +171,7 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
   @override
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
-    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+    final isDesktop = UIResponsive.isDesktop(context);
 
     return Scaffold(
       backgroundColor: AppTheme.aiDeep,

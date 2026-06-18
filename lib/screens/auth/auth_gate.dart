@@ -50,8 +50,23 @@ class _AuthGateState extends State<AuthGate> {
     }
 
     return StreamBuilder<User?>(
-      stream: AuthService.instance.authStateChanges(),
+      stream: AuthService.instance.authStateChanges()
+          .timeout(const Duration(seconds: 10), onTimeout: (sink) => sink.add(null)),
       builder: (context, snapshot) {
+        // Handle timeout - proceed to login screen instead of waiting forever
+        if (snapshot.hasError) {
+          debugPrint('[AuthGate] Auth stream error: ${snapshot.error}');
+          return const Stack(
+            children: [
+              AuthShell(),
+              _CloudSyncPassiveBanner(
+                message: 'Local Mode Active',
+                isError: true,
+              ),
+            ],
+          );
+        }
+
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const PremiumSplashScreen();
         }

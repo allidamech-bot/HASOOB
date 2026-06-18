@@ -2,13 +2,33 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../../core/app_theme.dart';
+import '../widgets/command360/command360_context_module.dart';
+import '../widgets/command360/command360_context_row.dart';
+import '../widgets/command360/command360_decision_options.dart';
+import '../widgets/command360/command360_executive_tab_button.dart';
+import '../widgets/command360/command360_memory_card.dart';
+import '../widgets/command360/command360_message_rows.dart';
+import '../widgets/command360/command360_quick_action_chip.dart';
+import '../widgets/command360/command360_starter_question_chip.dart';
+import '../widgets/command360/command360_workflow_card.dart';
+import '../widgets/command360/command360_message_expansion.dart';
+import '../widgets/command360/command360_detail_line.dart';
 import '../../../../core/business/business_context.dart';
+import '../../../../core/ui/responsive.dart';
 import '../../../../data/repositories/product_repository.dart';
 import '../../../../screens/invoice_details_screen.dart';
 import '../../../../screens/product_details_screen.dart';
 import '../../../../screens/settings_screen.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
+import '../../domain/services/ai_business_memory.dart';
+import '../../domain/services/ai_conversation_orchestrator.dart';
+import '../../domain/services/ai_evidence_bundle.dart';
+import '../../domain/services/ai_insight_generator.dart';
+import '../../domain/services/ai_response_metadata.dart';
+import '../../domain/services/ai_risk_detector.dart';
+import '../../domain/services/ai_data_collection_state.dart';
+import '../../domain/services/ai_workflow_session.dart';
 import '../../domain/services/proposal_execution_engine.dart';
 
 class LedgerEntry {
@@ -47,22 +67,6 @@ enum AiChatMessageType {
   error,
 }
 
-enum _AdvisorIntent {
-  generalHelp,
-  greeting,
-  exportAdvice,
-  pricingAdvice,
-  marginDiscussion,
-  scenarioComparison,
-  profitabilityDiscussion,
-  inventoryDiscussion,
-  customerDiscussion,
-  cashflowDiscussion,
-  transactionPreparation,
-  executionFollowUp,
-  unknown,
-}
-
 class AiChatMessage {
   final String id;
   final AiChatRole role;
@@ -71,7 +75,14 @@ class AiChatMessage {
   final DateTime timestamp;
   final AiProposalModel? proposal;
   final ProposalExecutionResult? executionResult;
+  final List<AiDecisionOption> decisionOptions;
+  final AiConversationMemory? memory;
   final List<String> suggestedReplies;
+  final AiResponseMetadata? metadata;
+  final List<AiFinancialInsight> insights;
+  final List<AiFinancialRisk> risks;
+  final List<AiFinancialRecommendation> recommendations;
+  final AiWorkflowSession? workflowSession;
 
   const AiChatMessage({
     required this.id,
@@ -81,12 +92,24 @@ class AiChatMessage {
     required this.timestamp,
     this.proposal,
     this.executionResult,
+    this.decisionOptions = const [],
+    this.memory,
     this.suggestedReplies = const [],
+    this.metadata,
+    this.insights = const [],
+    this.risks = const [],
+    this.recommendations = const [],
+    this.workflowSession,
   });
 }
 
 class AiAccountantScreen extends StatefulWidget {
-  const AiAccountantScreen({super.key});
+  final bool workspaceMode;
+
+  const AiAccountantScreen({
+    super.key,
+    this.workspaceMode = false,
+  });
 
   @override
   State<AiAccountantScreen> createState() => _AiAccountantScreenState();
@@ -96,12 +119,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _textController = TextEditingController();
   final _chatScrollController = ScrollController();
   final _repository = AiAccountantRepositoryFactory.make();
-  final _advisorContext = _AdvisorSessionContext();
+  final _orchestrator = AiConversationOrchestrator();
 
   bool _isAnalyzing = false;
   bool _isCommitting = false;
   AiProposalModel? _activeProposal;
   AiProposalModel? _confirmationProposal;
+  int _contextTabIndex = 0;
 
   static const Color darkBg = AppTheme.aiDeep;
   static const Color darkSurface = AppTheme.aiCard;
@@ -109,6 +133,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   static const Color textSecondary = AppTheme.aiTextSecondary;
   static const Color borderTerminal = AppTheme.aiCardBorder;
   static const Color tealSuccess = AppTheme.aiGreen;
+  static const Color premiumPanel = Color(0xFF101826);
+  static const Color premiumPanelSoft = Color(0xFF142033);
+  static const Color premiumStroke = Color(0xFF243044);
 
   final List<AiChatMessage> _messages = [
     AiChatMessage(
@@ -116,7 +143,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       role: AiChatRole.assistant,
       type: AiChatMessageType.question,
       text:
-          'Welcome. I can help with pricing, exports, inventory, customer balances, profitability, and preparing accounting operations for review. What would you like to work on?',
+          'Welcome. I can help with pricing, exports, inventory, customer balances, profitability, and preparing accounting operations for review. Add invoices, customers, products, expenses, and shipment costs to unlock evidence-backed CFO analysis. What would you like to work on?',
       timestamp: DateTime(2026, 6, 11),
       suggestedReplies: [
         'Price a shipment',
@@ -171,18 +198,65 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       text: text,
     );
 
-    if (_isExecutionIntent(text)) {
-      await _handleExecutionIntent(text);
+    AiAdvisorResponse advisorResponse;
+    try {
+      advisorResponse = await _orchestrator.generateResponse(
+        userText: text,
+        activeProposal: _activeProposal ?? _confirmationProposal,
+      );
+    } catch (e, stack) {
+      debugPrint('[AiAccountantScreen] Safe AI response fallback: $e');
+      debugPrint('$stack');
+      if (!mounted) return;
+      _appendMessage(
+        role: AiChatRole.assistant,
+        type: AiChatMessageType.error,
+        text:
+            'I could not prepare a reliable CFO answer from the available data. Please try again, or ask for a narrower analysis such as cash flow, customer risk, inventory, or shipment pricing.',
+        suggestedReplies: const [
+          'Check business health',
+          'Review customer risk',
+          'Price a shipment',
+        ],
+      );
       return;
     }
 
-    final advisory = _buildAdvisoryResponse(text);
-    if (advisory != null) {
+    if (_isExecutionIntent(text)) {
+      final proposal = _activeProposal ?? _confirmationProposal;
+      if (proposal != null && _isExecutableProposal(proposal)) {
+        await _handleExecutionIntent(text);
+      } else {
+        _appendMessage(
+          role: AiChatRole.assistant,
+          type: AiChatMessageType.confirmation,
+          text: advisorResponse.text,
+          decisionOptions: advisorResponse.decisionOptions,
+          memory: advisorResponse.memory,
+          suggestedReplies: advisorResponse.suggestedReplies,
+          metadata: advisorResponse.metadata,
+          insights: advisorResponse.insights,
+          risks: advisorResponse.risks,
+          recommendations: advisorResponse.recommendations,
+          workflowSession: advisorResponse.workflowSession,
+        );
+      }
+      return;
+    }
+
+    if (!advisorResponse.shouldPrepareProposal) {
       _appendMessage(
         role: AiChatRole.assistant,
-        type: advisory.type,
-        text: advisory.text,
-        suggestedReplies: advisory.suggestedReplies,
+        type: _messageTypeForMode(advisorResponse.mode),
+        text: advisorResponse.text,
+        decisionOptions: advisorResponse.decisionOptions,
+        memory: advisorResponse.memory,
+        suggestedReplies: advisorResponse.suggestedReplies,
+        metadata: advisorResponse.metadata,
+        insights: advisorResponse.insights,
+        risks: advisorResponse.risks,
+        recommendations: advisorResponse.recommendations,
+        workflowSession: advisorResponse.workflowSession,
       );
       return;
     }
@@ -193,7 +267,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     });
 
     try {
-      final proposal = await _repository.parseNaturalLanguage(text);
+      final proposalText = advisorResponse.proposalDraftText ?? text;
+      final proposal = await _repository.parseNaturalLanguage(proposalText);
       if (!mounted) return;
 
       if (proposal.actionType == 'unknown') {
@@ -213,8 +288,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
       setState(() {
         _activeProposal = proposal;
-        _advisorContext.latestProposal = proposal;
-        _rememberProposalContext(proposal);
+        _orchestrator.rememberProposal(proposal);
         _addPreviewLedgerRow(proposal);
       });
       _appendMessage(
@@ -226,11 +300,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         suggestedReplies: _proposalSuggestedReplies(proposal),
       );
     } catch (e) {
+      debugPrint('[AiAccountantScreen] Proposal parsing stopped safely: $e');
       if (!mounted) return;
       _appendMessage(
         role: AiChatRole.assistant,
         type: AiChatMessageType.error,
-        text: 'I could not analyze that request safely: $e',
+        text:
+            'I could not prepare a safe proposal from that request. Please add the transaction type, product, quantity, amount, and customer or supplier when relevant.',
         suggestedReplies: const [
           'Try as a purchase',
           'Try as a sale',
@@ -281,7 +357,14 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     required String text,
     AiProposalModel? proposal,
     ProposalExecutionResult? executionResult,
+    List<AiDecisionOption> decisionOptions = const [],
+    AiConversationMemory? memory,
     List<String> suggestedReplies = const [],
+    AiResponseMetadata? metadata,
+    List<AiFinancialInsight> insights = const [],
+    List<AiFinancialRisk> risks = const [],
+    List<AiFinancialRecommendation> recommendations = const [],
+    AiWorkflowSession? workflowSession,
   }) {
     setState(() {
       _messages.add(
@@ -293,7 +376,14 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           timestamp: DateTime.now(),
           proposal: proposal,
           executionResult: executionResult,
+          decisionOptions: decisionOptions,
+          memory: memory,
           suggestedReplies: suggestedReplies,
+          metadata: metadata,
+          insights: insights,
+          risks: risks,
+          recommendations: recommendations,
+          workflowSession: workflowSession,
         ),
       );
     });
@@ -405,7 +495,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         if (clearActive && !result.requiresUserConfirmation) {
           _activeProposal = null;
         }
-        _advisorContext.latestTopic = _AdvisorIntent.executionFollowUp;
+        _orchestrator.markExecutionFollowUp();
         _isCommitting = false;
         _markPreviewRow(result.success);
       });
@@ -429,10 +519,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ],
       );
     } catch (e) {
+      debugPrint('[AiAccountantScreen] Guarded execution failed safely: $e');
       if (!mounted) return;
-      final result = ProposalExecutionResult(
+      const result = ProposalExecutionResult(
         success: false,
-        error: 'Could not execute safely: $e',
+        error:
+            'The guarded execution flow stopped this action before anything was committed.',
       );
       setState(() {
         _confirmationProposal = null;
@@ -528,38 +620,24 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   @override
   Widget build(BuildContext context) {
+    if (widget.workspaceMode) {
+      return _buildWorkspaceView();
+    }
     return Directionality(
       textDirection: TextDirection.ltr,
       child: Scaffold(
         backgroundColor: darkBg,
         body: LayoutBuilder(
           builder: (context, constraints) {
-            final isDesktop = constraints.maxWidth >= 1000;
-            return Column(
-              children: [
-                _buildTopFinancialRibbon(),
-                Expanded(
-                  child: isDesktop
-                      ? Row(
-                          children: [
-                            Expanded(flex: 3, child: _buildAiPanel()),
-                            Expanded(flex: 2, child: _buildLedgerPanel()),
-                          ],
-                        )
-                      : Column(
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: _buildAiPanel(isMobile: true),
-                            ),
-                            SizedBox(
-                              height: constraints.maxHeight < 700 ? 220 : 280,
-                              child: _buildLedgerPanel(isCompact: true),
-                            ),
-                          ],
-                        ),
-                ),
-              ],
+            final isDesktop =
+                UIResponsive.isWideDesktopWidth(constraints.maxWidth);
+            return SafeArea(
+              child: Column(
+                children: [
+                  _buildPremiumHeader(isDesktop: isDesktop),
+                  Expanded(child: _buildCommandCenter(isDesktop: isDesktop)),
+                ],
+              ),
             );
           },
         ),
@@ -567,6 +645,835 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  Widget _buildWorkspaceView() {
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Scaffold(
+        backgroundColor: darkBg,
+        body: SafeArea(
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              final isDesktop =
+                  UIResponsive.isWideDesktopWidth(constraints.maxWidth);
+              return _buildConversationDominantShell(isDesktop: isDesktop);
+            },
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildConversationDominantShell({required bool isDesktop}) {
+    final padding = EdgeInsets.fromLTRB(
+      isDesktop ? 18 : 10,
+      isDesktop ? 14 : 8,
+      isDesktop ? 18 : 10,
+      isDesktop ? 14 : 10,
+    );
+
+    if (!isDesktop) {
+      return Padding(
+        padding: padding,
+        child: _buildConversationPanel(isDesktop: false),
+      );
+    }
+
+    return Padding(
+      padding: padding,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
+            flex: 72,
+            child: _buildConversationPanel(isDesktop: true),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            flex: 24,
+            child: _buildRightContextPanel(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConversationPanel({required bool isDesktop}) {
+    return Container(
+      decoration: BoxDecoration(
+        color: darkBg.withValues(alpha: 0.68),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        children: [
+          _buildConversationTopBar(isDesktop: isDesktop),
+          Expanded(
+            child: _messages.isEmpty
+                ? _buildPremiumEmptyState()
+                : _buildChatTimeline(),
+          ),
+          if (_isAnalyzing && _messages.isNotEmpty)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+              child: _buildTypingIndicator(),
+            ),
+          Padding(
+            padding: EdgeInsets.fromLTRB(14, 0, 14, isDesktop ? 14 : 10),
+            child: _buildInputField(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConversationTopBar({required bool isDesktop}) {
+    return Container(
+      padding: EdgeInsets.fromLTRB(isDesktop ? 18 : 12, 12, 12, 10),
+      decoration: const BoxDecoration(
+        border: Border(bottom: BorderSide(color: premiumStroke)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: goldAccent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
+            ),
+            child: const Icon(
+              Icons.account_balance_wallet_outlined,
+              color: goldAccent,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Text(
+              'AI Accountant',
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 16,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          _statusPill('AI CFO Beta', goldAccent),
+          const SizedBox(width: 8),
+          if (!isDesktop)
+            IconButton(
+              tooltip: 'Context',
+              icon:
+                  const Icon(Icons.view_sidebar_outlined, color: textSecondary),
+              onPressed: _showMobileContextSheet,
+            )
+          else
+            _statusPill(
+              _activeProposal != null ? 'Proposal ready' : 'Advisory mode',
+              _activeProposal != null ? goldAccent : tealSuccess,
+            ),
+        ],
+      ),
+    );
+  }
+
+  void _showMobileContextSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return SafeArea(
+          child: FractionallySizedBox(
+            heightFactor: 0.82,
+            child: Padding(
+              padding: const EdgeInsets.all(10),
+              child: _buildRightContextPanel(),
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  // ignore: unused_element
+  Widget _buildWorkspaceHeader() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(
+              color: goldAccent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
+            ),
+            child: const Icon(
+              Icons.account_balance_wallet_outlined,
+              color: goldAccent,
+              size: 18,
+            ),
+          ),
+          const SizedBox(width: 10),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'AI Accountant',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 16,
+                  ),
+                ),
+                SizedBox(height: 2),
+                Text(
+                  'Conversation-first workspace',
+                  style: TextStyle(
+                    color: AppTheme.aiTextSecondary,
+                    fontSize: 11,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          _statusPill(
+            _activeProposal != null ? 'Proposal ready' : 'Advisory mode',
+            _activeProposal != null ? goldAccent : tealSuccess,
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ignore: unused_element
+  Widget _buildWorkspaceTypingIndicator() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 0, 20, 6),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: premiumPanel,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: premiumStroke),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 14,
+              height: 14,
+              child:
+                  CircularProgressIndicator(color: goldAccent, strokeWidth: 2),
+            ),
+            SizedBox(width: 9),
+            Text(
+              'AI Accountant is preparing a safe response...',
+              style: TextStyle(color: textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCommandCenter({required bool isDesktop}) {
+    return _buildConversationDominantShell(isDesktop: isDesktop);
+  }
+
+  // ignore: unused_element
+  Widget _buildAiFirstHero({required bool isDesktop}) {
+    final score = _businessHealthScore();
+    final hasEvidence = score != null;
+    final statusCards = [
+      _ExecutiveKpiData(
+        label: 'Revenue Status',
+        value: hasEvidence
+            ? _statusForRisk(_latestRisks(), 'profit')
+            : 'Ask about revenue',
+        icon: Icons.trending_up_rounded,
+        color: hasEvidence ? tealSuccess : textSecondary,
+      ),
+      _ExecutiveKpiData(
+        label: 'Cashflow Status',
+        value: hasEvidence
+            ? _cashflowStatus(_latestRisks())
+            : 'Ask about cash flow',
+        icon: Icons.payments_outlined,
+        color: hasEvidence ? goldAccent : textSecondary,
+      ),
+      _ExecutiveKpiData(
+        label: 'Inventory Status',
+        value: hasEvidence
+            ? _inventoryStatus(_latestRisks())
+            : 'Ask about inventory',
+        icon: Icons.inventory_2_outlined,
+        color: hasEvidence ? tealSuccess : textSecondary,
+      ),
+      _ExecutiveKpiData(
+        label: 'Receivables Status',
+        value: hasEvidence
+            ? _receivablesStatus(_latestRisks())
+            : 'Ask about balances',
+        icon: Icons.receipt_long_outlined,
+        color: hasEvidence ? AppTheme.warning : textSecondary,
+      ),
+    ];
+
+    return Container(
+      padding: EdgeInsets.all(isDesktop ? 26 : 18),
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: premiumStroke),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.22),
+            blurRadius: 30,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      child: isDesktop
+          ? Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  flex: 5,
+                  child: _buildAiHeroStatement(
+                    score,
+                    compact: false,
+                  ),
+                ),
+                const SizedBox(width: 18),
+                Expanded(flex: 6, child: _buildHealthKpiGrid(statusCards, 4)),
+              ],
+            )
+          : _buildAiHeroStatement(
+              score,
+              compact: true,
+            ),
+    );
+  }
+
+  Widget _buildAiHeroStatement(int? score, {required bool compact}) {
+    final hasScore = score != null;
+    return Container(
+      padding: EdgeInsets.all(compact ? 14 : 18),
+      decoration: BoxDecoration(
+        color: AppTheme.aiDeep.withValues(alpha: 0.52),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: hasScore ? goldAccent.withValues(alpha: 0.3) : premiumStroke,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          const Text(
+            'AI Accountant',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 24,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 5),
+          const Text(
+            'Your financial advisor inside HASOOB',
+            style: TextStyle(
+              color: goldAccent,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            hasScore
+                ? 'Business health: $score / 100. Ask me what changed, what is risky, or what to do next.'
+                : 'Talk to me like your accountant. I can analyze profitability, monitor cash flow, detect risks, review balances, track inventory, and prepare proposals safely.',
+            style: const TextStyle(
+              color: textSecondary,
+              fontSize: 12,
+              height: 1.45,
+            ),
+            maxLines: compact ? 4 : null,
+            overflow: compact ? TextOverflow.ellipsis : null,
+          ),
+          SizedBox(height: compact ? 10 : 14),
+          _buildStarterPromptWrap(compact: compact),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealthKpiGrid(List<_ExecutiveKpiData> cards, int columns) {
+    return GridView.count(
+      crossAxisCount: columns,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: columns == 4 ? 1.18 : 1.08,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: cards.map((data) => _ExecutiveKpiCard(data: data)).toList(),
+    );
+  }
+
+  Widget _buildStarterPromptWrap({required bool compact}) {
+    final prompts = [
+      ('How is my business today?', Icons.query_stats_outlined),
+      ('Analyze profitability', Icons.analytics_outlined),
+      ('Show cash flow risks', Icons.payments_outlined),
+      ('Review customer balances', Icons.people_alt_outlined),
+      ('Check inventory health', Icons.inventory_2_outlined),
+    ];
+    if (compact) {
+      return SizedBox(
+        height: 38,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: prompts.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (context, index) {
+            final prompt = prompts[index];
+            return Command360StarterQuestionChip(
+              label: prompt.$1,
+              icon: prompt.$2,
+              onPressed: _isAnalyzing || _isCommitting
+                  ? null
+                  : () => _processAiCommand(customText: prompt.$1),
+            );
+          },
+        ),
+      );
+    }
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: prompts.map((prompt) {
+        return Command360StarterQuestionChip(
+          label: prompt.$1,
+          icon: prompt.$2,
+          onPressed: _isAnalyzing || _isCommitting
+              ? null
+              : () => _processAiCommand(customText: prompt.$1),
+        );
+      }).toList(),
+    );
+  }
+
+  // ignore: unused_element
+  Widget _buildAiDetectedCommandSection() {
+    final findings = _executiveFindings();
+    return _CommandSection(
+      title: 'AI Detected',
+      subtitle: 'Automatic findings from existing risks and insights.',
+      trailing: _statusPill(
+        findings.isEmpty ? 'Clear' : '${findings.length} findings',
+        findings.isEmpty ? tealSuccess : goldAccent,
+      ),
+      child: findings.isEmpty
+          ? const _ExecutiveEmptyLine(
+              icon: Icons.verified_outlined,
+              label: 'No critical issues detected',
+            )
+          : Wrap(
+              spacing: 10,
+              runSpacing: 10,
+              children: findings
+                  .map((finding) => _ExecutiveFindingTile(label: finding))
+                  .toList(),
+            ),
+    );
+  }
+
+  // ignore: unused_element
+  Widget _buildAiRecommendationsCommandSection({required bool isDesktop}) {
+    final recommendations = _latestRecommendations().take(3).toList();
+    if (recommendations.isEmpty) {
+      return const _CommandSection(
+        title: 'AI Recommendations',
+        subtitle:
+            'Ask the AI Accountant for analysis to generate next actions.',
+        child: _ExecutiveEmptyLine(
+          icon: Icons.lightbulb_outline,
+          label: 'Try: "How is my business doing?"',
+        ),
+      );
+    }
+
+    return _CommandSection(
+      title: 'AI Recommendations',
+      subtitle: 'Top 3 actions only.',
+      trailing: _statusPill('Top 3', tealSuccess),
+      child: GridView.count(
+        crossAxisCount: isDesktop ? 3 : 1,
+        mainAxisSpacing: 10,
+        crossAxisSpacing: 10,
+        childAspectRatio: isDesktop ? 3.1 : 4.1,
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        children: recommendations
+            .map((item) => _ExecutiveRecommendationCard(item: item))
+            .toList(),
+      ),
+    );
+  }
+
+  // ignore: unused_element
+  Widget _buildAskAiCommandSection({required bool isDesktop}) {
+    return _CommandSection(
+      title: 'Ask AI Accountant',
+      subtitle:
+          'Type a question, ask for analysis, or prepare a guarded proposal.',
+      trailing: _activeProposal != null
+          ? _statusPill('Proposal ready', goldAccent)
+          : _statusPill('Advisory mode', tealSuccess),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildDominantInput(),
+          const SizedBox(height: 12),
+          _buildQuickActions(),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: isDesktop ? 390 : 360,
+            child: Container(
+              decoration: BoxDecoration(
+                color: darkBg.withValues(alpha: 0.52),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: premiumStroke),
+              ),
+              child: _messages.isEmpty
+                  ? _buildPremiumEmptyState()
+                  : _buildChatTimeline(),
+            ),
+          ),
+          if (_isAnalyzing) _buildTypingIndicator(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDominantInput() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: goldAccent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: goldAccent.withValues(alpha: 0.26)),
+      ),
+      child: _buildInputField(),
+    );
+  }
+
+  // ignore: unused_element
+  Widget _buildContextTabsCommandSection({required bool isDesktop}) {
+    return _CommandSection(
+      title: 'Context Tabs',
+      subtitle:
+          'Overview, memory, and ledger are separated into one view at a time.',
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildContextTabBar(),
+          const SizedBox(height: 12),
+          SizedBox(
+            height: isDesktop ? 330 : 300,
+            child: _buildContextTabBody(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildContextTabBar() {
+    final tabs = [
+      (Icons.dashboard_outlined, 'Overview'),
+      (Icons.memory_outlined, 'Memory'),
+      (Icons.account_balance_outlined, 'Ledger'),
+    ];
+    return Row(
+      children: [
+        for (var i = 0; i < tabs.length; i++) ...[
+          Expanded(
+            child: Command360ExecutiveTabButton(
+              icon: tabs[i].$1,
+              label: tabs[i].$2,
+              selected: _contextTabIndex == i,
+              onPressed: () => setState(() => _contextTabIndex = i),
+            ),
+          ),
+          if (i != tabs.length - 1) const SizedBox(width: 8),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildContextTabBody() {
+    switch (_contextTabIndex) {
+      case 1:
+        return SingleChildScrollView(
+          child: _buildBusinessMemoryPanel(_orchestrator.businessMemory),
+        );
+      case 2:
+        return _buildLedgerPanel(isCompact: true, embedded: true);
+      case 0:
+      default:
+        return SingleChildScrollView(
+            child: _buildContextSummary(compact: true));
+    }
+  }
+
+  int? _businessHealthScore() {
+    final metadata = _latestMetadata();
+    if (metadata == null || metadata.evidenceCount == 0) return null;
+
+    var score = switch (metadata.confidenceLevel) {
+      AiEvidenceConfidence.high => 87,
+      AiEvidenceConfidence.medium => 74,
+      AiEvidenceConfidence.low => 58,
+    };
+
+    for (final risk in _latestRisks()) {
+      switch (risk.level) {
+        case AiFinancialRiskLevel.high:
+          score -= 18;
+          break;
+        case AiFinancialRiskLevel.medium:
+          score -= 10;
+          break;
+        case AiFinancialRiskLevel.low:
+          if (risk.title != 'No major risk detected') score -= 4;
+          break;
+      }
+    }
+    return score.clamp(0, 100);
+  }
+
+  AiResponseMetadata? _latestMetadata() {
+    for (final message in _messages.reversed) {
+      if (message.metadata != null) return message.metadata;
+    }
+    return null;
+  }
+
+  String _latestConfidenceLabel() {
+    final metadata = _latestMetadata();
+    return metadata == null ? 'Ready to analyze' : metadata.confidenceLabel;
+  }
+
+  List<AiFinancialRisk> _latestRisks() {
+    for (final message in _messages.reversed) {
+      if (message.risks.isNotEmpty) return message.risks;
+    }
+    return const [];
+  }
+
+  List<AiFinancialInsight> _latestInsights() {
+    for (final message in _messages.reversed) {
+      if (message.insights.isNotEmpty) return message.insights;
+    }
+    return const [];
+  }
+
+  List<AiFinancialRecommendation> _latestRecommendations() {
+    for (final message in _messages.reversed) {
+      if (message.recommendations.isNotEmpty) {
+        return message.recommendations;
+      }
+    }
+    return const [];
+  }
+
+  List<String> _executiveFindings() {
+    final risks = _latestRisks()
+        .where((risk) => risk.title != 'No major risk detected')
+        .map((risk) => risk.title)
+        .toList();
+    final insights = _latestInsights().map((insight) => insight.title).toList();
+    return [...risks, ...insights].take(5).toList(growable: false);
+  }
+
+  String _statusForRisk(List<AiFinancialRisk> risks, String keyword) {
+    final lowerKeyword = keyword.toLowerCase();
+    final hasRisk = risks.any((risk) {
+      final text = '${risk.title} ${risk.description}'.toLowerCase();
+      return text.contains(lowerKeyword);
+    });
+    return hasRisk ? 'Needs Review' : 'Stable';
+  }
+
+  String _cashflowStatus(List<AiFinancialRisk> risks) {
+    final hasRisk = risks.any((risk) {
+      final text = '${risk.title} ${risk.description}'.toLowerCase();
+      return text.contains('cash') ||
+          text.contains('invoice') ||
+          text.contains('balance');
+    });
+    return hasRisk ? 'Watch Closely' : 'Stable';
+  }
+
+  String _inventoryStatus(List<AiFinancialRisk> risks) {
+    final hasRisk = risks.any((risk) {
+      final text = '${risk.title} ${risk.description}'.toLowerCase();
+      return text.contains('stock') || text.contains('inventory');
+    });
+    return hasRisk ? 'Needs Attention' : 'Healthy';
+  }
+
+  String _receivablesStatus(List<AiFinancialRisk> risks) {
+    final hasRisk = risks.any((risk) {
+      final text = '${risk.title} ${risk.description}'.toLowerCase();
+      return text.contains('invoice') ||
+          text.contains('customer') ||
+          text.contains('receivable') ||
+          text.contains('balance');
+    });
+    return hasRisk ? 'Needs Follow-Up' : 'Stable';
+  }
+
+  Widget _buildPremiumHeader({required bool isDesktop}) {
+    return Container(
+      margin:
+          EdgeInsets.fromLTRB(isDesktop ? 20 : 12, 12, isDesktop ? 20 : 12, 0),
+      padding: EdgeInsets.symmetric(
+        horizontal: isDesktop ? 20 : 14,
+        vertical: isDesktop ? 18 : 14,
+      ),
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: premiumStroke),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.24),
+            blurRadius: 24,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 42,
+            height: 42,
+            decoration: BoxDecoration(
+              color: goldAccent.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
+            ),
+            child: const Icon(
+              Icons.account_balance_wallet_outlined,
+              color: goldAccent,
+              size: 22,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'AI Accountant',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 19,
+                    letterSpacing: 0,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  children: [
+                    _miniStatusDot(tealSuccess),
+                    const Text(
+                      'Ready',
+                      style: TextStyle(color: textSecondary, fontSize: 12),
+                    ),
+                    const Text(
+                      '•',
+                      style:
+                          TextStyle(color: AppTheme.aiTextMuted, fontSize: 12),
+                    ),
+                    const Text(
+                      'Context Loaded',
+                      style: TextStyle(color: textSecondary, fontSize: 12),
+                    ),
+                    _statusPill('AI CFO Beta', goldAccent),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          if (isDesktop) ...[
+            _headerMetric('Confidence', _latestConfidenceLabel()),
+            const SizedBox(width: 10),
+          ],
+          _statusPill(
+            _activeProposal != null ? 'Proposal ready' : 'Safe advisory mode',
+            _activeProposal != null ? goldAccent : tealSuccess,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _miniStatusDot(Color color) {
+    return Container(
+      width: 7,
+      height: 7,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+    );
+  }
+
+  Widget _headerMetric(String label, String value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      decoration: BoxDecoration(
+        color: premiumPanelSoft,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Row(
+        children: [
+          Text(
+            label,
+            style: const TextStyle(color: textSecondary, fontSize: 11),
+          ),
+          const SizedBox(width: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ignore: unused_element
   Widget _buildTopFinancialRibbon() {
     return SafeArea(
       bottom: false,
@@ -603,19 +1510,360 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  Widget _buildLedgerPanel({bool isCompact = false}) {
+  // ignore: unused_element
+  Widget _buildContextPanel() {
+    return Container(
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        children: [
+          _buildContextSummary(),
+          const Divider(color: premiumStroke, height: 1),
+          Expanded(child: _buildLedgerPanel(isCompact: true, embedded: true)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRightContextPanel() {
+    final score = _businessHealthScore();
+    final risks = _latestRisks();
+    final insights = _latestInsights();
+    final recommendations = _latestRecommendations();
+    final workflow = _orchestrator.activeWorkflow;
+    final proposal = _activeProposal ?? _confirmationProposal;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Command360ContextModule(
+              title: 'Business Health',
+              icon: Icons.query_stats_outlined,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    score == null ? 'Ready to analyze' : '$score / 100',
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 24,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    score == null
+                        ? 'Ask a business question to generate a live CFO view.'
+                        : _businessHealthLabel(score),
+                    style: const TextStyle(
+                      color: textSecondary,
+                      fontSize: 11,
+                      height: 1.35,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Command360ContextModule(
+              title: 'Risks',
+              icon: Icons.warning_amber_rounded,
+              child: _contextRows(
+                risks
+                    .where((risk) => risk.title != 'No major risk detected')
+                    .take(4)
+                    .map((risk) => '${risk.levelLabel}: ${risk.title}')
+                    .toList(),
+                empty: 'No active risk signal',
+              ),
+            ),
+            Command360ContextModule(
+              title: 'Insights',
+              icon: Icons.lightbulb_outline,
+              child: _contextRows(
+                insights.take(4).map((item) => item.title).toList(),
+                empty: 'No insight generated yet',
+              ),
+            ),
+            Command360ContextModule(
+              title: 'Recommendations',
+              icon: Icons.task_alt_outlined,
+              child: _contextRows(
+                recommendations.take(4).map((item) => item.title).toList(),
+                empty: 'Ask for analysis to generate actions',
+              ),
+            ),
+            Command360ContextModule(
+              title: 'Memory',
+              icon: Icons.memory_outlined,
+              child: _buildContextSummary(compact: true),
+            ),
+            Command360ContextModule(
+              title: 'Active Proposal',
+              icon: Icons.fact_check_outlined,
+              child: _contextRows(
+                [
+                  if (proposal != null) proposal.actionType,
+                  if (proposal != null) proposal.explanation,
+                ],
+                empty: 'No Active Proposal',
+              ),
+            ),
+            Command360ContextModule(
+              title: 'Active Workflow',
+              icon: Icons.route_outlined,
+              child: _contextRows(
+                [
+                  if (workflow != null)
+                    '${_workflowTitle(workflow.workflowType)}: step ${workflow.currentStep.clamp(1, workflow.totalSteps)} of ${workflow.totalSteps}',
+                  if (workflow?.waitingField != null)
+                    'Waiting for ${AiWorkflowField.label(workflow!.waitingField!)}',
+                ],
+                empty: 'No Active Workflow',
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _contextRows(List<String> rows, {required String empty}) {
+    final visibleRows = rows.where((row) => row.trim().isNotEmpty).toList();
+    if (visibleRows.isEmpty) {
+      return Text(
+        empty,
+        style: const TextStyle(color: textSecondary, fontSize: 11),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: visibleRows.take(4).map((row) {
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 7),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.only(top: 5),
+                child: Icon(Icons.circle, color: textSecondary, size: 5),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  row,
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    height: 1.35,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  String _businessHealthLabel(int score) {
+    if (score >= 80) return 'Healthy. Continue monitoring cash and exposure.';
+    if (score >= 65) return 'Stable with items worth reviewing.';
+    return 'Needs attention before major commitments.';
+  }
+
+  // ignore: unused_element
+  Widget _buildMobileContextPanel(double maxHeight) {
+    return Container(
+      constraints: BoxConstraints(maxHeight: maxHeight < 720 ? 230 : 300),
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Theme(
+        data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+        child: ExpansionTile(
+          initiallyExpanded: false,
+          tilePadding: const EdgeInsets.symmetric(horizontal: 14),
+          childrenPadding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          iconColor: goldAccent,
+          collapsedIconColor: textSecondary,
+          title: const Text(
+            'Context & ledger',
+            style: TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w800,
+              fontSize: 14,
+            ),
+          ),
+          subtitle: Text(
+            _activeProposal != null
+                ? 'Active proposal ready'
+                : 'Business context loaded',
+            style: const TextStyle(color: textSecondary, fontSize: 11),
+          ),
+          children: [
+            _buildContextSummary(compact: true),
+            const SizedBox(height: 10),
+            SizedBox(
+              height: 170,
+              child: _buildLedgerPanel(isCompact: true, embedded: true),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildContextSummary({bool compact = false}) {
+    final memory = _orchestrator.memory;
+    final businessMemory = _orchestrator.businessMemory;
+    final workflow = _orchestrator.activeWorkflow;
+    return Padding(
+      padding: EdgeInsets.all(compact ? 12 : 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (!compact) ...[
+            Row(
+              children: [
+                const Expanded(
+                  child: Text(
+                    'CFO context',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                _statusPill('Live', tealSuccess),
+              ],
+            ),
+            const SizedBox(height: 12),
+          ],
+          Command360ContextRow(
+              icon: Icons.business_outlined,
+              label: 'Business',
+              value: BusinessContext.businessId.isEmpty
+                  ? 'Open a business profile'
+                  : BusinessContext.businessId),
+          Command360ContextRow(
+              icon: Icons.person_outline,
+              label: 'Customer',
+              value: memory.latestCustomer ?? 'Ask about a customer'),
+          Command360ContextRow(
+              icon: Icons.inventory_2_outlined,
+              label: 'Product',
+              value: memory.currentProduct ?? 'Ask about a product'),
+          Command360ContextRow(
+              icon: Icons.fact_check_outlined,
+              label: 'Active proposal',
+              value: _activeProposal?.actionType ??
+                  _confirmationProposal?.actionType ??
+                  'No Active Proposal'),
+          Command360ContextRow(
+              icon: Icons.route_outlined,
+              label: 'Active workflow',
+              value: workflow == null
+                  ? 'No Active Workflow'
+                  : _workflowTitle(workflow.workflowType)),
+          if (!compact) ...[
+            const SizedBox(height: 8),
+            _buildBusinessMemoryPanel(businessMemory),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBusinessMemoryPanel(AiBusinessMemory businessMemory) {
+    final recentProduct = businessMemory.recentProducts.isEmpty
+        ? 'Discuss a product'
+        : businessMemory.recentProducts.first;
+    final recentCustomer = businessMemory.recentCustomers.isEmpty
+        ? 'Discuss a customer'
+        : businessMemory.recentCustomers.first;
+    final recentTopic = businessMemory.recentTopics.isEmpty
+        ? 'Ask for analysis'
+        : businessMemory.recentTopics.first;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.aiCardElevated.withValues(alpha: 0.48),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Expanded(
+                child: Text(
+                  'Business Memory',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              TextButton(
+                onPressed: () {
+                  setState(() => _orchestrator.clearBusinessMemory());
+                },
+                child: const Text('Clear Memory'),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Command360ContextRow(
+              icon: Icons.inventory_2_outlined,
+              label: 'Recent Product',
+              value: recentProduct),
+          Command360ContextRow(
+              icon: Icons.person_outline,
+              label: 'Recent Customer',
+              value: recentCustomer),
+          Command360ContextRow(
+              icon: Icons.topic_outlined,
+              label: 'Recent Topic',
+              value: recentTopic),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLedgerPanel({bool isCompact = false, bool embedded = false}) {
     return Container(
       padding: EdgeInsets.all(isCompact ? 12 : 16),
       decoration: BoxDecoration(
-        color: darkBg,
-        border: Border(
-          left: isCompact
-              ? BorderSide.none
-              : const BorderSide(color: borderTerminal),
-          top: isCompact
-              ? const BorderSide(color: borderTerminal)
-              : BorderSide.none,
-        ),
+        color: embedded ? Colors.transparent : darkBg,
+        border: embedded
+            ? null
+            : Border(
+                left: isCompact
+                    ? BorderSide.none
+                    : const BorderSide(color: borderTerminal),
+                top: isCompact
+                    ? const BorderSide(color: borderTerminal)
+                    : BorderSide.none,
+              ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -727,7 +1975,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                               Text(
                                 row.debit > 0
                                     ? row.debit.toStringAsFixed(2)
-                                    : '-',
+                                    : '0.00',
                                 style: const TextStyle(
                                   color: AppTheme.aiRed,
                                   fontSize: 11,
@@ -739,7 +1987,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                               Text(
                                 row.credit > 0
                                     ? row.credit.toStringAsFixed(2)
-                                    : '-',
+                                    : '0.00',
                                 style: const TextStyle(
                                   color: tealSuccess,
                                   fontSize: 11,
@@ -772,44 +2020,170 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildAiPanel({bool isMobile = false}) {
     return Container(
-      color: AppTheme.aiNavy,
-      padding: EdgeInsets.all(isMobile ? 14 : 20),
+      decoration: BoxDecoration(
+        color: AppTheme.aiNavy,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: premiumStroke),
+      ),
+      padding: EdgeInsets.all(isMobile ? 12 : 18),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              const Expanded(
-                child: Text(
-                  'Advisor chat',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 17,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
+          _buildWorkspaceIntro(),
+          const SizedBox(height: 14),
+          _buildQuickInsights(isMobile: isMobile),
+          const SizedBox(height: 12),
+          _buildQuickActions(),
+          const SizedBox(height: 12),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: darkBg.withValues(alpha: 0.42),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: premiumStroke),
               ),
-              if (_activeProposal != null)
-                _statusPill('Proposal ready', goldAccent)
-              else
-                _statusPill('Conversation safe', tealSuccess),
-            ],
+              child: _messages.isEmpty
+                  ? _buildPremiumEmptyState()
+                  : _buildChatTimeline(),
+            ),
           ),
-          const SizedBox(height: 4),
-          const Text(
-            'Discuss decisions freely. Clear purchase, sale, and pricing commands become reviewable proposal cards.',
-            style: TextStyle(color: textSecondary, fontSize: 12, height: 1.4),
-          ),
-          const Divider(color: borderTerminal, height: 22),
-          Expanded(child: _buildChatTimeline()),
           if (_isAnalyzing) _buildTypingIndicator(),
-          const SizedBox(height: 10),
-          _buildQuickPromptsStrip(),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           _buildInputField(),
         ],
+      ),
+    );
+  }
+
+  Widget _buildWorkspaceIntro() {
+    return Row(
+      children: [
+        const Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'AI CFO workspace',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Ask, compare, prepare proposals, then approve through the guarded accounting flow. Add invoices, customers, products, expenses, and shipment costs when analysis says data is missing.',
+                style:
+                    TextStyle(color: textSecondary, fontSize: 12, height: 1.35),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(width: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          alignment: WrapAlignment.end,
+          children: [
+            _statusPill('AI CFO Beta', goldAccent),
+            if (_activeProposal != null)
+              _statusPill('Proposal ready', goldAccent)
+            else
+              _statusPill('Advisory only', tealSuccess),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Widget _buildQuickInsights({required bool isMobile}) {
+    final insights = [
+      const _InsightData(
+        'Revenue',
+        'Ask about revenue',
+        Icons.trending_up_rounded,
+        tealSuccess,
+      ),
+      const _InsightData(
+        'Expenses',
+        'Ask about expenses',
+        Icons.trending_down_rounded,
+        AppTheme.aiRed,
+      ),
+      const _InsightData(
+        'Profit',
+        'Ask about profit',
+        Icons.account_balance_wallet_outlined,
+        goldAccent,
+      ),
+      const _InsightData(
+        'Pending Invoices',
+        'Ask about invoices',
+        Icons.receipt_long_outlined,
+        AppTheme.warning,
+      ),
+      const _InsightData(
+        'Low Stock',
+        'Ask about stock',
+        Icons.inventory_2_outlined,
+        tealSuccess,
+      ),
+    ];
+
+    if (isMobile) {
+      return SizedBox(
+        height: 78,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: insights.length,
+          separatorBuilder: (_, __) => const SizedBox(width: 8),
+          itemBuilder: (context, index) => _InsightCard(data: insights[index]),
+        ),
+      );
+    }
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return GridView.count(
+          crossAxisCount: constraints.maxWidth > 820 ? 5 : 3,
+          mainAxisSpacing: 8,
+          crossAxisSpacing: 8,
+          childAspectRatio: constraints.maxWidth > 820 ? 2.45 : 2.25,
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          children: insights.map((data) => _InsightCard(data: data)).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildQuickActions() {
+    final actions = [
+      ('Analyze Profitability', Icons.analytics_outlined),
+      ('Cash Flow', Icons.payments_outlined),
+      ('Low Stock', Icons.inventory_outlined),
+      ('Customer Balances', Icons.people_alt_outlined),
+      ('Top Products', Icons.leaderboard_outlined),
+    ];
+    return SizedBox(
+      height: 40,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: actions.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final action = actions[index];
+          return Command360QuickActionChip(
+            label: action.$1,
+            icon: action.$2,
+            onPressed: _isAnalyzing || _isCommitting
+                ? null
+                : () => _processAiCommand(customText: action.$1),
+          );
+        },
       ),
     );
   }
@@ -817,10 +2191,76 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   Widget _buildChatTimeline() {
     return ListView.separated(
       controller: _chatScrollController,
-      padding: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 20),
       itemCount: _messages.length,
-      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      separatorBuilder: (_, __) => const SizedBox(height: 14),
       itemBuilder: (context, index) => _buildChatMessage(_messages[index]),
+    );
+  }
+
+  Widget _buildPremiumEmptyState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 58,
+              height: 58,
+              decoration: BoxDecoration(
+                color: goldAccent.withValues(alpha: 0.11),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
+              ),
+              child: const Icon(
+                Icons.account_balance_outlined,
+                color: goldAccent,
+                size: 30,
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Welcome to AI Accountant',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Start with profitability, cash flow, stock risk, customer balances, or a transaction proposal. Add invoices, customers, products, expenses, and shipment costs to unlock evidence-backed CFO analysis.',
+              textAlign: TextAlign.center,
+              style:
+                  TextStyle(color: textSecondary, fontSize: 12, height: 1.45),
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              alignment: WrapAlignment.center,
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                Command360QuickActionChip(
+                  label: 'Analyze Profitability',
+                  icon: Icons.analytics_outlined,
+                  onPressed: () => _processAiCommand(
+                    customText: 'Analyze Profitability',
+                  ),
+                ),
+                Command360QuickActionChip(
+                  label: 'Price a shipment',
+                  icon: Icons.price_check_outlined,
+                  onPressed: () => _processAiCommand(
+                    customText: 'Price a shipment',
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -828,10 +2268,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final isUser = message.role == AiChatRole.user;
     final alignment = isUser ? Alignment.centerRight : Alignment.centerLeft;
     final bubbleColor =
-        isUser ? goldAccent.withValues(alpha: 0.16) : darkSurface;
+        isUser ? goldAccent.withValues(alpha: 0.16) : Colors.transparent;
     final borderColor =
-        isUser ? goldAccent.withValues(alpha: 0.34) : borderTerminal;
-    final maxWidth = MediaQuery.sizeOf(context).width >= 1000 ? 680.0 : 560.0;
+        isUser ? goldAccent.withValues(alpha: 0.34) : Colors.transparent;
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final maxWidth = isUser
+        ? (screenWidth >= 1000 ? 430.0 : screenWidth * 0.78)
+        : (screenWidth >= 1000 ? 900.0 : screenWidth * 0.96);
 
     return Align(
       alignment: alignment,
@@ -842,59 +2285,20 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
           children: [
             Container(
-              padding: const EdgeInsets.all(14),
+              padding: EdgeInsets.all(isUser ? 12 : 0),
               decoration: BoxDecoration(
                 color: bubbleColor,
-                borderRadius: BorderRadius.circular(8),
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(isUser ? 14 : 6),
+                  topRight: const Radius.circular(14),
+                  bottomLeft: Radius.circular(isUser ? 14 : 6),
+                  bottomRight: Radius.circular(isUser ? 4 : 14),
+                ),
                 border: Border.all(color: borderColor),
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Icon(
-                        isUser
-                            ? Icons.person_outline
-                            : _messageIcon(message.type),
-                        color:
-                            isUser ? goldAccent : _messageColor(message.type),
-                        size: 16,
-                      ),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          isUser ? 'You' : 'AI Accountant',
-                          style: TextStyle(
-                            color: isUser
-                                ? goldAccent
-                                : _messageColor(message.type),
-                            fontSize: 11,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    message.text,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 13,
-                      height: 1.45,
-                    ),
-                  ),
-                  if (message.proposal != null) ...[
-                    const SizedBox(height: 12),
-                    _buildProposalCard(message.proposal!),
-                  ],
-                  if (message.executionResult != null) ...[
-                    const SizedBox(height: 12),
-                    _buildExecutionResultCard(message.executionResult!),
-                  ],
-                ],
-              ),
+              child: isUser
+                  ? _buildUserMessageContent(message)
+                  : _buildAssistantMessageContent(message),
             ),
             if (!isUser && message.suggestedReplies.isNotEmpty) ...[
               const SizedBox(height: 8),
@@ -902,6 +2306,496 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ],
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildUserMessageContent(AiChatMessage message) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        Text(
+          message.text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+            height: 1.38,
+          ),
+        ),
+        const SizedBox(height: 5),
+        Text(
+          _timeLabel(message.timestamp),
+          style: const TextStyle(
+            color: AppTheme.aiTextMuted,
+            fontSize: 10,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAssistantMessageContent(AiChatMessage message) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Row(
+          children: [
+            Icon(
+              _messageIcon(message.type),
+              color: _messageColor(message.type),
+              size: 16,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                'AI Accountant',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: _messageColor(message.type),
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ),
+            Text(
+              _timeLabel(message.timestamp),
+              style: const TextStyle(
+                color: AppTheme.aiTextMuted,
+                fontSize: 10,
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        _messageSectionTitle('Summary'),
+        Text(
+          message.text,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 14,
+            height: 1.55,
+          ),
+        ),
+        if (message.decisionOptions.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _messageSectionTitle('Reasoning'),
+          Command360DecisionOptions(options: message.decisionOptions),
+        ],
+        if (message.recommendations.isNotEmpty) ...[
+          const SizedBox(height: 14),
+          _messageSectionTitle('Recommendations'),
+          Command360MessageRows(
+            rows: message.recommendations
+                .take(4)
+                .map((item) => item.title)
+                .toList(),
+            icon: Icons.task_alt_outlined,
+            color: tealSuccess,
+          ),
+        ],
+        if (message.proposal != null || message.executionResult != null) ...[
+          const SizedBox(height: 14),
+          _messageSectionTitle('Actions'),
+          if (message.proposal != null) _buildProposalCard(message.proposal!),
+          if (message.executionResult != null)
+            _buildExecutionResultCard(message.executionResult!),
+        ],
+        if (_hasExpandableMessageDetails(message)) ...[
+          const SizedBox(height: 12),
+          _buildMessageExpandableSections(message),
+        ],
+      ],
+    );
+  }
+
+  Widget _messageSectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Text(
+        title,
+        style: const TextStyle(
+          color: textSecondary,
+          fontSize: 11,
+          fontWeight: FontWeight.w900,
+        ),
+      ),
+    );
+  }
+
+  bool _hasExpandableMessageDetails(AiChatMessage message) {
+    return message.metadata != null ||
+        message.workflowSession != null ||
+        message.memory?.hasVisibleContext == true ||
+        message.insights.isNotEmpty ||
+        message.risks.isNotEmpty;
+  }
+
+  Widget _buildMessageExpandableSections(AiChatMessage message) {
+    final metadata = message.metadata;
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (message.insights.isNotEmpty || message.risks.isNotEmpty)
+            Command360MessageExpansion(
+              title: 'Evidence',
+              icon: Icons.dataset_outlined,
+              child: Command360MessageRows(
+                rows: [
+                  ...message.insights.take(3).map((item) => item.title),
+                  ...message.risks
+                      .where((risk) => risk.title != 'No major risk detected')
+                      .take(3)
+                      .map((risk) => '${risk.levelLabel}: ${risk.title}'),
+                  if (metadata != null)
+                    'Evidence records: ${metadata.evidenceCount}',
+                  if (metadata != null && metadata.missingEvidence.isNotEmpty)
+                    'Missing: ${metadata.missingEvidence.join(', ')}',
+                ],
+                icon: Icons.circle_outlined,
+                color: textSecondary,
+              ),
+            ),
+          if (metadata != null)
+            Command360MessageExpansion(
+              title: 'Confidence',
+              icon: Icons.verified_user_outlined,
+              child: Command360MessageRows(
+                rows: ['${metadata.confidenceLabel} confidence'],
+                icon: Icons.verified_user_outlined,
+                color: _confidenceColor(metadata.confidenceLevel),
+              ),
+            ),
+          if (metadata != null && metadata.executedTools.isNotEmpty)
+            Command360MessageExpansion(
+              title: 'Tools Used',
+              icon: Icons.construction_outlined,
+              child: Command360MessageRows(
+                rows: metadata.executedToolLabels,
+                icon: Icons.check_circle_outline_rounded,
+                color: tealSuccess,
+              ),
+            ),
+          if (message.workflowSession != null)
+            Command360MessageExpansion(
+              title: 'Workflow State',
+              icon: Icons.route_outlined,
+              child: Command360WorkflowCard(session: message.workflowSession!),
+            ),
+          if (message.memory?.hasVisibleContext == true)
+            Command360MessageExpansion(
+              title: 'Memory',
+              icon: Icons.memory_outlined,
+              child: Command360MemoryCard(memory: message.memory!),
+            ),
+        ],
+      ),
+    );
+  }
+
+  // ignore: unused_element
+  Widget _buildAiInsightsPanel({
+    required List<AiFinancialInsight> insights,
+    required List<AiFinancialRisk> risks,
+    required List<AiFinancialRecommendation> recommendations,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppTheme.aiCardElevated.withValues(alpha: 0.62),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: tealSuccess.withValues(alpha: 0.26)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'AI Insights',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          if (insights.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: insights.take(4).map(_insightCard).toList(),
+            ),
+          ],
+          if (risks.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            _insightSection(
+              title: 'Risks',
+              rows: risks
+                  .take(3)
+                  .map((risk) => '${risk.levelLabel}: ${risk.title}')
+                  .toList(),
+              icon: Icons.warning_amber_rounded,
+              color: goldAccent,
+            ),
+          ],
+          if (recommendations.isNotEmpty) ...[
+            const SizedBox(height: 10),
+            _insightSection(
+              title: 'Recommendations',
+              rows: recommendations.take(3).map((item) => item.title).toList(),
+              icon: Icons.task_alt_rounded,
+              color: tealSuccess,
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  Widget _insightCard(AiFinancialInsight insight) {
+    return Container(
+      width: 190,
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: premiumPanelSoft.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            insight.title,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            insight.description,
+            maxLines: 3,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: textSecondary,
+              fontSize: 10.5,
+              height: 1.35,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _insightSection({
+    required String title,
+    required List<String> rows,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            color: textSecondary,
+            fontSize: 10.5,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 6),
+        ...rows.map((row) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 5),
+            child: Row(
+              children: [
+                Icon(icon, color: color, size: 14),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    row,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  // ignore: unused_element
+  Widget _buildResponseMetadata(AiResponseMetadata metadata) {
+    final isMobile = MediaQuery.sizeOf(context).width < 700;
+    final confidenceColor = _confidenceColor(metadata.confidenceLevel);
+    final summary = Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        _metadataPill(
+          Icons.verified_user_outlined,
+          'Confidence: ${metadata.confidenceLabel}',
+          confidenceColor,
+        ),
+        _metadataPill(
+          Icons.dataset_outlined,
+          'Evidence: ${metadata.evidenceCount} records',
+          textSecondary,
+        ),
+        _metadataPill(
+          Icons.construction_outlined,
+          'Tools Used: ${metadata.executedTools.length}',
+          textSecondary,
+        ),
+      ],
+    );
+
+    final details = Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        summary,
+        if (metadata.executedTools.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _metadataPanel(
+            title: 'Tools Used',
+            rows: metadata.executedToolLabels,
+            icon: Icons.check_circle_outline_rounded,
+            color: tealSuccess,
+          ),
+        ],
+        if (metadata.missingEvidence.isNotEmpty) ...[
+          const SizedBox(height: 10),
+          _metadataPanel(
+            title: 'Missing Information',
+            rows: metadata.missingEvidence,
+            icon: Icons.info_outline_rounded,
+            color: goldAccent,
+          ),
+        ],
+      ],
+    );
+
+    if (!isMobile) return details;
+
+    return Theme(
+      data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppTheme.aiCardElevated.withValues(alpha: 0.58),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: premiumStroke),
+        ),
+        child: ExpansionTile(
+          tilePadding: const EdgeInsets.symmetric(horizontal: 10),
+          childrenPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+          iconColor: textSecondary,
+          collapsedIconColor: textSecondary,
+          title: summary,
+          children: [
+            if (metadata.executedTools.isNotEmpty)
+              _metadataPanel(
+                title: 'Tools Used',
+                rows: metadata.executedToolLabels,
+                icon: Icons.check_circle_outline_rounded,
+                color: tealSuccess,
+              ),
+            if (metadata.missingEvidence.isNotEmpty) ...[
+              const SizedBox(height: 10),
+              _metadataPanel(
+                title: 'Missing Information',
+                rows: metadata.missingEvidence,
+                icon: Icons.info_outline_rounded,
+                color: goldAccent,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _metadataPanel({
+    required String title,
+    required List<String> rows,
+    required IconData icon,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: AppTheme.aiCardElevated.withValues(alpha: 0.58),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ...rows.map((row) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Row(
+                children: [
+                  Icon(icon, color: color, size: 14),
+                  const SizedBox(width: 7),
+                  Expanded(
+                    child: Text(
+                      row,
+                      style: const TextStyle(
+                        color: textSecondary,
+                        fontSize: 11,
+                        height: 1.3,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _metadataPill(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: color.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 13),
+          const SizedBox(width: 5),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 10.5,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -927,21 +2821,30 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   Widget _buildTypingIndicator() {
-    return const Padding(
-      padding: EdgeInsets.only(top: 8),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 14,
-            height: 14,
-            child: CircularProgressIndicator(color: goldAccent, strokeWidth: 2),
-          ),
-          SizedBox(width: 8),
-          Text(
-            'Preparing a safe response...',
-            style: TextStyle(color: textSecondary, fontSize: 12),
-          ),
-        ],
+    return Padding(
+      padding: const EdgeInsets.only(top: 10),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        decoration: BoxDecoration(
+          color: premiumPanel,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: premiumStroke),
+        ),
+        child: const Row(
+          children: [
+            SizedBox(
+              width: 14,
+              height: 14,
+              child:
+                  CircularProgressIndicator(color: goldAccent, strokeWidth: 2),
+            ),
+            SizedBox(width: 9),
+            Text(
+              'AI Accountant is preparing a safe response...',
+              style: TextStyle(color: textSecondary, fontSize: 12),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -951,16 +2854,27 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final pricing = proposal.pricingPayload ?? const <String, dynamic>{};
     final inventory = proposal.inventoryPayload ?? const <String, dynamic>{};
     final financial = proposal.financialPayload ?? const <String, dynamic>{};
+    final impactArea = isPricing ? 'Pricing strategy' : 'Ledger and inventory';
+    final riskLevel = proposal.confidenceScore >= 0.85
+        ? 'Low'
+        : proposal.confidenceScore >= 0.65
+            ? 'Medium'
+            : 'High';
+    final riskColor = riskLevel == 'Low'
+        ? tealSuccess
+        : riskLevel == 'Medium'
+            ? AppTheme.warning
+            : AppTheme.aiRed;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.aiCardElevated,
-        borderRadius: BorderRadius.circular(8),
+        color: premiumPanelSoft,
+        borderRadius: BorderRadius.circular(12),
         border: Border.all(
           color: isPricing
-              ? tealSuccess.withValues(alpha: 0.6)
-              : goldAccent.withValues(alpha: 0.55),
+              ? tealSuccess.withValues(alpha: 0.42)
+              : goldAccent.withValues(alpha: 0.42),
         ),
       ),
       child: Column(
@@ -968,22 +2882,41 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         children: [
           Row(
             children: [
-              Icon(
-                isPricing
-                    ? Icons.price_check_outlined
-                    : Icons.fact_check_outlined,
-                color: isPricing ? tealSuccess : goldAccent,
-                size: 18,
+              Container(
+                width: 36,
+                height: 36,
+                decoration: BoxDecoration(
+                  color: (isPricing ? tealSuccess : goldAccent)
+                      .withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  isPricing
+                      ? Icons.price_check_outlined
+                      : Icons.fact_check_outlined,
+                  color: isPricing ? tealSuccess : goldAccent,
+                  size: 19,
+                ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  isPricing ? 'Pricing proposal' : 'Accounting proposal',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.w800,
-                  ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      isPricing ? 'Pricing proposal' : 'Accounting proposal',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 3),
+                    const Text(
+                      'Review required before execution',
+                      style: TextStyle(color: textSecondary, fontSize: 11),
+                    ),
+                  ],
                 ),
               ),
               _statusPill(
@@ -992,49 +2925,60 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ],
           ),
-          const Divider(color: borderTerminal, height: 22),
+          const SizedBox(height: 14),
           Text(
             proposal.explanation,
-            style:
-                const TextStyle(color: Colors.white, fontSize: 12, height: 1.5),
+            style: const TextStyle(
+                color: Colors.white, fontSize: 12.5, height: 1.5),
+          ),
+          const SizedBox(height: 14),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _proposalMetaChip(
+                  Icons.domain_verification_outlined, impactArea, tealSuccess),
+              _proposalMetaChip(
+                  Icons.shield_outlined, 'Risk: $riskLevel', riskColor),
+            ],
           ),
           const SizedBox(height: 14),
           if (isPricing) ...[
-            _detailLine(
-              Icons.location_on_outlined,
-              'Destination',
-              '${pricing['destination'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.location_on_outlined,
+              label: 'Destination',
+              value: '${pricing['destination'] ?? '-'}',
             ),
-            _detailLine(
-              Icons.inventory_2_outlined,
-              'Estimated units',
-              '${pricing['estimatedTotalBoxes'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.inventory_2_outlined,
+              label: 'Estimated units',
+              value: '${pricing['estimatedTotalBoxes'] ?? '-'}',
             ),
-            _detailLine(
-              Icons.price_change_outlined,
-              'Landed cost',
-              '${pricing['landedCostPerUnit'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.price_change_outlined,
+              label: 'Landed cost',
+              value: '${pricing['landedCostPerUnit'] ?? '-'}',
             ),
-            _detailLine(
-              Icons.trending_up_rounded,
-              'Suggested price',
-              '${pricing['suggestedPricePerUnit'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.trending_up_rounded,
+              label: 'Suggested price',
+              value: '${pricing['suggestedPricePerUnit'] ?? '-'}',
             ),
           ] else ...[
-            _detailLine(
-              Icons.inventory_2_outlined,
-              'Item',
-              '${inventory['name'] ?? inventory['productId'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.inventory_2_outlined,
+              label: 'Item',
+              value: '${inventory['name'] ?? inventory['productId'] ?? '-'}',
             ),
-            _detailLine(
-              Icons.format_list_numbered_rtl,
-              'Quantity',
-              '${inventory['quantity'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.format_list_numbered_rtl,
+              label: 'Quantity',
+              value: '${inventory['quantity'] ?? '-'}',
             ),
-            _detailLine(
-              Icons.payments_outlined,
-              'Amount',
-              '${financial['totalAmount'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.payments_outlined,
+              label: 'Amount',
+              value: '${financial['totalAmount'] ?? '-'}',
             ),
           ],
           const SizedBox(height: 16),
@@ -1086,6 +3030,32 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  Widget _proposalMetaChip(IconData icon, String label, Color color) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.09),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildExecutionResultCard(ProposalExecutionResult result) {
     final data = _asMap(result.data);
     final product = _asMap(data['product']);
@@ -1104,7 +3074,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             : AppTheme.aiRed;
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: AppTheme.aiCardElevated,
         borderRadius: BorderRadius.circular(8),
@@ -1138,38 +3108,41 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           ),
           const SizedBox(height: 12),
           if (product.isNotEmpty)
-            _detailLine(
-              Icons.inventory_2_outlined,
-              'Product',
-              '${product['id'] ?? '-'} | ${product['name'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.inventory_2_outlined,
+              label: 'Product',
+              value: '${product['id'] ?? '-'} | ${product['name'] ?? '-'}',
             ),
           if (invoice.isNotEmpty)
-            _detailLine(
-              Icons.receipt_long_outlined,
-              'Invoice',
-              '${invoice['id'] ?? '-'} | ${invoice['number'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.receipt_long_outlined,
+              label: 'Invoice',
+              value: '${invoice['id'] ?? '-'} | ${invoice['number'] ?? '-'}',
             ),
           if (journal.isNotEmpty)
-            _detailLine(
-              Icons.account_balance_outlined,
-              'Journal',
-              '${journal['id'] ?? '-'} | ${journal['code'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.account_balance_outlined,
+              label: 'Journal',
+              value: '${journal['id'] ?? '-'} | ${journal['code'] ?? '-'}',
             ),
           if (pricing.isNotEmpty)
-            _detailLine(
-              Icons.price_check_outlined,
-              'Pricing simulation',
-              '${pricing['id'] ?? '-'} | ${pricing['suggestedPrice'] ?? pricing['suggestedPricePerUnit'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.price_check_outlined,
+              label: 'Pricing simulation',
+              value:
+                  '${pricing['id'] ?? '-'} | ${pricing['suggestedPrice'] ?? pricing['suggestedPricePerUnit'] ?? '-'}',
             ),
-          _detailLine(
-            Icons.sync_rounded,
-            'Sync',
-            sync['status']?.toString() ?? (result.success ? 'queued' : '-'),
+          Command360DetailLine(
+            icon: Icons.sync_rounded,
+            label: 'Sync',
+            value:
+                sync['status']?.toString() ?? (result.success ? 'queued' : '-'),
           ),
-          _detailLine(
-            Icons.fact_check_outlined,
-            'Audit',
-            audit['status']?.toString() ?? (result.success ? 'stored' : '-'),
+          Command360DetailLine(
+            icon: Icons.fact_check_outlined,
+            label: 'Audit',
+            value: audit['status']?.toString() ??
+                (result.success ? 'stored' : '-'),
           ),
           if (result.requiresUserConfirmation && candidates.isNotEmpty)
             _buildCandidateProductList(candidates),
@@ -1280,32 +3253,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  Widget _detailLine(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(icon, color: textSecondary, size: 15),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 112,
-            child: Text(
-              label,
-              style: const TextStyle(color: textSecondary, fontSize: 11),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: Colors.white, fontSize: 11),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _statusPill(String label, Color color) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
@@ -1330,6 +3277,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildQuickPromptsStrip() {
     final prompts = [
       'I want to export chocolate to Saudi Arabia. What do you recommend?',
@@ -1404,648 +3352,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  _AdvisorResponse? _buildAdvisoryResponse(String text) {
-    final normalized = _normalized(text);
-    if (_isClearTransactionCommand(normalized) &&
-        !_isPreparationRequest(normalized)) {
-      return null;
-    }
-
-    final numericFollowUp = _buildNumericFollowUpResponse(text);
-    if (numericFollowUp != null) return numericFollowUp;
-
-    final intent = _classifyAdvisorIntent(normalized);
-    _rememberContextFromText(text, intent);
-
-    switch (intent) {
-      case _AdvisorIntent.greeting:
-        _advisorContext.latestTopic = intent;
-        return const _AdvisorResponse(
-          type: AiChatMessageType.normal,
-          text:
-              'Welcome. I can help you with pricing, exports, inventory, customer balances, profitability, and preparing accounting operations for review. What would you like to work on?',
-          suggestedReplies: [
-            'Price a shipment',
-            'Review profitability',
-            'Analyze inventory risk',
-          ],
-        );
-      case _AdvisorIntent.generalHelp:
-        _advisorContext.latestTopic = intent;
-        return const _AdvisorResponse(
-          type: AiChatMessageType.recommendation,
-          text:
-              'I can help in five practical areas: pricing shipments, reviewing profitability, preparing purchases or sales for approval, checking inventory risks, and discussing customer balances. Choose one and I will guide you step by step.',
-          suggestedReplies: [
-            'Price a shipment',
-            'Compare three scenarios',
-            'Prepare a purchase',
-          ],
-        );
-      case _AdvisorIntent.exportAdvice:
-        _advisorContext.latestTopic = intent;
-        return _exportAdviceResponse();
-      case _AdvisorIntent.pricingAdvice:
-        _advisorContext.latestTopic = intent;
-        return _pricingAdviceResponse();
-      case _AdvisorIntent.marginDiscussion:
-        _advisorContext.latestTopic = intent;
-        return _marginDiscussionResponse();
-      case _AdvisorIntent.scenarioComparison:
-        _advisorContext.latestTopic = intent;
-        return _scenarioComparisonResponse();
-      case _AdvisorIntent.profitabilityDiscussion:
-        _advisorContext.latestTopic = intent;
-        return _profitabilityResponse();
-      case _AdvisorIntent.inventoryDiscussion:
-        _advisorContext.latestTopic = intent;
-        return _inventoryResponse();
-      case _AdvisorIntent.customerDiscussion:
-        _advisorContext.latestTopic = intent;
-        return _customerResponse();
-      case _AdvisorIntent.cashflowDiscussion:
-        _advisorContext.latestTopic = intent;
-        return _cashflowResponse();
-      case _AdvisorIntent.transactionPreparation:
-        _advisorContext.latestTopic = intent;
-        return _transactionPreparationResponse(normalized);
-      case _AdvisorIntent.executionFollowUp:
-        _advisorContext.latestTopic = intent;
-        return _executionFollowUpResponse();
-      case _AdvisorIntent.unknown:
-        if (_looksLikeAdvisorDiscussion(normalized)) {
-          _advisorContext.latestTopic = intent;
-          return _unknownAdvisorResponse();
-        }
-        return _buildLegacyAdvisoryResponse(text);
-    }
-  }
-
-  _AdvisorResponse? _buildLegacyAdvisoryResponse(String text) {
-    final normalized = _normalized(text);
-    if (_isClearTransactionCommand(normalized)) return null;
-
-    if (_containsAny(normalized, [
-      'export',
-      'saudi',
-      'market entry',
-      'تصدير',
-      'السعودية',
-      'دخول السوق',
-    ])) {
-      return const _AdvisorResponse(
-        type: AiChatMessageType.question,
-        text:
-            'Let us build the export decision step by step. I need carton cost, expected selling price or target margin, shipping cost, customs cost, payment terms, and whether your priority is fast market entry or higher margin. Until those are clear, I will keep this as advice only.',
-        suggestedReplies: [
-          'My goal is fast market entry',
-          'My goal is higher margin',
-          'Compare pricing scenarios',
-        ],
-      );
-    }
-
-    if (_containsAny(normalized, [
-      '25%',
-      '25 percent',
-      'margin',
-      'هامش',
-      'ربح',
-      'مناسب',
-    ])) {
-      return const _AdvisorResponse(
-        type: AiChatMessageType.scenarioComparison,
-        text:
-            'A 25% margin can be suitable when demand is stable, returns are low, and competitors are not forcing discounts. For first entry, compare three scenarios: conservative at 15-18% to win accounts, balanced at 22-25% to protect profit, and aggressive at 30%+ only if the product has clear differentiation or limited supply.',
-        suggestedReplies: [
-          'Run conservative scenario',
-          'Run balanced scenario',
-          'Run aggressive scenario',
-        ],
-      );
-    }
-
-    if (_containsAny(normalized, [
-      'recommend',
-      'advice',
-      'advise',
-      'compare',
-      'explain',
-      'what do you think',
-      'suitable',
-      'better',
-      'strategy',
-      'discussion',
-      'تنصح',
-      'نصيحة',
-      'توصي',
-      'قارن',
-      'اشرح',
-      'أفضل',
-      'استراتيجية',
-      'مناقشة',
-    ])) {
-      return const _AdvisorResponse(
-        type: AiChatMessageType.recommendation,
-        text:
-            'I can help reason through that without touching the database. To make the recommendation useful, tell me the product, cost base, expected volume, payment terms, and your goal: cash speed, margin, market entry, or risk reduction.',
-        suggestedReplies: [
-          'Focus on cash speed',
-          'Focus on higher margin',
-          'Help me compare options',
-        ],
-      );
-    }
-
-    return null;
-  }
-
-  _AdvisorIntent _classifyAdvisorIntent(String normalized) {
-    if (_containsAny(normalized, [
-      'hello',
-      'hi',
-      'hey',
-      'good morning',
-      'good evening',
-      'مرحبا',
-      'أهلا',
-      'اهلا',
-      'السلام عليكم',
-    ])) {
-      return _AdvisorIntent.greeting;
-    }
-    if (_containsAny(normalized, [
-      'how can you help',
-      'what can you do',
-      'help me',
-      'ساعدني',
-      'ماذا تستطيع',
-      'شو بتقدر',
-    ])) {
-      return _AdvisorIntent.generalHelp;
-    }
-    if (_containsAny(normalized, [
-      'scenario',
-      'scenarios',
-      'compare three',
-      'compare margins',
-      'conservative',
-      'balanced',
-      'aggressive',
-      'سيناريو',
-      'سيناريوهات',
-      'قارن',
-      'محافظ',
-      'متوازن',
-      'هجومي',
-    ])) {
-      return _AdvisorIntent.scenarioComparison;
-    }
-    if (_containsAny(normalized, [
-      'export',
-      'saudi',
-      'market entry',
-      'shipping',
-      'customs',
-      'تصدير',
-      'السعودية',
-      'دخول السوق',
-      'شحن',
-      'جمارك',
-    ])) {
-      return _AdvisorIntent.exportAdvice;
-    }
-    if (_containsAny(normalized, [
-      'margin',
-      '25%',
-      '25 percent',
-      'markup',
-      'هامش',
-      'ربح',
-      'مناسب',
-    ])) {
-      return _AdvisorIntent.marginDiscussion;
-    }
-    if (_containsAny(normalized, [
-      'price',
-      'pricing',
-      'landed cost',
-      'quote price',
-      'سعر',
-      'تسعير',
-      'تكلفة واصلة',
-    ])) {
-      return _AdvisorIntent.pricingAdvice;
-    }
-    if (_containsAny(normalized, [
-      'profit',
-      'profitability',
-      'gross profit',
-      'net profit',
-      'ربحية',
-      'صافي الربح',
-      'مجمل الربح',
-    ])) {
-      return _AdvisorIntent.profitabilityDiscussion;
-    }
-    if (_containsAny(normalized, [
-      'inventory',
-      'stock',
-      'slow moving',
-      'out of stock',
-      'مخزون',
-      'كمية',
-      'بضاعة',
-      'نفاد',
-    ])) {
-      return _AdvisorIntent.inventoryDiscussion;
-    }
-    if (_containsAny(normalized, [
-      'customer',
-      'balance',
-      'payment history',
-      'receivable',
-      'عميل',
-      'زبون',
-      'رصيد',
-      'تحصيل',
-      'مديونية',
-    ])) {
-      return _AdvisorIntent.customerDiscussion;
-    }
-    if (_containsAny(normalized, [
-      'cash flow',
-      'cashflow',
-      'cash',
-      'liquidity',
-      'due invoices',
-      'تدفق نقدي',
-      'سيولة',
-      'كاش',
-      'نقد',
-      'فواتير مستحقة',
-    ])) {
-      return _AdvisorIntent.cashflowDiscussion;
-    }
-    if (_containsAny(normalized, [
-      'prepare',
-      'create proposal',
-      'purchase proposal',
-      'sale proposal',
-      'pricing simulation',
-      'جهز',
-      'حضّر',
-      'حضر',
-      'مقترح',
-      'عملية شراء',
-      'عملية بيع',
-    ])) {
-      return _AdvisorIntent.transactionPreparation;
-    }
-    if (_containsAny(normalized, [
-      'what happened',
-      'what is missing',
-      'explain the impact',
-      'impact',
-      'ماذا حدث',
-      'ما الناقص',
-      'اشرح الأثر',
-    ])) {
-      return _AdvisorIntent.executionFollowUp;
-    }
-    return _AdvisorIntent.unknown;
-  }
-
-  _AdvisorResponse? _buildNumericFollowUpResponse(String text) {
-    final amount = _firstNumber(text);
-    if (amount == null) return null;
-    final topic = _advisorContext.latestTopic;
-    if (topic != _AdvisorIntent.exportAdvice &&
-        topic != _AdvisorIntent.pricingAdvice &&
-        topic != _AdvisorIntent.marginDiscussion &&
-        topic != _AdvisorIntent.scenarioComparison) {
-      return null;
-    }
-
-    final normalized = _normalized(text);
-    if (_containsAny(normalized, ['%', 'percent', 'هامش', 'ربح'])) {
-      _advisorContext.currentMargin = amount;
-      return _marginDiscussionResponse();
-    }
-    return _rememberedCostResponse(amount);
-  }
-
-  _AdvisorResponse _exportAdviceResponse() {
-    final product = _advisorContext.currentProduct ?? 'the product';
-    final destination =
-        _advisorContext.currentDestination ?? 'the target market';
-    return _AdvisorResponse(
-      type: AiChatMessageType.question,
-      text:
-          'Good. Let us build the export decision for $product to $destination step by step. I need the carton cost, estimated shipping cost, customs or import fees, and your goal: fast market entry or higher margin.',
-      suggestedReplies: const [
-        'Carton cost is 45 dollars',
-        'My goal is fast market entry',
-        'Compare three scenarios',
-      ],
-    );
-  }
-
-  _AdvisorResponse _pricingAdviceResponse() {
-    final product = _advisorContext.currentProduct ?? 'this product';
-    return _AdvisorResponse(
-      type: AiChatMessageType.question,
-      text:
-          'For pricing $product, I need four inputs: landed cost or purchase cost, target margin, competitor price range, and currency. Then I can suggest conservative, balanced, and aggressive options without recording anything.',
-      suggestedReplies: const [
-        'Cost is 45 dollars',
-        'Target margin is 25%',
-        'Compare three scenarios',
-      ],
-    );
-  }
-
-  _AdvisorResponse _marginDiscussionResponse() {
-    final margin = _advisorContext.currentMargin?.toStringAsFixed(0) ?? '25';
-    return _AdvisorResponse(
-      type: AiChatMessageType.scenarioComparison,
-      text:
-          '$margin% can be suitable if demand is stable and competition is not aggressive. For a new market, I recommend comparing three scenarios: conservative, balanced, and aggressive. Conservative protects entry speed, balanced protects both sales and profit, and aggressive only works when the product has clear differentiation.',
-      suggestedReplies: const [
-        'Compare three scenarios',
-        'Use fast market entry',
-        'Use higher margin',
-      ],
-    );
-  }
-
-  _AdvisorResponse _scenarioComparisonResponse() {
-    final product = _advisorContext.currentProduct ?? 'the product';
-    final destination = _advisorContext.currentDestination;
-    final destinationPart = destination == null ? '' : ' for $destination';
-    _advisorContext.latestScenarioType = 'three_scenarios';
-    return _AdvisorResponse(
-      type: AiChatMessageType.scenarioComparison,
-      text:
-          'Here is a practical scenario comparison for $product$destinationPart:\n\nConservative: margin direction 15-18%. Advantage: easier market entry and faster customer testing. Risk: weak profit buffer if shipping or returns rise. Use it when you need first orders or distributor adoption.\n\nBalanced: margin direction 22-25%. Advantage: protects profit while keeping the offer realistic. Risk: may be average if competitors are discounting hard. Use it when demand is stable and you want repeatable sales.\n\nAggressive: margin direction 30%+. Advantage: stronger profit per carton. Risk: slower sales and higher rejection from price-sensitive buyers. Use it only when supply is limited, quality is differentiated, or the customer has urgency.',
-      suggestedReplies: const [
-        'Use balanced scenario',
-        'Prepare pricing simulation',
-        'Review profitability',
-      ],
-    );
-  }
-
-  _AdvisorResponse _profitabilityResponse() {
-    return const _AdvisorResponse(
-      type: AiChatMessageType.question,
-      text:
-          'To review profitability, separate gross profit from cash timing. I need selling price, purchase or landed cost, expected quantity, discounts, and any shipping or customs costs not already included.',
-      suggestedReplies: [
-        'Compare three scenarios',
-        'Cost is 45 dollars',
-        'Target margin is 25%',
-      ],
-    );
-  }
-
-  _AdvisorResponse _inventoryResponse() {
-    return const _AdvisorResponse(
-      type: AiChatMessageType.question,
-      text:
-          'For inventory risk, I need the product name, current stock quantity, average sales speed, and next replenishment date. The key question is whether the risk is stockout, slow movement, or cash tied up in stock.',
-      suggestedReplies: [
-        'Analyze inventory risk',
-        'Review slow-moving stock',
-        'Prepare a purchase',
-      ],
-    );
-  }
-
-  _AdvisorResponse _customerResponse() {
-    return const _AdvisorResponse(
-      type: AiChatMessageType.question,
-      text:
-          'For customer balance discussion, I need the customer name, current balance, oldest unpaid invoice, and recent payment behavior. Then we can decide whether to offer credit, request payment first, or continue normally.',
-      suggestedReplies: [
-        'Review customer balance',
-        'Discuss payment terms',
-        'Prepare a sale',
-      ],
-    );
-  }
-
-  _AdvisorResponse _cashflowResponse() {
-    return const _AdvisorResponse(
-      type: AiChatMessageType.question,
-      text:
-          'For cash flow, focus on timing. I need available cash, due customer invoices, upcoming supplier payments, and planned purchases. Then we can decide what can be paid now and what should wait.',
-      suggestedReplies: [
-        'Review due invoices',
-        'Plan upcoming purchases',
-        'Discuss cash risk',
-      ],
-    );
-  }
-
-  _AdvisorResponse _transactionPreparationResponse(String normalized) {
-    if (_containsAny(normalized, ['sale', 'بيع', 'عملية بيع'])) {
-      return const _AdvisorResponse(
-        type: AiChatMessageType.question,
-        text:
-            'I can prepare a sale proposal for review. Please provide product, quantity, selling price, customer name, and whether payment is cash or credit. I will not execute it until you approve the proposal card.',
-        suggestedReplies: [
-          'Prepare a sale',
-          'Discuss customer balance',
-          'Analyze inventory risk',
-        ],
-      );
-    }
-    if (_containsAny(normalized, ['pricing', 'تسعير', 'price'])) {
-      return _pricingAdviceResponse();
-    }
-    return const _AdvisorResponse(
-      type: AiChatMessageType.question,
-      text:
-          'I can prepare a purchase proposal for review. Please provide product, quantity, unit cost or total amount, supplier if available, and whether it was paid cash or remains payable.',
-      suggestedReplies: [
-        'Prepare a purchase',
-        'Price a shipment',
-        'Compare three scenarios',
-      ],
-    );
-  }
-
-  _AdvisorResponse _executionFollowUpResponse() {
-    final proposal = _advisorContext.latestProposal;
-    if (proposal == null) {
-      return const _AdvisorResponse(
-        type: AiChatMessageType.confirmation,
-        text:
-            'There is no completed proposal in this conversation yet. We can prepare a purchase, sale, or pricing simulation first, then you can approve it after review.',
-        suggestedReplies: [
-          'Prepare a purchase',
-          'Prepare a sale',
-          'Run pricing simulation',
-        ],
-      );
-    }
-    return _AdvisorResponse(
-      type: AiChatMessageType.recommendation,
-      text:
-          'The latest proposal is a ${proposal.actionType}. Review the proposal card details first: product, quantity, amount, and any required confirmation. If it looks correct, use approve or save and it will continue through the guarded execution flow.',
-      suggestedReplies: const [
-        'Approve',
-        'Change details',
-        'Explain accounting impact',
-      ],
-    );
-  }
-
-  _AdvisorResponse _rememberedCostResponse(double amount) {
-    _advisorContext.currentCost = amount;
-    final product = _advisorContext.currentProduct ?? 'the product';
-    final destination = _advisorContext.currentDestination;
-    final route = destination == null ? '' : ' for $destination';
-    return _AdvisorResponse(
-      type: AiChatMessageType.question,
-      text:
-          'Got it. I will treat ${amount.toStringAsFixed(2)} as the carton cost for $product$route. To continue pricing safely, I still need estimated shipping cost, customs or import fees, currency, and whether your goal is fast entry or higher margin.',
-      suggestedReplies: const [
-        'Shipping is 1200 dollars',
-        'Customs are 300 dollars',
-        'Compare three scenarios',
-      ],
-    );
-  }
-
-  _AdvisorResponse _unknownAdvisorResponse() {
-    return const _AdvisorResponse(
-      type: AiChatMessageType.question,
-      text:
-          'I can help, but I need to know the business area first. Are we discussing pricing, export, profitability, inventory, customer balances, cash flow, or preparing a purchase or sale for review?',
-      suggestedReplies: [
-        'Price a shipment',
-        'Review profitability',
-        'Analyze inventory risk',
-      ],
-    );
-  }
-
-  void _rememberContextFromText(String text, _AdvisorIntent intent) {
-    final normalized = _normalized(text);
-    final product = _extractProduct(normalized);
-    if (product != null) _advisorContext.currentProduct = product;
-    final destination = _extractDestination(normalized);
-    if (destination != null) _advisorContext.currentDestination = destination;
-    final margin = _extractMargin(normalized);
-    if (margin != null) _advisorContext.currentMargin = margin;
-    final customer = _extractCustomer(text);
-    if (customer != null) _advisorContext.latestCustomer = customer;
-    if (intent == _AdvisorIntent.scenarioComparison) {
-      _advisorContext.latestScenarioType = 'three_scenarios';
-    }
-  }
-
-  void _rememberProposalContext(AiProposalModel proposal) {
-    final inventory = proposal.inventoryPayload;
-    final customer = proposal.customerPayload;
-    final pricing = proposal.pricingPayload;
-    if (inventory != null) {
-      final name = inventory['name']?.toString();
-      if (name != null && name.trim().isNotEmpty) {
-        _advisorContext.currentProduct = name.trim();
-      }
-    }
-    if (customer != null) {
-      final name = customer['name']?.toString();
-      if (name != null && name.trim().isNotEmpty) {
-        _advisorContext.latestCustomer = name.trim();
-      }
-    }
-    if (pricing != null) {
-      final destination = pricing['destination']?.toString();
-      if (destination != null && destination.trim().isNotEmpty) {
-        _advisorContext.currentDestination = destination.trim();
-      }
-      final margin = (pricing['targetMarginPercentage'] as num?)?.toDouble();
-      if (margin != null) _advisorContext.currentMargin = margin;
-    }
-  }
-
-  String? _extractProduct(String normalized) {
-    final products = <String, String>{
-      'chocolate': 'chocolate',
-      'شوكولاتة': 'chocolate',
-      'شوكولاته': 'chocolate',
-      'carton': 'cartons',
-      'كرتون': 'cartons',
-    };
-    for (final entry in products.entries) {
-      if (normalized.contains(entry.key)) return entry.value;
-    }
-    return null;
-  }
-
-  String? _extractDestination(String normalized) {
-    if (normalized.contains('saudi') || normalized.contains('السعودية')) {
-      return 'Saudi Arabia';
-    }
-    if (normalized.contains('afghanistan') ||
-        normalized.contains('أفغانستان') ||
-        normalized.contains('افغانستان')) {
-      return 'Afghanistan';
-    }
-    if (normalized.contains('turkey') || normalized.contains('تركيا')) {
-      return 'Turkey';
-    }
-    return null;
-  }
-
-  double? _extractMargin(String normalized) {
-    if (!normalized.contains('%') &&
-        !normalized.contains('percent') &&
-        !normalized.contains('margin') &&
-        !normalized.contains('هامش')) {
-      return null;
-    }
-    return _firstNumber(normalized);
-  }
-
-  String? _extractCustomer(String text) {
-    final match = RegExp(
-      r'(?:customer|client|عميل|زبون)\s+([A-Za-z\u0600-\u06FF ]{2,32})',
-      caseSensitive: false,
-    ).firstMatch(text);
-    return match?.group(1)?.trim();
-  }
-
-  double? _firstNumber(String text) {
-    final match = RegExp(r'(\d+(?:[.,]\d+)?)').firstMatch(text);
-    if (match == null) return null;
-    return double.tryParse(match.group(1)!.replaceAll(',', '.'));
-  }
-
-  bool _looksLikeAdvisorDiscussion(String normalized) {
-    if (normalized.length < 3) return false;
-    if (_containsAny(normalized, [
-      '?',
-      'what',
-      'why',
-      'how',
-      'should',
-      'can i',
-      'هل',
-      'كيف',
-      'ماذا',
-      'ليش',
-      'ممكن',
-    ])) {
-      return true;
-    }
-    return !_isClearTransactionCommand(normalized);
-  }
-
   bool _isExecutionIntent(String text) {
     final normalized = _normalized(text);
     return _containsAny(normalized, [
@@ -2067,6 +3373,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     ]);
   }
 
+  // ignore: unused_element
   bool _isClearTransactionCommand(String normalized) {
     return _containsAny(normalized, [
       'bought',
@@ -2101,6 +3408,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     ]);
   }
 
+  // ignore: unused_element
   bool _isPreparationRequest(String normalized) {
     return _containsAny(normalized, [
       'prepare',
@@ -2144,6 +3452,29 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   String _normalized(String value) {
     return value.toLowerCase().trim();
+  }
+
+  String _workflowTitle(AiWorkflowType type) {
+    switch (type) {
+      case AiWorkflowType.purchase:
+        return 'Purchase';
+      case AiWorkflowType.sale:
+        return 'Sale';
+      case AiWorkflowType.pricing:
+        return 'Pricing';
+      case AiWorkflowType.inventoryAdjustment:
+        return 'Inventory Adjustment';
+      case AiWorkflowType.customerBalanceInquiry:
+        return 'Customer Balance';
+      case AiWorkflowType.supplierInquiry:
+        return 'Supplier';
+    }
+  }
+
+  String _timeLabel(DateTime timestamp) {
+    final hour = timestamp.hour.toString().padLeft(2, '0');
+    final minute = timestamp.minute.toString().padLeft(2, '0');
+    return '$hour:$minute';
   }
 
   Map<String, dynamic> _asMap(dynamic value) {
@@ -2198,6 +3529,23 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     }
   }
 
+  AiChatMessageType _messageTypeForMode(AiAdvisorMode mode) {
+    switch (mode) {
+      case AiAdvisorMode.chat:
+        return AiChatMessageType.normal;
+      case AiAdvisorMode.advice:
+      case AiAdvisorMode.analysis:
+        return AiChatMessageType.recommendation;
+      case AiAdvisorMode.pricing:
+      case AiAdvisorMode.export:
+        return AiChatMessageType.scenarioComparison;
+      case AiAdvisorMode.proposalReview:
+        return AiChatMessageType.proposal;
+      case AiAdvisorMode.executionGuard:
+        return AiChatMessageType.confirmation;
+    }
+  }
+
   Color _messageColor(AiChatMessageType type) {
     switch (type) {
       case AiChatMessageType.recommendation:
@@ -2215,27 +3563,364 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         return textSecondary;
     }
   }
+
+  Color _confidenceColor(AiEvidenceConfidence confidence) {
+    switch (confidence) {
+      case AiEvidenceConfidence.high:
+        return tealSuccess;
+      case AiEvidenceConfidence.medium:
+        return goldAccent;
+      case AiEvidenceConfidence.low:
+        return AppTheme.aiRed;
+    }
+  }
 }
 
-class _AdvisorResponse {
-  final AiChatMessageType type;
-  final String text;
-  final List<String> suggestedReplies;
+class _CommandSection extends StatelessWidget {
+  const _CommandSection({
+    required this.title,
+    required this.child,
+    this.subtitle,
+    this.trailing,
+  });
 
-  const _AdvisorResponse({
-    required this.type,
-    required this.text,
-    this.suggestedReplies = const [],
+  final String title;
+  final String? subtitle;
+  final Widget child;
+  final Widget? trailing;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: _AiAccountantScreenState.premiumPanel,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _AiAccountantScreenState.premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      title,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    if (subtitle != null) ...[
+                      const SizedBox(height: 4),
+                      Text(
+                        subtitle!,
+                        style: const TextStyle(
+                          color: _AiAccountantScreenState.textSecondary,
+                          fontSize: 12,
+                          height: 1.35,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+              if (trailing != null) ...[
+                const SizedBox(width: 12),
+                trailing!,
+              ],
+            ],
+          ),
+          const SizedBox(height: 14),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _ExecutiveKpiData {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _ExecutiveKpiData({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.color,
   });
 }
 
-class _AdvisorSessionContext {
-  String? currentProduct;
-  String? currentDestination;
-  double? currentMargin;
-  double? currentCost;
-  String? latestScenarioType;
-  AiProposalModel? latestProposal;
-  String? latestCustomer;
-  _AdvisorIntent? latestTopic;
+class _ExecutiveKpiCard extends StatelessWidget {
+  const _ExecutiveKpiCard({required this.data});
+
+  final _ExecutiveKpiData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color:
+            _AiAccountantScreenState.premiumPanelSoft.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _AiAccountantScreenState.premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Container(
+            width: 30,
+            height: 30,
+            decoration: BoxDecoration(
+              color: data.color.withValues(alpha: 0.11),
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(data.icon, color: data.color, size: 16),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            data.label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: _AiAccountantScreenState.textSecondary,
+              fontSize: 11,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            data.value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w900,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExecutiveFindingTile extends StatelessWidget {
+  const _ExecutiveFindingTile({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 220, maxWidth: 360),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _AiAccountantScreenState.goldAccent.withValues(alpha: 0.08),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _AiAccountantScreenState.goldAccent.withValues(alpha: 0.24),
+        ),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.auto_awesome_outlined,
+            color: _AiAccountantScreenState.goldAccent,
+            size: 17,
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+                height: 1.25,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExecutiveEmptyLine extends StatelessWidget {
+  const _ExecutiveEmptyLine({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _AiAccountantScreenState.premiumPanelSoft.withValues(alpha: 0.6),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _AiAccountantScreenState.premiumStroke),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: _AiAccountantScreenState.textSecondary, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              label,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: _AiAccountantScreenState.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ExecutiveRecommendationCard extends StatelessWidget {
+  const _ExecutiveRecommendationCard({required this.item});
+
+  final AiFinancialRecommendation item;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color:
+            _AiAccountantScreenState.premiumPanelSoft.withValues(alpha: 0.78),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _AiAccountantScreenState.tealSuccess.withValues(alpha: 0.24),
+        ),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.task_alt_rounded,
+            color: _AiAccountantScreenState.tealSuccess,
+            size: 18,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  item.description,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _AiAccountantScreenState.textSecondary,
+                    fontSize: 11,
+                    height: 1.35,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _InsightData {
+  final String label;
+  final String value;
+  final IconData icon;
+  final Color color;
+
+  const _InsightData(this.label, this.value, this.icon, this.color);
+}
+
+class _InsightCard extends StatelessWidget {
+  const _InsightCard({required this.data});
+
+  final _InsightData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 148,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _AiAccountantScreenState.premiumPanel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _AiAccountantScreenState.premiumStroke),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: data.color.withValues(alpha: 0.1),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(data.icon, color: data.color, size: 17),
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  data.label,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _AiAccountantScreenState.textSecondary,
+                    fontSize: 10.5,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  data.value,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

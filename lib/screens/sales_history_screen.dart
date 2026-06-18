@@ -6,6 +6,7 @@ import '../core/app_copy.dart';
 import '../core/app_formatters.dart';
 import '../core/app_theme.dart';
 import '../core/business/business_context.dart';
+import '../core/ui/responsive.dart';
 import '../core/utils/perf_logger.dart';
 import '../data/repositories/product_repository.dart';
 import '../widgets/premium/premium_card.dart';
@@ -101,7 +102,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
-    final isDesktop = MediaQuery.sizeOf(context).width >= 800;
+    final isDesktop = UIResponsive.isDesktop(context);
 
     return Scaffold(
       backgroundColor: AppTheme.aiDeep,

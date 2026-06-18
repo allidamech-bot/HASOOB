@@ -1,0 +1,93 @@
+import 'package:flutter_test/flutter_test.dart';
+import 'package:hasoob_app/features/ai_accountant/domain/services/ai_tool_planner.dart';
+
+void main() {
+  group('AiToolPlanner', () {
+    late AiToolPlanner planner;
+
+    setUp(() {
+      planner = AiToolPlanner();
+    });
+
+    test('classifies financial overview as read-only tool-backed work', () {
+      final plan = planner.plan(
+        userText: 'How is the business doing?',
+        businessId: 'business-1',
+      );
+
+      expect(plan.intent, AiAccountantIntent.financialOverview);
+      expect(plan.requiresTools, isTrue);
+      expect(plan.safetyLevel, AiToolSafetyLevel.readOnly);
+      expect(
+        plan.steps.map((step) => step.toolName),
+        contains('getFinancialSummary'),
+      );
+      expect(plan.steps.map((step) => step.toolName), contains('getInvoices'));
+      expect(plan.steps.map((step) => step.toolName), contains('getProducts'));
+      expect(plan.steps.map((step) => step.toolName), contains('getCustomers'));
+    });
+
+    test('classifies analyze business as automatic financial overview', () {
+      final plan = planner.plan(
+        userText: 'Analyze business',
+        businessId: 'business-1',
+      );
+
+      expect(plan.intent, AiAccountantIntent.financialOverview);
+      expect(plan.requiresTools, isTrue);
+    });
+
+    test('classifies executive CFO questions as evidence-backed overview', () {
+      for (final question in [
+        'What is my current business health?',
+        'What are my top risks?',
+        'What should I do this week as CFO?',
+        'What decisions need my approval?',
+      ]) {
+        final plan = planner.plan(
+          userText: question,
+          businessId: 'business-1',
+        );
+
+        expect(plan.intent, AiAccountantIntent.financialOverview);
+        expect(plan.requiresTools, isTrue);
+        expect(plan.safetyLevel, AiToolSafetyLevel.readOnly);
+      }
+    });
+
+    test('execution intent requires guard and no read tools', () {
+      final plan = planner.plan(
+        userText: 'execute',
+        businessId: 'business-1',
+      );
+
+      expect(plan.intent, AiAccountantIntent.executionIntent);
+      expect(plan.requiresTools, isFalse);
+      expect(plan.steps, isEmpty);
+      expect(plan.safetyLevel, AiToolSafetyLevel.executionGuard);
+    });
+
+    test('general advice does not require tools', () {
+      final plan = planner.plan(
+        userText: 'I need advice about growing my business',
+        businessId: 'business-1',
+      );
+
+      expect(plan.intent, AiAccountantIntent.generalAdvice);
+      expect(plan.requiresTools, isFalse);
+      expect(plan.safetyLevel, AiToolSafetyLevel.advisoryOnly);
+    });
+
+    test('classifies invoice review as read-only analysis', () {
+      final plan = planner.plan(
+        userText: 'review pending invoices',
+        businessId: 'business-1',
+      );
+
+      expect(plan.intent, AiAccountantIntent.invoiceAnalysis);
+      expect(plan.requiresTools, isTrue);
+      expect(plan.safetyLevel, AiToolSafetyLevel.readOnly);
+      expect(plan.steps.single.toolName, 'getInvoices');
+    });
+  });
+}

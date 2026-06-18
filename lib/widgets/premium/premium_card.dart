@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/app_theme.dart';
+import '../../core/ui/ui_tokens.dart';
 
 class PremiumCard extends StatelessWidget {
   final Widget child;
@@ -26,33 +27,34 @@ class PremiumCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = AppTheme.isDark(context);
-    
+    final cardRadius = radius ?? UITokens.radiusXl;
+
     return Container(
       decoration: BoxDecoration(
-        color: color ?? (isDark ? AppTheme.surfaceSecondary : AppTheme.lightSurface),
-        borderRadius: BorderRadius.circular(radius ?? AppTheme.radiusLarge),
+        color: color ?? (isDark ? AppTheme.aiCard : AppTheme.lightSurface),
+        borderRadius: BorderRadius.circular(cardRadius),
         border: border ?? Border.all(
           color: isDark ? Colors.white.withValues(alpha: 0.05) : AppTheme.lightBorder,
-          width: 1,
+          width: UITokens.borderWidthThin,
         ),
         gradient: gradient,
         boxShadow: shadows ?? [
           if (isDark)
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.15),
-              blurRadius: 16,
-              offset: const Offset(0, 4),
+              blurRadius: UITokens.blurStrong,
+              offset: const Offset(0, UITokens.spaceXs),
             )
           else
             BoxShadow(
               color: AppTheme.accentBlue.withValues(alpha: 0.04),
-              blurRadius: 12,
-              offset: const Offset(0, 4),
+              blurRadius: UITokens.blurMedium,
+              offset: const Offset(0, UITokens.spaceXs),
             ),
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(radius ?? AppTheme.radiusLarge),
+        borderRadius: BorderRadius.circular(cardRadius),
         child: Padding(
           padding: padding ?? const EdgeInsets.all(24),
           child: child,
