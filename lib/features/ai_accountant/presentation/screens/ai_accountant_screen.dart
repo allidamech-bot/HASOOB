@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../../../../core/app_theme.dart';
 import '../widgets/command360/command360_context_module.dart';
 import '../widgets/command360/command360_context_row.dart';
+import '../widgets/command360/command360_decision_options.dart';
 import '../widgets/command360/command360_executive_tab_button.dart';
 import '../widgets/command360/command360_quick_action_chip.dart';
 import '../widgets/command360/command360_starter_question_chip.dart';
@@ -2377,7 +2378,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         if (message.decisionOptions.isNotEmpty) ...[
           const SizedBox(height: 14),
           _messageSectionTitle('Reasoning'),
-          _buildDecisionOptions(message.decisionOptions),
+          Command360DecisionOptions(options: message.decisionOptions),
         ],
         if (message.recommendations.isNotEmpty) ...[
           const SizedBox(height: 14),
@@ -3006,81 +3007,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             );
           }),
         ],
-      ),
-    );
-  }
-
-  Widget _buildDecisionOptions(List<AiDecisionOption> options) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: options.map((option) {
-        return Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(
-            color: AppTheme.aiCardElevated,
-            borderRadius: BorderRadius.circular(8),
-            border: Border.all(color: tealSuccess.withValues(alpha: 0.3)),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  const Icon(
-                    Icons.route_outlined,
-                    color: tealSuccess,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      option.title,
-                      style: const TextStyle(
-                        color: tealSuccess,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              _decisionLine('Recommendation', option.recommendation),
-              _decisionLine('Advantage', option.advantage),
-              _decisionLine('Risk', option.risk),
-              _decisionLine('When', option.whenToUse),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _decisionLine(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 5),
-      child: RichText(
-        text: TextSpan(
-          children: [
-            TextSpan(
-              text: '$label: ',
-              style: const TextStyle(
-                color: textSecondary,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            TextSpan(
-              text: value,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                height: 1.35,
-              ),
-            ),
-          ],
-        ),
       ),
     );
   }
