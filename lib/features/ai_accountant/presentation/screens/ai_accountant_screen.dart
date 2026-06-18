@@ -8,6 +8,7 @@ import '../widgets/command360/command360_executive_tab_button.dart';
 import '../widgets/command360/command360_quick_action_chip.dart';
 import '../widgets/command360/command360_starter_question_chip.dart';
 import '../widgets/command360/command360_message_expansion.dart';
+import '../widgets/command360/command360_detail_line.dart';
 import '../../../../core/business/business_context.dart';
 import '../../../../core/ui/responsive.dart';
 import '../../../../data/repositories/product_repository.dart';
@@ -3208,41 +3209,41 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           ),
           const SizedBox(height: 14),
           if (isPricing) ...[
-            _detailLine(
-              Icons.location_on_outlined,
-              'Destination',
-              '${pricing['destination'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.location_on_outlined,
+              label: 'Destination',
+              value: '${pricing['destination'] ?? '-'}',
             ),
-            _detailLine(
-              Icons.inventory_2_outlined,
-              'Estimated units',
-              '${pricing['estimatedTotalBoxes'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.inventory_2_outlined,
+              label: 'Estimated units',
+              value: '${pricing['estimatedTotalBoxes'] ?? '-'}',
             ),
-            _detailLine(
-              Icons.price_change_outlined,
-              'Landed cost',
-              '${pricing['landedCostPerUnit'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.price_change_outlined,
+              label: 'Landed cost',
+              value: '${pricing['landedCostPerUnit'] ?? '-'}',
             ),
-            _detailLine(
-              Icons.trending_up_rounded,
-              'Suggested price',
-              '${pricing['suggestedPricePerUnit'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.trending_up_rounded,
+              label: 'Suggested price',
+              value: '${pricing['suggestedPricePerUnit'] ?? '-'}',
             ),
           ] else ...[
-            _detailLine(
-              Icons.inventory_2_outlined,
-              'Item',
-              '${inventory['name'] ?? inventory['productId'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.inventory_2_outlined,
+              label: 'Item',
+              value: '${inventory['name'] ?? inventory['productId'] ?? '-'}',
             ),
-            _detailLine(
-              Icons.format_list_numbered_rtl,
-              'Quantity',
-              '${inventory['quantity'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.format_list_numbered_rtl,
+              label: 'Quantity',
+              value: '${inventory['quantity'] ?? '-'}',
             ),
-            _detailLine(
-              Icons.payments_outlined,
-              'Amount',
-              '${financial['totalAmount'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.payments_outlined,
+              label: 'Amount',
+              value: '${financial['totalAmount'] ?? '-'}',
             ),
           ],
           const SizedBox(height: 16),
@@ -3372,38 +3373,38 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           ),
           const SizedBox(height: 12),
           if (product.isNotEmpty)
-            _detailLine(
-              Icons.inventory_2_outlined,
-              'Product',
-              '${product['id'] ?? '-'} | ${product['name'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.inventory_2_outlined,
+              label: 'Product',
+              value: '${product['id'] ?? '-'} | ${product['name'] ?? '-'}',
             ),
           if (invoice.isNotEmpty)
-            _detailLine(
-              Icons.receipt_long_outlined,
-              'Invoice',
-              '${invoice['id'] ?? '-'} | ${invoice['number'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.receipt_long_outlined,
+              label: 'Invoice',
+              value: '${invoice['id'] ?? '-'} | ${invoice['number'] ?? '-'}',
             ),
           if (journal.isNotEmpty)
-            _detailLine(
-              Icons.account_balance_outlined,
-              'Journal',
-              '${journal['id'] ?? '-'} | ${journal['code'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.account_balance_outlined,
+              label: 'Journal',
+              value: '${journal['id'] ?? '-'} | ${journal['code'] ?? '-'}',
             ),
           if (pricing.isNotEmpty)
-            _detailLine(
-              Icons.price_check_outlined,
-              'Pricing simulation',
-              '${pricing['id'] ?? '-'} | ${pricing['suggestedPrice'] ?? pricing['suggestedPricePerUnit'] ?? '-'}',
+            Command360DetailLine(
+              icon: Icons.price_check_outlined,
+              label: 'Pricing simulation',
+              value: '${pricing['id'] ?? '-'} | ${pricing['suggestedPrice'] ?? pricing['suggestedPricePerUnit'] ?? '-'}',
             ),
-          _detailLine(
-            Icons.sync_rounded,
-            'Sync',
-            sync['status']?.toString() ?? (result.success ? 'queued' : '-'),
+          Command360DetailLine(
+            icon: Icons.sync_rounded,
+            label: 'Sync',
+            value: sync['status']?.toString() ?? (result.success ? 'queued' : '-'),
           ),
-          _detailLine(
-            Icons.fact_check_outlined,
-            'Audit',
-            audit['status']?.toString() ?? (result.success ? 'stored' : '-'),
+          Command360DetailLine(
+            icon: Icons.fact_check_outlined,
+            label: 'Audit',
+            value: audit['status']?.toString() ?? (result.success ? 'stored' : '-'),
           ),
           if (result.requiresUserConfirmation && candidates.isNotEmpty)
             _buildCandidateProductList(candidates),
@@ -3514,31 +3515,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  Widget _detailLine(IconData icon, String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 8),
-      child: Row(
-        children: [
-          Icon(icon, color: textSecondary, size: 15),
-          const SizedBox(width: 8),
-          SizedBox(
-            width: 112,
-            child: Text(
-              label,
-              style: const TextStyle(color: textSecondary, fontSize: 11),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              style: const TextStyle(color: Colors.white, fontSize: 11),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 
   Widget _statusPill(String label, Color color) {
     return Container(
