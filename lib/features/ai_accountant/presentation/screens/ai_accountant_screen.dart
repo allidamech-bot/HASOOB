@@ -6,6 +6,7 @@ import '../widgets/command360/command360_context_module.dart';
 import '../widgets/command360/command360_context_row.dart';
 import '../widgets/command360/command360_decision_options.dart';
 import '../widgets/command360/command360_executive_tab_button.dart';
+import '../widgets/command360/command360_message_rows.dart';
 import '../widgets/command360/command360_quick_action_chip.dart';
 import '../widgets/command360/command360_starter_question_chip.dart';
 import '../widgets/command360/command360_message_expansion.dart';
@@ -1635,7 +1636,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-
   Widget _contextRows(List<String> rows, {required String empty}) {
     final visibleRows = rows.where((row) => row.trim().isNotEmpty).toList();
     if (visibleRows.isEmpty) {
@@ -1846,7 +1846,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       ),
     );
   }
-
 
   Widget _buildLedgerPanel({bool isCompact = false, bool embedded = false}) {
     return Container(
@@ -2383,8 +2382,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         if (message.recommendations.isNotEmpty) ...[
           const SizedBox(height: 14),
           _messageSectionTitle('Recommendations'),
-          _plainMessageRows(
-            message.recommendations.take(4).map((item) => item.title).toList(),
+          Command360MessageRows(
+            rows: message.recommendations
+                .take(4)
+                .map((item) => item.title)
+                .toList(),
             icon: Icons.task_alt_outlined,
             color: tealSuccess,
           ),
@@ -2418,41 +2420,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  Widget _plainMessageRows(
-    List<String> rows, {
-    required IconData icon,
-    required Color color,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: rows.map((row) {
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 7),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(top: 2),
-                child: Icon(icon, color: color, size: 14),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  row,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    height: 1.35,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
-
   bool _hasExpandableMessageDetails(AiChatMessage message) {
     return message.metadata != null ||
         message.workflowSession != null ||
@@ -2472,8 +2439,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             Command360MessageExpansion(
               title: 'Evidence',
               icon: Icons.dataset_outlined,
-              child: _plainMessageRows(
-                [
+              child: Command360MessageRows(
+                rows: [
                   ...message.insights.take(3).map((item) => item.title),
                   ...message.risks
                       .where((risk) => risk.title != 'No major risk detected')
@@ -2492,8 +2459,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             Command360MessageExpansion(
               title: 'Confidence',
               icon: Icons.verified_user_outlined,
-              child: _plainMessageRows(
-                ['${metadata.confidenceLabel} confidence'],
+              child: Command360MessageRows(
+                rows: ['${metadata.confidenceLabel} confidence'],
                 icon: Icons.verified_user_outlined,
                 color: _confidenceColor(metadata.confidenceLevel),
               ),
@@ -2502,8 +2469,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             Command360MessageExpansion(
               title: 'Tools Used',
               icon: Icons.construction_outlined,
-              child: _plainMessageRows(
-                metadata.executedToolLabels,
+              child: Command360MessageRows(
+                rows: metadata.executedToolLabels,
                 icon: Icons.check_circle_outline_rounded,
                 color: tealSuccess,
               ),
@@ -2524,7 +2491,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       ),
     );
   }
-
 
   // ignore: unused_element
   Widget _buildAiInsightsPanel({
@@ -3320,17 +3286,20 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             Command360DetailLine(
               icon: Icons.price_check_outlined,
               label: 'Pricing simulation',
-              value: '${pricing['id'] ?? '-'} | ${pricing['suggestedPrice'] ?? pricing['suggestedPricePerUnit'] ?? '-'}',
+              value:
+                  '${pricing['id'] ?? '-'} | ${pricing['suggestedPrice'] ?? pricing['suggestedPricePerUnit'] ?? '-'}',
             ),
           Command360DetailLine(
             icon: Icons.sync_rounded,
             label: 'Sync',
-            value: sync['status']?.toString() ?? (result.success ? 'queued' : '-'),
+            value:
+                sync['status']?.toString() ?? (result.success ? 'queued' : '-'),
           ),
           Command360DetailLine(
             icon: Icons.fact_check_outlined,
             label: 'Audit',
-            value: audit['status']?.toString() ?? (result.success ? 'stored' : '-'),
+            value: audit['status']?.toString() ??
+                (result.success ? 'stored' : '-'),
           ),
           if (result.requiresUserConfirmation && candidates.isNotEmpty)
             _buildCandidateProductList(candidates),
@@ -3440,7 +3409,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       ),
     );
   }
-
 
   Widget _statusPill(String label, Color color) {
     return Container(
