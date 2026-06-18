@@ -10,6 +10,7 @@ import '../widgets/command360/command360_memory_card.dart';
 import '../widgets/command360/command360_message_rows.dart';
 import '../widgets/command360/command360_quick_action_chip.dart';
 import '../widgets/command360/command360_starter_question_chip.dart';
+import '../widgets/command360/command360_workflow_card.dart';
 import '../widgets/command360/command360_message_expansion.dart';
 import '../widgets/command360/command360_detail_line.dart';
 import '../../../../core/business/business_context.dart';
@@ -2480,7 +2481,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             Command360MessageExpansion(
               title: 'Workflow State',
               icon: Icons.route_outlined,
-              child: _buildWorkflowCard(message.workflowSession!),
+              child: Command360WorkflowCard(session: message.workflowSession!),
             ),
           if (message.memory?.hasVisibleContext == true)
             Command360MessageExpansion(
@@ -2816,97 +2817,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               : () => _processAiCommand(customText: reply),
         );
       }).toList(),
-    );
-  }
-
-  Widget _buildWorkflowCard(AiWorkflowSession session) {
-    final collected = session.collectedData.keys
-        .map(AiWorkflowField.label)
-        .toList(growable: false);
-    final waiting = session.waitingField == null
-        ? 'Review'
-        : AiWorkflowField.label(session.waitingField!);
-    final step = session.currentStep.clamp(1, session.totalSteps);
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: goldAccent.withValues(alpha: 0.07),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              const Icon(Icons.route_outlined, color: goldAccent, size: 16),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  '${_workflowTitle(session.workflowType)} Workflow',
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-              _statusPill('Step $step of ${session.totalSteps}', goldAccent),
-            ],
-          ),
-          const SizedBox(height: 10),
-          if (collected.isNotEmpty)
-            _workflowLine(
-              Icons.check_circle_outline_rounded,
-              'Collected',
-              collected.join(', '),
-              tealSuccess,
-            ),
-          _workflowLine(
-            Icons.hourglass_empty_rounded,
-            'Waiting',
-            waiting,
-            goldAccent,
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _workflowLine(
-    IconData icon,
-    String label,
-    String value,
-    Color color,
-  ) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
-      child: Row(
-        children: [
-          Icon(icon, color: color, size: 14),
-          const SizedBox(width: 7),
-          SizedBox(
-            width: 72,
-            child: Text(
-              label,
-              style: const TextStyle(color: textSecondary, fontSize: 11),
-            ),
-          ),
-          Expanded(
-            child: Text(
-              value,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
