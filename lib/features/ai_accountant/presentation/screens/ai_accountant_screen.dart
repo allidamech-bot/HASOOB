@@ -6,6 +6,7 @@ import '../widgets/command360/command360_context_module.dart';
 import '../widgets/command360/command360_context_row.dart';
 import '../widgets/command360/command360_decision_options.dart';
 import '../widgets/command360/command360_executive_tab_button.dart';
+import '../widgets/command360/command360_memory_card.dart';
 import '../widgets/command360/command360_message_rows.dart';
 import '../widgets/command360/command360_quick_action_chip.dart';
 import '../widgets/command360/command360_starter_question_chip.dart';
@@ -2485,7 +2486,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             Command360MessageExpansion(
               title: 'Memory',
               icon: Icons.memory_outlined,
-              child: _buildMemoryCard(message.memory!),
+              child: Command360MemoryCard(memory: message.memory!),
             ),
         ],
       ),
@@ -2904,74 +2905,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMemoryCard(AiConversationMemory memory) {
-    final rows = [
-      if (memory.currentProduct != null) ('Product', memory.currentProduct!),
-      if (memory.currentDestination != null)
-        ('Destination', memory.currentDestination!),
-      if (memory.currentCost != null)
-        ('Cost', memory.currentCost!.toStringAsFixed(2)),
-      if (memory.currentMargin != null)
-        ('Margin', '${memory.currentMargin!.toStringAsFixed(0)}%'),
-      if (memory.latestCustomer != null) ('Customer', memory.latestCustomer!),
-      if (memory.missingData.isNotEmpty)
-        ('Missing', memory.missingData.join(', ')),
-    ];
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: goldAccent.withValues(alpha: 0.06),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const Row(
-            children: [
-              Icon(Icons.memory_outlined, color: goldAccent, size: 16),
-              SizedBox(width: 8),
-              Text(
-                'Conversation context',
-                style: TextStyle(
-                  color: goldAccent,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w800,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          ...rows.map((row) {
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 6),
-              child: Row(
-                children: [
-                  SizedBox(
-                    width: 92,
-                    child: Text(
-                      row.$1,
-                      style:
-                          const TextStyle(color: textSecondary, fontSize: 11),
-                    ),
-                  ),
-                  Expanded(
-                    child: Text(
-                      row.$2,
-                      style: const TextStyle(color: Colors.white, fontSize: 11),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
         ],
       ),
     );
