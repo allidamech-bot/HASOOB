@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:firebase_analytics/firebase_analytics.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -29,12 +31,27 @@ class AuthGate extends StatefulWidget {
 }
 
 class _AuthGateState extends State<AuthGate> {
+  Timer? _authLoadingTimer;
+  bool _authLoadingTimedOut = false;
+
   @override
   void initState() {
     super.initState();
+    if (widget.firebaseEnabled) {
+      _authLoadingTimer = Timer(const Duration(seconds: 10), () {
+        if (!mounted) return;
+        debugPrint(
+          '[AuthGate] Auth stream still waiting after 10s; '
+          'showing non-destructive fallback.',
+        );
+        setState(() => _authLoadingTimedOut = true);
+      });
+    }
     if (widget.firebaseEnabled && !_disableAnalyticsBootstrap) {
       try {
-        FirebaseAnalytics.instance.logEvent(name: 'app_open_custom').catchError((Object error) {
+        FirebaseAnalytics.instance
+            .logEvent(name: 'app_open_custom')
+            .catchError((Object error) {
           debugPrint('[Startup] AuthGate analytics ignored: $error');
         });
       } catch (error) {
@@ -44,18 +61,28 @@ class _AuthGateState extends State<AuthGate> {
   }
 
   @override
+  void dispose() {
+    _authLoadingTimer?.cancel();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     if (!widget.firebaseEnabled) {
       return _DegradedNoAuthShell(bootstrapResult: widget.bootstrapResult);
     }
 
     return StreamBuilder<User?>(
-      stream: AuthService.instance.authStateChanges()
-          .timeout(const Duration(seconds: 10), onTimeout: (sink) => sink.add(null)),
+      initialData: AuthService.instance.currentUser,
+      stream: AuthService.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // Handle timeout - proceed to login screen instead of waiting forever
+        final currentUser = snapshot.data ?? AuthService.instance.currentUser;
+
         if (snapshot.hasError) {
           debugPrint('[AuthGate] Auth stream error: ${snapshot.error}');
+          if (currentUser != null) {
+            return _authenticatedShell(currentUser);
+          }
           return const Stack(
             children: [
               AuthShell(),
@@ -67,26 +94,21 @@ class _AuthGateState extends State<AuthGate> {
           );
         }
 
-        if (snapshot.connectionState == ConnectionState.waiting) {
+        if (currentUser != null) {
+          _authLoadingTimer?.cancel();
+          return _authenticatedShell(currentUser);
+        }
+
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !_authLoadingTimedOut) {
           return const PremiumSplashScreen();
         }
 
-        if (snapshot.data != null) {
-          final user = snapshot.data!;
-          var isBusinessReady = true;
-          try {
-            BusinessContext.businessId;
-          } catch (_) {
-            isBusinessReady = false;
-          }
-          if (!isBusinessReady) {
-            BusinessContext.initialize(
-              businessId: user.uid,
-              userId: user.uid,
-              role: 'owner',
-            );
-          }
-          return const MainNavigationScreen();
+        if (_authLoadingTimedOut &&
+            snapshot.connectionState == ConnectionState.waiting) {
+          debugPrint(
+            '[AuthGate] Auth stream timeout fallback reached with no current user.',
+          );
         }
 
         return const Stack(
@@ -99,6 +121,23 @@ class _AuthGateState extends State<AuthGate> {
         );
       },
     );
+  }
+
+  Widget _authenticatedShell(User user) {
+    var isBusinessReady = true;
+    try {
+      BusinessContext.businessId;
+    } catch (_) {
+      isBusinessReady = false;
+    }
+    if (!isBusinessReady) {
+      BusinessContext.initialize(
+        businessId: user.uid,
+        userId: user.uid,
+        role: 'owner',
+      );
+    }
+    return const MainNavigationScreen();
   }
 }
 
@@ -118,7 +157,7 @@ class _CloudSyncPassiveBanner extends StatelessWidget {
       start: 16,
       end: 16,
       child: SafeArea(
-        top: false, 
+        top: false,
         child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 400),
@@ -131,18 +170,24 @@ class _CloudSyncPassiveBanner extends StatelessWidget {
                 shadowColor: Colors.black26,
                 shape: StadiumBorder(
                   side: BorderSide(
-                    color: isError ? AppTheme.accentCyan.withValues(alpha: 0.4) : AppTheme.border,
+                    color: isError
+                        ? AppTheme.accentCyan.withValues(alpha: 0.4)
+                        : AppTheme.border,
                     width: 1,
                   ),
                 ),
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        isError ? Icons.cloud_off_rounded : Icons.cloud_done_rounded,
-                        color: isError ? AppTheme.accentCyan : AppTheme.accentBlue,
+                        isError
+                            ? Icons.cloud_off_rounded
+                            : Icons.cloud_done_rounded,
+                        color:
+                            isError ? AppTheme.accentCyan : AppTheme.accentBlue,
                         size: 14,
                       ),
                       const SizedBox(width: 8),
@@ -157,7 +202,8 @@ class _CloudSyncPassiveBanner extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      const Icon(Icons.close_rounded, size: 12, color: AppTheme.textSecondary),
+                      const Icon(Icons.close_rounded,
+                          size: 12, color: AppTheme.textSecondary),
                     ],
                   ),
                 ),
@@ -241,7 +287,8 @@ class _TechnicalDiagnosticsOverlay extends StatelessWidget {
                   Text('Web Config Exists: ${result.webConfigExists}'),
                   if (result.missingFields.isNotEmpty)
                     Text('Missing Fields: ${result.missingFields.join(', ')}'),
-                  if (result.errorType != null) Text('Error Type: ${result.errorType}'),
+                  if (result.errorType != null)
+                    Text('Error Type: ${result.errorType}'),
                   if (result.errorMessage != null)
                     Text('Error Msg: ${result.errorMessage}'),
                   if (result.configDiagnostics.isNotEmpty) ...[
@@ -249,7 +296,8 @@ class _TechnicalDiagnosticsOverlay extends StatelessWidget {
                     const Text('Config Presence:',
                         style: TextStyle(fontWeight: FontWeight.bold)),
                     ...result.configDiagnostics.entries.map(
-                      (e) => Text('  ${e.key}: ${e.value ? 'PRESENT' : 'MISSING'}'),
+                      (e) => Text(
+                          '  ${e.key}: ${e.value ? 'PRESENT' : 'MISSING'}'),
                     ),
                   ],
                   if (result.stackTrace != null) ...[

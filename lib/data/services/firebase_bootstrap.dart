@@ -1,3 +1,4 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/foundation.dart';
 
@@ -56,8 +57,6 @@ class FirebaseBootstrap {
       );
     }
 
-
-
     final missingFields =
         DefaultFirebaseOptions.missingRequiredFields(selectedOptions);
     _logMissingFields(missingFields);
@@ -95,6 +94,8 @@ class FirebaseBootstrap {
         debugPrint('[Startup][Firebase] Firebase.initializeApp successful.');
       }
 
+      await _configureWebAuthPersistence();
+
       return FirebaseBootstrapResult(
         isConfigured: true,
         isConfigComplete: missingFields.isEmpty,
@@ -105,6 +106,7 @@ class FirebaseBootstrap {
       );
     } on FirebaseException catch (e, st) {
       if (e.code == 'duplicate-app') {
+        await _configureWebAuthPersistence();
         return FirebaseBootstrapResult(
           isConfigured: true,
           isConfigComplete: missingFields.isEmpty,
@@ -144,6 +146,16 @@ class FirebaseBootstrap {
         stackTrace: st.toString(),
         configDiagnostics: configDiagnostics,
       );
+    }
+  }
+
+  static Future<void> _configureWebAuthPersistence() async {
+    if (!kIsWeb) return;
+    try {
+      await FirebaseAuth.instance.setPersistence(Persistence.LOCAL);
+      debugPrint('[Startup][Firebase] Web auth persistence set to LOCAL.');
+    } catch (e) {
+      debugPrint('[Startup][Firebase] Web auth persistence ignored: $e');
     }
   }
 
