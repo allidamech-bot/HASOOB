@@ -109,6 +109,29 @@ enum _ActionCardSource {
   details,
 }
 
+enum _FollowUpStatus {
+  awaitingApproval,
+  reviewed,
+  deferred,
+  completed,
+}
+
+class _SessionFollowUpItem {
+  final String title;
+  final _FollowUpStatus status;
+  final String whyItMatters;
+  final String nextStep;
+  final DateTime? timestamp;
+
+  const _SessionFollowUpItem({
+    required this.title,
+    required this.status,
+    required this.whyItMatters,
+    required this.nextStep,
+    required this.timestamp,
+  });
+}
+
 class AiAccountantScreen extends StatefulWidget {
   final bool workspaceMode;
 
@@ -133,6 +156,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   AiProposalModel? _confirmationProposal;
   int _contextTabIndex = 0;
   final Set<int> _reviewedProposalIds = <int>{};
+  final List<_SessionFollowUpItem> _deferredFollowUps =
+      <_SessionFollowUpItem>[];
 
   static const Color darkBg = AppTheme.aiDeep;
   static const Color darkSurface = AppTheme.aiCard;
@@ -1938,6 +1963,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               child: _buildContextSummary(compact: true),
             ),
             Command360ContextModule(
+              title: 'CFO Follow-up',
+              icon: Icons.pending_actions_outlined,
+              child: _buildFollowUpLoop(compact: true),
+            ),
+            Command360ContextModule(
               title: 'Active Proposal / Workflow',
               icon: Icons.fact_check_outlined,
               child: _buildDecisionCockpit(
@@ -3466,17 +3496,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 ),
               OutlinedButton.icon(
                 onPressed: canDismiss
-                    ? () => setState(() {
-                          if (identical(_activeProposal, proposal)) {
-                            _activeProposal = null;
-                          }
-                          if (identical(_confirmationProposal, proposal)) {
-                            _confirmationProposal = null;
-                          }
-                          _ledgerRows.removeWhere(
-                            (row) => row.code == 'PENDING-AI',
-                          );
-                        })
+                    ? () => _deferProposal(proposal, generatedAt)
                     : null,
                 icon: const Icon(Icons.close_rounded, size: 16),
                 label: Text(compact ? 'Not now' : 'Dismiss'),
@@ -3486,6 +3506,288 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildFollowUpLoop({required bool compact}) {
+    final items = _sessionFollowUpItems();
+    if (items.isEmpty) {
+      return const _ExecutiveEmptyLine(
+        icon: Icons.pending_actions_outlined,
+        label: 'No session follow-up yet',
+      );
+    }
+
+    final visibleItems = items.take(compact ? 3 : 8).toList();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            _proposalMetaChip(
+              Icons.pending_actions_outlined,
+              '${items.length} session item${items.length == 1 ? '' : 's'}',
+              goldAccent,
+            ),
+            _proposalMetaChip(
+              Icons.lock_clock_outlined,
+              'Session-level',
+              textSecondary,
+            ),
+          ],
+        ),
+        SizedBox(height: compact ? 10 : 12),
+        ...visibleItems.map((item) {
+          final showGroup = !compact &&
+              (visibleItems.indexOf(item) == 0 ||
+                  visibleItems[visibleItems.indexOf(item) - 1].status !=
+                      item.status);
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (showGroup) ...[
+                Text(
+                  _followUpStatusGroup(item.status),
+                  style: const TextStyle(
+                    color: textSecondary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 7),
+              ],
+              _buildFollowUpItem(item, compact: compact),
+              SizedBox(height: compact ? 8 : 10),
+            ],
+          );
+        }),
+      ],
+    );
+  }
+
+  Widget _buildFollowUpItem(
+    _SessionFollowUpItem item, {
+    required bool compact,
+  }) {
+    final color = _followUpStatusColor(item.status);
+    final timing = item.timestamp == null
+        ? 'Session'
+        : '${_followUpTimingPrefix(item.status)} ${_timeLabel(item.timestamp!)}';
+
+    return Container(
+      padding: EdgeInsets.all(compact ? 10 : 12),
+      decoration: BoxDecoration(
+        color: darkSurface.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Icon(_followUpStatusIcon(item.status), color: color, size: 16),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  item.title,
+                  maxLines: compact ? 2 : null,
+                  overflow: compact ? TextOverflow.ellipsis : null,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12.5,
+                    fontWeight: FontWeight.w900,
+                    height: 1.25,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              _statusPill(_followUpStatusLabel(item.status), color),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _actionInfoLine(
+            icon: Icons.priority_high_outlined,
+            label: item.whyItMatters,
+          ),
+          _actionInfoLine(
+            icon: Icons.next_plan_outlined,
+            label: item.nextStep,
+          ),
+          Row(
+            children: [
+              const Icon(
+                Icons.schedule_outlined,
+                color: textSecondary,
+                size: 14,
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Text(
+                  '$timing - session-level memory',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: textSecondary,
+                    fontSize: 11,
+                    height: 1.3,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<_SessionFollowUpItem> _sessionFollowUpItems() {
+    final items = <_SessionFollowUpItem>[];
+    final currentProposal = _activeProposal ?? _confirmationProposal;
+
+    if (currentProposal != null) {
+      items.add(
+        _SessionFollowUpItem(
+          title: _proposalActionTitle(currentProposal),
+          status: _FollowUpStatus.awaitingApproval,
+          whyItMatters: _proposalFinancialImpact(currentProposal),
+          nextStep: _requiredDecisionLabel(
+            currentProposal,
+            isCurrent: true,
+          ),
+          timestamp: _proposalGeneratedAt(currentProposal),
+        ),
+      );
+    }
+
+    for (final message in _messages.reversed) {
+      final proposal = message.proposal;
+      if (proposal == null) continue;
+      if (!_reviewedProposalIds.contains(identityHashCode(proposal))) continue;
+      if (identical(proposal, currentProposal)) continue;
+      items.add(
+        _SessionFollowUpItem(
+          title: _proposalActionTitle(proposal),
+          status: _FollowUpStatus.reviewed,
+          whyItMatters: _proposalFinancialImpact(proposal),
+          nextStep: 'Keep reviewing or ask AI CFO for the next action.',
+          timestamp: message.timestamp,
+        ),
+      );
+    }
+
+    items.addAll(_deferredFollowUps.reversed);
+
+    for (final message in _messages.reversed) {
+      final result = message.executionResult;
+      if (result == null) continue;
+      items.add(
+        _SessionFollowUpItem(
+          title:
+              result.isSuccess ? 'Execution completed' : 'Execution follow-up',
+          status: result.isSuccess
+              ? _FollowUpStatus.completed
+              : _FollowUpStatus.awaitingApproval,
+          whyItMatters: _resultSummary(result),
+          nextStep: result.isSuccess
+              ? 'Review the synced result and continue monitoring.'
+              : 'Review the blocking message before trying again.',
+          timestamp: message.timestamp,
+        ),
+      );
+    }
+
+    return items;
+  }
+
+  void _deferProposal(AiProposalModel proposal, DateTime? generatedAt) {
+    setState(() {
+      _deferredFollowUps.add(
+        _SessionFollowUpItem(
+          title: _proposalActionTitle(proposal),
+          status: _FollowUpStatus.deferred,
+          whyItMatters: _proposalFinancialImpact(proposal),
+          nextStep: 'Return to this action from the session follow-up loop.',
+          timestamp: generatedAt ?? _proposalGeneratedAt(proposal),
+        ),
+      );
+      if (identical(_activeProposal, proposal)) {
+        _activeProposal = null;
+      }
+      if (identical(_confirmationProposal, proposal)) {
+        _confirmationProposal = null;
+      }
+      _ledgerRows.removeWhere(
+        (row) => row.code == 'PENDING-AI',
+      );
+    });
+  }
+
+  String _followUpStatusLabel(_FollowUpStatus status) {
+    switch (status) {
+      case _FollowUpStatus.awaitingApproval:
+        return 'Awaiting';
+      case _FollowUpStatus.reviewed:
+        return 'Reviewed';
+      case _FollowUpStatus.deferred:
+        return 'Deferred';
+      case _FollowUpStatus.completed:
+        return 'Completed';
+    }
+  }
+
+  String _followUpStatusGroup(_FollowUpStatus status) {
+    switch (status) {
+      case _FollowUpStatus.awaitingApproval:
+        return 'Awaiting approval';
+      case _FollowUpStatus.reviewed:
+        return 'Reviewed';
+      case _FollowUpStatus.deferred:
+        return 'Deferred / Not now';
+      case _FollowUpStatus.completed:
+        return 'Completed / executed';
+    }
+  }
+
+  String _followUpTimingPrefix(_FollowUpStatus status) {
+    switch (status) {
+      case _FollowUpStatus.awaitingApproval:
+        return 'Generated';
+      case _FollowUpStatus.reviewed:
+        return 'Reviewed';
+      case _FollowUpStatus.deferred:
+        return 'Deferred';
+      case _FollowUpStatus.completed:
+        return 'Completed';
+    }
+  }
+
+  IconData _followUpStatusIcon(_FollowUpStatus status) {
+    switch (status) {
+      case _FollowUpStatus.awaitingApproval:
+        return Icons.rule_outlined;
+      case _FollowUpStatus.reviewed:
+        return Icons.visibility_outlined;
+      case _FollowUpStatus.deferred:
+        return Icons.pause_circle_outline;
+      case _FollowUpStatus.completed:
+        return Icons.check_circle_outline;
+    }
+  }
+
+  Color _followUpStatusColor(_FollowUpStatus status) {
+    switch (status) {
+      case _FollowUpStatus.awaitingApproval:
+        return goldAccent;
+      case _FollowUpStatus.reviewed:
+        return tealSuccess;
+      case _FollowUpStatus.deferred:
+        return AppTheme.warning;
+      case _FollowUpStatus.completed:
+        return tealSuccess;
+    }
   }
 
   Widget _buildEvidenceSection(
@@ -3908,6 +4210,17 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                       generatedAt:
                           generatedAt ?? _proposalGeneratedAt(proposal),
                     ),
+                    const SizedBox(height: 14),
+                    const Text(
+                      'CFO Follow-up Loop',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildFollowUpLoop(compact: false),
                   ],
                 ),
               ),
