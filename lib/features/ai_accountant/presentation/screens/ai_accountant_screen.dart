@@ -132,6 +132,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   AiProposalModel? _activeProposal;
   AiProposalModel? _confirmationProposal;
   int _contextTabIndex = 0;
+  final Set<int> _reviewedProposalIds = <int>{};
 
   static const Color darkBg = AppTheme.aiDeep;
   static const Color darkSurface = AppTheme.aiCard;
@@ -1999,6 +2000,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         proposal,
         compact: true,
         source: _ActionCardSource.rail,
+        generatedAt: _proposalGeneratedAt(proposal),
       );
     }
 
@@ -2775,7 +2777,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         if (message.proposal != null || message.executionResult != null) ...[
           const SizedBox(height: 14),
           _messageSectionTitle('Actions'),
-          if (message.proposal != null) _buildProposalCard(message.proposal!),
+          if (message.proposal != null)
+            _buildProposalCard(message.proposal!,
+                generatedAt: message.timestamp),
           if (message.executionResult != null)
             _buildExecutionResultCard(message.executionResult!),
         ],
@@ -3228,11 +3232,15 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  Widget _buildProposalCard(AiProposalModel proposal) {
+  Widget _buildProposalCard(
+    AiProposalModel proposal, {
+    DateTime? generatedAt,
+  }) {
     return _buildActionExecutionCard(
       proposal,
       compact: false,
       source: _ActionCardSource.chat,
+      generatedAt: generatedAt,
     );
   }
 
@@ -3240,6 +3248,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     AiProposalModel proposal, {
     required bool compact,
     required _ActionCardSource source,
+    DateTime? generatedAt,
   }) {
     final isPricing = proposal.actionType == 'pricing_simulation';
     final pricing = proposal.pricingPayload ?? const <String, dynamic>{};
@@ -3401,6 +3410,21 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                   : 'Review required before execution',
             ),
           ],
+          SizedBox(height: compact ? 10 : 14),
+          _buildEvidenceSection(
+            proposal,
+            compact: compact,
+            generatedAt: generatedAt,
+            impact: impact,
+            riskLevel: riskLevel,
+          ),
+          SizedBox(height: compact ? 10 : 14),
+          _buildDecisionTrail(
+            proposal,
+            compact: compact,
+            generatedAt: generatedAt,
+            canExecute: canExecute,
+          ),
           SizedBox(height: compact ? 12 : 16),
           Wrap(
             alignment: WrapAlignment.end,
@@ -3409,7 +3433,10 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             children: [
               if (source != _ActionCardSource.details)
                 OutlinedButton.icon(
-                  onPressed: () => _showActionExecutionDetails(proposal),
+                  onPressed: () => _showActionExecutionDetails(
+                    proposal,
+                    generatedAt: generatedAt,
+                  ),
                   icon: const Icon(Icons.visibility_outlined, size: 16),
                   label: const Text('Review'),
                 ),
@@ -3459,6 +3486,296 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         ],
       ),
     );
+  }
+
+  Widget _buildEvidenceSection(
+    AiProposalModel proposal, {
+    required bool compact,
+    required DateTime? generatedAt,
+    required String impact,
+    required String riskLevel,
+  }) {
+    final signals = _proposalEvidenceSignals(proposal);
+    final shownSignals = signals.take(compact ? 3 : 5).toList();
+    final timing = generatedAt == null
+        ? (compact ? 'Session' : 'Session-level evidence')
+        : (compact
+            ? _timeLabel(generatedAt)
+            : 'Generated ${_timeLabel(generatedAt)}');
+
+    return Container(
+      padding: EdgeInsets.all(compact ? 10 : 12),
+      decoration: BoxDecoration(
+        color: darkSurface.withValues(alpha: 0.45),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.source_outlined, color: goldAccent, size: 15),
+              const SizedBox(width: 7),
+              const Expanded(
+                child: Text(
+                  'Evidence',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              _statusPill(timing, textSecondary),
+            ],
+          ),
+          const SizedBox(height: 9),
+          _evidenceLine(
+            icon: Icons.psychology_alt_outlined,
+            label: 'Reason',
+            value: proposal.explanation,
+            compact: compact,
+          ),
+          _evidenceLine(
+            icon: Icons.payments_outlined,
+            label: 'Impact',
+            value: impact,
+            compact: compact,
+          ),
+          _evidenceLine(
+            icon: Icons.warning_amber_rounded,
+            label: 'Risk note',
+            value: _proposalRiskNote(proposal, riskLevel),
+            compact: compact,
+          ),
+          _evidenceLine(
+            icon: Icons.verified_user_outlined,
+            label: 'Confidence',
+            value:
+                '${(proposal.confidenceScore * 100).clamp(0, 100).toStringAsFixed(0)}% - ${_proposalStatusLabel(proposal)}',
+            compact: compact,
+          ),
+          if (shownSignals.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            ...shownSignals.map(
+              (signal) => _evidenceLine(
+                icon: Icons.query_stats_outlined,
+                label: 'Signal',
+                value: signal,
+                compact: compact,
+              ),
+            ),
+          ] else
+            _evidenceLine(
+              icon: Icons.info_outline,
+              label: 'Signal',
+              value: 'No structured payload available for this card',
+              compact: compact,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDecisionTrail(
+    AiProposalModel proposal, {
+    required bool compact,
+    required DateTime? generatedAt,
+    required bool canExecute,
+  }) {
+    final isCurrent = _isCurrentActionProposal(proposal);
+    final reviewed = _reviewedProposalIds.contains(identityHashCode(proposal));
+    final generatedLabel = generatedAt == null
+        ? 'Proposal available in current session'
+        : 'Proposal generated at ${_timeLabel(generatedAt)}';
+    final executionLabel = isCurrent
+        ? 'Not executed yet'
+        : 'Execution state unavailable on this session card';
+
+    return Container(
+      padding: EdgeInsets.all(compact ? 10 : 12),
+      decoration: BoxDecoration(
+        color: darkSurface.withValues(alpha: 0.38),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.timeline_outlined, color: tealSuccess, size: 15),
+              const SizedBox(width: 7),
+              const Expanded(
+                child: Text(
+                  'Decision Trail',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              _statusPill('Session', tealSuccess),
+            ],
+          ),
+          const SizedBox(height: 9),
+          _trailLine(
+            icon: Icons.auto_awesome_outlined,
+            label: generatedLabel,
+            color: tealSuccess,
+          ),
+          _trailLine(
+            icon: Icons.visibility_outlined,
+            label: reviewed
+                ? 'Reviewed in this session'
+                : 'Review not opened in this session',
+            color: reviewed ? tealSuccess : textSecondary,
+          ),
+          _trailLine(
+            icon: Icons.rule_outlined,
+            label: canExecute
+                ? 'Awaiting approval for guarded execution'
+                : _requiredDecisionLabel(proposal, isCurrent: isCurrent),
+            color: isCurrent ? goldAccent : textSecondary,
+          ),
+          if (!compact)
+            _trailLine(
+              icon: Icons.lock_clock_outlined,
+              label: executionLabel,
+              color: textSecondary,
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _evidenceLine({
+    required IconData icon,
+    required String label,
+    required String value,
+    required bool compact,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: textSecondary, size: 14),
+          const SizedBox(width: 7),
+          SizedBox(
+            width: compact ? 64 : 84,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: textSecondary,
+                fontSize: 10.5,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              value,
+              maxLines: compact ? 2 : null,
+              overflow: compact ? TextOverflow.ellipsis : null,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11.5,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _trailLine({
+    required IconData icon,
+    required String label,
+    required Color color,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 14),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: textSecondary,
+                fontSize: 11.5,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<String> _proposalEvidenceSignals(AiProposalModel proposal) {
+    final signals = <String>[];
+    final inventory = proposal.inventoryPayload ?? const <String, dynamic>{};
+    final financial = proposal.financialPayload ?? const <String, dynamic>{};
+    final pricing = proposal.pricingPayload ?? const <String, dynamic>{};
+    final customer = proposal.customerPayload ?? const <String, dynamic>{};
+
+    void addSignal(String label, Object? value) {
+      if (value == null) return;
+      final text = '$value'.trim();
+      if (text.isEmpty || text == '0.0' || text == '0') return;
+      signals.add('$label: $text');
+    }
+
+    addSignal('Action type', proposal.actionType);
+    addSignal('Item', inventory['name'] ?? inventory['productId']);
+    addSignal('Quantity', inventory['quantity']);
+    addSignal('Cost price', inventory['costPrice']);
+    addSignal('Customer', customer['name'] ?? customer['customerName']);
+    addSignal('Total amount', financial['totalAmount']);
+    addSignal('Amount paid', financial['amountPaid']);
+    addSignal('Destination', pricing['destination']);
+    addSignal('Estimated units', pricing['estimatedTotalBoxes']);
+    addSignal('Landed cost/unit', pricing['landedCostPerUnit']);
+    addSignal('Suggested price/unit', pricing['suggestedPricePerUnit']);
+    addSignal('Target margin', pricing['targetMarginPercentage']);
+
+    return signals;
+  }
+
+  String _proposalRiskNote(AiProposalModel proposal, String riskLevel) {
+    if (identical(_confirmationProposal, proposal)) {
+      return '$riskLevel risk - confirmation required before execution';
+    }
+    if (!_isCurrentActionProposal(proposal)) {
+      return '$riskLevel risk - historical/review-only card';
+    }
+    if (!_isExecutableProposal(proposal)) {
+      return '$riskLevel risk - execution is not wired for this action';
+    }
+    return '$riskLevel risk - guarded by user approval';
+  }
+
+  String _proposalStatusLabel(AiProposalModel proposal) {
+    if (identical(_activeProposal, proposal)) return 'active proposal';
+    if (identical(_confirmationProposal, proposal)) {
+      return 'awaiting confirmation';
+    }
+    return 'review-only';
+  }
+
+  DateTime? _proposalGeneratedAt(AiProposalModel proposal) {
+    for (final message in _messages.reversed) {
+      if (identical(message.proposal, proposal)) return message.timestamp;
+    }
+    return null;
   }
 
   bool _isCurrentActionProposal(AiProposalModel proposal) {
@@ -3533,7 +3850,14 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  void _showActionExecutionDetails(AiProposalModel proposal) {
+  void _showActionExecutionDetails(
+    AiProposalModel proposal, {
+    DateTime? generatedAt,
+  }) {
+    setState(() {
+      _reviewedProposalIds.add(identityHashCode(proposal));
+    });
+
     showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
@@ -3581,6 +3905,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                       proposal,
                       compact: false,
                       source: _ActionCardSource.details,
+                      generatedAt:
+                          generatedAt ?? _proposalGeneratedAt(proposal),
                     ),
                   ],
                 ),
