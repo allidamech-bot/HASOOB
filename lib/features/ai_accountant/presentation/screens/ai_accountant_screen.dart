@@ -674,27 +674,349 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     if (!isDesktop) {
       return Padding(
         padding: padding,
-        child: _buildConversationPanel(isDesktop: false),
+        child: Column(
+          children: [
+            _buildExecutiveCommandHeader(isDesktop: false),
+            const SizedBox(height: 10),
+            _buildCommandSignalStrip(isDesktop: false),
+            const SizedBox(height: 10),
+            Expanded(child: _buildConversationPanel(isDesktop: false)),
+          ],
+        ),
       );
     }
 
     return Padding(
       padding: padding,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
+      child: Column(
         children: [
+          _buildExecutiveCommandHeader(isDesktop: true),
+          const SizedBox(height: 12),
+          _buildCommandSignalStrip(isDesktop: true),
+          const SizedBox(height: 14),
           Expanded(
-            flex: 72,
-            child: _buildConversationPanel(isDesktop: true),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            flex: 24,
-            child: _buildRightContextPanel(),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(
+                  flex: 72,
+                  child: _buildConversationPanel(isDesktop: true),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  flex: 24,
+                  child: _buildRightContextPanel(),
+                ),
+              ],
+            ),
           ),
         ],
       ),
     );
+  }
+
+  Widget _buildExecutiveCommandHeader({required bool isDesktop}) {
+    final score = _businessHealthScore();
+    final risks = _latestRisks()
+        .where((risk) => risk.title != 'No major risk detected')
+        .length;
+    final recommendations = _latestRecommendations().length;
+    final focus = _activeCommandFocus();
+
+    return Container(
+      padding: EdgeInsets.all(isDesktop ? 18 : 14),
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: premiumStroke),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: isDesktop
+          ? Row(
+              children: [
+                Expanded(child: _buildExecutiveHeaderIdentity(focus)),
+                const SizedBox(width: 16),
+                _buildExecutiveHeaderMetric(
+                  label: 'Health',
+                  value: score == null ? 'Pending' : '$score/100',
+                  color: score == null ? textSecondary : _healthColor(score),
+                ),
+                const SizedBox(width: 10),
+                _buildExecutiveHeaderMetric(
+                  label: 'Risks',
+                  value: '$risks',
+                  color: risks == 0 ? tealSuccess : goldAccent,
+                ),
+                const SizedBox(width: 10),
+                _buildExecutiveHeaderMetric(
+                  label: 'Actions',
+                  value: '$recommendations',
+                  color: recommendations == 0 ? textSecondary : tealSuccess,
+                ),
+              ],
+            )
+          : Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _buildExecutiveHeaderIdentity(focus),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildExecutiveHeaderMetric(
+                        label: 'Health',
+                        value: score == null ? 'Pending' : '$score/100',
+                        color:
+                            score == null ? textSecondary : _healthColor(score),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildExecutiveHeaderMetric(
+                        label: 'Risks',
+                        value: '$risks',
+                        color: risks == 0 ? tealSuccess : goldAccent,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildExecutiveHeaderMetric(
+                        label: 'Actions',
+                        value: '$recommendations',
+                        color:
+                            recommendations == 0 ? textSecondary : tealSuccess,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildExecutiveHeaderIdentity(String focus) {
+    return Row(
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: goldAccent.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: goldAccent.withValues(alpha: 0.28)),
+          ),
+          child: const Icon(
+            Icons.account_balance_outlined,
+            color: goldAccent,
+            size: 22,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Wrap(
+                spacing: 8,
+                runSpacing: 6,
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  const Text(
+                    'AI CFO Command360',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                  _statusPill('Command360 Beta', goldAccent),
+                  _statusPill(
+                    _activeProposal != null ? 'Proposal ready' : 'Live',
+                    _activeProposal != null ? goldAccent : tealSuccess,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 5),
+              Text(
+                focus,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: textSecondary,
+                  fontSize: 12,
+                  height: 1.35,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExecutiveHeaderMetric({
+    required String label,
+    required String value,
+    required Color color,
+  }) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 88),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        color: darkSurface.withValues(alpha: 0.72),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: color.withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: textSecondary,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: color,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCommandSignalStrip({required bool isDesktop}) {
+    final signals = _commandContextSignals();
+    final cards = signals
+        .map((signal) => _CommandSignalCard(signal: signal))
+        .toList(growable: false);
+
+    if (isDesktop) {
+      return Row(
+        children: [
+          for (var index = 0; index < cards.length; index++) ...[
+            Expanded(child: cards[index]),
+            if (index < cards.length - 1) const SizedBox(width: 10),
+          ],
+        ],
+      );
+    }
+
+    return SizedBox(
+      height: 84,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: cards.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        itemBuilder: (context, index) => SizedBox(
+          width: 172,
+          child: cards[index],
+        ),
+      ),
+    );
+  }
+
+  List<_CommandSignalData> _commandContextSignals() {
+    return [
+      _CommandSignalData(
+        icon: Icons.payments_outlined,
+        label: 'Cash',
+        value: _firstInsightSignal(['cash', 'payment', 'liquidity']) ??
+            'No cash signal yet',
+        color: tealSuccess,
+        hasEvidence: _hasInsightSignal(['cash', 'payment', 'liquidity']),
+      ),
+      _CommandSignalData(
+        icon: Icons.trending_up_rounded,
+        label: 'Revenue',
+        value: _firstInsightSignal(['revenue', 'sales', 'profit']) ??
+            'Awaiting revenue analysis',
+        color: goldAccent,
+        hasEvidence: _hasInsightSignal(['revenue', 'sales', 'profit']),
+      ),
+      _CommandSignalData(
+        icon: Icons.inventory_2_outlined,
+        label: 'Inventory',
+        value: _orchestrator.businessMemory.recentProducts.isEmpty
+            ? 'No inventory focus yet'
+            : _orchestrator.businessMemory.recentProducts.first,
+        color: AppTheme.aiBlue,
+        hasEvidence: _orchestrator.businessMemory.recentProducts.isNotEmpty,
+      ),
+      _CommandSignalData(
+        icon: Icons.people_alt_outlined,
+        label: 'Receivables',
+        value: _orchestrator.memory.latestCustomer ??
+            _firstInsightSignal(['receivable', 'customer', 'balance']) ??
+            'No receivables signal yet',
+        color: const Color(0xFF8B5CF6),
+        hasEvidence: _orchestrator.memory.latestCustomer != null ||
+            _hasInsightSignal(['receivable', 'customer', 'balance']),
+      ),
+    ];
+  }
+
+  bool _hasInsightSignal(List<String> tokens) =>
+      _firstInsightSignal(tokens) != null;
+
+  String? _firstInsightSignal(List<String> tokens) {
+    final loweredTokens = tokens.map((token) => token.toLowerCase()).toList();
+    final candidates = [
+      ..._latestInsights().map((item) => item.title),
+      ..._latestRisks().map((item) => item.title),
+      ..._latestRecommendations().map((item) => item.title),
+    ];
+
+    for (final candidate in candidates) {
+      final lowered = candidate.toLowerCase();
+      if (loweredTokens.any(lowered.contains)) return candidate;
+    }
+    return null;
+  }
+
+  String _activeCommandFocus() {
+    final workflow = _orchestrator.activeWorkflow;
+    final proposal = _activeProposal ?? _confirmationProposal;
+    final memory = _orchestrator.memory;
+
+    if (proposal != null) {
+      return 'Current focus: review ${proposal.actionType} proposal before execution.';
+    }
+    if (workflow != null) {
+      return 'Current focus: ${_workflowTitle(workflow.workflowType)} workflow, step ${workflow.currentStep.clamp(1, workflow.totalSteps)} of ${workflow.totalSteps}.';
+    }
+    if (memory.latestCustomer != null) {
+      return 'Current focus: ${memory.latestCustomer} customer context.';
+    }
+    if (memory.currentProduct != null) {
+      return 'Current focus: ${memory.currentProduct} product context.';
+    }
+    return 'Current focus: ask for cash, profitability, inventory, or receivables analysis.';
+  }
+
+  Color _healthColor(int score) {
+    if (score >= 80) return tealSuccess;
+    if (score >= 65) return goldAccent;
+    return AppTheme.aiRed;
   }
 
   Widget _buildConversationPanel({required bool isDesktop}) {
@@ -1576,7 +1898,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
             Command360ContextModule(
-              title: 'Risks',
+              title: 'Detected Risks',
               icon: Icons.warning_amber_rounded,
               child: _contextRows(
                 risks
@@ -1596,7 +1918,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
             Command360ContextModule(
-              title: 'Recommendations',
+              title: 'Recommended Next Actions',
               icon: Icons.task_alt_outlined,
               child: _contextRows(
                 recommendations.take(4).map((item) => item.title).toList(),
@@ -1609,27 +1931,18 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               child: _buildContextSummary(compact: true),
             ),
             Command360ContextModule(
-              title: 'Active Proposal',
+              title: 'Active Proposal / Workflow',
               icon: Icons.fact_check_outlined,
               child: _contextRows(
                 [
                   if (proposal != null) proposal.actionType,
                   if (proposal != null) proposal.explanation,
-                ],
-                empty: 'No Active Proposal',
-              ),
-            ),
-            Command360ContextModule(
-              title: 'Active Workflow',
-              icon: Icons.route_outlined,
-              child: _contextRows(
-                [
                   if (workflow != null)
                     '${_workflowTitle(workflow.workflowType)}: step ${workflow.currentStep.clamp(1, workflow.totalSteps)} of ${workflow.totalSteps}',
                   if (workflow?.waitingField != null)
                     'Waiting for ${AiWorkflowField.label(workflow!.waitingField!)}',
                 ],
-                empty: 'No Active Workflow',
+                empty: 'No active proposal or workflow',
               ),
             ),
           ],
@@ -3638,6 +3951,91 @@ class _CommandSection extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           child,
+        ],
+      ),
+    );
+  }
+}
+
+class _CommandSignalData {
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color color;
+  final bool hasEvidence;
+
+  const _CommandSignalData({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.color,
+    required this.hasEvidence,
+  });
+}
+
+class _CommandSignalCard extends StatelessWidget {
+  final _CommandSignalData signal;
+
+  const _CommandSignalCard({required this.signal});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(minHeight: 82),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _AiAccountantScreenState.premiumPanelSoft.withValues(alpha: 0.7),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: signal.hasEvidence
+              ? signal.color.withValues(alpha: 0.32)
+              : _AiAccountantScreenState.premiumStroke,
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 34,
+            height: 34,
+            decoration: BoxDecoration(
+              color: signal.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(9),
+            ),
+            child: Icon(signal.icon, color: signal.color, size: 18),
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  signal.label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: _AiAccountantScreenState.textSecondary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  signal.value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: signal.hasEvidence
+                        ? Colors.white
+                        : _AiAccountantScreenState.textSecondary,
+                    fontSize: 12,
+                    height: 1.25,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
