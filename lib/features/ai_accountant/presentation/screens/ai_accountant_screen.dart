@@ -103,6 +103,12 @@ class AiChatMessage {
   });
 }
 
+enum _ActionCardSource {
+  chat,
+  rail,
+  details,
+}
+
 class AiAccountantScreen extends StatefulWidget {
   final bool workspaceMode;
 
@@ -1933,16 +1939,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             Command360ContextModule(
               title: 'Active Proposal / Workflow',
               icon: Icons.fact_check_outlined,
-              child: _contextRows(
-                [
-                  if (proposal != null) proposal.actionType,
-                  if (proposal != null) proposal.explanation,
-                  if (workflow != null)
-                    '${_workflowTitle(workflow.workflowType)}: step ${workflow.currentStep.clamp(1, workflow.totalSteps)} of ${workflow.totalSteps}',
-                  if (workflow?.waitingField != null)
-                    'Waiting for ${AiWorkflowField.label(workflow!.waitingField!)}',
-                ],
-                empty: 'No active proposal or workflow',
+              child: _buildDecisionCockpit(
+                proposal: proposal,
+                workflow: workflow,
               ),
             ),
           ],
@@ -1988,6 +1987,73 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           ),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildDecisionCockpit({
+    required AiProposalModel? proposal,
+    required AiWorkflowSession? workflow,
+  }) {
+    if (proposal != null) {
+      return _buildActionExecutionCard(
+        proposal,
+        compact: true,
+        source: _ActionCardSource.rail,
+      );
+    }
+
+    if (workflow != null) {
+      return _buildWorkflowDecisionCard(workflow);
+    }
+
+    return const _ExecutiveEmptyLine(
+      icon: Icons.rule_folder_outlined,
+      label: 'No active proposal or workflow',
+    );
+  }
+
+  Widget _buildWorkflowDecisionCard(AiWorkflowSession workflow) {
+    final waitingField = workflow.waitingField;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: darkSurface.withValues(alpha: 0.58),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            _workflowTitle(workflow.workflowType),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 8),
+          _actionInfoLine(
+            icon: Icons.route_outlined,
+            label:
+                'Step ${workflow.currentStep.clamp(1, workflow.totalSteps)} of ${workflow.totalSteps}',
+          ),
+          _actionInfoLine(
+            icon: Icons.assignment_late_outlined,
+            label: waitingField == null
+                ? 'Review required before proposal creation'
+                : 'Waiting for ${AiWorkflowField.label(waitingField)}',
+          ),
+          const SizedBox(height: 10),
+          FilledButton.icon(
+            onPressed: null,
+            icon: const Icon(Icons.lock_outline, size: 16),
+            label: const Text('Review required'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -3163,11 +3229,31 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   Widget _buildProposalCard(AiProposalModel proposal) {
+    return _buildActionExecutionCard(
+      proposal,
+      compact: false,
+      source: _ActionCardSource.chat,
+    );
+  }
+
+  Widget _buildActionExecutionCard(
+    AiProposalModel proposal, {
+    required bool compact,
+    required _ActionCardSource source,
+  }) {
     final isPricing = proposal.actionType == 'pricing_simulation';
     final pricing = proposal.pricingPayload ?? const <String, dynamic>{};
     final inventory = proposal.inventoryPayload ?? const <String, dynamic>{};
     final financial = proposal.financialPayload ?? const <String, dynamic>{};
-    final impactArea = isPricing ? 'Pricing strategy' : 'Ledger and inventory';
+    final isCurrent = _isCurrentActionProposal(proposal);
+    final canExecute = isCurrent &&
+        identical(_activeProposal, proposal) &&
+        _isExecutableProposal(proposal) &&
+        !_isCommitting;
+    final canDismiss = isCurrent && !_isCommitting;
+    final title = _proposalActionTitle(proposal);
+    final impact = _proposalFinancialImpact(proposal);
+    final decision = _requiredDecisionLabel(proposal, isCurrent: isCurrent);
     final riskLevel = proposal.confidenceScore >= 0.85
         ? 'Low'
         : proposal.confidenceScore >= 0.65
@@ -3178,16 +3264,15 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         : riskLevel == 'Medium'
             ? AppTheme.warning
             : AppTheme.aiRed;
+    final actionColor = isPricing ? tealSuccess : goldAccent;
 
     return Container(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(compact ? 12 : 16),
       decoration: BoxDecoration(
         color: premiumPanelSoft,
         borderRadius: BorderRadius.circular(12),
         border: Border.all(
-          color: isPricing
-              ? tealSuccess.withValues(alpha: 0.42)
-              : goldAccent.withValues(alpha: 0.42),
+          color: actionColor.withValues(alpha: isCurrent ? 0.48 : 0.22),
         ),
       ),
       child: Column(
@@ -3199,15 +3284,14 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: (isPricing ? tealSuccess : goldAccent)
-                      .withValues(alpha: 0.12),
+                  color: actionColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(10),
                 ),
                 child: Icon(
                   isPricing
                       ? Icons.price_check_outlined
                       : Icons.fact_check_outlined,
-                  color: isPricing ? tealSuccess : goldAccent,
+                  color: actionColor,
                   size: 19,
                 ),
               ),
@@ -3217,7 +3301,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      isPricing ? 'Pricing proposal' : 'Accounting proposal',
+                      title,
+                      maxLines: compact ? 2 : 1,
+                      overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 14,
@@ -3225,9 +3311,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                       ),
                     ),
                     const SizedBox(height: 3),
-                    const Text(
-                      'Review required before execution',
-                      style: TextStyle(color: textSecondary, fontSize: 11),
+                    Text(
+                      decision,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style:
+                          const TextStyle(color: textSecondary, fontSize: 11),
                     ),
                   ],
                 ),
@@ -3241,6 +3330,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           const SizedBox(height: 14),
           Text(
             proposal.explanation,
+            maxLines: compact ? 3 : null,
+            overflow: compact ? TextOverflow.ellipsis : null,
             style: const TextStyle(
                 color: Colors.white, fontSize: 12.5, height: 1.5),
           ),
@@ -3250,13 +3341,18 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             runSpacing: 8,
             children: [
               _proposalMetaChip(
-                  Icons.domain_verification_outlined, impactArea, tealSuccess),
+                  Icons.insights_outlined, 'Impact: $impact', tealSuccess),
               _proposalMetaChip(
                   Icons.shield_outlined, 'Risk: $riskLevel', riskColor),
+              _proposalMetaChip(
+                Icons.verified_user_outlined,
+                isCurrent ? 'Status: Active' : 'Status: Review only',
+                isCurrent ? goldAccent : textSecondary,
+              ),
             ],
           ),
           const SizedBox(height: 14),
-          if (isPricing) ...[
+          if (!compact && isPricing) ...[
             Command360DetailLine(
               icon: Icons.location_on_outlined,
               label: 'Destination',
@@ -3277,7 +3373,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               label: 'Suggested price',
               value: '${pricing['suggestedPricePerUnit'] ?? '-'}',
             ),
-          ] else ...[
+          ] else if (!compact) ...[
             Command360DetailLine(
               icon: Icons.inventory_2_outlined,
               label: 'Item',
@@ -3293,53 +3389,206 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               label: 'Amount',
               value: '${financial['totalAmount'] ?? '-'}',
             ),
+          ] else ...[
+            _actionInfoLine(
+              icon: Icons.domain_verification_outlined,
+              label: isPricing ? 'Pricing strategy' : 'Ledger and inventory',
+            ),
+            _actionInfoLine(
+              icon: Icons.rule_outlined,
+              label: canExecute
+                  ? 'Ready for guarded execution'
+                  : 'Review required before execution',
+            ),
           ],
-          const SizedBox(height: 16),
+          SizedBox(height: compact ? 12 : 16),
           Wrap(
             alignment: WrapAlignment.end,
             spacing: 8,
             runSpacing: 8,
             children: [
+              if (source != _ActionCardSource.details)
+                OutlinedButton.icon(
+                  onPressed: () => _showActionExecutionDetails(proposal),
+                  icon: const Icon(Icons.visibility_outlined, size: 16),
+                  label: const Text('Review'),
+                ),
               if (isPricing)
                 FilledButton.icon(
-                  onPressed: _isCommitting ? null : _savePricingSimulation,
+                  onPressed: canExecute ? _savePricingSimulation : null,
                   icon: _isCommitting
                       ? _miniProgress()
                       : const Icon(Icons.save_outlined, size: 16),
-                  label: const Text('Save simulation'),
+                  label: Text(compact ? 'Approve' : 'Save simulation'),
                 )
               else
                 FilledButton.icon(
-                  onPressed: _isCommitting ? null : _commitProposalToLedger,
+                  onPressed: canExecute ? _commitProposalToLedger : null,
                   icon: _isCommitting
                       ? _miniProgress()
                       : const Icon(Icons.check_circle_outline, size: 16),
-                  label: const Text('Approve after review'),
+                  label: Text(compact ? 'Execute' : 'Approve / Execute'),
                 ),
               if (isPricing)
                 OutlinedButton.icon(
-                  onPressed: _isCommitting ? null : _convertPricingToQuotation,
+                  onPressed: canExecute && source == _ActionCardSource.chat
+                      ? _convertPricingToQuotation
+                      : null,
                   icon: const Icon(Icons.request_quote_outlined, size: 16),
                   label: const Text('Convert to quote'),
                 ),
               OutlinedButton.icon(
-                onPressed: _isCommitting
-                    ? null
-                    : () => setState(() {
+                onPressed: canDismiss
+                    ? () => setState(() {
                           if (identical(_activeProposal, proposal)) {
                             _activeProposal = null;
+                          }
+                          if (identical(_confirmationProposal, proposal)) {
+                            _confirmationProposal = null;
                           }
                           _ledgerRows.removeWhere(
                             (row) => row.code == 'PENDING-AI',
                           );
-                        }),
+                        })
+                    : null,
                 icon: const Icon(Icons.close_rounded, size: 16),
-                label: const Text('Dismiss'),
+                label: Text(compact ? 'Not now' : 'Dismiss'),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+
+  bool _isCurrentActionProposal(AiProposalModel proposal) {
+    return identical(_activeProposal, proposal) ||
+        identical(_confirmationProposal, proposal);
+  }
+
+  String _proposalActionTitle(AiProposalModel proposal) {
+    switch (proposal.actionType) {
+      case 'purchase':
+        return 'Approve purchase action';
+      case 'sale':
+        return 'Approve sales action';
+      case 'pricing_simulation':
+        return 'Review pricing action';
+      default:
+        return 'Review CFO action';
+    }
+  }
+
+  String _proposalFinancialImpact(AiProposalModel proposal) {
+    final financial = proposal.financialPayload ?? const <String, dynamic>{};
+    final pricing = proposal.pricingPayload ?? const <String, dynamic>{};
+    final total = financial['totalAmount'];
+    if (total != null) return '$total total value';
+    final suggestedPrice = pricing['suggestedPricePerUnit'];
+    if (suggestedPrice != null) return '$suggestedPrice suggested/unit';
+    final margin = pricing['targetMarginPercentage'];
+    if (margin != null) return '$margin% target margin';
+    return 'Needs review';
+  }
+
+  String _requiredDecisionLabel(
+    AiProposalModel proposal, {
+    required bool isCurrent,
+  }) {
+    if (!isCurrent) return 'Historical card: review only';
+    if (identical(_confirmationProposal, proposal)) {
+      return 'User confirmation required before execution';
+    }
+    if (proposal.actionType == 'pricing_simulation') {
+      return 'Decision required: save simulation or keep reviewing';
+    }
+    return 'Decision required: approve guarded execution or dismiss';
+  }
+
+  Widget _actionInfoLine({
+    required IconData icon,
+    required String label,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 7),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: textSecondary, size: 15),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Text(
+              label,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: textSecondary,
+                fontSize: 11,
+                height: 1.3,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showActionExecutionDetails(AiProposalModel proposal) {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.all(12),
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: premiumPanel,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: premiumStroke),
+              ),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        const Expanded(
+                          child: Text(
+                            'Action details',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          tooltip: 'Close',
+                          onPressed: () => Navigator.pop(context),
+                          icon: const Icon(
+                            Icons.close_rounded,
+                            color: textSecondary,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    _buildActionExecutionCard(
+                      proposal,
+                      compact: false,
+                      source: _ActionCardSource.details,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 
