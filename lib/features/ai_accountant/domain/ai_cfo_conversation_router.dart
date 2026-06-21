@@ -19,9 +19,7 @@ class AiCfoConversationRouter {
       return AiCfoConversationIntent.deferProposal;
     }
     if (_containsAny(normalized, _approvalTerms)) {
-      return activeProposal == null
-          ? AiCfoConversationIntent.executeProposal
-          : AiCfoConversationIntent.approveProposal;
+      return AiCfoConversationIntent.approveProposal;
     }
     if (_containsAny(normalized, _executionTerms)) {
       return AiCfoConversationIntent.executeProposal;

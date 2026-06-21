@@ -58,6 +58,7 @@ void main() {
 
       expect(response.type, AiCfoResponseType.clarificationNeeded);
       expect(response.evidence, isEmpty);
+      expect(response.hasGroundedEvidence, isFalse);
       expect(response.proposal, isNull);
       expect(response.requiresApproval, isFalse);
       expect(response.message, contains('Data completeness'));
@@ -98,6 +99,24 @@ void main() {
       expect(response.proposal, same(proposal));
     });
 
+    test('approval terms classify as approval even without active proposal',
+        () {
+      expect(
+        router.classify('موافق'),
+        AiCfoConversationIntent.approveProposal,
+      );
+
+      final response = router.respond(
+        'موافق',
+        context: const AiCfoContextSnapshot.empty(),
+      );
+
+      expect(response.type, AiCfoResponseType.proposal);
+      expect(response.isBlocked, isTrue);
+      expect(response.canExecute, isFalse);
+      expect(response.message, contains('no active proposal'));
+    });
+
     test('evidence-first response contains sourced evidence', () {
       const snapshot = AiCfoContextSnapshot(
         inventorySummary: [
@@ -129,7 +148,28 @@ void main() {
       expect(response.type, AiCfoResponseType.answer);
       expect(response.evidence, isNotEmpty);
       expect(response.evidence.every((item) => item.source.isNotEmpty), isTrue);
+      expect(response.hasGroundedEvidence, isTrue);
       expect(response.message, isNot(contains('unsupported')));
+    });
+
+    test('empty evidence source is not grounded evidence', () {
+      const response = AiCfoConversationResponse(
+        type: AiCfoResponseType.answer,
+        intent: AiCfoConversationIntent.inventoryReview,
+        title: 'Inventory review',
+        message: 'Evidence exists, but source is missing.',
+        evidence: [
+          AiCfoEvidence(
+            label: 'Low stock products',
+            value: '3',
+            source: '',
+            confidence: AiCfoEvidenceConfidence.low,
+            explanation: 'Missing source should fail grounding.',
+          ),
+        ],
+      );
+
+      expect(response.hasGroundedEvidence, isFalse);
     });
   });
 }

@@ -41,5 +41,6 @@ class AiCfoConversationResponse {
     this.canExecute = false,
   });
 
-  bool get hasGroundedEvidence => evidence.every((item) => item.isGrounded);
+  bool get hasGroundedEvidence =>
+      evidence.isNotEmpty && evidence.every((item) => item.isGrounded);
 }
