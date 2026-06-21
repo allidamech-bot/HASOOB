@@ -21,13 +21,10 @@ import '../../../../screens/product_details_screen.dart';
 import '../../../../screens/settings_screen.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
-import '../../domain/ai_cfo_context_snapshot.dart';
-import '../../domain/ai_cfo_context_snapshot_builder.dart';
-import '../../domain/ai_cfo_conversation_intent.dart';
 import '../../domain/ai_cfo_conversation_response.dart';
-import '../../domain/ai_cfo_conversation_router.dart';
 import '../../domain/ai_cfo_evidence.dart';
 import '../../domain/services/ai_business_memory.dart';
+import '../../domain/services/ai_cfo_conversation_engine.dart';
 import '../../domain/services/ai_conversation_orchestrator.dart';
 import '../../domain/services/ai_evidence_bundle.dart';
 import '../../domain/services/ai_insight_generator.dart';
@@ -182,8 +179,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _chatScrollController = ScrollController();
   final _repository = AiAccountantRepositoryFactory.make();
   final _orchestrator = AiConversationOrchestrator();
-  final _conversationRouter = const AiCfoConversationRouter();
-  final _contextSnapshotBuilder = const AiCfoContextSnapshotBuilder();
+  final _conversationEngine = const AiCfoConversationEngine();
 
   bool _isAnalyzing = false;
   bool _isCommitting = false;
@@ -265,7 +261,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       text: text,
     );
 
-    final kernelResponse = await _kernelResponse(text);
+    final kernelResponse = await _conversationEngine.resolve(
+      input: text,
+      businessId: BusinessContext.businessId,
+      activeProposal: _activeProposal ?? _confirmationProposal,
+    );
     if (kernelResponse != null) {
       _appendKernelResponse(kernelResponse);
       return;
@@ -389,45 +389,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     } finally {
       if (mounted) setState(() => _isAnalyzing = false);
     }
-  }
-
-  Future<AiCfoConversationResponse?> _kernelResponse(String text) async {
-    final activeProposal = _activeProposal ?? _confirmationProposal;
-    final intent = _conversationRouter.classify(
-      text,
-      activeProposal: activeProposal,
-    );
-    if ((intent == AiCfoConversationIntent.executeProposal ||
-            intent == AiCfoConversationIntent.deferProposal) &&
-        activeProposal == null) {
-      return _conversationRouter.responseForIntent(
-        intent,
-        context: const AiCfoContextSnapshot.empty(),
-      );
-    }
-    if (_isReadOnlyKernelIntent(intent)) {
-      final snapshot = BusinessContext.businessId.isEmpty
-          ? const AiCfoContextSnapshot.empty()
-          : await _contextSnapshotBuilder.buildFromFinancialTools(
-              businessId: BusinessContext.businessId,
-              intent: intent,
-            );
-      return _conversationRouter.responseForIntent(
-        intent,
-        context: snapshot,
-        activeProposal: activeProposal,
-      );
-    }
-    return null;
-  }
-
-  bool _isReadOnlyKernelIntent(AiCfoConversationIntent intent) {
-    return intent == AiCfoConversationIntent.businessHealth ||
-        intent == AiCfoConversationIntent.cashflowReview ||
-        intent == AiCfoConversationIntent.inventoryReview ||
-        intent == AiCfoConversationIntent.profitReview ||
-        intent == AiCfoConversationIntent.receivablesReview ||
-        intent == AiCfoConversationIntent.explainEvidence;
   }
 
   void _appendKernelResponse(AiCfoConversationResponse response) {
