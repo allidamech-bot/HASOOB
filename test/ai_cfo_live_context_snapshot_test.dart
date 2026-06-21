@@ -83,6 +83,139 @@ void main() {
       );
     });
 
+    test('empty successful tool data does not generate zero evidence', () {
+      final snapshot = builder.buildFromToolResults(
+        financialSummary: FinancialToolResult.success({}),
+        income: FinancialToolResult.success({}),
+        products: FinancialToolResult.success({}),
+      );
+
+      final values = snapshot
+          .evidenceFor(AiCfoContextArea.businessHealth)
+          .map((item) => item.value)
+          .toList();
+
+      expect(values, isNot(contains('0.00')));
+      expect(values, isNot(contains('0')));
+      expect(snapshot.dataCompletenessNotes, isNotEmpty);
+    });
+
+    test('missing financial summary keys produce completeness notes', () {
+      final snapshot = builder.buildFromToolResults(
+        financialSummary: FinancialToolResult.success({
+          'totalIncome': 100.0,
+        }),
+      );
+
+      expect(
+        snapshot.salesSummary.any(
+          (item) => item.label == 'Total income' && item.value == '100.00',
+        ),
+        isTrue,
+      );
+      expect(
+        snapshot.dataCompletenessNotes.join(' '),
+        contains('netCashFlow'),
+      );
+      expect(
+        snapshot.dataCompletenessNotes.join(' '),
+        contains('accountsReceivable'),
+      );
+      expect(
+        snapshot.dataCompletenessNotes.join(' '),
+        contains('totalProfit'),
+      );
+      expect(
+        snapshot.dataCompletenessNotes.join(' '),
+        contains('profitMargin'),
+      );
+    });
+
+    test('present zero value is preserved as valid evidence', () {
+      final snapshot = builder.buildFromToolResults(
+        financialSummary: FinancialToolResult.success({
+          'netCashFlow': 0.0,
+          'accountsReceivable': 0.0,
+          'totalIncome': 0.0,
+          'totalProfit': 0.0,
+          'profitMargin': 0.0,
+        }),
+        products: FinancialToolResult.success({
+          'records': const [],
+          'totalValue': 0.0,
+          'count': 0,
+        }),
+      );
+
+      expect(
+        snapshot.cashSummary.any(
+          (item) => item.label == 'Net cash flow' && item.value == '0.00',
+        ),
+        isTrue,
+      );
+      expect(
+        snapshot.inventorySummary.any(
+          (item) => item.label == 'Product count' && item.value == '0',
+        ),
+        isTrue,
+      );
+      expect(
+        snapshot.inventorySummary.any(
+          (item) => item.label == 'Inventory value' && item.value == '0.00',
+        ),
+        isTrue,
+      );
+    });
+
+    test('missing inventory totalValue does not create value evidence', () {
+      final snapshot = builder.buildFromToolResults(
+        products: FinancialToolResult.success({
+          'records': [
+            {'id': 'p-1'},
+          ],
+          'count': 1,
+        }),
+      );
+
+      expect(
+        snapshot.inventorySummary
+            .any((item) => item.label == 'Inventory value'),
+        isFalse,
+      );
+      expect(
+        snapshot.dataCompletenessNotes.join(' '),
+        contains('totalValue'),
+      );
+    });
+
+    test('missing income total and profit do not create amount evidence', () {
+      final snapshot = builder.buildFromToolResults(
+        income: FinancialToolResult.success({
+          'records': [
+            {'id': 's-1'},
+          ],
+          'count': 1,
+        }),
+      );
+
+      expect(
+        snapshot.salesSummary.any((item) => item.label == 'Sales total'),
+        isFalse,
+      );
+      expect(
+        snapshot.salesSummary.any((item) => item.label == 'Gross profit'),
+        isFalse,
+      );
+      expect(
+        snapshot.dataCompletenessNotes.join(' '),
+        contains('total'),
+      );
+      expect(
+        snapshot.dataCompletenessNotes.join(' '),
+        contains('profit'),
+      );
+    });
+
     test('evidence confidence is not high when data is incomplete', () {
       final snapshot = builder.buildFromToolResults(
         products: FinancialToolResult.success({

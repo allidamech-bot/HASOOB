@@ -158,57 +158,71 @@ class AiCfoContextSnapshotBuilder {
     );
     if (data == null) return;
     const source = 'FinancialTools.getFinancialSummary';
-    cashSummary.addAll([
-      _evidence(
-        label: 'Net cash flow',
-        value: _money(data['netCashFlow']),
-        source: source,
-        confidence: AiCfoEvidenceConfidence.medium,
-        explanation:
-            'Derived from income and expense totals returned by the financial summary tool.',
-      ),
-      _evidence(
-        label: 'Accounts receivable',
-        value: _money(data['accountsReceivable']),
-        source: source,
-        confidence: AiCfoEvidenceConfidence.medium,
-        explanation:
-            'Derived from invoice outstanding balances in the financial summary tool.',
-      ),
-    ]);
-    salesSummary.addAll([
-      _evidence(
-        label: 'Total income',
-        value: _money(data['totalIncome']),
-        source: source,
-        confidence: AiCfoEvidenceConfidence.medium,
-        explanation: 'Read from the financial summary tool.',
-      ),
-      _evidence(
-        label: 'Total profit',
-        value: _money(data['totalProfit']),
-        source: source,
-        confidence: AiCfoEvidenceConfidence.medium,
-        explanation: 'Read from the financial summary tool.',
-      ),
-      _evidence(
-        label: 'Profit margin',
-        value: '${_toDouble(data['profitMargin']).toStringAsFixed(1)}%',
-        source: source,
-        confidence: AiCfoEvidenceConfidence.medium,
-        explanation:
-            'Calculated by the existing financial summary tool from income and profit.',
-      ),
-    ]);
-    receivablesSummary.add(
-      _evidence(
-        label: 'Accounts receivable',
-        value: _money(data['accountsReceivable']),
-        source: source,
-        confidence: AiCfoEvidenceConfidence.medium,
-        explanation:
-            'Derived from invoice outstanding balances in the financial summary tool.',
-      ),
+    _addMoneyEvidence(
+      data,
+      key: 'netCashFlow',
+      label: 'Net cash flow',
+      source: source,
+      confidence: AiCfoEvidenceConfidence.medium,
+      explanation:
+          'Derived from income and expense totals returned by the financial summary tool.',
+      target: cashSummary,
+      notes: notes,
+    );
+    _addMoneyEvidence(
+      data,
+      key: 'accountsReceivable',
+      label: 'Accounts receivable',
+      source: source,
+      confidence: AiCfoEvidenceConfidence.medium,
+      explanation:
+          'Derived from invoice outstanding balances in the financial summary tool.',
+      target: cashSummary,
+      notes: notes,
+    );
+    _addMoneyEvidence(
+      data,
+      key: 'totalIncome',
+      label: 'Total income',
+      source: source,
+      confidence: AiCfoEvidenceConfidence.medium,
+      explanation: 'Read from the financial summary tool.',
+      target: salesSummary,
+      notes: notes,
+    );
+    _addMoneyEvidence(
+      data,
+      key: 'totalProfit',
+      label: 'Total profit',
+      source: source,
+      confidence: AiCfoEvidenceConfidence.medium,
+      explanation: 'Read from the financial summary tool.',
+      target: salesSummary,
+      notes: notes,
+    );
+    _addNumberEvidence(
+      data,
+      key: 'profitMargin',
+      label: 'Profit margin',
+      source: source,
+      confidence: AiCfoEvidenceConfidence.medium,
+      explanation:
+          'Calculated by the existing financial summary tool from income and profit.',
+      target: salesSummary,
+      notes: notes,
+      suffix: '%',
+      decimals: 1,
+    );
+    _addMoneyEvidence(
+      data,
+      key: 'accountsReceivable',
+      label: 'Accounts receivable',
+      source: source,
+      confidence: AiCfoEvidenceConfidence.medium,
+      explanation:
+          'Derived from invoice outstanding balances in the financial summary tool.',
+      target: receivablesSummary,
+      notes: notes,
     );
     notes.add('Financial summary is aggregate-only without row-level detail.');
   }
@@ -228,43 +242,50 @@ class AiCfoContextSnapshotBuilder {
     );
     if (data == null) return;
     const source = 'FinancialTools.getIncome';
-    final count = _toInt(data['count']);
-    final confidence =
-        count > 0 ? AiCfoEvidenceConfidence.high : AiCfoEvidenceConfidence.low;
+    final count = _intIfPresent(data, 'count', 'Sales record count', notes);
+    final confidence = _countConfidence(count);
     if (count == 0) {
       notes.add('Income tool returned no sales records.');
     }
-    salesSummary.addAll([
-      _evidence(
-        label: 'Sales record count',
-        value: count.toString(),
-        source: source,
-        confidence: confidence,
-        explanation: 'Count returned by the income tool.',
-      ),
-      _evidence(
-        label: 'Sales total',
-        value: _money(data['total']),
-        source: source,
-        confidence: confidence,
-        explanation: 'Sum of sales records returned by the income tool.',
-      ),
-      _evidence(
-        label: 'Gross profit',
-        value: _money(data['profit']),
-        source: source,
-        confidence: confidence,
-        explanation: 'Sum of profit values returned by the income tool.',
-      ),
-    ]);
-    recentSalesSignals.add(
-      _evidence(
-        label: 'Recent sales records',
-        value: count.toString(),
-        source: source,
-        confidence: confidence,
-        explanation: 'Record count from the income tool result.',
-      ),
+    if (count != null) {
+      salesSummary.add(
+        _evidence(
+          label: 'Sales record count',
+          value: count.toString(),
+          source: source,
+          confidence: confidence,
+          explanation: 'Count returned by the income tool.',
+        ),
+      );
+      recentSalesSignals.add(
+        _evidence(
+          label: 'Recent sales records',
+          value: count.toString(),
+          source: source,
+          confidence: confidence,
+          explanation: 'Record count from the income tool result.',
+        ),
+      );
+    }
+    _addMoneyEvidence(
+      data,
+      key: 'total',
+      label: 'Sales total',
+      source: source,
+      confidence: confidence,
+      explanation: 'Sum of sales records returned by the income tool.',
+      target: salesSummary,
+      notes: notes,
+    );
+    _addMoneyEvidence(
+      data,
+      key: 'profit',
+      label: 'Gross profit',
+      source: source,
+      confidence: confidence,
+      explanation: 'Sum of profit values returned by the income tool.',
+      target: salesSummary,
+      notes: notes,
     );
   }
 
@@ -282,28 +303,32 @@ class AiCfoContextSnapshotBuilder {
     );
     if (data == null) return;
     const source = 'FinancialTools.getExpenses';
-    final count = _toInt(data['count']);
-    final confidence =
-        count > 0 ? AiCfoEvidenceConfidence.high : AiCfoEvidenceConfidence.low;
+    final count = _intIfPresent(data, 'count', 'Expense ledger rows', notes);
+    final confidence = _countConfidence(count);
     if (count == 0) {
       notes.add('Expense tool returned no ledger expense records.');
     }
-    recentLedgerSignals.addAll([
-      _evidence(
-        label: 'Expense ledger rows',
-        value: count.toString(),
-        source: source,
-        confidence: confidence,
-        explanation: 'Count returned by the expense ledger tool.',
-      ),
-      _evidence(
-        label: 'Expense total',
-        value: _money(data['total']),
-        source: source,
-        confidence: confidence,
-        explanation: 'Sum of expense ledger rows returned by the tool.',
-      ),
-    ]);
+    if (count != null) {
+      recentLedgerSignals.add(
+        _evidence(
+          label: 'Expense ledger rows',
+          value: count.toString(),
+          source: source,
+          confidence: confidence,
+          explanation: 'Count returned by the expense ledger tool.',
+        ),
+      );
+    }
+    _addMoneyEvidence(
+      data,
+      key: 'total',
+      label: 'Expense total',
+      source: source,
+      confidence: confidence,
+      explanation: 'Sum of expense ledger rows returned by the tool.',
+      target: recentLedgerSignals,
+      notes: notes,
+    );
   }
 
   void _mapInvoices(
@@ -321,37 +346,42 @@ class AiCfoContextSnapshotBuilder {
     );
     if (data == null) return;
     const source = 'FinancialTools.getInvoices';
-    final count = _toInt(data['count']);
-    final confidence =
-        count > 0 ? AiCfoEvidenceConfidence.high : AiCfoEvidenceConfidence.low;
+    final count = _intIfPresent(data, 'count', 'Invoice count', notes);
+    final confidence = _countConfidence(count);
     if (count == 0) {
       notes.add('Invoice tool returned no invoice records.');
     }
-    cashSummary.add(
-      _evidence(
-        label: 'Invoice outstanding',
-        value: _money(data['outstanding']),
-        source: source,
-        confidence: confidence,
-        explanation: 'Outstanding invoice amount returned by the invoice tool.',
-      ),
+    _addMoneyEvidence(
+      data,
+      key: 'outstanding',
+      label: 'Invoice outstanding',
+      source: source,
+      confidence: confidence,
+      explanation: 'Outstanding invoice amount returned by the invoice tool.',
+      target: cashSummary,
+      notes: notes,
     );
-    receivablesSummary.addAll([
-      _evidence(
-        label: 'Invoice count',
-        value: count.toString(),
-        source: source,
-        confidence: confidence,
-        explanation: 'Count returned by the invoice tool.',
-      ),
-      _evidence(
-        label: 'Invoice outstanding',
-        value: _money(data['outstanding']),
-        source: source,
-        confidence: confidence,
-        explanation: 'Invoice total less paid amount returned by the tool.',
-      ),
-    ]);
+    if (count != null) {
+      receivablesSummary.add(
+        _evidence(
+          label: 'Invoice count',
+          value: count.toString(),
+          source: source,
+          confidence: confidence,
+          explanation: 'Count returned by the invoice tool.',
+        ),
+      );
+    }
+    _addMoneyEvidence(
+      data,
+      key: 'outstanding',
+      label: 'Invoice outstanding',
+      source: source,
+      confidence: confidence,
+      explanation: 'Invoice total less paid amount returned by the tool.',
+      target: receivablesSummary,
+      notes: notes,
+    );
   }
 
   void _mapCustomers(
@@ -368,29 +398,33 @@ class AiCfoContextSnapshotBuilder {
     );
     if (data == null) return;
     const source = 'FinancialTools.getCustomers';
-    final count = _toInt(data['count']);
-    final confidence =
-        count > 0 ? AiCfoEvidenceConfidence.high : AiCfoEvidenceConfidence.low;
+    final count = _intIfPresent(data, 'count', 'Customer count', notes);
+    final confidence = _countConfidence(count);
     if (count == 0) {
       notes.add('Customer tool returned no customer records.');
     }
-    receivablesSummary.addAll([
-      _evidence(
-        label: 'Customer count',
-        value: count.toString(),
-        source: source,
-        confidence: confidence,
-        explanation: 'Count returned by the customer tool.',
-      ),
-      _evidence(
-        label: 'Customer outstanding balance',
-        value: _money(data['totalOutstanding']),
-        source: source,
-        confidence: confidence,
-        explanation:
-            'Total outstanding customer balance returned by the customer tool.',
-      ),
-    ]);
+    if (count != null) {
+      receivablesSummary.add(
+        _evidence(
+          label: 'Customer count',
+          value: count.toString(),
+          source: source,
+          confidence: confidence,
+          explanation: 'Count returned by the customer tool.',
+        ),
+      );
+    }
+    _addMoneyEvidence(
+      data,
+      key: 'totalOutstanding',
+      label: 'Customer outstanding balance',
+      source: source,
+      confidence: confidence,
+      explanation:
+          'Total outstanding customer balance returned by the customer tool.',
+      target: receivablesSummary,
+      notes: notes,
+    );
   }
 
   void _mapProducts(
@@ -407,29 +441,33 @@ class AiCfoContextSnapshotBuilder {
     );
     if (data == null) return;
     const source = 'FinancialTools.getProducts';
-    final count = _toInt(data['count']);
-    final confidence =
-        count > 0 ? AiCfoEvidenceConfidence.high : AiCfoEvidenceConfidence.low;
+    final count = _intIfPresent(data, 'count', 'Product count', notes);
+    final confidence = _countConfidence(count);
     if (count == 0) {
       notes.add('Product tool returned no product records.');
     }
-    inventorySummary.addAll([
-      _evidence(
-        label: 'Product count',
-        value: count.toString(),
-        source: source,
-        confidence: confidence,
-        explanation: 'Count returned by the product tool.',
-      ),
-      _evidence(
-        label: 'Inventory value',
-        value: _money(data['totalValue']),
-        source: source,
-        confidence: confidence,
-        explanation:
-            'Inventory value calculated by the existing product tool from stock and cost fields.',
-      ),
-    ]);
+    if (count != null) {
+      inventorySummary.add(
+        _evidence(
+          label: 'Product count',
+          value: count.toString(),
+          source: source,
+          confidence: confidence,
+          explanation: 'Count returned by the product tool.',
+        ),
+      );
+    }
+    _addMoneyEvidence(
+      data,
+      key: 'totalValue',
+      label: 'Inventory value',
+      source: source,
+      confidence: confidence,
+      explanation:
+          'Inventory value calculated by the existing product tool from stock and cost fields.',
+      target: inventorySummary,
+      notes: notes,
+    );
   }
 
   Map<String, dynamic>? _dataMap(
@@ -456,6 +494,115 @@ class AiCfoContextSnapshotBuilder {
     return Map<String, dynamic>.from(data);
   }
 
+  void _addMoneyEvidence(
+    Map<String, dynamic> data, {
+    required String key,
+    required String label,
+    required String source,
+    required AiCfoEvidenceConfidence confidence,
+    required String explanation,
+    required List<AiCfoEvidence> target,
+    required List<String> notes,
+  }) {
+    final value = _moneyIfPresent(data, key, label, notes);
+    if (value == null) return;
+    target.add(
+      _evidence(
+        label: label,
+        value: value,
+        source: source,
+        confidence: confidence,
+        explanation: explanation,
+      ),
+    );
+  }
+
+  void _addNumberEvidence(
+    Map<String, dynamic> data, {
+    required String key,
+    required String label,
+    required String source,
+    required AiCfoEvidenceConfidence confidence,
+    required String explanation,
+    required List<AiCfoEvidence> target,
+    required List<String> notes,
+    String suffix = '',
+    int decimals = 0,
+  }) {
+    final value = _numberIfPresent(
+      data,
+      key,
+      label,
+      notes,
+      suffix: suffix,
+      decimals: decimals,
+    );
+    if (value == null) return;
+    target.add(
+      _evidence(
+        label: label,
+        value: value,
+        source: source,
+        confidence: confidence,
+        explanation: explanation,
+      ),
+    );
+  }
+
+  bool _hasValue(Map<String, dynamic> data, String key) {
+    return data.containsKey(key) && data[key] != null;
+  }
+
+  String? _moneyIfPresent(
+    Map<String, dynamic> data,
+    String key,
+    String label,
+    List<String> notes,
+  ) {
+    if (!_hasValue(data, key)) {
+      _addMissingFieldNote(label, key, notes);
+      return null;
+    }
+    return _toDouble(data[key]).toStringAsFixed(2);
+  }
+
+  String? _numberIfPresent(
+    Map<String, dynamic> data,
+    String key,
+    String label,
+    List<String> notes, {
+    String suffix = '',
+    int decimals = 0,
+  }) {
+    if (!_hasValue(data, key)) {
+      _addMissingFieldNote(label, key, notes);
+      return null;
+    }
+    return '${_toDouble(data[key]).toStringAsFixed(decimals)}$suffix';
+  }
+
+  int? _intIfPresent(
+    Map<String, dynamic> data,
+    String key,
+    String label,
+    List<String> notes,
+  ) {
+    if (!_hasValue(data, key)) {
+      _addMissingFieldNote(label, key, notes);
+      return null;
+    }
+    return _toInt(data[key]);
+  }
+
+  void _addMissingFieldNote(String label, String key, List<String> notes) {
+    notes.add('$label missing source field "$key".');
+  }
+
+  AiCfoEvidenceConfidence _countConfidence(int? count) {
+    if (count == null || count == 0) return AiCfoEvidenceConfidence.low;
+    return AiCfoEvidenceConfidence.high;
+  }
+
   AiCfoEvidence _evidence({
     required String label,
     required String value,
@@ -471,8 +618,6 @@ class AiCfoContextSnapshotBuilder {
       explanation: explanation,
     );
   }
-
-  String _money(dynamic value) => _toDouble(value).toStringAsFixed(2);
 
   double _toDouble(dynamic value) {
     if (value == null) return 0;
