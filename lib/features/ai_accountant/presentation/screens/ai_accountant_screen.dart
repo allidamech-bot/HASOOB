@@ -116,6 +116,15 @@ enum _FollowUpStatus {
   completed,
 }
 
+enum _OperatingTimelineEventType {
+  proposalGenerated,
+  reviewed,
+  awaitingApproval,
+  deferred,
+  executed,
+  followUpNeeded,
+}
+
 class _SessionFollowUpItem {
   final String title;
   final _FollowUpStatus status;
@@ -129,6 +138,24 @@ class _SessionFollowUpItem {
     required this.whyItMatters,
     required this.nextStep,
     required this.timestamp,
+  });
+}
+
+class _OperatingTimelineEntry {
+  final String title;
+  final _OperatingTimelineEventType type;
+  final String reason;
+  final String nextStep;
+  final DateTime? timestamp;
+  final AiProposalModel? proposal;
+
+  const _OperatingTimelineEntry({
+    required this.title,
+    required this.type,
+    required this.reason,
+    required this.nextStep,
+    required this.timestamp,
+    this.proposal,
   });
 }
 
@@ -1963,6 +1990,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               child: _buildContextSummary(compact: true),
             ),
             Command360ContextModule(
+              title: 'CFO Operating Timeline',
+              icon: Icons.timeline_outlined,
+              child: _buildOperatingTimeline(compact: true),
+            ),
+            Command360ContextModule(
               title: 'CFO Follow-up',
               icon: Icons.pending_actions_outlined,
               child: _buildFollowUpLoop(compact: true),
@@ -3455,6 +3487,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             generatedAt: generatedAt,
             canExecute: canExecute,
           ),
+          if (!compact) ...[
+            const SizedBox(height: 14),
+            _buildOperatingTimeline(
+              compact: false,
+              proposalFilter: proposal,
+            ),
+          ],
           SizedBox(height: compact ? 12 : 16),
           Wrap(
             alignment: WrapAlignment.end,
@@ -3700,6 +3739,336 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     }
 
     return items;
+  }
+
+  Widget _buildOperatingTimeline({
+    required bool compact,
+    AiProposalModel? proposalFilter,
+  }) {
+    final entries = _operatingTimelineEntries(proposalFilter: proposalFilter);
+    if (entries.isEmpty) {
+      return const _ExecutiveEmptyLine(
+        icon: Icons.timeline_outlined,
+        label: 'No session timeline events yet',
+      );
+    }
+
+    final visibleEntries = entries.take(compact ? 4 : 12).toList();
+    return Container(
+      padding: EdgeInsets.all(compact ? 10 : 12),
+      decoration: BoxDecoration(
+        color: darkSurface.withValues(alpha: compact ? 0.34 : 0.45),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.timeline_outlined, color: goldAccent, size: 15),
+              const SizedBox(width: 7),
+              const Expanded(
+                child: Text(
+                  'CFO Operating Timeline',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              _statusPill('Session-level', textSecondary),
+            ],
+          ),
+          const SizedBox(height: 9),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _proposalMetaChip(
+                Icons.route_outlined,
+                '${entries.length} event${entries.length == 1 ? '' : 's'}',
+                goldAccent,
+              ),
+              _proposalMetaChip(
+                Icons.lock_clock_outlined,
+                'No persistent history',
+                textSecondary,
+              ),
+            ],
+          ),
+          SizedBox(height: compact ? 10 : 12),
+          ...visibleEntries.map(
+            (entry) => _buildOperatingTimelineEntry(
+              entry,
+              compact: compact,
+              isLast: visibleEntries.last == entry,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOperatingTimelineEntry(
+    _OperatingTimelineEntry entry, {
+    required bool compact,
+    required bool isLast,
+  }) {
+    final color = _timelineEventColor(entry.type);
+    final timing = entry.timestamp == null
+        ? 'Session'
+        : '${_timelineTimingPrefix(entry.type)} ${_timeLabel(entry.timestamp!)}';
+
+    return Padding(
+      padding: EdgeInsets.only(bottom: isLast ? 0 : (compact ? 9 : 12)),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Column(
+            children: [
+              Container(
+                width: 24,
+                height: 24,
+                decoration: BoxDecoration(
+                  color: color.withValues(alpha: 0.12),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: color.withValues(alpha: 0.34)),
+                ),
+                child: Icon(_timelineEventIcon(entry.type),
+                    color: color, size: 14),
+              ),
+              if (!isLast)
+                Container(
+                  width: 1,
+                  height: compact ? 58 : 78,
+                  color: premiumStroke,
+                ),
+            ],
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Container(
+              padding: EdgeInsets.all(compact ? 9 : 11),
+              decoration: BoxDecoration(
+                color: premiumPanelSoft.withValues(alpha: 0.56),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(color: color.withValues(alpha: 0.2)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 6,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    children: [
+                      Text(
+                        entry.title,
+                        maxLines: compact ? 2 : null,
+                        overflow: compact ? TextOverflow.ellipsis : null,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 12.5,
+                          fontWeight: FontWeight.w900,
+                          height: 1.25,
+                        ),
+                      ),
+                      _statusPill(_timelineEventLabel(entry.type), color),
+                    ],
+                  ),
+                  const SizedBox(height: 7),
+                  _actionInfoLine(
+                    icon: Icons.schedule_outlined,
+                    label: '$timing - session-level event',
+                  ),
+                  _actionInfoLine(
+                    icon: Icons.source_outlined,
+                    label: entry.reason,
+                  ),
+                  if (!compact)
+                    _actionInfoLine(
+                      icon: Icons.next_plan_outlined,
+                      label: entry.nextStep,
+                    )
+                  else
+                    Text(
+                      entry.nextStep,
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: textSecondary,
+                        fontSize: 11,
+                        height: 1.3,
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  List<_OperatingTimelineEntry> _operatingTimelineEntries({
+    AiProposalModel? proposalFilter,
+  }) {
+    final entries = <_OperatingTimelineEntry>[];
+    final currentProposal = _activeProposal ?? _confirmationProposal;
+
+    bool includeProposal(AiProposalModel? proposal) {
+      return proposalFilter == null ||
+          (proposal != null && identical(proposal, proposalFilter));
+    }
+
+    for (final message in _messages.reversed) {
+      final proposal = message.proposal;
+      if (proposal == null || !includeProposal(proposal)) continue;
+      final isCurrent = identical(proposal, currentProposal);
+      entries.add(
+        _OperatingTimelineEntry(
+          title: _proposalActionTitle(proposal),
+          type: _OperatingTimelineEventType.proposalGenerated,
+          reason: proposal.explanation,
+          nextStep: isCurrent
+              ? _requiredDecisionLabel(proposal, isCurrent: true)
+              : 'Keep this as review-only session context.',
+          timestamp: message.timestamp,
+          proposal: proposal,
+        ),
+      );
+      if (_reviewedProposalIds.contains(identityHashCode(proposal))) {
+        entries.add(
+          _OperatingTimelineEntry(
+            title: _proposalActionTitle(proposal),
+            type: _OperatingTimelineEventType.reviewed,
+            reason: _proposalFinancialImpact(proposal),
+            nextStep: isCurrent
+                ? _requiredDecisionLabel(proposal, isCurrent: true)
+                : 'Ask AI CFO for another action or keep monitoring.',
+            timestamp: message.timestamp,
+            proposal: proposal,
+          ),
+        );
+      }
+      if (isCurrent) {
+        entries.add(
+          _OperatingTimelineEntry(
+            title: _proposalActionTitle(proposal),
+            type: _OperatingTimelineEventType.awaitingApproval,
+            reason: _proposalFinancialImpact(proposal),
+            nextStep: _requiredDecisionLabel(proposal, isCurrent: true),
+            timestamp: message.timestamp,
+            proposal: proposal,
+          ),
+        );
+      }
+    }
+
+    if (proposalFilter == null) {
+      for (final item in _deferredFollowUps.reversed) {
+        entries.add(
+          _OperatingTimelineEntry(
+            title: item.title,
+            type: _OperatingTimelineEventType.deferred,
+            reason: item.whyItMatters,
+            nextStep: item.nextStep,
+            timestamp: item.timestamp,
+          ),
+        );
+      }
+    }
+
+    for (final message in _messages.reversed) {
+      final result = message.executionResult;
+      if (result == null || proposalFilter != null) continue;
+      entries.add(
+        _OperatingTimelineEntry(
+          title:
+              result.isSuccess ? 'Execution completed' : 'Follow-up required',
+          type: result.isSuccess
+              ? _OperatingTimelineEventType.executed
+              : _OperatingTimelineEventType.followUpNeeded,
+          reason: _resultSummary(result),
+          nextStep: result.isSuccess
+              ? 'Review the synced result and continue monitoring.'
+              : 'Review the blocking message before trying again.',
+          timestamp: message.timestamp,
+        ),
+      );
+    }
+
+    return entries;
+  }
+
+  String _timelineEventLabel(_OperatingTimelineEventType type) {
+    switch (type) {
+      case _OperatingTimelineEventType.proposalGenerated:
+        return 'Generated';
+      case _OperatingTimelineEventType.reviewed:
+        return 'Reviewed';
+      case _OperatingTimelineEventType.awaitingApproval:
+        return 'Awaiting';
+      case _OperatingTimelineEventType.deferred:
+        return 'Deferred';
+      case _OperatingTimelineEventType.executed:
+        return 'Executed';
+      case _OperatingTimelineEventType.followUpNeeded:
+        return 'Follow-up';
+    }
+  }
+
+  String _timelineTimingPrefix(_OperatingTimelineEventType type) {
+    switch (type) {
+      case _OperatingTimelineEventType.proposalGenerated:
+        return 'Generated';
+      case _OperatingTimelineEventType.reviewed:
+        return 'Reviewed';
+      case _OperatingTimelineEventType.awaitingApproval:
+        return 'Awaiting since';
+      case _OperatingTimelineEventType.deferred:
+        return 'Deferred';
+      case _OperatingTimelineEventType.executed:
+        return 'Executed';
+      case _OperatingTimelineEventType.followUpNeeded:
+        return 'Flagged';
+    }
+  }
+
+  IconData _timelineEventIcon(_OperatingTimelineEventType type) {
+    switch (type) {
+      case _OperatingTimelineEventType.proposalGenerated:
+        return Icons.auto_awesome_outlined;
+      case _OperatingTimelineEventType.reviewed:
+        return Icons.visibility_outlined;
+      case _OperatingTimelineEventType.awaitingApproval:
+        return Icons.rule_outlined;
+      case _OperatingTimelineEventType.deferred:
+        return Icons.pause_circle_outline;
+      case _OperatingTimelineEventType.executed:
+        return Icons.check_circle_outline;
+      case _OperatingTimelineEventType.followUpNeeded:
+        return Icons.pending_actions_outlined;
+    }
+  }
+
+  Color _timelineEventColor(_OperatingTimelineEventType type) {
+    switch (type) {
+      case _OperatingTimelineEventType.proposalGenerated:
+        return tealSuccess;
+      case _OperatingTimelineEventType.reviewed:
+        return AppTheme.accentCyan;
+      case _OperatingTimelineEventType.awaitingApproval:
+        return goldAccent;
+      case _OperatingTimelineEventType.deferred:
+        return AppTheme.warning;
+      case _OperatingTimelineEventType.executed:
+        return tealSuccess;
+      case _OperatingTimelineEventType.followUpNeeded:
+        return AppTheme.aiRed;
+    }
   }
 
   void _deferProposal(AiProposalModel proposal, DateTime? generatedAt) {
