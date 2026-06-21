@@ -22,9 +22,11 @@ import '../../../../screens/settings_screen.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
 import '../../domain/ai_cfo_context_snapshot.dart';
+import '../../domain/ai_cfo_context_snapshot_builder.dart';
 import '../../domain/ai_cfo_conversation_intent.dart';
 import '../../domain/ai_cfo_conversation_response.dart';
 import '../../domain/ai_cfo_conversation_router.dart';
+import '../../domain/ai_cfo_evidence.dart';
 import '../../domain/services/ai_business_memory.dart';
 import '../../domain/services/ai_conversation_orchestrator.dart';
 import '../../domain/services/ai_evidence_bundle.dart';
@@ -181,6 +183,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _repository = AiAccountantRepositoryFactory.make();
   final _orchestrator = AiConversationOrchestrator();
   final _conversationRouter = const AiCfoConversationRouter();
+  final _contextSnapshotBuilder = const AiCfoContextSnapshotBuilder();
 
   bool _isAnalyzing = false;
   bool _isCommitting = false;
@@ -262,9 +265,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       text: text,
     );
 
-    final kernelGuard = _kernelGuardResponse(text);
-    if (kernelGuard != null) {
-      _appendKernelResponse(kernelGuard);
+    final kernelResponse = await _kernelResponse(text);
+    if (kernelResponse != null) {
+      _appendKernelResponse(kernelResponse);
       return;
     }
 
@@ -388,7 +391,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     }
   }
 
-  AiCfoConversationResponse? _kernelGuardResponse(String text) {
+  Future<AiCfoConversationResponse?> _kernelResponse(String text) async {
     final activeProposal = _activeProposal ?? _confirmationProposal;
     final intent = _conversationRouter.classify(
       text,
@@ -402,7 +405,29 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         context: const AiCfoContextSnapshot.empty(),
       );
     }
+    if (_isReadOnlyKernelIntent(intent)) {
+      final snapshot = BusinessContext.businessId.isEmpty
+          ? const AiCfoContextSnapshot.empty()
+          : await _contextSnapshotBuilder.buildFromFinancialTools(
+              businessId: BusinessContext.businessId,
+              intent: intent,
+            );
+      return _conversationRouter.responseForIntent(
+        intent,
+        context: snapshot,
+        activeProposal: activeProposal,
+      );
+    }
     return null;
+  }
+
+  bool _isReadOnlyKernelIntent(AiCfoConversationIntent intent) {
+    return intent == AiCfoConversationIntent.businessHealth ||
+        intent == AiCfoConversationIntent.cashflowReview ||
+        intent == AiCfoConversationIntent.inventoryReview ||
+        intent == AiCfoConversationIntent.profitReview ||
+        intent == AiCfoConversationIntent.receivablesReview ||
+        intent == AiCfoConversationIntent.explainEvidence;
   }
 
   void _appendKernelResponse(AiCfoConversationResponse response) {
@@ -418,15 +443,62 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       type: response.isBlocked
           ? AiChatMessageType.confirmation
           : AiChatMessageType.normal,
-      text: response.message,
+      text: _kernelResponseText(response),
       proposal: response.proposal,
       suggestedReplies: suggestions,
-      metadata: AiResponseMetadata.low(
-        missingEvidence: response.blockedReason == null
-            ? const []
-            : [response.blockedReason!],
-      ),
+      metadata: _kernelResponseMetadata(response),
     );
+  }
+
+  String _kernelResponseText(AiCfoConversationResponse response) {
+    final lines = <String>[
+      response.title,
+      response.message,
+    ];
+    if (response.evidence.isNotEmpty) {
+      lines.add('Evidence:');
+      lines.addAll(response.evidence
+          .take(6)
+          .map((item) => '- ${item.label}: ${item.value} (${item.source})'));
+    }
+    if (response.risks.isNotEmpty) {
+      lines.add('Missing data / limits:');
+      lines.addAll(response.risks.take(4).map((item) => '- $item'));
+    }
+    return lines.join('\n');
+  }
+
+  AiResponseMetadata _kernelResponseMetadata(
+    AiCfoConversationResponse response,
+  ) {
+    final missingEvidence = <String>[
+      if (response.blockedReason != null) response.blockedReason!,
+      ...response.risks,
+    ];
+    return AiResponseMetadata(
+      confidenceLevel: _kernelConfidence(response.evidence),
+      executedTools: response.evidence
+          .map((item) => item.source)
+          .where((source) => source.trim().isNotEmpty)
+          .toSet()
+          .toList(),
+      missingEvidence: missingEvidence.toSet().toList(),
+      evidenceCount: response.evidence.length,
+      generatedAt: DateTime.now(),
+    );
+  }
+
+  AiEvidenceConfidence _kernelConfidence(List<AiCfoEvidence> evidence) {
+    if (evidence.isEmpty) return AiEvidenceConfidence.low;
+    if (evidence
+        .any((item) => item.confidence == AiCfoEvidenceConfidence.low)) {
+      return AiEvidenceConfidence.low;
+    }
+    if (evidence
+        .any((item) => item.confidence == AiCfoEvidenceConfidence.medium)) {
+      return AiEvidenceConfidence.medium;
+    }
+    return AiEvidenceConfidence.high;
   }
 
   Future<void> _handleExecutionIntent(String text) async {
