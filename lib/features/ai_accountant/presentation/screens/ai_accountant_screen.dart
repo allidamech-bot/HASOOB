@@ -21,6 +21,10 @@ import '../../../../screens/product_details_screen.dart';
 import '../../../../screens/settings_screen.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
+import '../../domain/ai_cfo_context_snapshot.dart';
+import '../../domain/ai_cfo_conversation_intent.dart';
+import '../../domain/ai_cfo_conversation_response.dart';
+import '../../domain/ai_cfo_conversation_router.dart';
 import '../../domain/services/ai_business_memory.dart';
 import '../../domain/services/ai_conversation_orchestrator.dart';
 import '../../domain/services/ai_evidence_bundle.dart';
@@ -176,6 +180,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _chatScrollController = ScrollController();
   final _repository = AiAccountantRepositoryFactory.make();
   final _orchestrator = AiConversationOrchestrator();
+  final _conversationRouter = const AiCfoConversationRouter();
 
   bool _isAnalyzing = false;
   bool _isCommitting = false;
@@ -256,6 +261,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       type: AiChatMessageType.normal,
       text: text,
     );
+
+    final kernelGuard = _kernelGuardResponse(text);
+    if (kernelGuard != null) {
+      _appendKernelResponse(kernelGuard);
+      return;
+    }
 
     AiAdvisorResponse advisorResponse;
     try {
@@ -375,6 +386,47 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     } finally {
       if (mounted) setState(() => _isAnalyzing = false);
     }
+  }
+
+  AiCfoConversationResponse? _kernelGuardResponse(String text) {
+    final activeProposal = _activeProposal ?? _confirmationProposal;
+    final intent = _conversationRouter.classify(
+      text,
+      activeProposal: activeProposal,
+    );
+    if ((intent == AiCfoConversationIntent.executeProposal ||
+            intent == AiCfoConversationIntent.deferProposal) &&
+        activeProposal == null) {
+      return _conversationRouter.responseForIntent(
+        intent,
+        context: const AiCfoContextSnapshot.empty(),
+      );
+    }
+    return null;
+  }
+
+  void _appendKernelResponse(AiCfoConversationResponse response) {
+    final suggestions = response.type == AiCfoResponseType.blocked
+        ? const [
+            'Prepare a proposal',
+            'Review business health',
+            'Continue discussion',
+          ]
+        : const <String>[];
+    _appendMessage(
+      role: AiChatRole.assistant,
+      type: response.isBlocked
+          ? AiChatMessageType.confirmation
+          : AiChatMessageType.normal,
+      text: response.message,
+      proposal: response.proposal,
+      suggestedReplies: suggestions,
+      metadata: AiResponseMetadata.low(
+        missingEvidence: response.blockedReason == null
+            ? const []
+            : [response.blockedReason!],
+      ),
+    );
   }
 
   Future<void> _handleExecutionIntent(String text) async {
