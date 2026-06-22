@@ -23,8 +23,10 @@ import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
 import '../../domain/ai_cfo_conversation_response.dart';
 import '../../domain/ai_cfo_evidence.dart';
+import '../../domain/ai_cfo_proposal_lifecycle.dart';
 import '../../domain/services/ai_business_memory.dart';
 import '../../domain/services/ai_cfo_conversation_engine.dart';
+import '../../domain/services/ai_cfo_proposal_lifecycle_resolver.dart';
 import '../../domain/services/ai_conversation_orchestrator.dart';
 import '../../domain/services/ai_evidence_bundle.dart';
 import '../../domain/services/ai_insight_generator.dart';
@@ -180,6 +182,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _repository = AiAccountantRepositoryFactory.make();
   final _orchestrator = AiConversationOrchestrator();
   final _conversationEngine = const AiCfoConversationEngine();
+  final _proposalLifecycleResolver = const AiCfoProposalLifecycleResolver();
 
   bool _isAnalyzing = false;
   bool _isCommitting = false;
@@ -250,6 +253,25 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     super.dispose();
   }
 
+  AiCfoProposalLifecycle _proposalLifecycle({
+    bool lastExecutionSucceeded = false,
+    bool lastExecutionFailed = false,
+    String? reason,
+  }) {
+    return _proposalLifecycleResolver.resolve(
+      activeProposal: _activeProposal,
+      confirmationProposal: _confirmationProposal,
+      reviewedProposalIds: _reviewedProposalIds
+          .map((proposalId) => proposalId.toString())
+          .toSet(),
+      deferredFollowUps: _deferredFollowUps.map((item) => item.title).toList(),
+      isExecuting: _isCommitting,
+      lastExecutionSucceeded: lastExecutionSucceeded,
+      lastExecutionFailed: lastExecutionFailed,
+      reason: reason,
+    );
+  }
+
   Future<void> _processAiCommand({String? customText}) async {
     final text = customText ?? _textController.text.trim();
     if (text.isEmpty) return;
@@ -261,10 +283,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       text: text,
     );
 
+    final lifecycle = _proposalLifecycle();
     final kernelResponse = await _conversationEngine.resolve(
       input: text,
       businessId: BusinessContext.businessId,
       activeProposal: _activeProposal ?? _confirmationProposal,
+      lifecycle: lifecycle,
     );
     if (kernelResponse != null) {
       _appendKernelResponse(kernelResponse);

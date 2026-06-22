@@ -4,6 +4,7 @@ import '../ai_cfo_context_snapshot_builder.dart';
 import '../ai_cfo_conversation_intent.dart';
 import '../ai_cfo_conversation_response.dart';
 import '../ai_cfo_conversation_router.dart';
+import '../ai_cfo_proposal_lifecycle.dart';
 
 class AiCfoConversationEngine {
   const AiCfoConversationEngine({
@@ -20,19 +21,23 @@ class AiCfoConversationEngine {
     required String input,
     required String businessId,
     AiProposalModel? activeProposal,
+    AiCfoProposalLifecycle? lifecycle,
     bool hasApprovedProposal = false,
   }) async {
+    final actionProposal = activeProposal ??
+        lifecycle?.activeProposal ??
+        lifecycle?.confirmationProposal;
     final intent = _router.classify(
       input,
-      activeProposal: activeProposal,
+      activeProposal: actionProposal,
       hasApprovedProposal: hasApprovedProposal,
     );
 
-    if (_shouldGuardWithoutActiveProposal(intent, activeProposal)) {
+    if (_shouldGuardWithoutActiveProposal(intent, actionProposal, lifecycle)) {
       return _router.responseForIntent(
         intent,
         context: const AiCfoContextSnapshot.empty(),
-        activeProposal: activeProposal,
+        activeProposal: actionProposal,
         hasApprovedProposal: hasApprovedProposal,
       );
     }
@@ -47,7 +52,7 @@ class AiCfoConversationEngine {
       return _router.responseForIntent(
         intent,
         context: snapshot,
-        activeProposal: activeProposal,
+        activeProposal: actionProposal,
         hasApprovedProposal: hasApprovedProposal,
       );
     }
@@ -58,8 +63,10 @@ class AiCfoConversationEngine {
   bool _shouldGuardWithoutActiveProposal(
     AiCfoConversationIntent intent,
     AiProposalModel? activeProposal,
+    AiCfoProposalLifecycle? lifecycle,
   ) {
     if (activeProposal != null) return false;
+    if (lifecycle != null && lifecycle.hasProposal) return false;
     return intent == AiCfoConversationIntent.executeProposal ||
         intent == AiCfoConversationIntent.deferProposal ||
         intent == AiCfoConversationIntent.approveProposal;
