@@ -21,6 +21,7 @@ import '../../../../screens/product_details_screen.dart';
 import '../../../../screens/settings_screen.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
+import '../../domain/ai_cfo_execution_outcome.dart';
 import '../../domain/ai_cfo_conversation_response.dart';
 import '../../domain/ai_cfo_evidence.dart';
 import '../../domain/ai_cfo_proposal_command.dart';
@@ -29,6 +30,7 @@ import '../../domain/ai_cfo_proposal_session_state.dart';
 import '../../domain/ai_cfo_proposal_state_event.dart';
 import '../../domain/services/ai_business_memory.dart';
 import '../../domain/services/ai_cfo_conversation_engine.dart';
+import '../../domain/services/ai_cfo_execution_outcome_normalizer.dart';
 import '../../domain/services/ai_cfo_proposal_command_adapter.dart';
 import '../../domain/services/ai_cfo_proposal_lifecycle_resolver.dart';
 import '../../domain/services/ai_cfo_proposal_state_reducer.dart';
@@ -187,6 +189,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _repository = AiAccountantRepositoryFactory.make();
   final _orchestrator = AiConversationOrchestrator();
   final _conversationEngine = const AiCfoConversationEngine();
+  final _executionOutcomeNormalizer = const AiCfoExecutionOutcomeNormalizer();
   final _proposalLifecycleResolver = const AiCfoProposalLifecycleResolver();
   final _proposalCommandAdapter = const AiCfoProposalCommandAdapter();
   final _proposalStateReducer = const AiCfoProposalStateReducer();
@@ -288,6 +291,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       state: _proposalSessionState,
       event: event,
     );
+  }
+
+  void _recordExecutionOutcome(AiCfoExecutionOutcome outcome) {
+    final event = _executionOutcomeNormalizer.toStateEventOrNull(outcome);
+    if (event == null) return;
+    _recordProposalState(event);
   }
 
   Future<void> _processAiCommand({String? customText}) async {
@@ -592,6 +601,14 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final proposal = _activeProposal ?? _confirmationProposal;
 
     if (proposal == null || !_isExecutableProposal(proposal)) {
+      _recordExecutionOutcome(
+        _executionOutcomeNormalizer.skipped(
+          reason: 'No executable proposal is available.',
+          proposal: proposal,
+          proposalSessionId:
+              proposal == null ? null : _proposalSessionId(proposal),
+        ),
+      );
       _appendMessage(
         role: AiChatRole.assistant,
         type: AiChatMessageType.confirmation,
@@ -749,12 +766,10 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     required bool clearActive,
   }) async {
     setState(() {
-      _recordProposalState(
-        AiCfoProposalStateEvent(
-          type: AiCfoProposalStateEventType.executionStarted,
+      _recordExecutionOutcome(
+        _executionOutcomeNormalizer.started(
           proposal: proposal,
-          reason: 'Existing execution path started.',
-          occurredAt: DateTime.now(),
+          proposalSessionId: _proposalSessionId(proposal),
         ),
       );
       _isCommitting = true;
@@ -763,19 +778,25 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       final result = await _repository.executeProposalDetailed(proposal);
       if (!mounted) return;
       setState(() {
-        _recordProposalState(
-          AiCfoProposalStateEvent(
-            type: result.success
-                ? AiCfoProposalStateEventType.executed
-                : result.requiresUserConfirmation
-                    ? AiCfoProposalStateEventType.blocked
-                    : AiCfoProposalStateEventType.failed,
-            proposal: proposal,
-            reason: _resultSummary(result),
-            occurredAt: DateTime.now(),
-            completedExternally: result.success,
-          ),
-        );
+        final proposalSessionId = _proposalSessionId(proposal);
+        final outcome = result.success
+            ? _executionOutcomeNormalizer.succeeded(
+                proposal: proposal,
+                proposalSessionId: proposalSessionId,
+                message: _resultSummary(result),
+              )
+            : result.requiresUserConfirmation
+                ? _executionOutcomeNormalizer.blocked(
+                    proposal: proposal,
+                    proposalSessionId: proposalSessionId,
+                    reason: _resultSummary(result),
+                  )
+                : _executionOutcomeNormalizer.failed(
+                    proposal: proposal,
+                    proposalSessionId: proposalSessionId,
+                    reason: _resultSummary(result),
+                  );
+        _recordExecutionOutcome(outcome);
         _confirmationProposal =
             result.requiresUserConfirmation ? proposal : null;
         if (clearActive && !result.requiresUserConfirmation) {
@@ -813,12 +834,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             'The guarded execution flow stopped this action before anything was committed.',
       );
       setState(() {
-        _recordProposalState(
-          AiCfoProposalStateEvent(
-            type: AiCfoProposalStateEventType.failed,
+        _recordExecutionOutcome(
+          _executionOutcomeNormalizer.failed(
             proposal: proposal,
+            proposalSessionId: _proposalSessionId(proposal),
             reason: result.error ?? 'Execution failed safely.',
-            occurredAt: DateTime.now(),
           ),
         );
         _confirmationProposal = null;
