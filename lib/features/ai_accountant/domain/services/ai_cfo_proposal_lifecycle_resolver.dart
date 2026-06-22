@@ -12,6 +12,7 @@ class AiCfoProposalLifecycleResolver {
     AiProposalModel? activeProposal,
     AiProposalModel? confirmationProposal,
     Set<String> reviewedProposalIds = const {},
+    Set<String> approvedProposalIds = const {},
     List<String> deferredFollowUps = const [],
     bool isExecuting = false,
     bool lastExecutionSucceeded = false,
@@ -22,6 +23,7 @@ class AiCfoProposalLifecycleResolver {
       activeProposal: activeProposal,
       confirmationProposal: confirmationProposal,
       reviewedProposalIds: reviewedProposalIds,
+      approvedProposalIds: approvedProposalIds,
       deferredFollowUps: deferredFollowUps,
       isExecuting: isExecuting,
       lastExecutionSucceeded: lastExecutionSucceeded,
@@ -33,6 +35,7 @@ class AiCfoProposalLifecycleResolver {
       activeProposal: activeProposal,
       confirmationProposal: confirmationProposal,
       reviewedProposalIds: Set.unmodifiable(reviewedProposalIds),
+      approvedProposalIds: Set.unmodifiable(approvedProposalIds),
       deferredFollowUps: List.unmodifiable(deferredFollowUps),
       state: state,
       reason: reason,
@@ -43,6 +46,7 @@ class AiCfoProposalLifecycleResolver {
     required AiProposalModel? activeProposal,
     required AiProposalModel? confirmationProposal,
     required Set<String> reviewedProposalIds,
+    required Set<String> approvedProposalIds,
     required List<String> deferredFollowUps,
     required bool isExecuting,
     required bool lastExecutionSucceeded,
@@ -60,6 +64,9 @@ class AiCfoProposalLifecycleResolver {
     }
     if (activeProposal != null) {
       final sessionId = proposalSessionId(activeProposal);
+      if (approvedProposalIds.contains(sessionId)) {
+        return AiCfoProposalLifecycleState.approved;
+      }
       if (reviewedProposalIds.contains(sessionId)) {
         return AiCfoProposalLifecycleState.reviewed;
       }

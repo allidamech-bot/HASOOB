@@ -19,6 +19,7 @@ class AiCfoProposalLifecycle {
   final AiProposalModel? activeProposal;
   final AiProposalModel? confirmationProposal;
   final Set<String> reviewedProposalIds;
+  final Set<String> approvedProposalIds;
   final List<String> deferredFollowUps;
   final AiCfoProposalLifecycleState state;
   final String? reason;
@@ -27,6 +28,7 @@ class AiCfoProposalLifecycle {
     this.activeProposal,
     this.confirmationProposal,
     this.reviewedProposalIds = const {},
+    this.approvedProposalIds = const {},
     this.deferredFollowUps = const [],
     this.state = AiCfoProposalLifecycleState.none,
     this.reason,
