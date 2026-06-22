@@ -6,6 +6,7 @@ import 'package:hasoob_app/features/ai_accountant/data/tools/financial_tools.dar
 import 'package:hasoob_app/features/ai_accountant/domain/ai_cfo_context_snapshot_builder.dart';
 import 'package:hasoob_app/features/ai_accountant/domain/ai_cfo_conversation_response.dart';
 import 'package:hasoob_app/features/ai_accountant/domain/services/ai_cfo_conversation_engine.dart';
+import 'package:hasoob_app/features/ai_accountant/domain/services/ai_cfo_proposal_lifecycle_resolver.dart';
 
 void main() {
   group('AiCfoConversationEngine', () {
@@ -141,6 +142,31 @@ void main() {
         input: 'execute',
         businessId: 'business-1',
         activeProposal: proposal,
+      );
+
+      expect(response, isNull);
+      expect(tools.readCalls, isEmpty);
+      expect(tools.writeCalls, isEmpty);
+    });
+
+    test('uses lifecycle proposal facts for active execution flow', () async {
+      final tools = _EngineFinancialTools();
+      final engine = _engineWith(tools);
+      final proposal = AiProposalModel(
+        actionType: 'sale',
+        explanation: 'Existing proposal should stay in current execution flow.',
+        confidenceScore: 0.9,
+        inventoryPayload: const {'productId': 'p-1', 'quantity': 1},
+        financialPayload: const {'totalAmount': 10.0},
+      );
+      final lifecycle = const AiCfoProposalLifecycleResolver().resolve(
+        activeProposal: proposal,
+      );
+
+      final response = await engine.resolve(
+        input: 'execute',
+        businessId: 'business-1',
+        lifecycle: lifecycle,
       );
 
       expect(response, isNull);
