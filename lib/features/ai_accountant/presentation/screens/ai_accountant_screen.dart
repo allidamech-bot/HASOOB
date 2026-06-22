@@ -23,9 +23,11 @@ import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
 import '../../domain/ai_cfo_conversation_response.dart';
 import '../../domain/ai_cfo_evidence.dart';
+import '../../domain/ai_cfo_proposal_command.dart';
 import '../../domain/ai_cfo_proposal_lifecycle.dart';
 import '../../domain/services/ai_business_memory.dart';
 import '../../domain/services/ai_cfo_conversation_engine.dart';
+import '../../domain/services/ai_cfo_proposal_command_adapter.dart';
 import '../../domain/services/ai_cfo_proposal_lifecycle_resolver.dart';
 import '../../domain/services/ai_conversation_orchestrator.dart';
 import '../../domain/services/ai_evidence_bundle.dart';
@@ -183,6 +185,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _orchestrator = AiConversationOrchestrator();
   final _conversationEngine = const AiCfoConversationEngine();
   final _proposalLifecycleResolver = const AiCfoProposalLifecycleResolver();
+  final _proposalCommandAdapter = const AiCfoProposalCommandAdapter();
 
   bool _isAnalyzing = false;
   bool _isCommitting = false;
@@ -283,15 +286,36 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       text: text,
     );
 
+    final activeProposal = _activeProposal ?? _confirmationProposal;
     final lifecycle = _proposalLifecycle();
+    final intent = _conversationEngine.classifyIntent(
+      input: text,
+      activeProposal: activeProposal,
+    );
     final kernelResponse = await _conversationEngine.resolve(
       input: text,
       businessId: BusinessContext.businessId,
-      activeProposal: _activeProposal ?? _confirmationProposal,
+      activeProposal: activeProposal,
       lifecycle: lifecycle,
     );
     if (kernelResponse != null) {
+      final command = _proposalCommandAdapter.adapt(
+        intent: intent,
+        lifecycle: lifecycle,
+        response: kernelResponse,
+        activeProposal: activeProposal,
+      );
+      if (await _handleProposalCommand(command, input: text)) return;
       _appendKernelResponse(kernelResponse);
+      return;
+    }
+
+    final command = _proposalCommandAdapter.adapt(
+      intent: intent,
+      lifecycle: lifecycle,
+      activeProposal: activeProposal,
+    );
+    if (await _handleProposalCommand(command, input: text)) {
       return;
     }
 
@@ -433,6 +457,49 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       suggestedReplies: suggestions,
       metadata: _kernelResponseMetadata(response),
     );
+  }
+
+  Future<bool> _handleProposalCommand(
+    AiCfoProposalCommand command, {
+    required String input,
+  }) async {
+    switch (command.type) {
+      case AiCfoProposalCommandType.none:
+        return false;
+      case AiCfoProposalCommandType.showGuardMessage:
+        final response = command.response;
+        if (response != null) {
+          _appendKernelResponse(response);
+        } else {
+          _appendMessage(
+            role: AiChatRole.assistant,
+            type: AiChatMessageType.confirmation,
+            text: command.reason,
+            suggestedReplies: const [
+              'Review proposal',
+              'Prepare a proposal',
+              'Continue discussion',
+            ],
+          );
+        }
+        return true;
+      case AiCfoProposalCommandType.reviewProposal:
+        final proposal = command.proposal;
+        if (proposal == null) return false;
+        _showActionExecutionDetails(proposal);
+        return true;
+      case AiCfoProposalCommandType.approveProposal:
+        return false;
+      case AiCfoProposalCommandType.deferProposal:
+        final proposal = command.proposal;
+        if (proposal == null) return false;
+        _deferProposal(proposal, _proposalGeneratedAt(proposal));
+        return true;
+      case AiCfoProposalCommandType.executeProposal:
+        if (!command.canMutateLedger) return false;
+        await _handleExecutionIntent(input);
+        return true;
+    }
   }
 
   String _kernelResponseText(AiCfoConversationResponse response) {
