@@ -25,10 +25,13 @@ import '../../domain/ai_cfo_conversation_response.dart';
 import '../../domain/ai_cfo_evidence.dart';
 import '../../domain/ai_cfo_proposal_command.dart';
 import '../../domain/ai_cfo_proposal_lifecycle.dart';
+import '../../domain/ai_cfo_proposal_session_state.dart';
+import '../../domain/ai_cfo_proposal_state_event.dart';
 import '../../domain/services/ai_business_memory.dart';
 import '../../domain/services/ai_cfo_conversation_engine.dart';
 import '../../domain/services/ai_cfo_proposal_command_adapter.dart';
 import '../../domain/services/ai_cfo_proposal_lifecycle_resolver.dart';
+import '../../domain/services/ai_cfo_proposal_state_reducer.dart';
 import '../../domain/services/ai_conversation_orchestrator.dart';
 import '../../domain/services/ai_evidence_bundle.dart';
 import '../../domain/services/ai_insight_generator.dart';
@@ -186,13 +189,15 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _conversationEngine = const AiCfoConversationEngine();
   final _proposalLifecycleResolver = const AiCfoProposalLifecycleResolver();
   final _proposalCommandAdapter = const AiCfoProposalCommandAdapter();
+  final _proposalStateReducer = const AiCfoProposalStateReducer();
 
   bool _isAnalyzing = false;
   bool _isCommitting = false;
   AiProposalModel? _activeProposal;
   AiProposalModel? _confirmationProposal;
   int _contextTabIndex = 0;
-  final Set<int> _reviewedProposalIds = <int>{};
+  AiCfoProposalSessionState _proposalSessionState =
+      AiCfoProposalSessionState.empty();
   final List<_SessionFollowUpItem> _deferredFollowUps =
       <_SessionFollowUpItem>[];
 
@@ -264,14 +269,24 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     return _proposalLifecycleResolver.resolve(
       activeProposal: _activeProposal,
       confirmationProposal: _confirmationProposal,
-      reviewedProposalIds: _reviewedProposalIds
-          .map((proposalId) => proposalId.toString())
-          .toSet(),
-      deferredFollowUps: _deferredFollowUps.map((item) => item.title).toList(),
+      reviewedProposalIds: _proposalSessionState.reviewedProposalIds,
+      approvedProposalIds: _proposalSessionState.approvedProposalIds,
+      deferredFollowUps: _proposalSessionState.deferredProposalIds.toList(),
       isExecuting: _isCommitting,
       lastExecutionSucceeded: lastExecutionSucceeded,
       lastExecutionFailed: lastExecutionFailed,
       reason: reason,
+    );
+  }
+
+  String _proposalSessionId(AiProposalModel proposal) {
+    return _proposalLifecycleResolver.proposalSessionId(proposal);
+  }
+
+  void _recordProposalState(AiCfoProposalStateEvent event) {
+    _proposalSessionState = _proposalStateReducer.reduce(
+      state: _proposalSessionState,
+      event: event,
     );
   }
 
@@ -489,6 +504,19 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         _showActionExecutionDetails(proposal);
         return true;
       case AiCfoProposalCommandType.approveProposal:
+        final proposal = command.proposal;
+        if (proposal != null) {
+          setState(() {
+            _recordProposalState(
+              AiCfoProposalStateEvent(
+                type: AiCfoProposalStateEventType.approved,
+                proposal: proposal,
+                reason: 'Proposal approved in session.',
+                occurredAt: DateTime.now(),
+              ),
+            );
+          });
+        }
         return false;
       case AiCfoProposalCommandType.deferProposal:
         final proposal = command.proposal;
@@ -720,11 +748,34 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     AiProposalModel proposal, {
     required bool clearActive,
   }) async {
-    setState(() => _isCommitting = true);
+    setState(() {
+      _recordProposalState(
+        AiCfoProposalStateEvent(
+          type: AiCfoProposalStateEventType.executionStarted,
+          proposal: proposal,
+          reason: 'Existing execution path started.',
+          occurredAt: DateTime.now(),
+        ),
+      );
+      _isCommitting = true;
+    });
     try {
       final result = await _repository.executeProposalDetailed(proposal);
       if (!mounted) return;
       setState(() {
+        _recordProposalState(
+          AiCfoProposalStateEvent(
+            type: result.success
+                ? AiCfoProposalStateEventType.executed
+                : result.requiresUserConfirmation
+                    ? AiCfoProposalStateEventType.blocked
+                    : AiCfoProposalStateEventType.failed,
+            proposal: proposal,
+            reason: _resultSummary(result),
+            occurredAt: DateTime.now(),
+            completedExternally: result.success,
+          ),
+        );
         _confirmationProposal =
             result.requiresUserConfirmation ? proposal : null;
         if (clearActive && !result.requiresUserConfirmation) {
@@ -762,6 +813,14 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             'The guarded execution flow stopped this action before anything was committed.',
       );
       setState(() {
+        _recordProposalState(
+          AiCfoProposalStateEvent(
+            type: AiCfoProposalStateEventType.failed,
+            proposal: proposal,
+            reason: result.error ?? 'Execution failed safely.',
+            occurredAt: DateTime.now(),
+          ),
+        );
         _confirmationProposal = null;
         if (clearActive) _activeProposal = null;
         _isCommitting = false;
@@ -3880,7 +3939,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     for (final message in _messages.reversed) {
       final proposal = message.proposal;
       if (proposal == null) continue;
-      if (!_reviewedProposalIds.contains(identityHashCode(proposal))) continue;
+      if (!_proposalSessionState.isReviewed(_proposalSessionId(proposal))) {
+        continue;
+      }
       if (identical(proposal, currentProposal)) continue;
       items.add(
         _SessionFollowUpItem(
@@ -4115,7 +4176,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           proposal: proposal,
         ),
       );
-      if (_reviewedProposalIds.contains(identityHashCode(proposal))) {
+      if (_proposalSessionState.isReviewed(_proposalSessionId(proposal))) {
         entries.add(
           _OperatingTimelineEntry(
             title: _proposalActionTitle(proposal),
@@ -4249,6 +4310,14 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   void _deferProposal(AiProposalModel proposal, DateTime? generatedAt) {
     setState(() {
+      _recordProposalState(
+        AiCfoProposalStateEvent(
+          type: AiCfoProposalStateEventType.deferred,
+          proposal: proposal,
+          reason: 'Proposal deferred in session.',
+          occurredAt: DateTime.now(),
+        ),
+      );
       _deferredFollowUps.add(
         _SessionFollowUpItem(
           title: _proposalActionTitle(proposal),
@@ -4432,7 +4501,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     required bool canExecute,
   }) {
     final isCurrent = _isCurrentActionProposal(proposal);
-    final reviewed = _reviewedProposalIds.contains(identityHashCode(proposal));
+    final reviewed = _proposalSessionState.isReviewed(
+      _proposalSessionId(proposal),
+    );
     final generatedLabel = generatedAt == null
         ? 'Proposal available in current session'
         : 'Proposal generated at ${_timeLabel(generatedAt)}';
@@ -4702,7 +4773,14 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     DateTime? generatedAt,
   }) {
     setState(() {
-      _reviewedProposalIds.add(identityHashCode(proposal));
+      _recordProposalState(
+        AiCfoProposalStateEvent(
+          type: AiCfoProposalStateEventType.reviewed,
+          proposal: proposal,
+          reason: 'Proposal reviewed in session.',
+          occurredAt: DateTime.now(),
+        ),
+      );
     });
 
     showModalBottomSheet<void>(
