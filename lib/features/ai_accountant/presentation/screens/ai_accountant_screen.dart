@@ -25,15 +25,11 @@ import '../../domain/ai_cfo_execution_outcome.dart';
 import '../../domain/ai_cfo_conversation_response.dart';
 import '../../domain/ai_cfo_evidence.dart';
 import '../../domain/ai_cfo_proposal_command.dart';
-import '../../domain/ai_cfo_proposal_lifecycle.dart';
 import '../../domain/ai_cfo_proposal_session_state.dart';
 import '../../domain/ai_cfo_proposal_state_event.dart';
 import '../../domain/services/ai_business_memory.dart';
-import '../../domain/services/ai_cfo_conversation_engine.dart';
 import '../../domain/services/ai_cfo_execution_outcome_normalizer.dart';
-import '../../domain/services/ai_cfo_proposal_command_adapter.dart';
-import '../../domain/services/ai_cfo_proposal_lifecycle_resolver.dart';
-import '../../domain/services/ai_cfo_proposal_state_reducer.dart';
+import '../../domain/services/ai_cfo_proposal_session_controller.dart';
 import '../../domain/services/ai_conversation_orchestrator.dart';
 import '../../domain/services/ai_evidence_bundle.dart';
 import '../../domain/services/ai_insight_generator.dart';
@@ -188,11 +184,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   final _chatScrollController = ScrollController();
   final _repository = AiAccountantRepositoryFactory.make();
   final _orchestrator = AiConversationOrchestrator();
-  final _conversationEngine = const AiCfoConversationEngine();
+  final _proposalSessionController = const AiCfoProposalSessionController();
   final _executionOutcomeNormalizer = const AiCfoExecutionOutcomeNormalizer();
-  final _proposalLifecycleResolver = const AiCfoProposalLifecycleResolver();
-  final _proposalCommandAdapter = const AiCfoProposalCommandAdapter();
-  final _proposalStateReducer = const AiCfoProposalStateReducer();
 
   bool _isAnalyzing = false;
   bool _isCommitting = false;
@@ -264,39 +257,22 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     super.dispose();
   }
 
-  AiCfoProposalLifecycle _proposalLifecycle({
-    bool lastExecutionSucceeded = false,
-    bool lastExecutionFailed = false,
-    String? reason,
-  }) {
-    return _proposalLifecycleResolver.resolve(
-      activeProposal: _activeProposal,
-      confirmationProposal: _confirmationProposal,
-      reviewedProposalIds: _proposalSessionState.reviewedProposalIds,
-      approvedProposalIds: _proposalSessionState.approvedProposalIds,
-      deferredFollowUps: _proposalSessionState.deferredProposalIds.toList(),
-      isExecuting: _isCommitting,
-      lastExecutionSucceeded: lastExecutionSucceeded,
-      lastExecutionFailed: lastExecutionFailed,
-      reason: reason,
-    );
-  }
-
   String _proposalSessionId(AiProposalModel proposal) {
-    return _proposalLifecycleResolver.proposalSessionId(proposal);
+    return _proposalSessionController.proposalSessionId(proposal);
   }
 
   void _recordProposalState(AiCfoProposalStateEvent event) {
-    _proposalSessionState = _proposalStateReducer.reduce(
+    _proposalSessionState = _proposalSessionController.reduceEvent(
       state: _proposalSessionState,
       event: event,
     );
   }
 
   void _recordExecutionOutcome(AiCfoExecutionOutcome outcome) {
-    final event = _executionOutcomeNormalizer.toStateEventOrNull(outcome);
-    if (event == null) return;
-    _recordProposalState(event);
+    _proposalSessionState = _proposalSessionController.reduceOutcome(
+      state: _proposalSessionState,
+      outcome: outcome,
+    );
   }
 
   Future<void> _processAiCommand({String? customText}) async {
@@ -310,36 +286,29 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       text: text,
     );
 
-    final activeProposal = _activeProposal ?? _confirmationProposal;
-    final lifecycle = _proposalLifecycle();
-    final intent = _conversationEngine.classifyIntent(
-      input: text,
-      activeProposal: activeProposal,
-    );
-    final kernelResponse = await _conversationEngine.resolve(
+    final controllerResult = await _proposalSessionController.resolveCommand(
       input: text,
       businessId: BusinessContext.businessId,
-      activeProposal: activeProposal,
-      lifecycle: lifecycle,
+      sessionState: _proposalSessionState,
+      activeProposal: _activeProposal,
+      confirmationProposal: _confirmationProposal,
     );
+    final kernelResponse = controllerResult.response;
     if (kernelResponse != null) {
-      final command = _proposalCommandAdapter.adapt(
-        intent: intent,
-        lifecycle: lifecycle,
-        response: kernelResponse,
-        activeProposal: activeProposal,
-      );
-      if (await _handleProposalCommand(command, input: text)) return;
+      if (await _handleProposalCommand(
+        controllerResult.command,
+        input: text,
+      )) {
+        return;
+      }
       _appendKernelResponse(kernelResponse);
       return;
     }
 
-    final command = _proposalCommandAdapter.adapt(
-      intent: intent,
-      lifecycle: lifecycle,
-      activeProposal: activeProposal,
-    );
-    if (await _handleProposalCommand(command, input: text)) {
+    if (await _handleProposalCommand(
+      controllerResult.command,
+      input: text,
+    )) {
       return;
     }
 
