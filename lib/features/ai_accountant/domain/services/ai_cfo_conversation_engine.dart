@@ -23,6 +23,18 @@ class AiCfoConversationEngine {
   final AiCfoContextSnapshotBuilder _snapshotBuilder;
   final AiCfoProposalDecisionPolicyResolver _decisionPolicyResolver;
 
+  AiCfoConversationIntent classifyIntent({
+    required String input,
+    AiProposalModel? activeProposal,
+    bool hasApprovedProposal = false,
+  }) {
+    return _router.classify(
+      input,
+      activeProposal: activeProposal,
+      hasApprovedProposal: hasApprovedProposal,
+    );
+  }
+
   Future<AiCfoConversationResponse?> resolve({
     required String input,
     required String businessId,
