@@ -9,7 +9,7 @@ This document records the current AI CFO beta manual-smoke status without invent
 | Field | Value |
 | --- | --- |
 | Findings date | 2026-06-23 |
-| Findings status | Documentation readiness recorded; manual smoke pending |
+| Findings status | Manual smoke blocked; safe disposable app environment was not confirmed |
 | Manual smoke result | NOT_RUN |
 | Demo readiness decision | NOT_RUN |
 
@@ -17,8 +17,8 @@ This document records the current AI CFO beta manual-smoke status without invent
 
 | Field | Value |
 | --- | --- |
-| Branch | `feature/ai-cfo-beta-manual-smoke-findings` |
-| Commit | `ee8cb6d952a8006ddd1972d7fe4c35b8842a0a77` |
+| Branch | `feature/ai-cfo-beta-human-smoke-execution` |
+| Commit | `c1ea777fc614eebbce05b9ad110d25baf559f237` |
 | Data assumption | Local, staging, or disposable demo data only |
 
 ## Environment Summary
@@ -26,6 +26,8 @@ This document records the current AI CFO beta manual-smoke status without invent
 | Item | Status | Notes |
 | --- | --- | --- |
 | Documentation checklist prepared | PASS | Demo runbook and manual smoke evidence checklist are available. |
+| Safe disposable app environment | NOT_RUN | Not confirmed in this sprint; no app/device smoke was started. |
+| Disposable demo data | NOT_RUN | Not confirmed in this sprint; no execution path was exercised. |
 | Human/device manual app smoke | NOT_RUN | No live app/device smoke run was performed in this sprint. |
 | Screenshots captured | NOT_RUN | No screenshots were captured in this sprint. |
 | Production data used | NOT_RUN | Manual smoke was not executed; production data must not be used. |
@@ -35,13 +37,13 @@ This document records the current AI CFO beta manual-smoke status without invent
 | Check | Status | Notes |
 | --- | --- | --- |
 | Documentation-safe validation | PASS | Markdown table/known spacing checks passed for the AI CFO beta smoke docs. |
-| Static analysis | PASS | Project static analysis passed during this findings sprint. |
+| Static analysis | PASS | Project static analysis passed during this human-smoke execution sprint. |
 | AI CFO/proposal automated tests | NOT_RUN | Not required for this documentation-only findings record unless validation scope changes. |
 | Web release build | NOT_RUN | Not required for this documentation-only findings record unless release validation is requested. |
 
 ## Manual Smoke Execution Status
 
-Manual smoke execution is `NOT_RUN` for this sprint. The current work creates the findings record and confirms documentation readiness, but it does not claim that the AI Accountant workspace, proposal states, execution handoff, or recovery paths were manually observed in a running app.
+Manual smoke execution is `NOT_RUN` for this sprint. A safe local, staging, or disposable app environment and disposable demo data were not confirmed, so no app/device smoke was started. This document does not claim that the AI Accountant workspace, proposal states, execution handoff, or recovery paths were manually observed in a running app.
 
 ## AI CFO Flow Findings
 
@@ -97,4 +99,4 @@ Manual smoke execution is `NOT_RUN` for this sprint. The current work creates th
 | PASS | No | Manual smoke was not performed. |
 | PASS_WITH_NOTES | No | Manual smoke was not performed. |
 | FAIL | No | No manual failure was observed because no manual smoke was performed. |
-| NOT_RUN | Yes | Documentation readiness is present, but human/device manual smoke remains pending. |
+| NOT_RUN | Yes | A safe disposable app environment was not confirmed, so human/device manual smoke remains pending. |
