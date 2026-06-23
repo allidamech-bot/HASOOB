@@ -113,6 +113,66 @@ void main() {
       expect(result.isSessionOnly, isTrue);
     });
 
+    test('deferred active proposal blocks execution delegation', () async {
+      final proposal = _proposal();
+      final proposalId = controller.proposalSessionId(proposal);
+      final result = await controller.resolveCommand(
+        input: 'execute this',
+        businessId: '',
+        sessionState: AiCfoProposalSessionState(
+          reviewedProposalIds: {proposalId},
+          approvedProposalIds: {proposalId},
+          deferredProposalIds: {proposalId},
+        ),
+        activeProposal: proposal,
+      );
+
+      expect(
+          result.action, AiCfoProposalSessionControllerAction.showGuardMessage);
+      expect(result.lifecycle.state, AiCfoProposalLifecycleState.deferred);
+      expect(result.isBlocked, isTrue);
+      expect(result.canDelegateExecution, isFalse);
+      expect(result.command.canMutateLedger, isFalse);
+    });
+
+    test('blocked active proposal blocks execution delegation', () async {
+      final proposal = _proposal();
+      final proposalId = controller.proposalSessionId(proposal);
+      final result = await controller.resolveCommand(
+        input: 'execute this',
+        businessId: '',
+        sessionState: AiCfoProposalSessionState(
+          approvedProposalIds: {proposalId},
+          blockedReasons: {proposalId: 'Product confirmation required.'},
+        ),
+        activeProposal: proposal,
+      );
+
+      expect(result.lifecycle.state, AiCfoProposalLifecycleState.blocked);
+      expect(result.isBlocked, isTrue);
+      expect(result.canDelegateExecution, isFalse);
+      expect(result.command.canMutateLedger, isFalse);
+    });
+
+    test('failed active proposal blocks execution delegation', () async {
+      final proposal = _proposal();
+      final proposalId = controller.proposalSessionId(proposal);
+      final result = await controller.resolveCommand(
+        input: 'execute this',
+        businessId: '',
+        sessionState: AiCfoProposalSessionState(
+          approvedProposalIds: {proposalId},
+          failureReasons: {proposalId: 'Insufficient stock.'},
+        ),
+        activeProposal: proposal,
+      );
+
+      expect(result.lifecycle.state, AiCfoProposalLifecycleState.failed);
+      expect(result.isBlocked, isTrue);
+      expect(result.canDelegateExecution, isFalse);
+      expect(result.command.canMutateLedger, isFalse);
+    });
+
     test('executable proposal delegates execution only', () async {
       final proposal = _proposal();
       final proposalId = controller.proposalSessionId(proposal);
@@ -145,6 +205,28 @@ void main() {
           result.action, AiCfoProposalSessionControllerAction.showGuardMessage);
       expect(result.isBlocked, isTrue);
       expect(result.canDelegateExecution, isFalse);
+    });
+
+    test('executed proposal blocks duplicate execution delegation', () async {
+      final proposal = _proposal();
+      final proposalId = controller.proposalSessionId(proposal);
+      final result = await controller.resolveCommand(
+        input: 'execute this again',
+        businessId: '',
+        sessionState: AiCfoProposalSessionState(
+          reviewedProposalIds: {proposalId},
+          approvedProposalIds: {proposalId},
+          executedProposalIds: {proposalId},
+        ),
+        activeProposal: proposal,
+      );
+
+      expect(
+          result.action, AiCfoProposalSessionControllerAction.showGuardMessage);
+      expect(result.lifecycle.state, AiCfoProposalLifecycleState.executed);
+      expect(result.isBlocked, isTrue);
+      expect(result.canDelegateExecution, isFalse);
+      expect(result.command.canMutateLedger, isFalse);
     });
 
     test('reduceEvent reviewed updates session state', () {

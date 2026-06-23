@@ -62,6 +62,22 @@ void main() {
       expect(lifecycle.canExecute, isFalse);
     });
 
+    test('deferred active proposal id resolves to deferred', () {
+      final proposal = _proposal();
+      final proposalId = resolver.proposalSessionId(proposal);
+
+      final lifecycle = resolver.resolve(
+        activeProposal: proposal,
+        reviewedProposalIds: {proposalId},
+        approvedProposalIds: {proposalId},
+        deferredFollowUps: [proposalId],
+      );
+
+      expect(lifecycle.state, AiCfoProposalLifecycleState.deferred);
+      expect(lifecycle.hasProposal, isTrue);
+      expect(lifecycle.canExecute, isFalse);
+    });
+
     test('executing flag resolves to executing', () {
       final lifecycle = resolver.resolve(
         activeProposal: _proposal(),
