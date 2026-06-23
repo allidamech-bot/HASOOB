@@ -38,6 +38,7 @@ import '../../domain/services/ai_risk_detector.dart';
 import '../../domain/services/ai_data_collection_state.dart';
 import '../../domain/services/ai_workflow_session.dart';
 import '../../domain/services/proposal_execution_engine.dart';
+import '../proposal_execution_presentation_state.dart';
 
 class LedgerEntry {
   final String code;
@@ -338,7 +339,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
     if (_isExecutionIntent(text)) {
       final proposal = _activeProposal ?? _confirmationProposal;
-      if (proposal != null && _isExecutableProposal(proposal)) {
+      if (proposal != null && _canDelegateProposalExecution(proposal)) {
         await _handleExecutionIntent(text);
       } else {
         _appendMessage(
@@ -560,6 +561,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   Future<void> _handleExecutionIntent(String text) async {
+    if (_isCommitting) {
+      _appendExecutionGuardMessage(
+        'Execution is already in progress. I will wait for the guarded result before starting another request.',
+      );
+      return;
+    }
+
     final wantsQuotation = _containsAny(_normalized(text), [
       'convert',
       'quotation',
@@ -569,7 +577,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     ]);
     final proposal = _activeProposal ?? _confirmationProposal;
 
-    if (proposal == null || !_isExecutableProposal(proposal)) {
+    if (proposal == null || !_canDelegateProposalExecution(proposal)) {
       _recordExecutionOutcome(
         _executionOutcomeNormalizer.skipped(
           reason: 'No executable proposal is available.',
@@ -677,7 +685,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Future<void> _savePricingSimulation() async {
     final proposal = _activeProposal;
-    if (proposal == null) return;
+    if (proposal == null || !_guardProposalExecutionRequest(proposal)) return;
     await _executeProposal(proposal, clearActive: true);
   }
 
@@ -708,13 +716,19 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Future<void> _commitProposalToLedger() async {
     final proposal = _activeProposal;
-    if (proposal == null) return;
+    if (proposal == null || !_guardProposalExecutionRequest(proposal)) return;
     await _executeProposal(proposal, clearActive: true);
   }
 
   Future<void> _confirmProductAndExecute(String productId) async {
     final proposal = _confirmationProposal ?? _activeProposal;
     if (proposal == null || productId.isEmpty) return;
+    if (_isCommitting) {
+      _appendExecutionGuardMessage(
+        'Execution is already in progress. I will wait for the guarded result before starting another request.',
+      );
+      return;
+    }
     final inventory =
         Map<String, dynamic>.from(proposal.inventoryPayload ?? {});
     inventory['productId'] = productId;
@@ -734,6 +748,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     AiProposalModel proposal, {
     required bool clearActive,
   }) async {
+    if (_isCommitting) {
+      _appendExecutionGuardMessage(
+        'Execution is already in progress. I will wait for the guarded result before starting another request.',
+      );
+      return;
+    }
+
     setState(() {
       _recordExecutionOutcome(
         _executionOutcomeNormalizer.started(
@@ -3541,14 +3562,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final inventory = proposal.inventoryPayload ?? const <String, dynamic>{};
     final financial = proposal.financialPayload ?? const <String, dynamic>{};
     final isCurrent = _isCurrentActionProposal(proposal);
-    final canExecute = isCurrent &&
-        identical(_activeProposal, proposal) &&
-        _isExecutableProposal(proposal) &&
-        !_isCommitting;
+    final executionState = _proposalExecutionState(proposal);
+    final canExecute = executionState.canDelegateExecution;
     final canDismiss = isCurrent && !_isCommitting;
     final title = _proposalActionTitle(proposal);
     final impact = _proposalFinancialImpact(proposal);
-    final decision = _requiredDecisionLabel(proposal, isCurrent: isCurrent);
+    final decision = executionState.decisionLabel;
     final riskLevel = proposal.confidenceScore >= 0.85
         ? 'Low'
         : proposal.confidenceScore >= 0.65
@@ -3641,7 +3660,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                   Icons.shield_outlined, 'Risk: $riskLevel', riskColor),
               _proposalMetaChip(
                 Icons.verified_user_outlined,
-                isCurrent ? 'Status: Active' : 'Status: Review only',
+                'Status: ${executionState.statusLabel}',
                 isCurrent ? goldAccent : textSecondary,
               ),
             ],
@@ -3691,9 +3710,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ),
             _actionInfoLine(
               icon: Icons.rule_outlined,
-              label: canExecute
+              label: executionState.canDelegateExecution
                   ? 'Ready for guarded execution'
-                  : 'Review required before execution',
+                  : executionState.decisionLabel,
             ),
           ],
           SizedBox(height: compact ? 10 : 14),
@@ -3709,7 +3728,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             proposal,
             compact: compact,
             generatedAt: generatedAt,
-            canExecute: canExecute,
+            executionState: executionState,
           ),
           if (!compact) ...[
             const SizedBox(height: 14),
@@ -4487,7 +4506,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     AiProposalModel proposal, {
     required bool compact,
     required DateTime? generatedAt,
-    required bool canExecute,
+    required AiCfoProposalExecutionPresentationState executionState,
   }) {
     final isCurrent = _isCurrentActionProposal(proposal);
     final reviewed = _proposalSessionState.isReviewed(
@@ -4496,9 +4515,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final generatedLabel = generatedAt == null
         ? 'Proposal available in current session'
         : 'Proposal generated at ${_timeLabel(generatedAt)}';
-    final executionLabel = isCurrent
-        ? 'Not executed yet'
-        : 'Execution state unavailable on this session card';
+    final executionLabel = executionState.executionLabel;
 
     return Container(
       padding: EdgeInsets.all(compact ? 10 : 12),
@@ -4542,9 +4559,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           ),
           _trailLine(
             icon: Icons.rule_outlined,
-            label: canExecute
-                ? 'Awaiting approval for guarded execution'
-                : _requiredDecisionLabel(proposal, isCurrent: isCurrent),
+            label: executionState.decisionLabel,
             color: isCurrent ? goldAccent : textSecondary,
           ),
           if (!compact)
@@ -4658,6 +4673,19 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   String _proposalRiskNote(AiProposalModel proposal, String riskLevel) {
+    final executionState = _proposalExecutionState(proposal);
+    if (executionState.state == AiCfoProposalExecutionUxState.deferred) {
+      return '$riskLevel risk - deferred in this session';
+    }
+    if (executionState.state == AiCfoProposalExecutionUxState.failed) {
+      return '$riskLevel risk - failed and needs follow-up';
+    }
+    if (executionState.state == AiCfoProposalExecutionUxState.blocked) {
+      return '$riskLevel risk - blocked and needs follow-up';
+    }
+    if (executionState.state == AiCfoProposalExecutionUxState.executed) {
+      return '$riskLevel risk - already executed';
+    }
     if (identical(_confirmationProposal, proposal)) {
       return '$riskLevel risk - confirmation required before execution';
     }
@@ -4671,6 +4699,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   String _proposalStatusLabel(AiProposalModel proposal) {
+    final executionState = _proposalExecutionState(proposal);
+    if (executionState.state == AiCfoProposalExecutionUxState.deferred ||
+        executionState.isTerminal ||
+        executionState.state == AiCfoProposalExecutionUxState.executing) {
+      return executionState.statusLabel.toLowerCase();
+    }
     if (identical(_activeProposal, proposal)) return 'active proposal';
     if (identical(_confirmationProposal, proposal)) {
       return 'awaiting confirmation';
@@ -4719,14 +4753,10 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     AiProposalModel proposal, {
     required bool isCurrent,
   }) {
-    if (!isCurrent) return 'Historical card: review only';
-    if (identical(_confirmationProposal, proposal)) {
-      return 'User confirmation required before execution';
-    }
-    if (proposal.actionType == 'pricing_simulation') {
-      return 'Decision required: save simulation or keep reviewing';
-    }
-    return 'Decision required: approve guarded execution or dismiss';
+    return _proposalExecutionState(
+      proposal,
+      isCurrent: isCurrent,
+    ).decisionLabel;
   }
 
   Widget _actionInfoLine({
@@ -5242,6 +5272,51 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     return proposal.actionType == 'purchase' ||
         proposal.actionType == 'sale' ||
         proposal.actionType == 'pricing_simulation';
+  }
+
+  AiCfoProposalExecutionPresentationState _proposalExecutionState(
+    AiProposalModel proposal, {
+    bool? isCurrent,
+  }) {
+    final current = isCurrent ?? _isCurrentActionProposal(proposal);
+    return AiCfoProposalExecutionPresentationState.resolve(
+      proposal: proposal,
+      proposalSessionId: _proposalSessionId(proposal),
+      sessionState: _proposalSessionState,
+      isCurrent: current,
+      requiresConfirmation: identical(_confirmationProposal, proposal),
+      isExecuting: _isCommitting,
+    );
+  }
+
+  bool _canDelegateProposalExecution(AiProposalModel proposal) {
+    return _proposalExecutionState(
+      proposal,
+      isCurrent: identical(_activeProposal, proposal),
+    ).canDelegateExecution;
+  }
+
+  bool _guardProposalExecutionRequest(AiProposalModel proposal) {
+    final state = _proposalExecutionState(
+      proposal,
+      isCurrent: identical(_activeProposal, proposal),
+    );
+    if (state.canDelegateExecution) return true;
+    _appendExecutionGuardMessage(state.decisionLabel);
+    return false;
+  }
+
+  void _appendExecutionGuardMessage(String text) {
+    _appendMessage(
+      role: AiChatRole.assistant,
+      type: AiChatMessageType.confirmation,
+      text: text,
+      suggestedReplies: const [
+        'Review proposal',
+        'What is missing?',
+        'Continue discussion',
+      ],
+    );
   }
 
   List<String> _proposalSuggestedReplies(AiProposalModel proposal) {
