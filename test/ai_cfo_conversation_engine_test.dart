@@ -186,14 +186,20 @@ void main() {
     });
 
     test('screen no longer owns read-only intent routing logic directly', () {
-      final source = File(
+      final screenSource = File(
         'lib/features/ai_accountant/presentation/screens/'
         'ai_accountant_screen.dart',
       ).readAsStringSync();
+      final controllerSource = File(
+        'lib/features/ai_accountant/domain/services/'
+        'ai_cfo_proposal_session_controller.dart',
+      ).readAsStringSync();
 
-      expect(source, isNot(contains('_isReadOnlyKernelIntent')));
-      expect(source, isNot(contains('buildFromFinancialTools')));
-      expect(source, contains('AiCfoConversationEngine'));
+      expect(screenSource, isNot(contains('_isReadOnlyKernelIntent')));
+      expect(screenSource, isNot(contains('buildFromFinancialTools')));
+      expect(screenSource, isNot(contains('AiCfoConversationEngine')));
+      expect(screenSource, contains('AiCfoProposalSessionController'));
+      expect(controllerSource, contains('AiCfoConversationEngine'));
     });
   });
 }
