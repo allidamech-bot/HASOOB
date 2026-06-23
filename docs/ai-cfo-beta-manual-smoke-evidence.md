@@ -4,6 +4,8 @@
 
 Use this checklist to capture practical evidence for an AI CFO beta demo or release smoke pass. The goal is to verify the cockpit flow, proposal guardrails, and recovery states without changing accounting behavior or relying on production data.
 
+After a smoke pass, record observed results in the companion findings document: [AI CFO Beta Manual Smoke Findings](ai-cfo-beta-manual-smoke-findings.md).
+
 ## Safe Data Assumptions
 
 - Use local, staging, or disposable demo data only.
