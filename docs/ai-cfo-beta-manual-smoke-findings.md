@@ -45,6 +45,8 @@ This document records the current AI CFO beta manual-smoke status without invent
 
 Manual smoke execution is `NOT_RUN` for this sprint. A safe local, staging, or disposable app environment and disposable demo data were not confirmed, so no app/device smoke was started. This document does not claim that the AI Accountant workspace, proposal states, execution handoff, or recovery paths were manually observed in a running app.
 
+Before retrying human/device smoke, complete the safe environment checklist in [AI CFO Safe Demo Environment Readiness](ai-cfo-safe-demo-environment-readiness.md).
+
 ## AI CFO Flow Findings
 
 | Check | Expected behavior | Evidence status | Notes |
