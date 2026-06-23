@@ -64,6 +64,9 @@ class AiCfoProposalLifecycleResolver {
     }
     if (activeProposal != null) {
       final sessionId = proposalSessionId(activeProposal);
+      if (deferredFollowUps.contains(sessionId)) {
+        return AiCfoProposalLifecycleState.deferred;
+      }
       if (approvedProposalIds.contains(sessionId)) {
         return AiCfoProposalLifecycleState.approved;
       }
