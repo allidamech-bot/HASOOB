@@ -46,6 +46,8 @@ Human/device smoke is not currently runnable as PASS evidence because the repo d
 | AI Accountant execution | Screen delegates real execution through the repository/execution-engine path. | Execution smoke can affect data unless the environment is disposable. |
 | Test fixtures | Automated tests seed temporary `qa-business` style data. | Useful as examples, but not documented as a runnable human-smoke data setup. |
 
+See [AI CFO Mock/UI-Only Smoke Access Audit](ai-cfo-mock-ui-smoke-access-audit.md) for the UI-only mock access classification. That audit is `AUDIT_ONLY` and does not mark human smoke or real execution checks as PASS.
+
 ## Candidate Environment Options
 
 | Option | Description | Readiness |
