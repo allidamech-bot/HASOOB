@@ -4,6 +4,8 @@
 
 Use this runbook to demo and regression-check the AI CFO beta safely. The beta should show evidence-backed CFO guidance, proposal review, guarded execution handoff, and recovery states without changing accounting behavior outside the existing execution path.
 
+For manual smoke capture, use the companion evidence checklist: [AI CFO Beta Manual Smoke Evidence](ai-cfo-beta-manual-smoke-evidence.md).
+
 ## Safe Demo Assumptions
 
 - Use local, staging, or disposable demo data.
