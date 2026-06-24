@@ -191,6 +191,35 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     );
   }
 
+  Future<void> _confirmDeleteInvoice(InvoiceModel invoice) async {
+    final copy = AppCopy.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(copy.t('delete')),
+        content: Text(
+          copy.isEnglish
+              ? 'Delete invoice ${invoice.invoiceNumber}? This cannot be undone.'
+              : 'حذف الفاتورة ${invoice.invoiceNumber}؟ لا يمكن التراجع عن هذا الإجراء.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(copy.t('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(copy.t('delete')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteInvoice(invoice.id);
+    }
+  }
+
   Future<void> _deleteQuotation(String id) async {
     await _repo.deleteQuotation(id, _businessId);
 
@@ -201,6 +230,35 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       context,
       AppCopy.of(context).documentsDeleteQuotationSuccess(),
     );
+  }
+
+  Future<void> _confirmDeleteQuotation(QuotationModel quotation) async {
+    final copy = AppCopy.of(context);
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(copy.t('delete')),
+        content: Text(
+          copy.isEnglish
+              ? 'Delete quotation ${quotation.quotationNumber}? This cannot be undone.'
+              : 'حذف عرض السعر ${quotation.quotationNumber}؟ لا يمكن التراجع عن هذا الإجراء.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: Text(copy.t('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: Text(copy.t('delete')),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await _deleteQuotation(quotation.id);
+    }
   }
 
   double _parseAmount(String text) {
@@ -512,7 +570,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                   child: Text(copy.t('pdfShare')),
                 ),
                 OutlinedButton(
-                  onPressed: () => _deleteInvoice(invoice.id),
+                  onPressed: () => _confirmDeleteInvoice(invoice),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.danger,
                   ),
@@ -602,7 +660,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                   child: Text(copy.t('pdfShare')),
                 ),
                 OutlinedButton(
-                  onPressed: () => _deleteQuotation(quotation.id),
+                  onPressed: () => _confirmDeleteQuotation(quotation),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.danger,
                   ),
