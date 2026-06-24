@@ -193,7 +193,7 @@ class _CloudSyncPassiveBanner extends StatelessWidget {
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
-                          isError ? 'الوضع المحلي مفعّل' : 'المزامنة مفعلة',
+                          message,
                           style: const TextStyle(
                             color: AppTheme.textPrimary,
                             fontSize: 12,
