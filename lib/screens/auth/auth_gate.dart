@@ -115,7 +115,7 @@ class _AuthGateState extends State<AuthGate> {
           children: [
             AuthShell(),
             _CloudSyncPassiveBanner(
-              message: 'Cloud sync is preparing...',
+              message: 'Sign in to enable cloud sync.',
             ),
           ],
         );
