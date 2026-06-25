@@ -340,6 +340,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       const SizedBox(height: 16),
       _hero(data, copy),
       const SizedBox(height: 24),
+      _reportReadingGuide(data, copy),
+      const SizedBox(height: 24),
       _buildDomainLayerReports(copy),
       const SizedBox(height: 24),
       const Padding(
@@ -842,6 +844,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _bestSelling(ReportsSnapshot data, AppCopy copy) {
     return _listSection(
       title: copy.t('bestSellingProducts'),
+      helper: copy.isEnglish
+          ? 'Shows which products are driving sales and profit. Use it to decide what to reorder, promote, or price-check.'
+          : null,
       empty: copy.t('noBestSellingData'),
       children: data.bestSellingProducts.map((item) {
         return _ListSurface(
@@ -873,6 +878,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _lowStock(ReportsSnapshot data, AppCopy copy) {
     return _listSection(
       title: copy.t('lowStockProducts'),
+      helper: copy.isEnglish
+          ? 'Shows products that may interrupt sales soon. Check these before promising delivery or buying new stock.'
+          : null,
       empty: copy.t('noLowStockNow'),
       children: data.lowStockItems.take(6).map((product) {
         return _ListSurface(
@@ -904,6 +912,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _recentSales(ReportsSnapshot data, AppCopy copy) {
     return _listSection(
       title: copy.t('recentSales'),
+      helper: copy.isEnglish
+          ? 'Shows the latest recorded sales activity. If this is empty, reports will not yet show daily movement.'
+          : null,
       empty: copy.t('noSalesYet'),
       children: data.recentSales.map((row) {
         return _ListSurface(
@@ -943,6 +954,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _listSection({
     required String title,
+    String? helper,
     required String empty,
     required List<Widget> children,
   }) {
@@ -950,6 +962,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AppSectionHeader(title: title),
+        if (helper != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            helper,
+            style: TextStyle(color: _muted, fontSize: 12, height: 1.4),
+          ),
+        ],
         const SizedBox(height: 12),
         if (children.isEmpty)
           AiGlassCard(
@@ -1072,6 +1091,53 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
+  Widget _reportReadingGuide(ReportsSnapshot data, AppCopy copy) {
+    final hasSales = data.recentSales.isNotEmpty || data.totalSales > 0;
+    final hasProducts = data.totalProducts > 0;
+    final body = copy.isEnglish
+        ? (hasSales || hasProducts
+            ? 'Use this page as a daily readout: sales show movement, low stock shows supply risk, best sellers show demand, and accounting shows whether balances need review.'
+            : 'Reports need real business activity before they can guide decisions. Add products first, then record sales or invoices so trends, profit, and stock signals become useful.')
+        : copy.t('notEnoughData');
+
+    return AiGlassCard(
+      borderColor: AppTheme.aiBlue.withValues(alpha: 0.18),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.insights_rounded, color: AppTheme.aiBlue),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  copy.isEnglish
+                      ? 'How to read today\'s reports'
+                      : copy.t('reportsTitle'),
+                  style: const TextStyle(
+                    color: AppTheme.aiTextPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  body,
+                  style: const TextStyle(
+                    color: AppTheme.aiTextSecondary,
+                    fontSize: 12,
+                    height: 1.45,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _accounting(ReportsSnapshot data, AppCopy copy) {
     return _ListSurface(
       child: ListTile(
@@ -1160,9 +1226,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
           children: [
             AppSectionHeader(
                 title: copy.isEnglish
-                    ? 'Domain Layer KPIs'
+                    ? 'Additional Financial Summary'
                     : 'ظ…ط¤ط´ط±ط§طھ ط§ظ„ط£ط¯ط§ط، â€” ط·ط¨ظ‚ط© ط§ظ„ظ†ط·ط§ظ‚',
                 hasAccentLine: true),
+            if (copy.isEnglish) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Revenue, collected amounts, overdue balances, and customer ranking help you check collection and sales concentration.',
+                style: TextStyle(color: _muted, fontSize: 12, height: 1.4),
+              ),
+            ],
             const SizedBox(height: 16),
             GridView.count(
               crossAxisCount:
@@ -1202,14 +1275,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
             const SizedBox(height: 24),
             _chartCard(
                 copy.isEnglish
-                    ? 'Monthly Sales (Domain)'
+                    ? 'Monthly Sales'
                     : 'ط§ظ„ظ…ط¨ظٹط¹ط§طھ ط§ظ„ط´ظ‡ط±ظٹط©',
                 _lineChart(chartPoints, _blue, copy)),
             const SizedBox(height: 24),
             _listSection(
-              title: copy.isEnglish
-                  ? 'Top Customers (Domain)'
-                  : 'ط£ظپط¶ظ„ ط§ظ„ط¹ظ…ظ„ط§ط،',
+              title:
+                  copy.isEnglish ? 'Top Customers' : 'ط£ظپط¶ظ„ ط§ظ„ط¹ظ…ظ„ط§ط،',
+              helper: copy.isEnglish
+                  ? 'Shows customer concentration. If one customer dominates, review collection risk before offering more credit.'
+                  : null,
               empty: copy.isEnglish
                   ? 'No top customers found.'
                   : 'ظ„ط§ ظٹظˆط¬ط¯ ط¹ظ…ظ„ط§ط، ظ…طھظ…ظٹط²ظˆظ†.',

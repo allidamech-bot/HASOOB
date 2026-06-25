@@ -1177,7 +1177,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 14),
           Text(
             copy.isEnglish
-                ? 'Cash-flow pulse will become useful after invoices, payments, and expenses are recorded. Until then, ask AI CFO what cash-flow data is missing.'
+                ? 'Daily cash check: record invoices, payments, and expenses so this card can show whether money coming in covers money going out. Until then, ask AI CFO what cash-flow data is missing.'
                 : 'سيصبح نبض التدفق النقدي مفيدا بعد تسجيل الفواتير والمدفوعات والمصروفات. حتى ذلك الوقت، اسأل المدير المالي الذكي عن البيانات النقدية الناقصة.',
             style: const TextStyle(
               color: AppTheme.aiTextSecondary,
@@ -1226,7 +1226,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 18),
           Text(
             copy.isEnglish
-                ? 'No simulation has been prepared yet.'
+                ? 'No decision comparison is prepared yet.'
                 : 'لم يتم تجهيز محاكاة بعد.',
             style: const TextStyle(
                 color: AppTheme.aiTextPrimary,
@@ -1236,7 +1236,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 8),
           Text(
             copy.isEnglish
-                ? 'Use AI CFO to compare a purchase, pricing, cash-flow, or inventory decision after adding real products, costs, sales, and customer data.'
+                ? 'Use AI CFO to compare one real choice at a time, such as a purchase, price change, cash-flow concern, or reorder decision after adding products, costs, sales, and customer data.'
                 : 'استخدم المدير المالي الذكي لمقارنة قرار شراء أو تسعير أو تدفق نقدي أو مخزون بعد إضافة المنتجات والتكاليف والمبيعات وبيانات العملاء.',
             style: const TextStyle(
                 color: AppTheme.aiTextSecondary, fontSize: 11, height: 1.4),
@@ -1262,7 +1262,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 12),
           Text(
             copy.isEnglish
-                ? 'No live obligations are shown here yet. Record invoices, payments, and due dates before relying on this card.'
+                ? 'Daily obligation check: track invoices, payments, and due dates here before relying on the card for what needs follow-up.'
                 : 'لا توجد التزامات مباشرة معروضة هنا بعد. سجل الفواتير والمدفوعات وتواريخ الاستحقاق قبل الاعتماد على هذه البطاقة.',
             style: const TextStyle(
               color: AppTheme.aiTextSecondary,
@@ -1279,10 +1279,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       children: [
         AiAlertCard(
-          message: copy.t('dashboardAlertLowStock'),
-          subtitle: copy.dashboardLowStockAlertSubtitle(lowStockCount),
+          message: lowStockCount > 0
+              ? copy.t('dashboardAlertLowStock')
+              : (copy.isEnglish
+                  ? 'Stock watch is clear'
+                  : copy.t('dashboardAlertLowStock')),
+          subtitle: lowStockCount > 0
+              ? copy.dashboardLowStockAlertSubtitle(lowStockCount)
+              : (copy.isEnglish
+                  ? 'No low-stock items are flagged in the current report snapshot. Keep product stock updated so this stays useful.'
+                  : copy.dashboardLowStockAlertSubtitle(lowStockCount)),
           icon: Icons.warning_amber_rounded,
-          severity: AiAlertSeverity.warning,
+          severity: lowStockCount > 0
+              ? AiAlertSeverity.warning
+              : AiAlertSeverity.success,
         ),
         const SizedBox(height: 12),
         AiAlertCard(

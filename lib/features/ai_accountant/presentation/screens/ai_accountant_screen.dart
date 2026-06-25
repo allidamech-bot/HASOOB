@@ -22,6 +22,7 @@ import '../../../../screens/settings_screen.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
 import '../../domain/ai_cfo_execution_outcome.dart';
+import '../../domain/ai_cfo_conversation_intent.dart';
 import '../../domain/ai_cfo_conversation_response.dart';
 import '../../domain/ai_cfo_evidence.dart';
 import '../../domain/ai_cfo_proposal_command.dart';
@@ -522,45 +523,115 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   String _kernelResponseText(AiCfoConversationResponse response) {
     final lines = <String>[
       response.title,
-      response.message,
+      '',
+      'Current picture:',
+      _currentPictureLine(response),
+      '',
+      'What changed / what is missing:',
+      _changedOrMissingLine(response),
+      '',
+      'Risk:',
+      _riskLine(response),
+      '',
+      'Recommended next action:',
+      _recommendedNextActionLine(response),
     ];
     if (response.evidence.isNotEmpty) {
+      lines.add('');
       lines.add('What you already have:');
       lines.addAll(response.evidence
           .take(4)
           .map((item) => '- ${item.label}: ${item.value}'));
+      lines.add('');
       lines.add('Evidence sources:');
       lines.addAll(response.evidence.take(6).map((item) => '- ${item.source}'));
-      lines.add('Risk to check first:');
-      lines.add(_firstRiskToCheck(response));
-    }
-    if (response.risks.isNotEmpty) {
-      lines.add('Missing data / limits:');
-      lines.addAll(response.risks.take(4).map((item) => '- $item'));
-    }
-    if (response.evidence.isEmpty) {
+    } else {
+      lines.add('');
       lines.add('What to add next:');
       lines.add('- Products with stock, cost, and selling price.');
       lines.add('- Customers and invoices with paid or unpaid balances.');
       lines.add('- Recorded sales, payments, expenses, or ledger entries.');
+      lines.add('');
       lines.add('Useful next questions:');
       lines.add('- What cash-flow data is missing?');
       lines.add('- Which stock needs attention?');
       lines.add('- What can you say from the data I have?');
     }
+    if (response.risks.isNotEmpty || response.blockedReason != null) {
+      lines.add('');
+      lines.add('Missing data / limits:');
+      if (response.blockedReason != null) {
+        lines.add('- ${response.blockedReason}');
+      }
+      lines.addAll(response.risks.take(4).map((item) => '- $item'));
+    }
     return lines.join('\n');
   }
 
-  String _firstRiskToCheck(AiCfoConversationResponse response) {
+  String _currentPictureLine(AiCfoConversationResponse response) {
+    if (response.evidence.isEmpty) {
+      return response.message;
+    }
+    final leadEvidence = response.evidence.take(3).map((item) {
+      return '${item.label}: ${item.value}';
+    }).join('; ');
+    return 'This view is based on ${response.evidence.length} local evidence record${response.evidence.length == 1 ? '' : 's'} available now: $leadEvidence.';
+  }
+
+  String _changedOrMissingLine(AiCfoConversationResponse response) {
+    if (response.risks.isNotEmpty) {
+      return response.risks.take(2).join(' ');
+    }
+    if (response.evidence.isEmpty) {
+      return 'The app is missing enough recorded activity to compare trends yet. Add products, customers, invoices, sales, payments, or expenses to make the answer stronger.';
+    }
+    return 'No trend change is being claimed from this snapshot alone. Keep recording daily sales, collections, expenses, and stock updates so the next review can compare movement.';
+  }
+
+  String _riskLine(AiCfoConversationResponse response) {
     final hasLowConfidence = response.evidence
         .any((item) => item.confidence == AiCfoEvidenceConfidence.low);
     if (hasLowConfidence) {
-      return '- Verify low-confidence evidence before making a financial decision.';
+      return 'Some evidence is low confidence, so verify the underlying records before making a financial decision.';
     }
     if (response.risks.isNotEmpty) {
-      return '- ${response.risks.first}';
+      return response.risks.first;
     }
-    return '- Ask for a focused cash flow, inventory, profit, or receivables review before acting.';
+    if (response.evidence.isEmpty) {
+      return 'The main risk is acting without enough local evidence.';
+    }
+    return 'No critical risk is proven from this answer alone; review cash flow, stock, profit, or receivables before acting.';
+  }
+
+  String _recommendedNextActionLine(AiCfoConversationResponse response) {
+    if (response.type == AiCfoResponseType.blocked ||
+        response.intent == AiCfoConversationIntent.unsupported) {
+      return 'Ask for one focused area, such as cash flow, inventory, profit, receivables, or evidence explanation.';
+    }
+    if (response.evidence.isEmpty) {
+      return 'Add one real business record, then ask the same question again so the answer can use evidence.';
+    }
+    switch (response.intent) {
+      case AiCfoConversationIntent.cashflowReview:
+        return 'Check unpaid invoices, recent collections, and upcoming expenses before spending or discounting.';
+      case AiCfoConversationIntent.inventoryReview:
+        return 'Review low-stock or out-of-stock items, then decide what to reorder based on demand and margin.';
+      case AiCfoConversationIntent.profitReview:
+        return 'Compare selling price, cost, sales volume, and expenses before changing prices or buying more stock.';
+      case AiCfoConversationIntent.receivablesReview:
+        return 'Follow up on customer balances with the highest exposure first.';
+      case AiCfoConversationIntent.explainEvidence:
+        return 'Use the evidence list below to check the source records, then ask a narrower follow-up if needed.';
+      case AiCfoConversationIntent.businessHealth:
+        return 'Pick the weakest area next: cash flow, stock, profit, or customer collection.';
+      case AiCfoConversationIntent.createProposal:
+      case AiCfoConversationIntent.approveProposal:
+      case AiCfoConversationIntent.deferProposal:
+      case AiCfoConversationIntent.executeProposal:
+        return 'Review the proposal details and approve only when the numbers match your records.';
+      case AiCfoConversationIntent.unsupported:
+        return 'Ask for one focused area, such as cash flow, inventory, profit, receivables, or evidence explanation.';
+    }
   }
 
   AiResponseMetadata _kernelResponseMetadata(
