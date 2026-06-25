@@ -1202,7 +1202,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Center(
-              child: Text('Error loading domain reports',
+              child: Text('Error loading financial summary',
                   style: TextStyle(color: AppTheme.aiRed)));
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
