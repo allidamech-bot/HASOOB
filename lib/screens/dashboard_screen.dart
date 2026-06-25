@@ -23,12 +23,14 @@ import 'package:hasoob_app/screens/add_product_screen.dart';
 import 'package:hasoob_app/screens/business_profile_screen.dart';
 import 'package:hasoob_app/screens/customers_screen.dart';
 import 'package:hasoob_app/screens/invoice_form_screen.dart';
+import 'package:hasoob_app/screens/inventory_screen.dart';
 import 'package:hasoob_app/screens/collection_center_screen.dart';
 import 'package:hasoob_app/screens/settings_screen.dart';
 import 'package:hasoob_app/screens/_dashboard_dock_spacer.dart';
 import 'package:hasoob_app/core/business/daily_decision_engine.dart';
 import 'package:hasoob_app/features/dashboard/data/models/dashboard_summary_model.dart';
 import 'package:hasoob_app/features/dashboard/data/repositories/dashboard_repository_factory.dart';
+import 'package:hasoob_app/features/ai_accountant/presentation/screens/ai_accountant_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -358,6 +360,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(
                   horizontal: AiMobileConfig.horizontalPadding),
+              child: _buildOperatingFocusCard(context, copy, data),
+            ),
+            const SizedBox(height: AiMobileConfig.sectionGap),
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AiMobileConfig.horizontalPadding),
               child: _buildMobileFinancialHealthAndKPIs(summary, copy),
             ),
             const SizedBox(height: AiMobileConfig.sectionGap),
@@ -534,6 +542,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ],
               ),
               const SizedBox(height: 14),
+              _buildOperatingFocusCard(context, copy, data),
+              const SizedBox(height: 14),
               _buildKpiGrid(summary, copy, true),
               const SizedBox(height: 16),
               Row(
@@ -633,6 +643,161 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildOperatingFocusCard(
+    BuildContext context,
+    AppCopy copy,
+    ReportsSnapshot data,
+  ) {
+    final focus = _dashboardFocus(context, copy, data);
+    return AiGlassCard(
+      borderColor: focus.color.withValues(alpha: 0.22),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: focus.color.withValues(alpha: 0.12),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: focus.color.withValues(alpha: 0.24)),
+            ),
+            child: Icon(focus.icon, color: focus.color, size: 22),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  copy.isEnglish ? 'Today\'s Operating Focus' : 'تركيز اليوم',
+                  style: const TextStyle(
+                    color: AppTheme.aiTextPrimary,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  focus.title,
+                  style: const TextStyle(
+                    color: AppTheme.aiTextPrimary,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  focus.subtitle,
+                  style: const TextStyle(
+                    color: AppTheme.aiTextSecondary,
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 12),
+                AiActionButton(
+                  label: focus.actionLabel,
+                  icon: focus.actionIcon,
+                  color: focus.color,
+                  isSmall: true,
+                  onTap: focus.onTap,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  _DashboardFocus _dashboardFocus(
+    BuildContext context,
+    AppCopy copy,
+    ReportsSnapshot data,
+  ) {
+    if (data.totalProducts == 0) {
+      return _DashboardFocus(
+        title: copy.isEnglish ? 'Add your first product' : 'أضف أول منتج',
+        subtitle: copy.isEnglish
+            ? 'Products unlock stock tracking, Quick Sell, product profit, and useful reports.'
+            : 'المنتجات تفتح تتبع المخزون والبيع السريع وتقارير الربح.',
+        actionLabel: copy.t('dashboardAddProduct'),
+        icon: Icons.inventory_2_outlined,
+        actionIcon: Icons.add_rounded,
+        color: AppTheme.aiBlue,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AddProductScreen()),
+        ),
+      );
+    }
+    if (data.salesRecords.isEmpty) {
+      return _DashboardFocus(
+        title: copy.isEnglish ? 'Record the first sale' : 'سجل أول عملية بيع',
+        subtitle: copy.isEnglish
+            ? 'You have products. Open Inventory and use Quick Sell on the product being sold.'
+            : 'لديك منتجات. افتح المخزون واستخدم البيع السريع على المنتج المباع.',
+        actionLabel:
+            copy.isEnglish ? 'Open Inventory to Quick Sell' : 'فتح المخزون',
+        icon: Icons.point_of_sale_rounded,
+        actionIcon: Icons.sell_rounded,
+        color: AppTheme.aiGold,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const InventoryScreen()),
+        ),
+      );
+    }
+    if (data.lowStockItems.isNotEmpty) {
+      return _DashboardFocus(
+        title: copy.isEnglish ? 'Review low stock' : 'راجع المخزون المنخفض',
+        subtitle: copy.isEnglish
+            ? '${data.lowStockItems.length} product${data.lowStockItems.length == 1 ? '' : 's'} need stock attention before promising more sales.'
+            : 'توجد منتجات تحتاج متابعة قبل الالتزام بمبيعات جديدة.',
+        actionLabel: copy.isEnglish ? 'Open Inventory' : 'فتح المخزون',
+        icon: Icons.warning_amber_rounded,
+        actionIcon: Icons.inventory_2_rounded,
+        color: AppTheme.aiRed,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const InventoryScreen()),
+        ),
+      );
+    }
+    if (data.recentSales.isNotEmpty || data.totalSales > 0) {
+      return _DashboardFocus(
+        title: copy.isEnglish
+            ? 'Ask AI CFO what changed'
+            : 'اسأل المدير المالي الذكي',
+        subtitle: copy.isEnglish
+            ? 'Sales data exists. Ask which products are moving, what stock to check, and whether performance evidence is strong enough.'
+            : 'توجد بيانات مبيعات. اسأل عن حركة المنتجات والمخزون والبيانات الناقصة.',
+        actionLabel: copy.isEnglish ? 'Open AI CFO' : 'فتح المدير المالي',
+        icon: Icons.psychology_rounded,
+        actionIcon: Icons.chat_bubble_outline_rounded,
+        color: AppTheme.aiGreen,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AiAccountantScreen()),
+        ),
+      );
+    }
+    return _DashboardFocus(
+      title: copy.isEnglish ? 'Create a customer document' : 'أنشئ مستند عميل',
+      subtitle: copy.isEnglish
+          ? 'Use an invoice for a confirmed sale. Use a quotation before the customer agrees.'
+          : 'استخدم الفاتورة للبيع المؤكد وعرض السعر قبل موافقة العميل.',
+      actionLabel: copy.t('dashboardCreateInvoice'),
+      icon: Icons.receipt_long_rounded,
+      actionIcon: Icons.receipt_long_rounded,
+      color: AppTheme.aiGold,
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const InvoiceFormScreen()),
       ),
     );
   }
@@ -1722,4 +1887,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
     );
   }
+}
+
+class _DashboardFocus {
+  const _DashboardFocus({
+    required this.title,
+    required this.subtitle,
+    required this.actionLabel,
+    required this.icon,
+    required this.actionIcon,
+    required this.color,
+    required this.onTap,
+  });
+
+  final String title;
+  final String subtitle;
+  final String actionLabel;
+  final IconData icon;
+  final IconData actionIcon;
+  final Color color;
+  final VoidCallback onTap;
 }

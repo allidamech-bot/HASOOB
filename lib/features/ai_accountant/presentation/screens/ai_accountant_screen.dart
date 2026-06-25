@@ -1109,6 +1109,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             const SizedBox(height: 10),
             _buildCommandSignalStrip(isDesktop: false),
             const SizedBox(height: 10),
+            _buildDailyOperatingBrief(compact: true),
+            const SizedBox(height: 10),
             Expanded(child: _buildConversationPanel(isDesktop: false)),
           ],
         ),
@@ -1122,6 +1124,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           _buildExecutiveCommandHeader(isDesktop: true),
           const SizedBox(height: 12),
           _buildCommandSignalStrip(isDesktop: true),
+          const SizedBox(height: 12),
+          _buildDailyOperatingBrief(compact: false),
           const SizedBox(height: 14),
           Expanded(
             child: Row(
@@ -1226,6 +1230,134 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildDailyOperatingBrief({required bool compact}) {
+    final metadata = _latestMetadata();
+    final risks = _latestRisks()
+        .where((risk) => risk.title != 'No major risk detected')
+        .toList();
+    final recommendations = _latestRecommendations();
+    final missing = metadata?.missingEvidence.take(2).toList() ?? const [];
+    final evidenceLine = metadata == null || metadata.evidenceCount == 0
+        ? 'No evidence checked yet in this session.'
+        : '${metadata.evidenceCount} evidence record${metadata.evidenceCount == 1 ? '' : 's'} checked at ${metadata.confidenceLabel.toLowerCase()} confidence.';
+    final missingLine = missing.isEmpty
+        ? 'Ask for a focused review to identify missing data.'
+        : missing.join(' ');
+    final riskLine = risks.isEmpty
+        ? 'First risk: acting before enough sales, stock, invoice, or cash evidence is available.'
+        : 'First risk: ${risks.first.title}. ${risks.first.description}';
+    final actionLine = recommendations.isNotEmpty
+        ? recommendations.first.title
+        : (metadata == null || metadata.evidenceCount == 0
+            ? 'Add products, record a Quick Sell sale, or create an invoice, then ask for a business health review.'
+            : 'Ask a narrower question about cash flow, stock, profit, receivables, or sales movement.');
+    const suggestedQuestion =
+        'After my latest sale, which products are moving and what stock should I check?';
+
+    return Container(
+      padding: EdgeInsets.all(compact ? 12 : 14),
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.today_outlined, color: goldAccent, size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Daily Operating Brief',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              _statusPill('Beta', goldAccent),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _dailyBriefChip('Data exists', evidenceLine, Icons.folder_copy),
+              _dailyBriefChip('Missing data', missingLine, Icons.rule_rounded),
+              _dailyBriefChip(
+                  'First risk', riskLine, Icons.warning_amber_rounded),
+              _dailyBriefChip('Next action', actionLine, Icons.route_rounded),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _isAnalyzing || _isCommitting
+                  ? null
+                  : () => _processAiCommand(customText: suggestedQuestion),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+              label: const Text('Ask about sales movement'),
+              style: TextButton.styleFrom(
+                foregroundColor: goldAccent,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dailyBriefChip(String label, String value, IconData icon) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 190, maxWidth: 330),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: darkBg.withValues(alpha: 0.38),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: goldAccent, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: textSecondary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    height: 1.25,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
