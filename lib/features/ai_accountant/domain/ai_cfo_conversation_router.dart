@@ -286,7 +286,7 @@ class AiCfoConversationRouter {
       AiCfoContextArea.cash =>
         'Add issued invoices, recorded payments, expenses, or ledger entries next. After that you can ask "what cash risk should I watch this week?".',
       AiCfoContextArea.sales =>
-        'Record sales or issue invoices with product quantities and prices next. After that you can ask "which products are driving profit?".',
+        'Record sales through Quick Sell or issue invoices with product quantities and prices next. After that you can ask "which products are moving?", "is sales data enough to judge performance?", or "what stock should I check?".',
       AiCfoContextArea.inventory =>
         'Add products with stock, cost, selling price, and low-stock thresholds next. After that you can ask "which stock needs attention?".',
       AiCfoContextArea.receivables =>
@@ -304,7 +304,7 @@ class AiCfoConversationRouter {
       AiCfoContextArea.cash =>
         'You can next ask about collection timing, expense pressure, or whether cash evidence is still incomplete.',
       AiCfoContextArea.sales =>
-        'You can next ask for product margin, weak sales evidence, or what data would make the profit view stronger.',
+        'You can next ask which products are moving, whether sales are enough to judge performance, what stock to check, or what sales data is still missing.',
       AiCfoContextArea.inventory =>
         'You can next ask about low-stock risk, reorder priorities, or slow-moving inventory evidence.',
       AiCfoContextArea.receivables =>
