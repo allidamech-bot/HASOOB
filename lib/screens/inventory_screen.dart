@@ -16,6 +16,7 @@ import '../widgets/ai_design_system.dart';
 import 'add_product_screen.dart';
 import 'edit_product_screen.dart';
 import 'product_details_screen.dart';
+import 'sales_history_screen.dart';
 import 'sell_product_screen.dart';
 import '../features/inventory/data/models/inventory_item.dart';
 import '../features/inventory/domain/repositories/inventory_repository.dart';
@@ -787,11 +788,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 isSmall: true,
                 onTap: product.isOutOfStock
                     ? () {}
-                    : () {
-                        Navigator.push(
+                    : () async {
+                        final recorded = await Navigator.push<bool>(
                           context,
                           MaterialPageRoute(
                             builder: (_) => SellProductScreen(product: product),
+                          ),
+                        );
+                        if (!mounted || recorded != true) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SalesHistoryScreen(),
                           ),
                         );
                       },
