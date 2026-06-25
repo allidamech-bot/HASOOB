@@ -122,12 +122,12 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       );
     }
 
-    final fresh = await _repo.getQuotationById(id, _businessId);
+    final fresh = await _repo.getQuotationById(_businessId, id);
     if (fresh == null) {
       throw Exception(copy.t('documentsErrorQuotationNotFound'));
     }
 
-    final items = await _repo.getQuotationItems(id, _businessId);
+    final items = await _repo.getQuotationItems(_businessId, id);
     final profile = await _profileRepo.getBusinessProfile(_businessId);
 
     final result = await _export.generateQuotationPdf(

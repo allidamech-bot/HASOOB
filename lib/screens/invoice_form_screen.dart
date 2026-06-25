@@ -97,12 +97,12 @@ class _InvoiceFormScreenState extends State<InvoiceFormScreen> {
 
       if (_isFromQuotation) {
         final quotation = await _invoiceRepository.getQuotationById(
-          widget.sourceQuotationId!,
           businessId,
+          widget.sourceQuotationId!,
         );
         final quotationItems = await _invoiceRepository.getQuotationItems(
-          widget.sourceQuotationId!,
           businessId,
+          widget.sourceQuotationId!,
         );
 
         if (quotation != null) {

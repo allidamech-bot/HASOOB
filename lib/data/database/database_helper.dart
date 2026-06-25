@@ -2612,7 +2612,6 @@ class DBHelper {
 
     final db = await database();
     final quotationId = _newTextId('QT');
-    late final String quotationNumber;
     final createdAt = issueDate ?? DateTime.now().toIso8601String();
     final normalizedItems = _normalizeDocumentItems(items);
     if (normalizedItems.isEmpty) {
@@ -2625,10 +2624,12 @@ class DBHelper {
 
     final normalizedCurrencyCode = AppCurrency.sanitizeLabel(currencyCode);
     final currentBranchId = BranchContext().currentBranchId;
+    late String quotationNumber;
+    late String finalBranchId;
 
     await db.transaction((txn) async {
       quotationNumber = await _nextDocumentNumber(txn, prefix: 'QT');
-      final finalBranchId = branchId ?? currentBranchId;
+      finalBranchId = branchId ?? currentBranchId ?? '';
 
       await txn.insert('quotations', {
         'id': quotationId,
@@ -2658,16 +2659,15 @@ class DBHelper {
           'line_total': item['line_total'],
         });
       }
-
-      await AuditService().log(
-        businessId: businessId,
-        entityType: 'quotation',
-        entityId: quotationId,
-        action: 'create',
-        newValue:
-            'Quotation #$quotationNumber created for branch $finalBranchId',
-      );
     });
+
+    await AuditService().log(
+      businessId: businessId,
+      entityType: 'quotation',
+      entityId: quotationId,
+      action: 'create',
+      newValue: 'Quotation #$quotationNumber created for branch $finalBranchId',
+    );
 
     return quotationId;
   }
@@ -2779,7 +2779,6 @@ class DBHelper {
 
     final db = await database();
     final invoiceId = _newTextId('INV');
-    late final String invoiceNumber;
     final invoiceDate = issueDate ?? DateTime.now().toIso8601String();
     final normalizedItems = _normalizeDocumentItems(items);
     if (normalizedItems.isEmpty) {
@@ -2802,10 +2801,12 @@ class DBHelper {
             dueDate: dueDate,
           )
         : 'draft';
+    late String invoiceNumber;
+    late String finalBranchId;
 
     await db.transaction((txn) async {
       invoiceNumber = await _nextDocumentNumber(txn, prefix: 'INV');
-      final finalBranchId = branchId ?? currentBranchId;
+      finalBranchId = branchId ?? currentBranchId ?? '';
 
       await _ensureDefaultAccounts(txn, businessId);
       await _repairAccountNames(txn, businessId);
@@ -2988,15 +2989,15 @@ class DBHelper {
           });
         }
       }
-
-      await AuditService().log(
-        businessId: businessId,
-        entityType: 'invoice',
-        entityId: invoiceId,
-        action: 'create',
-        newValue: 'Invoice #$invoiceNumber created for branch $finalBranchId',
-      );
     });
+
+    await AuditService().log(
+      businessId: businessId,
+      entityType: 'invoice',
+      entityId: invoiceId,
+      action: 'create',
+      newValue: 'Invoice #$invoiceNumber created for branch $finalBranchId',
+    );
 
     return invoiceId;
   }
@@ -3022,9 +3023,11 @@ class DBHelper {
     late double newPaid;
     late double newRemaining;
     late String updatedStatus;
+    late String finalBranchId;
+    late String invoiceNumber;
 
     await db.transaction((txn) async {
-      final finalBranchId = branchId ?? currentBranchId;
+      finalBranchId = branchId ?? currentBranchId ?? '';
       await _ensureDefaultAccounts(txn, businessId);
       await _repairAccountNames(txn, businessId);
 
@@ -3039,6 +3042,7 @@ class DBHelper {
       }
 
       final invoice = invoiceRows.first;
+      invoiceNumber = invoice['invoice_number']?.toString() ?? '';
       if ((invoice['status']?.toString() ?? '') == 'draft' ||
           _toInt(invoice['accounting_posted']) != 1) {
         throw Exception('يجب إصدار الفاتورة قبل تسجيل دفعات عليها.');
@@ -3100,19 +3104,19 @@ class DBHelper {
         debitAccountId: cashAccountId,
         creditAccountId: receivablesAccountId,
         amount: amount,
-        description: 'سداد على الفاتورة ${invoice['invoice_number']}',
+        description: 'سداد على الفاتورة $invoiceNumber',
         date: normalizedDate,
       );
-
-      await AuditService().log(
-        businessId: businessId,
-        entityType: 'payment',
-        entityId: paymentId,
-        action: 'create',
-        newValue:
-            'Payment of $amount for invoice ${invoice['invoice_number']} in branch $finalBranchId',
-      );
     });
+
+    await AuditService().log(
+      businessId: businessId,
+      entityType: 'payment',
+      entityId: paymentId,
+      action: 'create',
+      newValue:
+          'Payment of $amount for invoice $invoiceNumber in branch $finalBranchId',
+    );
 
     return paymentId;
   }
