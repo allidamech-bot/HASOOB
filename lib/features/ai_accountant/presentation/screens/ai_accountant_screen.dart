@@ -440,7 +440,17 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             'Review business health',
             'Continue discussion',
           ]
-        : const <String>[];
+        : response.evidence.isEmpty
+            ? const [
+                'What data is missing?',
+                'Review inventory risk',
+                'Review cash flow',
+              ]
+            : const [
+                'Explain evidence',
+                'What data is missing?',
+                'Review next risk',
+              ];
     _appendMessage(
       role: AiChatRole.assistant,
       type: response.isBlocked
@@ -523,6 +533,16 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     if (response.risks.isNotEmpty) {
       lines.add('Missing data / limits:');
       lines.addAll(response.risks.take(4).map((item) => '- $item'));
+    }
+    if (response.evidence.isEmpty) {
+      lines.add('What to add next:');
+      lines.add('- Products with stock, cost, and selling price.');
+      lines.add('- Customers and invoices with paid or unpaid balances.');
+      lines.add('- Recorded sales, payments, expenses, or ledger entries.');
+      lines.add('Useful next questions:');
+      lines.add('- What cash-flow data is missing?');
+      lines.add('- Which stock needs attention?');
+      lines.add('- What can you say from the data I have?');
     }
     return lines.join('\n');
   }

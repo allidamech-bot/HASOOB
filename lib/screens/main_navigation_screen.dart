@@ -118,7 +118,7 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
                     sheetContext: sheetContext,
                     icon: Icons.person_add_rounded,
                     iconColor: AppTheme.aiGreen,
-                    label: copy.t('addCustomer'),
+                    label: copy.t('customersTitle'),
                     onTap: () {
                       Navigator.pop(sheetContext);
                       Navigator.push(

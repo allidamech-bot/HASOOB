@@ -63,7 +63,8 @@ class _SellProductScreenState extends State<SellProductScreen> {
   double get _enteredUnitPrice =>
       double.tryParse(_priceController.text.trim()) ?? 0;
 
-  String? get _currencyCode => AppCurrency.sanitizeLabel(_currencyController.text);
+  String? get _currencyCode =>
+      AppCurrency.sanitizeLabel(_currencyController.text);
 
   double get _enteredTotal => _qty * _enteredUnitPrice;
 
@@ -73,13 +74,19 @@ class _SellProductScreenState extends State<SellProductScreen> {
   String? get _validationMessage {
     final copy = AppCopy.of(context);
     if (_qty <= 0) {
-      return copy.t('sellInvalidQty');
+      return copy.isEnglish
+          ? 'Enter a sale quantity greater than zero.'
+          : 'أدخل كمية بيع أكبر من صفر.';
     }
     if (_qty > widget.product.stockQty) {
-      return copy.t('sellQtyTooHigh');
+      return copy.isEnglish
+          ? 'Only ${widget.product.stockQty} ${widget.product.unit} are available. Reduce the quantity or adjust stock first.'
+          : 'المتاح فقط ${widget.product.stockQty} ${widget.product.unit}. خفض الكمية أو عدل المخزون أولا.';
     }
     if (_enteredUnitPrice < 0) {
-      return copy.t('sellNegativePrice');
+      return copy.isEnglish
+          ? 'Selling price cannot be negative.'
+          : 'سعر البيع لا يمكن أن يكون سالبا.';
     }
     return null;
   }
@@ -136,6 +143,34 @@ class _SellProductScreenState extends State<SellProductScreen> {
             Card(
               child: Padding(
                 padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Icon(
+                      Icons.info_outline_rounded,
+                      color: AppTheme.accent,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        copy.isEnglish
+                            ? 'Review quantity, price, customer, and note before confirming. The sale is recorded only if saving succeeds, then stock and sales history update.'
+                            : 'راجع الكمية والسعر والعميل والملاحظة قبل التأكيد. لا يتم تسجيل البيع إلا بعد نجاح الحفظ، ثم يتحدث المخزون وسجل المبيعات.',
+                        style: TextStyle(
+                          color: AppTheme.textSecondaryFor(context),
+                          height: 1.4,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -146,7 +181,8 @@ class _SellProductScreenState extends State<SellProductScreen> {
                           ),
                     ),
                     const SizedBox(height: 8),
-                    Text(copy.sellAvailableStock(product.stockQty, product.unit)),
+                    Text(copy.sellAvailableStock(
+                        product.stockQty, product.unit)),
                     Text(copy.sellDefaultPrice(
                       AppFormatters.currency(product.sellingPrice),
                     )),
@@ -185,13 +221,17 @@ class _SellProductScreenState extends State<SellProductScreen> {
               keyboardType: TextInputType.number,
               decoration: InputDecoration(
                 labelText: copy.t('quantity'),
+                helperText: copy.isEnglish
+                    ? 'Available: ${product.stockQty} ${product.unit}'
+                    : 'المتاح: ${product.stockQty} ${product.unit}',
                 prefixIcon: const Icon(Icons.confirmation_number_rounded),
               ),
             ),
             const SizedBox(height: 12),
             TextFormField(
               controller: _priceController,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
               decoration: InputDecoration(
                 labelText: copy.t('sellingPrice'),
                 helperText: _currencyCode ?? copy.t('noCurrencySpecified'),
@@ -203,6 +243,9 @@ class _SellProductScreenState extends State<SellProductScreen> {
               controller: _customerController,
               decoration: InputDecoration(
                 labelText: copy.t('customerNameOptional'),
+                helperText: copy.isEnglish
+                    ? 'Useful for customer statements and later follow-up.'
+                    : 'مفيد لكشف العميل والمتابعة لاحقا.',
                 prefixIcon: const Icon(Icons.person_outline_rounded),
               ),
             ),
@@ -286,7 +329,9 @@ class _SellProductScreenState extends State<SellProductScreen> {
                     )
                   : const Icon(Icons.check_circle_outline_rounded),
               label: Text(
-                _isSubmitting ? copy.t('submittingSale') : copy.t('confirmSale'),
+                _isSubmitting
+                    ? copy.t('submittingSale')
+                    : copy.t('confirmSale'),
               ),
             ),
           ],

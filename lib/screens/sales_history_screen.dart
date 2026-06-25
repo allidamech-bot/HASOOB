@@ -13,6 +13,7 @@ import '../widgets/premium/premium_card.dart';
 import '../widgets/sync_status_indicator.dart';
 import '../widgets/ai_design_system.dart';
 import 'documents_screen.dart';
+import 'inventory_screen.dart';
 import 'collection_center_screen.dart' as collection;
 
 enum SalesPeriodFilter { all, today, last7Days, last30Days }
@@ -70,8 +71,9 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
     return rows.where((row) {
       final productName = row['product_name']?.toString().toLowerCase() ?? '';
       final customerName = row['customer_name']?.toString().toLowerCase() ?? '';
-      final matchesSearch =
-          query.isEmpty || productName.contains(query) || customerName.contains(query);
+      final matchesSearch = query.isEmpty ||
+          productName.contains(query) ||
+          customerName.contains(query);
 
       if (!matchesSearch) return false;
 
@@ -115,22 +117,24 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           final originalRows = snapshot.data ?? const [];
           final filteredRows = _applyFilters(originalRows);
 
-          final totalSalesVal = originalRows.fold<double>(0, (sum, item) => sum + _toDouble(item['total_sale']));
-          final totalProfitVal = originalRows.fold<double>(0, (sum, item) => sum + _toDouble(item['total_profit']));
+          final totalSalesVal = originalRows.fold<double>(
+              0, (sum, item) => sum + _toDouble(item['total_sale']));
+          final totalProfitVal = originalRows.fold<double>(
+              0, (sum, item) => sum + _toDouble(item['total_profit']));
           final transactionCount = filteredRows.length;
 
           return CustomScrollView(
             slivers: [
               SliverToBoxAdapter(
                 child: AiPageHeader(
-                  title: copy.isEnglish ? 'Sales & Invoices' : 'العملاء والفواتير',
-                  subtitle: copy.isEnglish 
+                  title:
+                      copy.isEnglish ? 'Sales & Invoices' : 'العملاء والفواتير',
+                  subtitle: copy.isEnglish
                       ? 'Track sales operations, profit margins, and customer accounts.'
                       : 'تتبع المبيعات المباشرة، فواتير العملاء، الأرباح المحققة والمدفوعات.',
                   actions: const [SyncStatusIndicator()],
                 ),
               ),
-
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(20, 24, 20, 24),
                 sliver: SliverToBoxAdapter(
@@ -149,19 +153,25 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                         childAspectRatio: isDesktop ? 2.5 : 1.5,
                         children: [
                           AiKpiCard(
-                            label: copy.isEnglish ? 'Total Sales' : 'إجمالي المبيعات',
+                            label: copy.isEnglish
+                                ? 'Total Sales'
+                                : 'إجمالي المبيعات',
                             value: AppFormatters.currency(totalSalesVal),
                             icon: Icons.payments_rounded,
                             accentColor: AppTheme.aiGold,
                           ),
                           AiKpiCard(
-                            label: copy.isEnglish ? 'Total Profit' : 'صافي الأرباح',
+                            label: copy.isEnglish
+                                ? 'Total Profit'
+                                : 'صافي الأرباح',
                             value: AppFormatters.currency(totalProfitVal),
                             icon: Icons.trending_up_rounded,
                             accentColor: AppTheme.aiGreen,
                           ),
                           AiKpiCard(
-                            label: copy.isEnglish ? 'Filtered Txns' : 'العمليات المصفاة',
+                            label: copy.isEnglish
+                                ? 'Filtered Txns'
+                                : 'العمليات المصفاة',
                             value: '$transactionCount',
                             icon: Icons.point_of_sale_rounded,
                             accentColor: AppTheme.aiBlue,
@@ -182,16 +192,22 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           children: [
                             AiSearchField(
                               controller: _searchController,
-                              hintText: copy.isEnglish ? 'Search sales by product or customer...' : 'ابحث باسم المنتج أو اسم العميل...',
+                              hintText: copy.isEnglish
+                                  ? 'Search sales by product or customer...'
+                                  : 'ابحث باسم المنتج أو اسم العميل...',
                               onClear: _searchController.clear,
                             ),
                             const SizedBox(height: 16),
                             DropdownButtonFormField<SalesPeriodFilter>(
                               initialValue: _periodFilter,
                               dropdownColor: AppTheme.aiCardElevated,
-                              style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.bold),
+                              style: const TextStyle(
+                                  color: AppTheme.aiTextPrimary,
+                                  fontWeight: FontWeight.bold),
                               decoration: InputDecoration(
-                                labelText: copy.isEnglish ? 'Time Period' : 'فترة العمليات',
+                                labelText: copy.isEnglish
+                                    ? 'Time Period'
+                                    : 'فترة العمليات',
                                 filled: true,
                                 fillColor: AppTheme.aiCardElevated,
                               ),
@@ -227,14 +243,17 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                             ),
                           ),
                           AiActionButton(
-                            label: copy.isEnglish ? 'New Sale' : 'تسجيل عملية مبيعات',
+                            label: copy.isEnglish
+                                ? 'New Sale'
+                                : 'تسجيل عملية مبيعات',
                             icon: Icons.add_shopping_cart_rounded,
                             color: AppTheme.aiGold,
                             isSmall: true,
                             onTap: () {
                               Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const DocumentsScreen()),
+                                MaterialPageRoute(
+                                    builder: (_) => const DocumentsScreen()),
                               );
                             },
                           ),
@@ -244,8 +263,11 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
 
                       if (snapshot.hasError)
                         _buildErrorState(context, copy, snapshot.error)
-                      else if (!hasData && snapshot.connectionState == ConnectionState.waiting)
-                        const Center(child: CircularProgressIndicator(color: AppTheme.aiGold))
+                      else if (!hasData &&
+                          snapshot.connectionState == ConnectionState.waiting)
+                        const Center(
+                            child: CircularProgressIndicator(
+                                color: AppTheme.aiGold))
                       else if (originalRows.isEmpty)
                         _buildEmptyState(context, copy)
                       else if (filteredRows.isEmpty)
@@ -253,8 +275,12 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           padding: const EdgeInsets.all(32),
                           child: Center(
                             child: Text(
-                              copy.isEnglish ? 'No matching sales records found.' : 'لا توجد سجلات مبيعات مطابقة لبحثك وتصفيتك.',
-                              style: const TextStyle(color: AppTheme.aiTextSecondary, fontWeight: FontWeight.bold),
+                              copy.isEnglish
+                                  ? 'No matching sales records found.'
+                                  : 'لا توجد سجلات مبيعات مطابقة لبحثك وتصفيتك.',
+                              style: const TextStyle(
+                                  color: AppTheme.aiTextSecondary,
+                                  fontWeight: FontWeight.bold),
                             ),
                           ),
                         )
@@ -264,10 +290,14 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           final qty = _toInt(row['qty']);
                           final unitPrice = _toDouble(row['selling_price']);
                           final totalSale = _toDouble(row['total_sale']);
-                          final currencyCode = row['currency_code']?.toString().trim();
-                          final customerName = row['customer_name']?.toString().trim() ?? '';
-                          final saleNote = row['sale_note']?.toString().trim() ?? '';
-                          final productName = row['product_name']?.toString().trim() ?? '';
+                          final currencyCode =
+                              row['currency_code']?.toString().trim();
+                          final customerName =
+                              row['customer_name']?.toString().trim() ?? '';
+                          final saleNote =
+                              row['sale_note']?.toString().trim() ?? '';
+                          final productName =
+                              row['product_name']?.toString().trim() ?? '';
 
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 12),
@@ -284,10 +314,12 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                                     width: 46,
                                     height: 46,
                                     decoration: BoxDecoration(
-                                      color: AppTheme.aiGold.withValues(alpha: 0.12),
+                                      color: AppTheme.aiGold
+                                          .withValues(alpha: 0.12),
                                       borderRadius: BorderRadius.circular(14),
                                       border: Border.all(
-                                        color: AppTheme.aiGold.withValues(alpha: 0.2),
+                                        color: AppTheme.aiGold
+                                            .withValues(alpha: 0.2),
                                       ),
                                     ),
                                     child: const Icon(
@@ -298,15 +330,18 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                                   const SizedBox(width: 14),
                                   Expanded(
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         Row(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
                                           children: [
                                             Expanded(
                                               child: Text(
                                                 productName.isEmpty
-                                                    ? copy.salesHistoryProductFallback()
+                                                    ? copy
+                                                        .salesHistoryProductFallback()
                                                     : productName,
                                                 style: const TextStyle(
                                                   fontWeight: FontWeight.w800,
@@ -317,8 +352,20 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                                             ),
                                             const SizedBox(width: 12),
                                             Column(
-                                              crossAxisAlignment: CrossAxisAlignment.end,
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.end,
                                               children: [
+                                                Text(
+                                                  copy.isEnglish
+                                                      ? 'Sale total'
+                                                      : 'إجمالي البيع',
+                                                  style: const TextStyle(
+                                                    color: AppTheme.aiTextMuted,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
                                                 Text(
                                                   AppFormatters.currency(
                                                     totalSale,
@@ -330,7 +377,18 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                                                     color: AppTheme.aiGold,
                                                   ),
                                                 ),
-                                                const SizedBox(height: 4),
+                                                const SizedBox(height: 6),
+                                                Text(
+                                                  copy.isEnglish
+                                                      ? 'Profit'
+                                                      : 'الربح',
+                                                  style: const TextStyle(
+                                                    color: AppTheme.aiTextMuted,
+                                                    fontSize: 10,
+                                                    fontWeight: FontWeight.w800,
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
                                                 Text(
                                                   AppFormatters.currency(
                                                     totalProfit,
@@ -379,7 +437,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                                         if (customerName.isNotEmpty) ...[
                                           const SizedBox(height: 8),
                                           Text(
-                                            copy.salesHistoryCustomer(customerName),
+                                            copy.salesHistoryCustomer(
+                                                customerName),
                                             style: const TextStyle(
                                               color: AppTheme.aiTextSecondary,
                                               fontSize: 12,
@@ -434,11 +493,17 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, color: AppTheme.aiRed, size: 48),
+            const Icon(Icons.error_outline_rounded,
+                color: AppTheme.aiRed, size: 48),
             const SizedBox(height: 16),
             Text(
-              copy.isEnglish ? 'Error loading sales history' : 'فشل تحميل بيانات المبيعات من الخادم.',
-              style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.w800, fontSize: 15),
+              copy.isEnglish
+                  ? 'Error loading sales history'
+                  : 'فشل تحميل بيانات المبيعات من الخادم.',
+              style: const TextStyle(
+                  color: AppTheme.aiTextPrimary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -454,24 +519,51 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
   }
 
   Widget _buildEmptyState(BuildContext context, AppCopy copy) {
-    return AiMobileEmptyState(
-      icon: Icons.point_of_sale_rounded,
-      title: copy.isEnglish ? 'No sales yet' : 'لا توجد مبيعات بعد',
-      subtitle: copy.isEnglish ? 'Start by registering your first sale.' : 'ابدأ بتسجيل أول عملية مبيعات.',
-      actionLabel: copy.isEnglish ? 'New Sale' : 'تسجيل عملية مبيعات',
-      onAction: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const DocumentsScreen()),
-        );
-      },
+    return Column(
+      children: [
+        AiMobileEmptyState(
+          icon: Icons.point_of_sale_rounded,
+          title: copy.isEnglish ? 'No sales yet' : 'لا توجد مبيعات بعد',
+          subtitle: copy.isEnglish
+              ? 'Start by registering your first sale.'
+              : 'ابدأ بتسجيل أول عملية مبيعات.',
+          actionLabel: copy.isEnglish ? 'New Sale' : 'تسجيل عملية مبيعات',
+          onAction: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const DocumentsScreen()),
+            );
+          },
+        ),
+        const SizedBox(height: 12),
+        Wrap(
+          alignment: WrapAlignment.center,
+          spacing: 12,
+          runSpacing: 12,
+          children: [
+            OutlinedButton.icon(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const InventoryScreen()),
+                );
+              },
+              icon: const Icon(Icons.inventory_2_outlined),
+              label: Text(copy.t('navInventory')),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
   Widget _buildCollectionCenterCard(BuildContext context, AppCopy copy) {
     return GestureDetector(
       onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => const collection.CollectionCenterScreen()));
+        Navigator.push(
+            context,
+            MaterialPageRoute(
+                builder: (_) => const collection.CollectionCenterScreen()));
       },
       child: PremiumCard(
         padding: const EdgeInsets.all(0),
@@ -486,7 +578,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                   color: AppTheme.aiRed.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.warning_amber_rounded, color: AppTheme.aiRed),
+                child: const Icon(Icons.warning_amber_rounded,
+                    color: AppTheme.aiRed),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -514,7 +607,8 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                   ],
                 ),
               ),
-              const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.aiTextMuted, size: 16),
+              const Icon(Icons.arrow_forward_ios_rounded,
+                  color: AppTheme.aiTextMuted, size: 16),
             ],
           ),
         ),
