@@ -527,8 +527,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       'Current picture:',
       _currentPictureLine(response),
       '',
-      'What changed / what is missing:',
-      _changedOrMissingLine(response),
+      'Available evidence:',
+      _availableEvidenceLine(response),
+      '',
+      'Missing data:',
+      _missingDataLine(response),
       '',
       'Risk:',
       _riskLine(response),
@@ -538,7 +541,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     ];
     if (response.evidence.isNotEmpty) {
       lines.add('');
-      lines.add('What you already have:');
+      lines.add('Evidence details:');
       lines.addAll(response.evidence
           .take(4)
           .map((item) => '- ${item.label}: ${item.value}'));
@@ -578,7 +581,22 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     return 'This view is based on ${response.evidence.length} local evidence record${response.evidence.length == 1 ? '' : 's'} available now: $leadEvidence.';
   }
 
-  String _changedOrMissingLine(AiCfoConversationResponse response) {
+  String _availableEvidenceLine(AiCfoConversationResponse response) {
+    if (response.evidence.isEmpty) {
+      return 'No usable local evidence is attached to this answer yet.';
+    }
+    final sources = response.evidence
+        .map((item) => item.source)
+        .where((source) => source.trim().isNotEmpty)
+        .toSet()
+        .take(3)
+        .join(', ');
+    return sources.isEmpty
+        ? 'Evidence exists, but the source labels are incomplete.'
+        : 'I can use evidence from: $sources.';
+  }
+
+  String _missingDataLine(AiCfoConversationResponse response) {
     if (response.risks.isNotEmpty) {
       return response.risks.take(2).join(' ');
     }

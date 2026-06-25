@@ -407,7 +407,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ),
         child: Text(
           copy.isEnglish
-              ? 'This section shows records from the newer inventory data layer. Use the main inventory list above for Quick Sell actions.'
+              ? 'This catalog is for reference. To record a sale, use the main inventory list above and choose Quick Sell on the product.'
               : 'يعرض هذا القسم سجلات من طبقة بيانات المخزون الأحدث. استخدم قائمة المخزون الرئيسية أعلاه للبيع السريع.',
           style: const TextStyle(
             color: AppTheme.aiTextSecondary,
@@ -613,7 +613,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         child: AiMobileEmptyState(
           title: copy.isEnglish ? 'No products yet' : 'لا توجد أصناف بعد',
           subtitle: copy.isEnglish
-              ? 'Add items to track stock and sales.'
+              ? 'Add products first. Sales are recorded from a product card with Quick Sell.'
               : 'أضف منتجاتك الأولى لبدء التتبع والمبيعات.',
           icon: Icons.inventory_2_rounded,
           actionLabel: copy.isEnglish ? 'Add Item' : 'إضافة صنف',
@@ -634,7 +634,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 ? 'No products in inventory yet'
                 : 'لا توجد أصناف في المخزون بعد',
             subtitle: copy.isEnglish
-                ? 'Start by adding your first product to manage costs, pricing, and profitability.'
+                ? 'Start by adding your first product. Once stock exists, open the product card and use Quick Sell to record a sale.'
                 : 'أضف أول صنف لبدء إدارة المخزون، وحساب التكلفة والربحية وتقييم الأصول.',
             action: AiActionButton(
               label: copy.isEnglish ? 'Add Product' : 'أضف أول صنف الآن',
@@ -661,7 +661,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 Expanded(
                   child: Text(
                     copy.isEnglish
-                        ? 'AI Hint: You can sync products from the cloud sync center instantly.'
+                        ? 'Sale path: add a product, keep its stock updated, then use Quick Sell on that product to record the sale.'
                         : 'تلميح ذكي: يمكنك استيراد ومزامنة أصنافك المسجلة سحابياً مباشرة من مركز المزامنة.',
                     style: const TextStyle(
                         color: AppTheme.aiGold,
@@ -764,6 +764,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
             ],
           ),
           const SizedBox(height: 20),
+          if (!product.isOutOfStock) ...[
+            Text(
+              copy.isEnglish
+                  ? 'Use Quick Sell to record a sale for this product.'
+                  : 'استخدم البيع السريع لتسجيل بيع هذا المنتج.',
+              style: const TextStyle(
+                color: AppTheme.aiTextSecondary,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           Wrap(
             spacing: 12,
             runSpacing: 12,

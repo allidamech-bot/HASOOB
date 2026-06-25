@@ -130,7 +130,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                   title:
                       copy.isEnglish ? 'Sales & Invoices' : 'العملاء والفواتير',
                   subtitle: copy.isEnglish
-                      ? 'Track sales operations, profit margins, and customer accounts.'
+                      ? 'Review recorded sales, profit margins, and customer invoice activity.'
                       : 'تتبع المبيعات المباشرة، فواتير العملاء، الأرباح المحققة والمدفوعات.',
                   actions: const [SyncStatusIndicator()],
                 ),
@@ -244,7 +244,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           ),
                           AiActionButton(
                             label: copy.isEnglish
-                                ? 'Open Inventory for Quick Sale'
+                                ? 'Open Inventory to Quick Sell'
                                 : 'تسجيل عملية مبيعات',
                             icon: Icons.add_shopping_cart_rounded,
                             color: AppTheme.aiGold,
@@ -525,9 +525,11 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           icon: Icons.point_of_sale_rounded,
           title: copy.isEnglish ? 'No sales yet' : 'لا توجد مبيعات بعد',
           subtitle: copy.isEnglish
-              ? 'Sales appear here after you sell a stocked product. Open Inventory, choose a product, then use Quick Sell.'
+              ? 'Sales appear here after you Quick Sell a stocked product from Inventory.'
               : 'ابدأ بتسجيل أول عملية مبيعات.',
-          actionLabel: copy.isEnglish ? 'Open Inventory' : 'تسجيل عملية مبيعات',
+          actionLabel: copy.isEnglish
+              ? 'Open Inventory to Quick Sell'
+              : 'تسجيل عملية مبيعات',
           onAction: () {
             Navigator.push(
               context,

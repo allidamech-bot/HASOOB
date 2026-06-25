@@ -990,7 +990,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
                   title: empty,
                   subtitle: emptySubtitle ??
                       (AppCopy.of(context).isEnglish
-                          ? "No transactions recorded in this category yet."
+                          ? "This section needs real products, sales, or invoices before it can guide a decision."
                           : "ظ„ظ… ظٹطھظ… طھط³ط¬ظٹظ„ ط£ظٹ ط¹ظ…ظ„ظٹط§طھ طھط¬ط§ط±ظٹط© ط£ظˆ ظ…ط¨ظٹط¹ط§طھ طپظٹ ط‡ط°ط§ ط§ظ„ظ‚ط³ظ… ط­طھظ‰ ط§ظ„ط¢ظ†."),
                 ),
                 const SizedBox(height: 12),

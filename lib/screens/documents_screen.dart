@@ -382,7 +382,11 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
               : Icons.request_quote_rounded,
         ),
         label: Text(
-          _showInvoices ? copy.t('newInvoice') : copy.t('quotations'),
+          _showInvoices
+              ? copy.t('newInvoice')
+              : copy.isEnglish
+                  ? 'New Quotation'
+                  : copy.t('documentsTabQuotations'),
         ),
       ),
       body: RefreshIndicator(
