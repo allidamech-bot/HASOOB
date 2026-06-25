@@ -469,8 +469,12 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                         const SizedBox(height: 8),
                         Text(
                           _showInvoices
-                              ? copy.documentsEmptySubtitle()
-                              : copy.quotationsEmptySubtitle(),
+                              ? (copy.isEnglish
+                                  ? 'Create an invoice after the customer confirms the sale. Use it to track what should be collected and what is already paid.'
+                                  : 'أنشئ فاتورة بعد تأكيد البيع مع العميل. استخدمها لتتبع المبلغ المطلوب تحصيله وما تم دفعه.')
+                              : (copy.isEnglish
+                                  ? 'Create a quotation while the customer is still reviewing price or quantity. Convert it to an invoice only after the sale is accepted.'
+                                  : 'أنشئ عرض سعر عندما يكون العميل ما زال يراجع السعر أو الكمية. حوّله إلى فاتورة فقط بعد قبول البيع.'),
                           style: TextStyle(
                             fontSize: 12,
                             color: AppTheme.textSecondaryFor(context),

@@ -1420,9 +1420,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             copy.t('stockAlerts'), copy.t('dashboardStockThresholds')),
         const SizedBox(height: 16),
         if (data.lowStockItems.isEmpty)
-          _emptyCard(context,
-              icon: Icons.inventory_2_outlined,
-              text: copy.t('dashboardNoLowStock'))
+          _emptyCard(
+            context,
+            icon: Icons.inventory_2_outlined,
+            text: copy.t('dashboardNoLowStock'),
+            subtitle: copy.isEnglish
+                ? 'Nothing needs stock attention in the current snapshot. Keep product quantities updated so this stays useful.'
+                : 'لا توجد منتجات تحتاج انتباها في المخزون حاليا. حدّث كميات المنتجات حتى تبقى هذه البطاقة مفيدة.',
+          )
         else ...[
           ...preview.map((item) => Padding(
                 padding: const EdgeInsets.only(bottom: 12),
@@ -1575,8 +1580,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _emptyCard(BuildContext context,
-      {required IconData icon, required String text}) {
+  Widget _emptyCard(
+    BuildContext context, {
+    required IconData icon,
+    required String text,
+    String? subtitle,
+  }) {
     final copy = AppCopy.of(context);
     return AiGlassCard(
       borderColor: AppTheme.aiGold.withValues(alpha: 0.2),
@@ -1586,9 +1595,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           AiEmptyState(
             icon: icon,
             title: text,
-            subtitle: copy.isEnglish
-                ? "Start adding data to unlock insights and recommendations."
-                : "ابدأ بإضافة البيانات لتفعيل التحليلات والتوصيات.",
+            subtitle: subtitle ??
+                (copy.isEnglish
+                    ? "Start with a product, invoice, or sale so this dashboard can guide the next action."
+                    : "ابدأ بإضافة البيانات لتفعيل التحليلات والتوصيات."),
           ),
           const SizedBox(height: 12),
           Wrap(

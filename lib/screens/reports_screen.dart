@@ -848,6 +848,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ? 'Shows which products are driving sales and profit. Use it to decide what to reorder, promote, or price-check.'
           : null,
       empty: copy.t('noBestSellingData'),
+      emptySubtitle: copy.isEnglish
+          ? 'After you record sales for stocked products, this section will show demand and profit leaders. Add products, then record sales or invoices with quantities.'
+          : 'بعد تسجيل مبيعات المنتجات سيظهر هنا ما يحقق الطلب والربح. أضف المنتجات ثم سجل المبيعات أو الفواتير بالكميات.',
       children: data.bestSellingProducts.map((item) {
         return _ListSurface(
           child: ListTile(
@@ -882,6 +885,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ? 'Shows products that may interrupt sales soon. Check these before promising delivery or buying new stock.'
           : null,
       empty: copy.t('noLowStockNow'),
+      emptySubtitle: copy.isEnglish
+          ? 'This section will flag products below their stock threshold. Add products with quantities and keep stock updated after sales.'
+          : 'سيعرض هذا القسم المنتجات التي تنخفض عن حد المخزون. أضف المنتجات بكمياتها وحدّث المخزون بعد البيع.',
       children: data.lowStockItems.take(6).map((product) {
         return _ListSurface(
           child: ListTile(
@@ -916,6 +922,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ? 'Shows the latest recorded sales activity. If this is empty, reports will not yet show daily movement.'
           : null,
       empty: copy.t('noSalesYet'),
+      emptySubtitle: copy.isEnglish
+          ? 'Recent sales will appear after you sell stocked products or issue sales invoices. Add one real sale to start seeing movement.'
+          : 'ستظهر المبيعات الحديثة بعد بيع منتجات من المخزون أو إصدار فواتير بيع. سجّل عملية بيع حقيقية لبدء عرض الحركة.',
       children: data.recentSales.map((row) {
         return _ListSurface(
           child: ListTile(
@@ -956,6 +965,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     required String title,
     String? helper,
     required String empty,
+    String? emptySubtitle,
     required List<Widget> children,
   }) {
     return Column(
@@ -978,9 +988,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 AiEmptyState(
                   icon: Icons.analytics_outlined,
                   title: empty,
-                  subtitle: AppCopy.of(context).isEnglish
-                      ? "No transactions recorded in this category yet."
-                      : "ظ„ظ… ظٹطھظ… طھط³ط¬ظٹظ„ ط£ظٹ ط¹ظ…ظ„ظٹط§طھ طھط¬ط§ط±ظٹط© ط£ظˆ ظ…ط¨ظٹط¹ط§طھ طپظٹ ط‡ط°ط§ ط§ظ„ظ‚ط³ظ… ط­طھظ‰ ط§ظ„ط¢ظ†.",
+                  subtitle: emptySubtitle ??
+                      (AppCopy.of(context).isEnglish
+                          ? "No transactions recorded in this category yet."
+                          : "ظ„ظ… ظٹطھظ… طھط³ط¬ظٹظ„ ط£ظٹ ط¹ظ…ظ„ظٹط§طھ طھط¬ط§ط±ظٹط© ط£ظˆ ظ…ط¨ظٹط¹ط§طھ طپظٹ ط‡ط°ط§ ط§ظ„ظ‚ط³ظ… ط­طھظ‰ ط§ظ„ط¢ظ†."),
                 ),
                 const SizedBox(height: 12),
                 Wrap(
