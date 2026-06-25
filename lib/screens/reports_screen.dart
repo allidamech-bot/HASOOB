@@ -30,7 +30,7 @@ import '../features/shipping_logistics/presentation/widgets/container_simulation
 import '../features/analytics/presentation/widgets/autonomous_audit_widget.dart';
 import '../features/analytics/presentation/widgets/diagnostic_panel_widget.dart';
 import 'add_product_screen.dart';
-import 'documents_screen.dart';
+import 'invoice_form_screen.dart';
 
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:io' as io;
@@ -941,7 +941,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-Widget _listSection({
+  Widget _listSection({
     required String title,
     required String empty,
     required List<Widget> children,
@@ -967,33 +967,35 @@ Widget _listSection({
                 Wrap(
                   spacing: 12,
                   runSpacing: 12,
-alignment: WrapAlignment.center,
-                      children: [
-                        AiActionButton(
-                          label: AppCopy.of(context).t('dashboardAddProduct'),
-                          icon: Icons.add_rounded,
-                          color: AppTheme.aiBlue,
-                          isSmall: true,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const AddProductScreen()),
-                            );
-                          },
-                        ),
-                        AiActionButton(
-                          label: AppCopy.of(context).t('dashboardCreateInvoice'),
-                          icon: Icons.receipt_long_rounded,
-                          color: AppTheme.aiGold,
-                          isSmall: true,
-                          onTap: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (_) => const DocumentsScreen()),
-                            );
-                          },
-                        ),
-                      ],
+                  alignment: WrapAlignment.center,
+                  children: [
+                    AiActionButton(
+                      label: AppCopy.of(context).t('dashboardAddProduct'),
+                      icon: Icons.add_rounded,
+                      color: AppTheme.aiBlue,
+                      isSmall: true,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AddProductScreen()),
+                        );
+                      },
+                    ),
+                    AiActionButton(
+                      label: AppCopy.of(context).t('dashboardCreateInvoice'),
+                      icon: Icons.receipt_long_rounded,
+                      color: AppTheme.aiGold,
+                      isSmall: true,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const InvoiceFormScreen()),
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -1050,10 +1052,10 @@ alignment: WrapAlignment.center,
                 Text(
                   hasData
                       ? (copy.isEnglish
-                          ? 'Operating liquidity is growing robustly at +14.8%. The optimal financial path is to decrease customer invoice collection periods while maintaining stable stock levels of profitable items.'
-                          : 'ظ†ظ…ظˆ ط§ظ„ط³ظٹظˆظ„ط© ط§ظ„طھط´ط؛ظٹظ„ظٹط© ظˆط§ظ„ط±ط¨ط­ظٹط© ظ…ظ…طھط§ط² ط¨ظ†ط³ط¨ط© +14.8% ظ‡ط°ط§ ط§ظ„ط´ظ‡ط±. ط§ظ„ط®ظٹط§ط± ط§ظ„ظ…ط§ظ„ظٹ ط§ظ„ط£ظپط¶ظ„ ط§ظ„ط¢ظ† ظ‡ظˆ ط§ظ„ط¹ظ…ظ„ ط¹ظ„ظ‰ طھظ‚طµظٹط± ظپطھط±ط§طھ طھط­طµظٹظ„ ط§ظ„ظپظˆط§طھظٹط± ط§ظ„ظ…ظپطھظˆط­ط© ظ…ط¹ ط§ظ„ط­ظپط§ط¸ ط¹ظ„ظ‰ ظ…ط³طھظˆظٹط§طھ ظ…ط®ط²ظˆظ† ط¢ظ…ظ†ط© ظ„ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„ط£ظƒط«ط± ط±ط¨ط­ظٹط©.')
+                          ? 'Reports are using your recorded products and sales. Check customer collection, low-stock items, and profit evidence before making decisions.'
+                          : 'ظ†ظ…ظˆ ط§ظ„ط³ظٹظˆظ„ط© ط§ظ„طھط´ط؛ظٹظ„ظٹط© ظˆط§ظ„ط±ط¨ط­ظٹط© ظ…ظ…طھط§ط² ط¨ظ†ط³ط¨ط© حسب البيانات المسجلة ظ‡ط°ط§ ط§ظ„ط´ظ‡ط±. ط§ظ„ط®ظٹط§ط± ط§ظ„ظ…ط§ظ„ظٹ ط§ظ„ط£ظپط¶ظ„ ط§ظ„ط¢ظ† ظ‡ظˆ ط§ظ„ط¹ظ…ظ„ ط¹ظ„ظ‰ طھظ‚طµظٹط± ظپطھط±ط§طھ طھط­طµظٹظ„ ط§ظ„ظپظˆط§طھظٹط± ط§ظ„ظ…ظپطھظˆط­ط© ظ…ط¹ ط§ظ„ط­ظپط§ط¸ ط¹ظ„ظ‰ ظ…ط³طھظˆظٹط§طھ ظ…ط®ط²ظˆظ† ط¢ظ…ظ†ط© ظ„ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„ط£ظƒط«ط± ط±ط¨ط­ظٹط©.')
                       : (copy.isEnglish
-                          ? 'Not enough local financial data is available to generate diagnostic AI insights. Start recording sales transactions and products to construct your ultra-cockpit model.'
+                          ? 'Not enough local financial data is available for useful report insights yet. Add products, record sales, and issue invoices to make reports meaningful.'
                           : 'ظ„ط§ طھظˆط¬ط¯ ط¨ظٹط§ظ†ط§طھ ظ…ط§ظ„ظٹط© ظƒط§ظپظٹط© ط­ط§ظ„ظٹط§ظ‹ ظ„ط¥ط¬ط±ط§ط، ط§ظ„طھط­ظ„ظٹظ„ط§طھ ظˆط§ظ„طھظ‚ط¯ظٹط±ط§طھ ط§ظ„ط°ظƒظٹط© ط§ظ„طھظ†ط¨ط¤ظٹط©. ط£ط¶ظپ ط§ظ„ط£طµظ†ط§ظپ ظپظٹ ط§ظ„ظ…ط®ط²ظˆظ† ظˆط³ط¬ظ„ ظپظˆط§طھظٹط± ظ…ط¨ظٹط¹ط§طھظƒ ظ„طھظ…ظƒظٹظ† ظ†ظ…ظˆط°ط¬ ط§ظ„ط°ظƒط§ط، ط§ظ„ظ…ط§ظ„ظٹ ظ…ظ† ط­ط³ط§ط¨ ط§ظ„ظƒظپط§ط،ط© ط§ظ„ظ…ط§ظ„ظٹط© ظˆظ‡ط§ظ…ط´ ط§ظ„ط£ظ…ط§ظ†.'),
                   style: const TextStyle(
                     color: AppTheme.aiTextPrimary,
@@ -1163,9 +1165,8 @@ alignment: WrapAlignment.center,
                 hasAccentLine: true),
             const SizedBox(height: 16),
             GridView.count(
-              crossAxisCount: isDesktop
-                  ? 3
-                  : (UIResponsive.isPhone(context) ? 1 : 2),
+              crossAxisCount:
+                  isDesktop ? 3 : (UIResponsive.isPhone(context) ? 1 : 2),
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               shrinkWrap: true,

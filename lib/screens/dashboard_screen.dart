@@ -22,7 +22,7 @@ import 'package:hasoob_app/widgets/ai_robot_advisor.dart';
 import 'package:hasoob_app/screens/add_product_screen.dart';
 import 'package:hasoob_app/screens/business_profile_screen.dart';
 import 'package:hasoob_app/screens/customers_screen.dart';
-import 'package:hasoob_app/screens/documents_screen.dart';
+import 'package:hasoob_app/screens/invoice_form_screen.dart';
 import 'package:hasoob_app/screens/collection_center_screen.dart';
 import 'package:hasoob_app/screens/settings_screen.dart';
 import 'package:hasoob_app/screens/_dashboard_dock_spacer.dart';
@@ -65,12 +65,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final businessId = BusinessContext.businessId;
       final results = await Future.wait([
-        _reportService.buildSnapshot(businessId: businessId, forceRefresh: forceRefresh)
+        _reportService
+            .buildSnapshot(businessId: businessId, forceRefresh: forceRefresh)
             .timeout(const Duration(seconds: 10)),
       ]);
 
       final snapshot = results[0];
-      final decisions = await DailyDecisionEngine.instance.generateDecisions(businessId, snapshot);
+      final decisions = await DailyDecisionEngine.instance
+          .generateDecisions(businessId, snapshot);
 
       if (mounted) {
         setState(() {
@@ -125,14 +127,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
         throw Exception(copy.t('restoreOnlyWhenEmpty'));
       }
 
-      final products = await CloudSyncService.instance.fetchProducts(businessId);
+      final products =
+          await CloudSyncService.instance.fetchProducts(businessId);
       if (products.isEmpty) {
         throw Exception(copy.t('cloudProductsMissing'));
       }
 
-      final accounts = await CloudSyncService.instance.fetchAccounts(businessId);
-      final salesRecords = await CloudSyncService.instance.fetchSalesRecords(businessId);
-      final journalEntries = await CloudSyncService.instance.fetchJournalEntries(businessId);
+      final accounts =
+          await CloudSyncService.instance.fetchAccounts(businessId);
+      final salesRecords =
+          await CloudSyncService.instance.fetchSalesRecords(businessId);
+      final journalEntries =
+          await CloudSyncService.instance.fetchJournalEntries(businessId);
 
       final restoredCount = await DBHelper.restoreCloudSnapshotIfLocalEmpty(
         businessId: businessId,
@@ -149,7 +155,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
       AppMessages.success(context, copy.dashboardRestoreCount(restoredCount));
     } catch (error) {
       if (!mounted) return;
-      AppMessages.error(context, '${copy.t('loadDashboardRestoreError')}\n$error');
+      AppMessages.error(
+          context, '${copy.t('loadDashboardRestoreError')}\n$error');
     } finally {
       if (mounted) {
         setState(() => _isRestoring = false);
@@ -172,10 +179,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
           }
 
           return FloatingActionButton.extended(
-            onPressed: manager.isRunning ? null : () => manager.runSync(force: true),
-            backgroundColor: manager.isRunning
-                ? AppTheme.aiCardElevated
-                : AppTheme.aiGold,
+            onPressed:
+                manager.isRunning ? null : () => manager.runSync(force: true),
+            backgroundColor:
+                manager.isRunning ? AppTheme.aiCardElevated : AppTheme.aiGold,
             elevation: 8,
             icon: manager.isRunning
                 ? const SizedBox(
@@ -189,7 +196,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 : const Icon(Icons.sync_rounded, color: Colors.black),
             label: Text(
               manager.isRunning ? copy.t('syncRunning') : copy.t('syncNow'),
-              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w900),
+              style: const TextStyle(
+                  color: Colors.black, fontWeight: FontWeight.w900),
             ),
           );
         },
@@ -206,9 +214,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildBody(BuildContext context, AppCopy copy) {
     if (_isLoading && _cachedData == null) {
-      return const Center(child: CircularProgressIndicator(color: AppTheme.aiGold));
+      return const Center(
+          child: CircularProgressIndicator(color: AppTheme.aiGold));
     }
-    
+
     if (_error != null && _cachedData == null) {
       return _buildErrorState(context, copy, _error);
     }
@@ -217,10 +226,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       stream: _dashboardRepository.getDashboardSummary(),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Center(child: Text('Error: ${snapshot.error}', style: const TextStyle(color: AppTheme.aiRed)));
+          return Center(
+              child: Text('Error: ${snapshot.error}',
+                  style: const TextStyle(color: AppTheme.aiRed)));
         }
-        if (snapshot.connectionState == ConnectionState.waiting && !snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator(color: AppTheme.aiGold));
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const Center(
+              child: CircularProgressIndicator(color: AppTheme.aiGold));
         }
         final summary = snapshot.data;
         if (summary == null) return const SizedBox.shrink();
@@ -234,22 +247,26 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Container(
       decoration: const BoxDecoration(
         color: AppTheme.aiNavy,
-        border: Border(bottom: BorderSide(color: AppTheme.aiCardBorder, width: 1)),
+        border:
+            Border(bottom: BorderSide(color: AppTheme.aiCardBorder, width: 1)),
       ),
       child: SafeArea(
         bottom: false,
         child: Padding(
-          padding: const EdgeInsets.fromLTRB(AiMobileConfig.horizontalPadding, 12, AiMobileConfig.horizontalPadding, 12),
+          padding: const EdgeInsets.fromLTRB(AiMobileConfig.horizontalPadding,
+              12, AiMobileConfig.horizontalPadding, 12),
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Row(
                 children: [
-                  const Icon(Icons.psychology_rounded, color: AppTheme.aiGold, size: 20),
+                  const Icon(Icons.psychology_rounded,
+                      color: AppTheme.aiGold, size: 20),
                   const SizedBox(width: 8),
                   Text(
                     copy.isEnglish ? 'Hasoob' : 'حاسوب',
-                    style: AiMobileConfig.pageTitle.copyWith(color: AppTheme.aiGold),
+                    style: AiMobileConfig.pageTitle
+                        .copyWith(color: AppTheme.aiGold),
                   ),
                 ],
               ),
@@ -259,8 +276,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   const SyncStatusIndicator(),
                   const SizedBox(width: 12),
                   InkWell(
-                    onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SettingsScreen())),
-                    child: const Icon(Icons.settings_outlined, color: AppTheme.aiTextSecondary, size: 24),
+                    onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const SettingsScreen())),
+                    child: const Icon(Icons.settings_outlined,
+                        color: AppTheme.aiTextSecondary, size: 24),
                   ),
                 ],
               ),
@@ -274,42 +295,50 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Widget _buildMobileQuickActions(BuildContext context, AppCopy copy) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+      padding: const EdgeInsets.symmetric(
+          horizontal: AiMobileConfig.horizontalPadding),
       child: Row(
         children: [
           AiMobileActionCard(
             title: copy.t('dashboardAddProduct'),
             icon: Icons.add_box_rounded,
             color: AppTheme.aiBlue,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const AddProductScreen())),
           ),
           const SizedBox(width: 12),
           AiMobileActionCard(
             title: copy.t('dashboardCreateInvoice'),
             icon: Icons.receipt_long_rounded,
             color: AppTheme.aiGold,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen())),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const InvoiceFormScreen())),
           ),
           const SizedBox(width: 12),
           AiMobileActionCard(
-            title: copy.t('dashboardAddCustomer'),
+            title: copy.t('customersTitle'),
             icon: Icons.person_add_alt_1_rounded,
             color: AppTheme.aiGreen,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomersScreen())),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const CustomersScreen())),
           ),
           const SizedBox(width: 12),
           AiMobileActionCard(
             title: copy.isEnglish ? 'Collection Center' : 'مركز التحصيل',
             icon: Icons.account_balance_wallet_rounded,
             color: AppTheme.aiRed,
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen())),
+            onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const CollectionCenterScreen())),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildContent(BuildContext context, AppCopy copy, DashboardSummaryModel summary) {
+  Widget _buildContent(
+      BuildContext context, AppCopy copy, DashboardSummaryModel summary) {
     final data = _cachedData ?? ReportsSnapshot.empty();
     final lowStockPreview = data.lowStockItems.take(3).toList();
     final isDesktop = UIResponsive.isDesktop(context);
@@ -321,12 +350,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _buildMobileHeader(context, copy),
             const SizedBox(height: AiMobileConfig.sectionGap),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AiMobileConfig.horizontalPadding),
               child: _buildDecisionCommander(_decisions ?? [], copy),
             ),
             const SizedBox(height: AiMobileConfig.sectionGap),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AiMobileConfig.horizontalPadding),
               child: _buildMobileFinancialHealthAndKPIs(summary, copy),
             ),
             const SizedBox(height: AiMobileConfig.sectionGap),
@@ -335,7 +366,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             _buildMobileQuickActions(context, copy),
             const SizedBox(height: AiMobileConfig.sectionGap),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+              padding: const EdgeInsets.symmetric(
+                  horizontal: AiMobileConfig.horizontalPadding),
               child: Column(
                 children: [
                   _buildCashFlowPulseCard(copy),
@@ -383,7 +415,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   height: 2,
                   decoration: const BoxDecoration(
                     gradient: LinearGradient(
-                      colors: [Colors.transparent, AppTheme.aiGold, Colors.transparent],
+                      colors: [
+                        Colors.transparent,
+                        AppTheme.aiGold,
+                        Colors.transparent
+                      ],
                     ),
                   ),
                 ),
@@ -409,7 +445,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               const SizedBox(height: 4),
                               Row(
                                 children: [
-                                  const Icon(Icons.verified_user_rounded, color: AppTheme.aiGreen, size: 12),
+                                  const Icon(Icons.verified_user_rounded,
+                                      color: AppTheme.aiGreen, size: 12),
                                   const SizedBox(width: 6),
                                   Text(
                                     copy.t('dashboardSecureSession'),
@@ -435,7 +472,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               tooltip: copy.t('businessProfile'),
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const BusinessProfileScreen()),
+                                MaterialPageRoute(
+                                    builder: (_) =>
+                                        const BusinessProfileScreen()),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -445,7 +484,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               tooltip: copy.t('settings'),
                               onTap: () => Navigator.push(
                                 context,
-                                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                                MaterialPageRoute(
+                                    builder: (_) => const SettingsScreen()),
                               ),
                             ),
                             const SizedBox(width: 10),
@@ -488,14 +528,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 children: [
                   Expanded(flex: 3, child: _buildHealthScoreCard(data, copy)),
                   const SizedBox(width: 20),
-                  Expanded(flex: 4, child: _buildDecisionCommander(_decisions ?? [], copy)),
+                  Expanded(
+                      flex: 4,
+                      child: _buildDecisionCommander(_decisions ?? [], copy)),
                 ],
               ),
-
               const SizedBox(height: 14),
               _buildKpiGrid(summary, copy, true),
               const SizedBox(height: 16),
-
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -504,18 +544,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   Expanded(child: _buildDecisionSimulationCard(copy)),
                 ],
               ),
-
               const SizedBox(height: 16),
-
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Expanded(child: _buildObligationsCard(copy)),
                   const SizedBox(width: 16),
-                  Expanded(child: _buildSmartAlerts(copy, lowStockPreview.length)),
+                  Expanded(
+                      child: _buildSmartAlerts(copy, lowStockPreview.length)),
                 ],
               ),
-
               const SizedBox(height: 20),
               AppSectionHeader(
                 title: copy.t('quickActions'),
@@ -523,19 +561,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ),
               const SizedBox(height: 10),
               _buildQuickActionsStrip(context, copy),
-
               const SizedBox(height: 20),
               _buildRestoreCard(context, copy),
-
               const SizedBox(height: 20),
-
               if (isDesktop)
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: _stockSection(context, copy, data, lowStockPreview)),
+                    Expanded(
+                        child: _stockSection(
+                            context, copy, data, lowStockPreview)),
                     const SizedBox(width: 24),
-                    Expanded(child: _recentActivitiesSection(context, copy, summary)),
+                    Expanded(
+                        child:
+                            _recentActivitiesSection(context, copy, summary)),
                   ],
                 )
               else ...[
@@ -543,10 +582,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 const SizedBox(height: 28),
                 _recentActivitiesSection(context, copy, summary),
               ],
-
               const SizedBox(height: 120),
               if (!isDesktop)
-                SizedBox(height: DashboardDockSpacer.bottomReservedSpace(context)),
+                SizedBox(
+                    height: DashboardDockSpacer.bottomReservedSpace(context)),
             ]),
           ),
         ),
@@ -602,10 +641,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     int score = 0;
     String scoreLabel = copy.isEnglish ? 'Awaiting Data' : 'بانتظار البيانات';
     Color scoreColor = AppTheme.aiTextSecondary;
-    String desc1 = copy.isEnglish ? 'Not enough data.' : 'لا توجد بيانات كافية لقياس كفاءة التشغيل حالياً.';
-    String desc2 = copy.isEnglish ? 'Add items to start.' : 'ابدأ بإضافة منتجاتك ومبيعاتك الأولى لتفعيل مؤشر الصحة.';
+    String desc1 = copy.isEnglish
+        ? 'Not enough data.'
+        : 'لا توجد بيانات كافية لقياس كفاءة التشغيل حالياً.';
+    String desc2 = copy.isEnglish
+        ? 'Add items to start.'
+        : 'ابدأ بإضافة منتجاتك ومبيعاتك الأولى لتفعيل مؤشر الصحة.';
 
-    if (data != null && (data.totalProducts > 0 || data.salesRecords.isNotEmpty)) {
+    if (data != null &&
+        (data.totalProducts > 0 || data.salesRecords.isNotEmpty)) {
       score = 85;
       scoreLabel = copy.isEnglish ? 'Excellent' : 'ممتاز جداً';
       scoreColor = AppTheme.aiGreen;
@@ -616,8 +660,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
         scoreColor = AppTheme.aiGold;
       }
 
-      desc1 = copy.isEnglish 
-          ? 'You have ${data.totalProducts} active products.' 
+      desc1 = copy.isEnglish
+          ? 'You have ${data.totalProducts} active products.'
           : 'الكفاءة التشغيلية ممتازة، لديك ${data.totalProducts} صنف نشط.';
       desc2 = copy.isEnglish
           ? 'Total sales recorded is ${data.totalSales.toStringAsFixed(2)}.'
@@ -634,7 +678,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                copy.isEnglish ? 'Financial Health Score' : 'مؤشر الصحة المالية',
+                copy.isEnglish
+                    ? 'Financial Health Score'
+                    : 'مؤشر الصحة المالية',
                 style: const TextStyle(
                   color: AppTheme.aiTextPrimary,
                   fontSize: 16,
@@ -642,7 +688,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
                   color: scoreColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
@@ -694,7 +741,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildMobileFinancialHealthAndKPIs(DashboardSummaryModel summary, AppCopy copy) {
+  Widget _buildMobileFinancialHealthAndKPIs(
+      DashboardSummaryModel summary, AppCopy copy) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -707,18 +755,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
               children: [
                 Row(
                   children: [
-                    const Icon(Icons.monitor_heart_rounded, color: AppTheme.aiGreen, size: 16),
+                    const Icon(Icons.monitor_heart_rounded,
+                        color: AppTheme.aiGreen, size: 16),
                     const SizedBox(width: 4),
                     Text(
                       copy.isEnglish ? 'Health' : 'الصحة',
-                      style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11, fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                          color: AppTheme.aiTextSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
                 const SizedBox(height: 8),
                 const Text(
                   'مستقرة',
-                  style: TextStyle(color: AppTheme.aiGreen, fontSize: 16, fontWeight: FontWeight.w900),
+                  style: TextStyle(
+                      color: AppTheme.aiGreen,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 4),
                 const Text(
@@ -734,9 +789,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
           flex: 3,
           child: Column(
             children: [
-              _buildCompactKpiRow(Icons.point_of_sale_rounded, AppTheme.aiGold, copy.isEnglish ? 'Sales' : 'المبيعات', AppFormatters.currency(summary.totalSalesVolume)),
+              _buildCompactKpiRow(
+                  Icons.point_of_sale_rounded,
+                  AppTheme.aiGold,
+                  copy.isEnglish ? 'Sales' : 'المبيعات',
+                  AppFormatters.currency(summary.totalSalesVolume)),
               const SizedBox(height: 8),
-              _buildCompactKpiRow(Icons.people_alt_rounded, AppTheme.aiBlue, copy.isEnglish ? 'Customers' : 'العملاء', summary.activeCustomersCount.toString()),
+              _buildCompactKpiRow(
+                  Icons.people_alt_rounded,
+                  AppTheme.aiBlue,
+                  copy.isEnglish ? 'Customers' : 'العملاء',
+                  summary.activeCustomersCount.toString()),
             ],
           ),
         ),
@@ -744,25 +807,35 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildCompactKpiRow(IconData icon, Color color, String label, String value) {
+  Widget _buildCompactKpiRow(
+      IconData icon, Color color, String label, String value) {
     return PremiumCard(
       padding: const EdgeInsets.all(8),
       child: Row(
         children: [
           Container(
             padding: const EdgeInsets.all(4),
-            decoration: BoxDecoration(color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
+            decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.15), shape: BoxShape.circle),
             child: Icon(icon, color: color, size: 12),
           ),
           const SizedBox(width: 8),
-          Expanded(child: Text(label, style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11))),
-          Text(value, style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.bold)),
+          Expanded(
+              child: Text(label,
+                  style: const TextStyle(
+                      color: AppTheme.aiTextSecondary, fontSize: 11))),
+          Text(value,
+              style: const TextStyle(
+                  color: AppTheme.aiTextPrimary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold)),
         ],
       ),
     );
   }
 
-  Widget _buildDecisionCommander(List<BusinessDecision> decisions, AppCopy copy) {
+  Widget _buildDecisionCommander(
+      List<BusinessDecision> decisions, AppCopy copy) {
     return AiGlassCard(
       borderColor: AppTheme.aiGold.withValues(alpha: 0.4),
       glowColor: AppTheme.aiGold,
@@ -777,7 +850,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   color: AppTheme.aiGold.withValues(alpha: 0.15),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.psychology_rounded, color: AppTheme.aiGold, size: 24),
+                child: const Icon(Icons.psychology_rounded,
+                    color: AppTheme.aiGold, size: 24),
               ),
               const SizedBox(width: 12),
               const Text(
@@ -791,7 +865,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ],
           ),
           const SizedBox(height: 20),
-          if (decisions.isEmpty || decisions.any((d) => d.priority == DecisionPriority.info && d.title == 'إعداد بيانات النشاط التجاري'))
+          if (decisions.isEmpty ||
+              decisions.any((d) =>
+                  d.priority == DecisionPriority.info &&
+                  d.title == 'إعداد بيانات النشاط التجاري'))
             _buildEmptyDecisionState(copy)
           else
             ...decisions.map((d) => _decisionItem(d)),
@@ -812,18 +889,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          const Icon(Icons.analytics_outlined, color: AppTheme.aiTextSecondary, size: 48),
+          const Icon(Icons.analytics_outlined,
+              color: AppTheme.aiTextSecondary, size: 48),
           const SizedBox(height: 16),
           const Text(
             'لا توجد بيانات كافية لإصدار قرارات مالية دقيقة بعد',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.aiTextPrimary, fontSize: 15, fontWeight: FontWeight.bold),
+            style: TextStyle(
+                color: AppTheme.aiTextPrimary,
+                fontSize: 15,
+                fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 8),
           const Text(
             'أضف بياناتك الأولى ليقوم الذكاء المالي بتحليلها واقتراح أفضل الخطوات لك.',
             textAlign: TextAlign.center,
-            style: TextStyle(color: AppTheme.aiTextSecondary, fontSize: 13, height: 1.5),
+            style: TextStyle(
+                color: AppTheme.aiTextSecondary, fontSize: 13, height: 1.5),
           ),
           const SizedBox(height: 24),
           Wrap(
@@ -832,10 +914,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
             alignment: WrapAlignment.center,
             children: [
               _setupActionButton('إضافة منتج', Icons.inventory_2_outlined, () {
-                Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AddProductScreen()));
               }),
-              _setupActionButton('إنشاء فاتورة', Icons.receipt_long_outlined, () {}),
-              _setupActionButton('إضافة عميل', Icons.person_add_outlined, () {}),
+              _setupActionButton(
+                  'إنشاء فاتورة', Icons.receipt_long_outlined, () {}),
+              _setupActionButton(
+                  'إضافة عميل', Icons.person_add_outlined, () {}),
             ],
           ),
         ],
@@ -859,7 +946,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           children: [
             Icon(icon, color: AppTheme.aiBlue, size: 18),
             const SizedBox(width: 8),
-            Text(label, style: const TextStyle(color: AppTheme.aiBlue, fontSize: 13, fontWeight: FontWeight.bold)),
+            Text(label,
+                style: const TextStyle(
+                    color: AppTheme.aiBlue,
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold)),
           ],
         ),
       ),
@@ -929,7 +1020,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     const SizedBox(width: 4),
                     Text(
                       '${(decision.confidenceScore * 100).toInt()}% دقة',
-                      style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                          color: color,
+                          fontSize: 11,
+                          fontWeight: FontWeight.bold),
                     ),
                   ],
                 ),
@@ -939,7 +1033,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
           const SizedBox(height: 12),
           Text(
             decision.explanation,
-            style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 13, height: 1.5),
+            style: const TextStyle(
+                color: AppTheme.aiTextPrimary, fontSize: 13, height: 1.5),
           ),
           const SizedBox(height: 12),
           Container(
@@ -950,12 +1045,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
             child: Row(
               children: [
-                const Icon(Icons.data_usage_rounded, color: AppTheme.aiTextSecondary, size: 16),
+                const Icon(Icons.data_usage_rounded,
+                    color: AppTheme.aiTextSecondary, size: 16),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     decision.sourceDataSummary,
-                    style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12),
+                    style: const TextStyle(
+                        color: AppTheme.aiTextSecondary, fontSize: 12),
                   ),
                 ),
               ],
@@ -968,27 +1065,44 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onTap: () {
                 if (decision.navigationTarget != null) {
                   if (decision.navigationTarget == 'collection') {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const CollectionCenterScreen()));
                   } else if (decision.navigationTarget == 'invoices') {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen()));
-                  } else if (decision.navigationTarget == 'products' || decision.navigationTarget == 'inventory') {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const InvoiceFormScreen()));
+                  } else if (decision.navigationTarget == 'products' ||
+                      decision.navigationTarget == 'inventory') {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const AddProductScreen()));
                   }
                 }
               },
               borderRadius: BorderRadius.circular(8),
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                 decoration: BoxDecoration(
                   color: color,
                   borderRadius: BorderRadius.circular(8),
                   boxShadow: [
-                    BoxShadow(color: color.withValues(alpha: 0.3), blurRadius: 8, offset: const Offset(0, 2)),
+                    BoxShadow(
+                        color: color.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2)),
                   ],
                 ),
                 child: Text(
                   decision.suggestedActionLabel,
-                  style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold),
                 ),
               ),
             ),
@@ -998,45 +1112,46 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildKpiGrid(DashboardSummaryModel summary, AppCopy copy, bool isDesktop) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return GridView.count(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          crossAxisCount: isDesktop ? 4 : 2,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
-          childAspectRatio: isDesktop ? 1.7 : 2.2,
-          children: [
-            AiKpiCard(
-              label: copy.isEnglish ? 'Sales Volume' : 'حجم المبيعات',
-              value: AppFormatters.currency(summary.totalSalesVolume),
-              icon: Icons.point_of_sale_rounded,
-              accentColor: AppTheme.aiBlue,
-            ),
-            AiKpiCard(
-              label: copy.isEnglish ? 'Active Customers' : 'العملاء النشطون',
-              value: summary.activeCustomersCount.toString(),
-              icon: Icons.people_alt_rounded,
-              accentColor: AppTheme.aiGold,
-            ),
-            AiKpiCard(
-              label: copy.isEnglish ? 'Low Stock Alerts' : 'تنبيهات المخزون',
-              value: summary.lowStockItemsCount.toString(),
-              icon: Icons.warning_amber_rounded,
-              accentColor: summary.lowStockItemsCount > 0 ? AppTheme.aiRed : AppTheme.aiGreen,
-            ),
-            AiKpiCard(
-              label: copy.isEnglish ? 'Recovery Rate' : 'معدل التحصيل',
-              value: '${summary.recoveryRate.toStringAsFixed(2)}%',
-              icon: Icons.trending_up_rounded,
-              accentColor: AppTheme.success,
-            ),
-          ],
-        );
-      }
-    );
+  Widget _buildKpiGrid(
+      DashboardSummaryModel summary, AppCopy copy, bool isDesktop) {
+    return LayoutBuilder(builder: (context, constraints) {
+      return GridView.count(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
+        crossAxisCount: isDesktop ? 4 : 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: isDesktop ? 1.7 : 2.2,
+        children: [
+          AiKpiCard(
+            label: copy.isEnglish ? 'Sales Volume' : 'حجم المبيعات',
+            value: AppFormatters.currency(summary.totalSalesVolume),
+            icon: Icons.point_of_sale_rounded,
+            accentColor: AppTheme.aiBlue,
+          ),
+          AiKpiCard(
+            label: copy.isEnglish ? 'Active Customers' : 'العملاء النشطون',
+            value: summary.activeCustomersCount.toString(),
+            icon: Icons.people_alt_rounded,
+            accentColor: AppTheme.aiGold,
+          ),
+          AiKpiCard(
+            label: copy.isEnglish ? 'Low Stock Alerts' : 'تنبيهات المخزون',
+            value: summary.lowStockItemsCount.toString(),
+            icon: Icons.warning_amber_rounded,
+            accentColor: summary.lowStockItemsCount > 0
+                ? AppTheme.aiRed
+                : AppTheme.aiGreen,
+          ),
+          AiKpiCard(
+            label: copy.isEnglish ? 'Recovery Rate' : 'معدل التحصيل',
+            value: '${summary.recoveryRate.toStringAsFixed(2)}%',
+            icon: Icons.trending_up_rounded,
+            accentColor: AppTheme.success,
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildCashFlowPulseCard(AppCopy copy) {
@@ -1055,40 +1170,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   fontWeight: FontWeight.w900,
                 ),
               ),
-              const Icon(Icons.analytics_rounded, color: AppTheme.aiBlue, size: 18),
+              const Icon(Icons.analytics_rounded,
+                  color: AppTheme.aiBlue, size: 18),
             ],
           ),
-          const SizedBox(height: 20),
-          _pulseBar(copy.t('dashboardCashInflow'), 0.85, AppTheme.aiGreen, '14,200 ر.س'),
-          const SizedBox(height: 12),
-          _pulseBar(copy.t('dashboardCashOutflow'), 0.38, AppTheme.aiGold, '5,400 ر.س'),
+          const SizedBox(height: 14),
+          Text(
+            copy.isEnglish
+                ? 'Cash-flow pulse will become useful after invoices, payments, and expenses are recorded. Until then, ask AI CFO what cash-flow data is missing.'
+                : 'سيصبح نبض التدفق النقدي مفيدا بعد تسجيل الفواتير والمدفوعات والمصروفات. حتى ذلك الوقت، اسأل المدير المالي الذكي عن البيانات النقدية الناقصة.',
+            style: const TextStyle(
+              color: AppTheme.aiTextSecondary,
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _pulseBar(String label, double percentage, Color color, String amount) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(label, style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11, fontWeight: FontWeight.bold)),
-            Text(amount, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w900)),
-          ],
-        ),
-        const SizedBox(height: 6),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: LinearProgressIndicator(
-            value: percentage,
-            minHeight: 6,
-            backgroundColor: color.withValues(alpha: 0.1),
-            valueColor: AlwaysStoppedAnimation<Color>(color),
-          ),
-        ),
-      ],
     );
   }
 
@@ -1117,20 +1215,31 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 ),
                 child: Text(
                   copy.t('dashboardSimulationReady'),
-                  style: const TextStyle(color: AppTheme.aiGold, fontSize: 9, fontWeight: FontWeight.w800),
+                  style: const TextStyle(
+                      color: AppTheme.aiGold,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 18),
           Text(
-            copy.t('dashboardSimulationScenario'),
-            style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.w700),
+            copy.isEnglish
+                ? 'No simulation has been prepared yet.'
+                : 'لم يتم تجهيز محاكاة بعد.',
+            style: const TextStyle(
+                color: AppTheme.aiTextPrimary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
           Text(
-            copy.t('dashboardSimulationResult'),
-            style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11, height: 1.4),
+            copy.isEnglish
+                ? 'Use AI CFO to compare a purchase, pricing, cash-flow, or inventory decision after adding real products, costs, sales, and customer data.'
+                : 'استخدم المدير المالي الذكي لمقارنة قرار شراء أو تسعير أو تدفق نقدي أو مخزون بعد إضافة المنتجات والتكاليف والمبيعات وبيانات العملاء.',
+            style: const TextStyle(
+                color: AppTheme.aiTextSecondary, fontSize: 11, height: 1.4),
           ),
         ],
       ),
@@ -1150,29 +1259,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
               fontWeight: FontWeight.w900,
             ),
           ),
-          const SizedBox(height: 16),
-          _obligationItem(copy.t('dashboardObligation1'), '3,400 ر.س', copy.t('dashboardTomorrow'), AppTheme.aiGold),
-          const Divider(height: 20),
-          _obligationItem(copy.t('dashboardObligation2'), '12,000 ر.س', copy.t('dashboardIn3Days'), AppTheme.aiBlue),
+          const SizedBox(height: 12),
+          Text(
+            copy.isEnglish
+                ? 'No live obligations are shown here yet. Record invoices, payments, and due dates before relying on this card.'
+                : 'لا توجد التزامات مباشرة معروضة هنا بعد. سجل الفواتير والمدفوعات وتواريخ الاستحقاق قبل الاعتماد على هذه البطاقة.',
+            style: const TextStyle(
+              color: AppTheme.aiTextSecondary,
+              fontSize: 12,
+              height: 1.4,
+            ),
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _obligationItem(String title, String amount, String date, Color color) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(title, style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 13, fontWeight: FontWeight.w700)),
-            const SizedBox(height: 4),
-            Text(date, style: TextStyle(color: color, fontSize: 11, fontWeight: FontWeight.bold)),
-          ],
-        ),
-        Text(amount, style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 15, fontWeight: FontWeight.w900)),
-      ],
     );
   }
 
@@ -1206,7 +1305,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
             context,
             icon: Icons.add_box_rounded,
             title: copy.t('dashboardAddProduct'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const AddProductScreen())),
             accentColor: AppTheme.aiBlue,
           ),
           const SizedBox(width: 14),
@@ -1214,15 +1314,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
             context,
             icon: Icons.receipt_long_rounded,
             title: copy.t('dashboardCreateInvoice'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen())),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const InvoiceFormScreen())),
             accentColor: AppTheme.aiGold,
           ),
           const SizedBox(width: 14),
           _quickActionTile(
             context,
             icon: Icons.person_add_alt_1_rounded,
-            title: copy.t('dashboardAddCustomer'),
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CustomersScreen())),
+            title: copy.t('customersTitle'),
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const CustomersScreen())),
             accentColor: AppTheme.aiGreen,
           ),
           const SizedBox(width: 14),
@@ -1230,7 +1332,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
             context,
             icon: Icons.account_balance_wallet_rounded,
             title: copy.isEnglish ? 'Collection Center' : 'مركز التحصيل',
-            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen())),
+            onTap: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                    builder: (_) => const CollectionCenterScreen())),
             accentColor: AppTheme.aiRed,
           ),
         ],
@@ -1296,86 +1401,120 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _stockSection(BuildContext context, AppCopy copy, ReportsSnapshot data, List<dynamic> preview) {
+  Widget _stockSection(BuildContext context, AppCopy copy, ReportsSnapshot data,
+      List<dynamic> preview) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader(copy.t('stockAlerts'), copy.t('dashboardStockThresholds')),
+        _sectionHeader(
+            copy.t('stockAlerts'), copy.t('dashboardStockThresholds')),
         const SizedBox(height: 16),
         if (data.lowStockItems.isEmpty)
-          _emptyCard(context, icon: Icons.inventory_2_outlined, text: copy.t('dashboardNoLowStock'))
+          _emptyCard(context,
+              icon: Icons.inventory_2_outlined,
+              text: copy.t('dashboardNoLowStock'))
         else ...[
           ...preview.map((item) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: PremiumCard(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  _iconBox(item.isOutOfStock ? Icons.remove_shopping_cart_rounded : Icons.warning_amber_rounded, 
-                           item.isOutOfStock ? AppTheme.aiRed : AppTheme.aiGold),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(item.name, style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.w800, fontSize: 14)),
-                        const SizedBox(height: 4),
-                        Text(
-                          copy.dashboardStockLine(item.stockQty, item.unit, item.lowStockThreshold),
-                          style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12),
+                padding: const EdgeInsets.only(bottom: 12),
+                child: PremiumCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      _iconBox(
+                          item.isOutOfStock
+                              ? Icons.remove_shopping_cart_rounded
+                              : Icons.warning_amber_rounded,
+                          item.isOutOfStock ? AppTheme.aiRed : AppTheme.aiGold),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(item.name,
+                                style: const TextStyle(
+                                    color: AppTheme.aiTextPrimary,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14)),
+                            const SizedBox(height: 4),
+                            Text(
+                              copy.dashboardStockLine(item.stockQty, item.unit,
+                                  item.lowStockThreshold),
+                              style: const TextStyle(
+                                  color: AppTheme.aiTextSecondary,
+                                  fontSize: 12),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      _statusPill(
+                          item.isOutOfStock
+                              ? copy.t('outOfStock')
+                              : copy.t('lowStock'),
+                          item.isOutOfStock ? AppTheme.aiRed : AppTheme.aiGold),
+                    ],
                   ),
-                  _statusPill(item.isOutOfStock ? copy.t('outOfStock') : copy.t('lowStock'),
-                              item.isOutOfStock ? AppTheme.aiRed : AppTheme.aiGold),
-                ],
-              ),
-            ),
-          )),
+                ),
+              )),
         ],
       ],
     );
   }
 
-  Widget _recentActivitiesSection(BuildContext context, AppCopy copy, DashboardSummaryModel summary) {
+  Widget _recentActivitiesSection(
+      BuildContext context, AppCopy copy, DashboardSummaryModel summary) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _sectionHeader(copy.isEnglish ? 'Recent Activities' : 'النشاطات الأخيرة', copy.isEnglish ? 'Latest system events' : 'أحدث عمليات النظام'),
+        _sectionHeader(
+            copy.isEnglish ? 'Recent Activities' : 'النشاطات الأخيرة',
+            copy.isEnglish ? 'Latest system events' : 'أحدث عمليات النظام'),
         const SizedBox(height: 16),
         if (summary.recentActivities.isEmpty)
-          _emptyCard(context, icon: Icons.history_rounded, text: copy.isEnglish ? 'No recent activities' : 'لا توجد نشاطات حديثة')
+          _emptyCard(context,
+              icon: Icons.history_rounded,
+              text: copy.isEnglish
+                  ? 'No recent activities'
+                  : 'لا توجد نشاطات حديثة')
         else ...[
           ...summary.recentActivities.map((row) => Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: PremiumCard(
-              padding: const EdgeInsets.all(16),
-              child: Row(
-                children: [
-                  _iconBox(Icons.notifications_active_rounded, AppTheme.aiGold),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(row['title']?.toString() ?? '', style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.w800, fontSize: 14)),
-                        const SizedBox(height: 4),
-                        Text(
-                          row['subtitle']?.toString() ?? '',
-                          style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12),
+                padding: const EdgeInsets.only(bottom: 12),
+                child: PremiumCard(
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      _iconBox(
+                          Icons.notifications_active_rounded, AppTheme.aiGold),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(row['title']?.toString() ?? '',
+                                style: const TextStyle(
+                                    color: AppTheme.aiTextPrimary,
+                                    fontWeight: FontWeight.w800,
+                                    fontSize: 14)),
+                            const SizedBox(height: 4),
+                            Text(
+                              row['subtitle']?.toString() ?? '',
+                              style: const TextStyle(
+                                  color: AppTheme.aiTextSecondary,
+                                  fontSize: 12),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
+                      ),
+                      Text(
+                        row['time']?.toString() ?? '',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 11,
+                            color: AppTheme.aiTextSecondary),
+                      ),
+                    ],
                   ),
-                  Text(
-                    row['time']?.toString() ?? '',
-                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: AppTheme.aiTextSecondary),
-                  ),
-                ],
-              ),
-            ),
-          )),
+                ),
+              )),
         ],
       ],
     );
@@ -1385,9 +1524,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(title, style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.w900, fontSize: 17)),
+        Text(title,
+            style: const TextStyle(
+                color: AppTheme.aiTextPrimary,
+                fontWeight: FontWeight.w900,
+                fontSize: 17)),
         const SizedBox(height: 2),
-        Text(subtitle, style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12)),
+        Text(subtitle,
+            style:
+                const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12)),
       ],
     );
   }
@@ -1414,12 +1559,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 10),
+        style:
+            TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 10),
       ),
     );
   }
 
-  Widget _emptyCard(BuildContext context, {required IconData icon, required String text}) {
+  Widget _emptyCard(BuildContext context,
+      {required IconData icon, required String text}) {
     final copy = AppCopy.of(context);
     return AiGlassCard(
       borderColor: AppTheme.aiGold.withValues(alpha: 0.2),
@@ -1444,14 +1591,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 icon: Icons.add_rounded,
                 color: AppTheme.aiBlue,
                 isSmall: true,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AddProductScreen())),
               ),
               AiActionButton(
                 label: copy.t('dashboardCreateInvoice'),
                 icon: Icons.receipt_long_rounded,
                 color: AppTheme.aiGold,
                 isSmall: true,
-                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen())),
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const InvoiceFormScreen())),
               ),
             ],
           ),
@@ -1477,7 +1630,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: _refresh,
-              style: ElevatedButton.styleFrom(backgroundColor: AppTheme.aiGold, foregroundColor: Colors.black),
+              style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.aiGold,
+                  foregroundColor: Colors.black),
               child: Text(copy.t('retry')),
             ),
           ],

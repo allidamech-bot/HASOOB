@@ -244,7 +244,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                           ),
                           AiActionButton(
                             label: copy.isEnglish
-                                ? 'New Sale'
+                                ? 'Open Inventory for Quick Sale'
                                 : 'تسجيل عملية مبيعات',
                             icon: Icons.add_shopping_cart_rounded,
                             color: AppTheme.aiGold,
@@ -253,7 +253,7 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                    builder: (_) => const DocumentsScreen()),
+                                    builder: (_) => const InventoryScreen()),
                               );
                             },
                           ),
@@ -525,13 +525,13 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
           icon: Icons.point_of_sale_rounded,
           title: copy.isEnglish ? 'No sales yet' : 'لا توجد مبيعات بعد',
           subtitle: copy.isEnglish
-              ? 'Start by registering your first sale.'
+              ? 'Sales appear here after you sell a stocked product. Open Inventory, choose a product, then use Quick Sell.'
               : 'ابدأ بتسجيل أول عملية مبيعات.',
-          actionLabel: copy.isEnglish ? 'New Sale' : 'تسجيل عملية مبيعات',
+          actionLabel: copy.isEnglish ? 'Open Inventory' : 'تسجيل عملية مبيعات',
           onAction: () {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const DocumentsScreen()),
+              MaterialPageRoute(builder: (_) => const InventoryScreen()),
             );
           },
         ),
@@ -545,11 +545,13 @@ class _SalesHistoryScreenState extends State<SalesHistoryScreen> {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (_) => const InventoryScreen()),
+                  MaterialPageRoute(builder: (_) => const DocumentsScreen()),
                 );
               },
-              icon: const Icon(Icons.inventory_2_outlined),
-              label: Text(copy.t('navInventory')),
+              icon: const Icon(Icons.receipt_long_outlined),
+              label: Text(copy.isEnglish
+                  ? 'Create invoice instead'
+                  : copy.t('newInvoice')),
             ),
           ],
         ),

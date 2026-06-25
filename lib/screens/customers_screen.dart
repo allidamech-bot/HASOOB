@@ -263,7 +263,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
           children: [
             Text(
               copy.isEnglish
-                  ? 'Customer Directory (Domain Layer)'
+                  ? 'Additional Customer Catalog'
                   : 'دليل العملاء — طبقة النطاق',
               style: const TextStyle(
                 color: AppTheme.aiBlue,
@@ -275,8 +275,25 @@ class _CustomersScreenState extends State<CustomersScreen> {
         )
       else
         AiMobileSectionHeader(
-          title: copy.isEnglish ? 'Customer Directory' : 'دليل العملاء',
+          title:
+              copy.isEnglish ? 'Additional Customer Catalog' : 'دليل العملاء',
         ),
+
+      Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+        ),
+        child: Text(
+          copy.isEnglish
+              ? 'This section shows customer records from the newer customer data layer. It may overlap with the main list while both data paths are active.'
+              : 'يعرض هذا القسم سجلات العملاء من طبقة بيانات العملاء الأحدث، وقد يتداخل مع القائمة الرئيسية أثناء عمل المسارين.',
+          style: const TextStyle(
+            color: AppTheme.aiTextSecondary,
+            fontSize: 12,
+            height: 1.35,
+          ),
+        ),
+      ),
 
       SizedBox(height: isDesktop ? 16 : AiMobileConfig.sectionGap),
 
@@ -303,7 +320,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 padding: const EdgeInsets.all(24),
                 child: Center(
                   child: Text(
-                    copy.isEnglish ? 'No customers found.' : 'لا يوجد عملاء.',
+                    copy.isEnglish
+                        ? 'No additional customer records found.'
+                        : 'لا يوجد عملاء.',
                     style: const TextStyle(
                       color: AppTheme.aiTextSecondary,
                       fontWeight: FontWeight.bold,

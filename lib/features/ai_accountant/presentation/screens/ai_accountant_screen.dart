@@ -525,10 +525,14 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       response.message,
     ];
     if (response.evidence.isNotEmpty) {
-      lines.add('Evidence:');
+      lines.add('What you already have:');
       lines.addAll(response.evidence
-          .take(6)
-          .map((item) => '- ${item.label}: ${item.value} (${item.source})'));
+          .take(4)
+          .map((item) => '- ${item.label}: ${item.value}'));
+      lines.add('Evidence sources:');
+      lines.addAll(response.evidence.take(6).map((item) => '- ${item.source}'));
+      lines.add('Risk to check first:');
+      lines.add(_firstRiskToCheck(response));
     }
     if (response.risks.isNotEmpty) {
       lines.add('Missing data / limits:');
@@ -545,6 +549,18 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       lines.add('- What can you say from the data I have?');
     }
     return lines.join('\n');
+  }
+
+  String _firstRiskToCheck(AiCfoConversationResponse response) {
+    final hasLowConfidence = response.evidence
+        .any((item) => item.confidence == AiCfoEvidenceConfidence.low);
+    if (hasLowConfidence) {
+      return '- Verify low-confidence evidence before making a financial decision.';
+    }
+    if (response.risks.isNotEmpty) {
+      return '- ${response.risks.first}';
+    }
+    return '- Ask for a focused cash flow, inventory, profit, or receivables review before acting.';
   }
 
   AiResponseMetadata _kernelResponseMetadata(

@@ -207,7 +207,7 @@ class AiCfoConversationRouter {
         intent: AiCfoConversationIntent.explainEvidence,
         title: 'Evidence explanation',
         message: _withCompleteness(
-          'There is no evidence in the current snapshot to explain.',
+          'There is no evidence in the current snapshot to explain. Add products, customers, invoices, sales, payments, or expenses first; then ask me to explain which records support the answer.',
           context,
         ),
       );
