@@ -435,7 +435,7 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                         });
                       },
                     ),
-                  ],
+],
                 ),
                 const SizedBox(height: 16),
                 if (rows.isEmpty)
@@ -456,6 +456,34 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                           copy.t('noDocuments'),
                           style: const TextStyle(fontWeight: FontWeight.w800),
                           textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _showInvoices
+                              ? copy.documentsEmptySubtitle()
+                              : copy.quotationsEmptySubtitle(),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondaryFor(context),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            FilledButton.icon(
+                              onPressed: _create,
+                              icon: Icon(_showInvoices
+                                  ? Icons.receipt_long_rounded
+                                  : Icons.request_quote_rounded),
+                              label: Text(_showInvoices
+                                  ? copy.t('newInvoice')
+                                  : copy.t('documentsTabQuotations')),
+                            ),
+                          ],
                         ),
                       ],
                     ),

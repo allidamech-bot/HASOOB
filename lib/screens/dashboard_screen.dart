@@ -1420,12 +1420,43 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 
   Widget _emptyCard(BuildContext context, {required IconData icon, required String text}) {
-    return AiEmptyState(
-      icon: icon,
-      title: text,
-      subtitle: AppCopy.of(context).isEnglish 
-          ? "No business records available for this section." 
-          : "لا توجد سجلات تجارية متوفرة في هذا القسم حالياً.",
+    final copy = AppCopy.of(context);
+    return AiGlassCard(
+      borderColor: AppTheme.aiGold.withValues(alpha: 0.2),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AiEmptyState(
+            icon: icon,
+            title: text,
+            subtitle: copy.isEnglish
+                ? "Start adding data to unlock insights and recommendations."
+                : "ابدأ بإضافة البيانات لتفعيل التحليلات والتوصيات.",
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            alignment: WrapAlignment.center,
+            children: [
+              AiActionButton(
+                label: copy.t('dashboardAddProduct'),
+                icon: Icons.add_rounded,
+                color: AppTheme.aiBlue,
+                isSmall: true,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
+              ),
+              AiActionButton(
+                label: copy.t('dashboardCreateInvoice'),
+                icon: Icons.receipt_long_rounded,
+                color: AppTheme.aiGold,
+                isSmall: true,
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen())),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

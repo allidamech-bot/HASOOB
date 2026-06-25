@@ -140,9 +140,17 @@ class AppCopy {
   String documentsPaymentSavedSuccess() =>
       isEnglish ? 'Payment recorded successfully.' : 'تم تسجيل الدفعة بنجاح.';
 
-  String documentsCustomerFallback() => isEnglish ? 'No customer' : 'بدون عميل';
+String documentsCustomerFallback() => isEnglish ? 'No customer' : 'بدون عميل';
 
-  String documentsChipLine(String label, String value) => '$label: $value';
+   String documentsEmptySubtitle() => isEnglish
+       ? 'Add products and customers to start creating invoices.'
+       : 'أضف منتجات وعملاء لبدء إنشاء الفواتير.';
+
+   String quotationsEmptySubtitle() => isEnglish
+       ? 'Add products and customers to start creating quotations.'
+       : 'أضف منتجات وعملاء لبدء إنشاء عروض الأسعار.';
+
+   String documentsChipLine(String label, String value) => '$label: $value';
 
   String reportsRecentSaleSubtitle({
     required String customerName,
@@ -297,6 +305,8 @@ class AppCopy {
       'invoices': 'الفواتير',
       'quotations': 'عروض الأسعار',
       'noDocuments': 'لا توجد وثائق حتى الآن.',
+       'documentsEmptySubtitle': 'أضف منتجات وعملاء لبدء إنشاء الفواتير.',
+       'quotationsEmptySubtitle': 'أضف منتجات وعملاء لبدء إنشاء عروض الأسعار.',
       'total': 'الإجمالي',
       'paid': 'المدفوع',
       'remaining': 'المتبقي',
@@ -852,6 +862,8 @@ class AppCopy {
       'invoices': 'Invoices',
       'quotations': 'Quotations',
       'noDocuments': 'There are no documents yet.',
+       'documentsEmptySubtitle': 'Add products and customers to start creating invoices.',
+       'quotationsEmptySubtitle': 'Add products and customers to start creating quotations.',
       'total': 'Total',
       'paid': 'Paid',
       'remaining': 'Remaining',

@@ -1660,11 +1660,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Widget _buildStarterPromptWrap({required bool compact}) {
     final prompts = [
-      ('How is my business today?', Icons.query_stats_outlined),
-      ('Analyze profitability', Icons.analytics_outlined),
-      ('Show cash flow risks', Icons.payments_outlined),
-      ('Review customer balances', Icons.people_alt_outlined),
-      ('Check inventory health', Icons.inventory_2_outlined),
+      ('What should I do today?', Icons.today_outlined),
+      ('How is my business doing?', Icons.query_stats_outlined),
+      ('Which products need attention?', Icons.inventory_2_outlined),
+      ('What are my risks?', Icons.warning_amber_outlined),
+      ('Before I decide, what should I check?', Icons.fact_check_outlined),
     ];
     if (compact) {
       return SizedBox(

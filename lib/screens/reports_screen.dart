@@ -29,6 +29,8 @@ import '../features/analytics/presentation/widgets/predictive_runway_widget.dart
 import '../features/shipping_logistics/presentation/widgets/container_simulation_widget.dart';
 import '../features/analytics/presentation/widgets/autonomous_audit_widget.dart';
 import '../features/analytics/presentation/widgets/diagnostic_panel_widget.dart';
+import 'add_product_screen.dart';
+import 'documents_screen.dart';
 
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:io' as io;
@@ -939,7 +941,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     );
   }
 
-  Widget _listSection({
+Widget _listSection({
     required String title,
     required String empty,
     required List<Widget> children,
@@ -952,12 +954,48 @@ class _ReportsScreenState extends State<ReportsScreen> {
         if (children.isEmpty)
           AiGlassCard(
             borderColor: AppTheme.aiGold.withValues(alpha: 0.15),
-            child: AiEmptyState(
-              icon: Icons.analytics_outlined,
-              title: empty,
-              subtitle: AppCopy.of(context).isEnglish
-                  ? "No transactions have been recorded in this category yet."
-                  : "ظ„ظ… ظٹطھظ… طھط³ط¬ظٹظ„ ط£ظٹ ط¹ظ…ظ„ظٹط§طھ طھط¬ط§ط±ظٹط© ط£ظˆ ظ…ط¨ظٹط¹ط§طھ ظپظٹ ظ‡ط°ط§ ط§ظ„ظ‚ط³ظ… ط­طھظ‰ ط§ظ„ط¢ظ†.",
+            child: Column(
+              children: [
+                AiEmptyState(
+                  icon: Icons.analytics_outlined,
+                  title: empty,
+                  subtitle: AppCopy.of(context).isEnglish
+                      ? "No transactions recorded in this category yet."
+                      : "ظ„ظ… ظٹطھظ… طھط³ط¬ظٹظ„ ط£ظٹ ط¹ظ…ظ„ظٹط§طھ طھط¬ط§ط±ظٹط© ط£ظˆ ظ…ط¨ظٹط¹ط§طھ طپظٹ ط‡ط°ط§ ط§ظ„ظ‚ط³ظ… ط­طھظ‰ ط§ظ„ط¢ظ†.",
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+alignment: WrapAlignment.center,
+                      children: [
+                        AiActionButton(
+                          label: AppCopy.of(context).t('dashboardAddProduct'),
+                          icon: Icons.add_rounded,
+                          color: AppTheme.aiBlue,
+                          isSmall: true,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const AddProductScreen()),
+                            );
+                          },
+                        ),
+                        AiActionButton(
+                          label: AppCopy.of(context).t('dashboardCreateInvoice'),
+                          icon: Icons.receipt_long_rounded,
+                          color: AppTheme.aiGold,
+                          isSmall: true,
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (_) => const DocumentsScreen()),
+                            );
+                          },
+                        ),
+                      ],
+                ),
+              ],
             ),
           )
         else
