@@ -140,7 +140,7 @@ class DesktopSidebar extends StatelessWidget {
             child: ListView(
               padding: const EdgeInsets.symmetric(horizontal: 16),
               children: [
-                 _SidebarItem(
+                _SidebarItem(
                   icon: Icons.psychology_rounded,
                   label: copy.t('aiAccountant'),
                   isSelected: selectedIndex == 0,
@@ -158,7 +158,7 @@ class DesktopSidebar extends StatelessWidget {
                   icon: Icons.inventory_2_rounded,
                   label: copy.t('navInventory'),
                   isSelected: selectedIndex == 2,
-              onTap: () => onDestinationSelected(3),
+                  onTap: () => onDestinationSelected(2),
                 ),
                 const SizedBox(height: 10),
                 _SidebarItem(
@@ -196,7 +196,7 @@ class DesktopSidebar extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.all(24.0),
             child: InkWell(
-              onTap: () => onDestinationSelected(2),
+              onTap: () => onDestinationSelected(3),
               borderRadius: BorderRadius.circular(16),
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 16),

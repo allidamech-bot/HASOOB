@@ -108,7 +108,8 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
           }
 
           // Link to customer
-          final cid = inv.customerName; // Due to DB structure, customerName often stores customer_id or name
+          final cid = inv
+              .customerName; // Due to DB structure, customerName often stores customer_id or name
           // We must find the correct customer in map
           String targetCid = '';
           for (final entry in customerRiskMap.entries) {
@@ -137,7 +138,8 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
           .toList()
         ..sort((a, b) => b['overdueAmount'].compareTo(a['overdueAmount']));
 
-      _customersWithOverdue = _customerRisks.where((c) => c['overdueAmount'] > 0).length;
+      _customersWithOverdue =
+          _customerRisks.where((c) => c['overdueAmount'] > 0).length;
 
       if (mounted) {
         setState(() {
@@ -184,51 +186,64 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
         elevation: 0,
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator(color: AppTheme.aiGold))
+          ? const Center(
+              child: CircularProgressIndicator(color: AppTheme.aiGold))
           : _error != null
-              ? Center(child: Text(_error!, style: const TextStyle(color: AppTheme.aiRed)))
+              ? Center(
+                  child: Text(_error!,
+                      style: const TextStyle(color: AppTheme.aiRed)))
               : RefreshIndicator(
                   onRefresh: _loadData,
                   color: AppTheme.aiGold,
                   backgroundColor: AppTheme.aiCard,
-                  child: isDesktop 
-                    ? ListView(
-                        padding: const EdgeInsets.all(24),
-                        children: _buildContentList(copy, isDesktop, context),
-                      )
-                    : AiMobilePageShell(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(height: AiMobileConfig.sectionGap),
-                            Padding(
-                              padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: _buildContentList(copy, isDesktop, context),
+                  child: isDesktop
+                      ? ListView(
+                          padding: const EdgeInsets.all(24),
+                          children: _buildContentList(copy, isDesktop, context),
+                        )
+                      : AiMobilePageShell(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: AiMobileConfig.sectionGap),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal:
+                                        AiMobileConfig.horizontalPadding),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: _buildContentList(
+                                      copy, isDesktop, context),
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
                 ),
     );
   }
 
-  List<Widget> _buildContentList(AppCopy copy, bool isDesktop, BuildContext context) {
+  List<Widget> _buildContentList(
+      AppCopy copy, bool isDesktop, BuildContext context) {
     return [
       _buildExecutiveSummary(copy, isDesktop),
       const SizedBox(height: 32),
       Text(
         copy.t('agingBuckets'),
-        style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 18, fontWeight: FontWeight.w900),
+        style: const TextStyle(
+            color: AppTheme.aiTextPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w900),
       ),
       const SizedBox(height: 16),
       _buildAgingBucketsRow(copy),
       const SizedBox(height: 32),
       Text(
         copy.t('customerRisk'),
-        style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 18, fontWeight: FontWeight.w900),
+        style: const TextStyle(
+            color: AppTheme.aiTextPrimary,
+            fontSize: 18,
+            fontWeight: FontWeight.w900),
       ),
       const SizedBox(height: 16),
       if (_customerRisks.isEmpty)
@@ -237,11 +252,15 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
           border: Border.all(color: AppTheme.aiCardBorder),
           child: Column(
             children: [
-              const Icon(Icons.check_circle_outline_rounded, color: AppTheme.aiGreen, size: 64),
+              const Icon(Icons.check_circle_outline_rounded,
+                  color: AppTheme.aiGreen, size: 64),
               const SizedBox(height: 16),
               Text(
                 copy.t('noOverdueInvoices'),
-                style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 16, fontWeight: FontWeight.w900),
+                style: const TextStyle(
+                    color: AppTheme.aiTextPrimary,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 8),
               const Text(
@@ -262,33 +281,45 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
         )
       else
         ..._customerRisks.map((c) => _buildCustomerCard(c, copy)),
-      
+
       const SizedBox(height: 32),
 
       // ── Invoices Data Layer Section ──────────
       Text(
-        copy.isEnglish ? 'Recent Invoices (Domain Layer)' : 'الفواتير الحديثة — طبقة النطاق',
-        style: const TextStyle(color: AppTheme.aiBlue, fontSize: 18, fontWeight: FontWeight.w900),
+        copy.isEnglish ? 'Recent Invoices' : 'الفواتير الحديثة',
+        style: const TextStyle(
+            color: AppTheme.aiBlue, fontSize: 18, fontWeight: FontWeight.w900),
       ),
       const SizedBox(height: 16),
       StreamBuilder<List<InvoiceModel>>(
         stream: _newCollectionRepository.getInvoices(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text(copy.isEnglish ? 'Error loading invoices' : 'تعذر تحميل الفواتير', style: const TextStyle(color: AppTheme.aiRed)));
+            return Center(
+                child: Text(
+                    copy.isEnglish
+                        ? 'Error loading invoices'
+                        : 'تعذر تحميل الفواتير',
+                    style: const TextStyle(color: AppTheme.aiRed)));
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppTheme.aiBlue));
+            return const Center(
+                child: CircularProgressIndicator(color: AppTheme.aiBlue));
           }
           final invoices = snapshot.data ?? [];
           if (invoices.isEmpty) {
-            return Center(child: Text(copy.isEnglish ? 'No invoices found.' : 'لا توجد فواتير.', style: const TextStyle(color: AppTheme.aiTextSecondary)));
+            return Center(
+                child: Text(
+                    copy.isEnglish ? 'No invoices found.' : 'لا توجد فواتير.',
+                    style: const TextStyle(color: AppTheme.aiTextSecondary)));
           }
           return Column(
-            children: invoices.map((inv) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _invoiceModelCard(inv, copy),
-            )).toList(),
+            children: invoices
+                .map((inv) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _invoiceModelCard(inv, copy),
+                    ))
+                .toList(),
           );
         },
       ),
@@ -297,28 +328,40 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
 
       // ── Payments Data Layer Section ──────────
       Text(
-        copy.isEnglish ? 'Recent Payments (Domain Layer)' : 'المدفوعات الحديثة — طبقة النطاق',
-        style: const TextStyle(color: AppTheme.aiGreen, fontSize: 18, fontWeight: FontWeight.w900),
+        copy.isEnglish ? 'Recent Payments' : 'المدفوعات الحديثة',
+        style: const TextStyle(
+            color: AppTheme.aiGreen, fontSize: 18, fontWeight: FontWeight.w900),
       ),
       const SizedBox(height: 16),
       StreamBuilder<List<PaymentModel>>(
         stream: _newCollectionRepository.getPayments(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text(copy.isEnglish ? 'Error loading payments' : 'تعذر تحميل المدفوعات', style: const TextStyle(color: AppTheme.aiRed)));
+            return Center(
+                child: Text(
+                    copy.isEnglish
+                        ? 'Error loading payments'
+                        : 'تعذر تحميل المدفوعات',
+                    style: const TextStyle(color: AppTheme.aiRed)));
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: AppTheme.aiGreen));
+            return const Center(
+                child: CircularProgressIndicator(color: AppTheme.aiGreen));
           }
           final payments = snapshot.data ?? [];
           if (payments.isEmpty) {
-            return Center(child: Text(copy.isEnglish ? 'No payments found.' : 'لا توجد مدفوعات.', style: const TextStyle(color: AppTheme.aiTextSecondary)));
+            return Center(
+                child: Text(
+                    copy.isEnglish ? 'No payments found.' : 'لا توجد مدفوعات.',
+                    style: const TextStyle(color: AppTheme.aiTextSecondary)));
           }
           return Column(
-            children: payments.map((pay) => Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: _paymentModelCard(pay, copy),
-            )).toList(),
+            children: payments
+                .map((pay) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _paymentModelCard(pay, copy),
+                    ))
+                .toList(),
           );
         },
       ),
@@ -326,7 +369,6 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
       if (isDesktop) const SizedBox(height: 120),
     ];
   }
-
 
   Widget _buildExecutiveSummary(AppCopy copy, bool isDesktop) {
     return GridView.count(
@@ -337,9 +379,12 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
       mainAxisSpacing: 8,
       childAspectRatio: 1.6,
       children: [
-        _buildSummaryCard(copy.t('totalOverdue'), AppFormatters.currency(_totalOverdue), AppTheme.aiRed),
-        _buildSummaryCard(copy.t('overdueInvoicesCount'), '$_overdueInvoicesCount', AppTheme.aiGold),
-        _buildSummaryCard(copy.t('customersWithOverdue'), '$_customersWithOverdue', AppTheme.aiBlue),
+        _buildSummaryCard(copy.t('totalOverdue'),
+            AppFormatters.currency(_totalOverdue), AppTheme.aiRed),
+        _buildSummaryCard(copy.t('overdueInvoicesCount'),
+            '$_overdueInvoicesCount', AppTheme.aiGold),
+        _buildSummaryCard(copy.t('customersWithOverdue'),
+            '$_customersWithOverdue', AppTheme.aiBlue),
       ],
     );
   }
@@ -356,9 +401,18 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(title, style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12, fontWeight: FontWeight.bold)),
+          Text(title,
+              style: const TextStyle(
+                  color: AppTheme.aiTextSecondary,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 4),
-          FittedBox(child: Text(value, style: TextStyle(color: color, fontSize: 20, fontWeight: FontWeight.w900))),
+          FittedBox(
+              child: Text(value,
+                  style: TextStyle(
+                      color: color,
+                      fontSize: 20,
+                      fontWeight: FontWeight.w900))),
         ],
       ),
     );
@@ -369,10 +423,12 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
       spacing: 8,
       runSpacing: 8,
       children: [
-        _buildAgingBucket(copy.t('agingCurrent'), _agingCurrent, AppTheme.aiGreen),
+        _buildAgingBucket(
+            copy.t('agingCurrent'), _agingCurrent, AppTheme.aiGreen),
         _buildAgingBucket(copy.t('aging1To30'), _aging1to30, AppTheme.aiGold),
         _buildAgingBucket(copy.t('aging31To60'), _aging31to60, Colors.orange),
-        _buildAgingBucket(copy.t('aging61To90'), _aging61to90, AppTheme.aiRed.withValues(alpha: 0.8)),
+        _buildAgingBucket(copy.t('aging61To90'), _aging61to90,
+            AppTheme.aiRed.withValues(alpha: 0.8)),
         _buildAgingBucket(copy.t('aging90Plus'), _aging90Plus, AppTheme.aiRed),
       ],
     );
@@ -389,11 +445,16 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
       ),
       child: Column(
         children: [
-          Text(label, style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 13, fontWeight: FontWeight.bold)),
+          Text(label,
+              style: const TextStyle(
+                  color: AppTheme.aiTextPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold)),
           const SizedBox(height: 8),
           Text(
             AppFormatters.currency(amount),
-            style: TextStyle(color: color, fontSize: 15, fontWeight: FontWeight.w900),
+            style: TextStyle(
+                color: color, fontSize: 15, fontWeight: FontWeight.w900),
           ),
         ],
       ),
@@ -430,17 +491,23 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(c['name'], style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 16, fontWeight: FontWeight.w900)),
+                      Text(c['name'],
+                          style: const TextStyle(
+                              color: AppTheme.aiTextPrimary,
+                              fontSize: 16,
+                              fontWeight: FontWeight.w900)),
                       const SizedBox(height: 4),
                       Text(
                         '${copy.t('unpaidBalance')}: ${AppFormatters.currency(total)}',
-                        style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 13),
+                        style: const TextStyle(
+                            color: AppTheme.aiTextSecondary, fontSize: 13),
                       ),
                       if (lastDate != null) ...[
                         const SizedBox(height: 2),
                         Text(
                           '${copy.t('lastInvoiceDate')}: ${AppFormatters.dateString(lastDate)}',
-                          style: const TextStyle(color: AppTheme.aiTextMuted, fontSize: 11),
+                          style: const TextStyle(
+                              color: AppTheme.aiTextMuted, fontSize: 11),
                         ),
                       ],
                     ],
@@ -450,17 +517,25 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
                       decoration: BoxDecoration(
                         color: riskColor.withValues(alpha: 0.15),
                         borderRadius: BorderRadius.circular(6),
                       ),
-                      child: Text(riskLabel, style: TextStyle(color: riskColor, fontSize: 11, fontWeight: FontWeight.bold)),
+                      child: Text(riskLabel,
+                          style: TextStyle(
+                              color: riskColor,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold)),
                     ),
                     const SizedBox(height: 8),
                     Text(
                       AppFormatters.currency(overdue),
-                      style: TextStyle(color: riskColor, fontSize: 16, fontWeight: FontWeight.w900),
+                      style: TextStyle(
+                          color: riskColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w900),
                     ),
                   ],
                 ),
@@ -474,7 +549,11 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
               children: [
                 TextButton.icon(
                   onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (_) => CustomerStatementScreen(customerId: c['id'], customerName: c['name'])));
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => CustomerStatementScreen(
+                                customerId: c['id'], customerName: c['name'])));
                   },
                   icon: const Icon(Icons.receipt_long, size: 18),
                   label: Text(copy.t('details')),
@@ -482,13 +561,16 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                 const SizedBox(width: 8),
                 FilledButton.icon(
                   onPressed: () {
-                    final message = copy.whatsappReminderTemplate(c['name'], AppFormatters.currency(overdue));
+                    final message = copy.whatsappReminderTemplate(
+                        c['name'], AppFormatters.currency(overdue));
                     Clipboard.setData(ClipboardData(text: message));
                     AppMessages.success(context, 'تم نسخ الرسالة بنجاح.');
                   },
                   icon: const Icon(Icons.copy, size: 18),
                   label: Text(copy.t('copyWhatsApp')),
-                  style: FilledButton.styleFrom(backgroundColor: AppTheme.aiGreen, foregroundColor: Colors.black),
+                  style: FilledButton.styleFrom(
+                      backgroundColor: AppTheme.aiGreen,
+                      foregroundColor: Colors.black),
                 ),
               ],
             ),
@@ -552,9 +634,11 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      invoice.dueDate != null 
-                        ? '${copy.isEnglish ? 'Due' : 'تستحق'}: ${AppFormatters.dateString(invoice.dueDate!)}' 
-                        : (copy.isEnglish ? 'No due date' : 'لا يوجد تاريخ استحقاق'),
+                      invoice.dueDate != null
+                          ? '${copy.isEnglish ? 'Due' : 'تستحق'}: ${AppFormatters.dateString(invoice.dueDate!)}'
+                          : (copy.isEnglish
+                              ? 'No due date'
+                              : 'لا يوجد تاريخ استحقاق'),
                       style: const TextStyle(
                         color: AppTheme.aiTextSecondary,
                         fontSize: 12,
@@ -564,11 +648,13 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: statusColor.withValues(alpha: 0.25)),
+                  border:
+                      Border.all(color: statusColor.withValues(alpha: 0.25)),
                 ),
                 child: Text(
                   statusLabel,
@@ -587,7 +673,8 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
             runSpacing: 8,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppTheme.aiCardElevated.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(14),
@@ -595,11 +682,15 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                 ),
                 child: Text(
                   '${copy.isEnglish ? 'Total' : 'المجموع'}: ${AppFormatters.currency(invoice.total)}',
-                  style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      color: AppTheme.aiTextPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppTheme.aiCardElevated.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(14),
@@ -607,7 +698,10 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                 ),
                 child: Text(
                   '${copy.isEnglish ? 'Items' : 'الأصناف'}: ${invoice.items.length}',
-                  style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      color: AppTheme.aiTextPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ],
@@ -620,7 +714,8 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
   Widget _paymentModelCard(PaymentModel payment, AppCopy copy) {
     return PremiumCard(
       padding: const EdgeInsets.all(20),
-      border: Border.all(color: AppTheme.aiGreen.withValues(alpha: 0.2), width: 1),
+      border:
+          Border.all(color: AppTheme.aiGreen.withValues(alpha: 0.2), width: 1),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -634,7 +729,8 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(color: AppTheme.aiGreen),
                 ),
-                child: const Icon(Icons.payments_rounded, color: AppTheme.aiGreen),
+                child:
+                    const Icon(Icons.payments_rounded, color: AppTheme.aiGreen),
               ),
               const SizedBox(width: 12),
               Expanded(
@@ -651,9 +747,9 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      payment.createdAt != null 
-                        ? AppFormatters.dateString(payment.createdAt!) 
-                        : '',
+                      payment.createdAt != null
+                          ? AppFormatters.dateString(payment.createdAt!)
+                          : '',
                       style: const TextStyle(
                         color: AppTheme.aiTextSecondary,
                         fontSize: 12,
@@ -663,14 +759,18 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: AppTheme.aiGreen.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: AppTheme.aiGreen.withValues(alpha: 0.25)),
+                  border: Border.all(
+                      color: AppTheme.aiGreen.withValues(alpha: 0.25)),
                 ),
                 child: Text(
-                  payment.method == 'bank' ? (copy.isEnglish ? 'Bank' : 'تحويل بنكي') : (copy.isEnglish ? 'Cash' : 'نقدي'),
+                  payment.method == 'bank'
+                      ? (copy.isEnglish ? 'Bank' : 'تحويل بنكي')
+                      : (copy.isEnglish ? 'Cash' : 'نقدي'),
                   style: const TextStyle(
                     color: AppTheme.aiGreen,
                     fontWeight: FontWeight.w800,
@@ -686,7 +786,8 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
             runSpacing: 8,
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
                 decoration: BoxDecoration(
                   color: AppTheme.aiCardElevated.withValues(alpha: 0.7),
                   borderRadius: BorderRadius.circular(14),
@@ -694,7 +795,10 @@ class _CollectionCenterScreenState extends State<CollectionCenterScreen> {
                 ),
                 child: Text(
                   '${copy.isEnglish ? 'Amount' : 'المبلغ'}: ${AppFormatters.currency(payment.amount)}',
-                  style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+                  style: const TextStyle(
+                      color: AppTheme.aiTextPrimary,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600),
                 ),
               ),
             ],

@@ -159,7 +159,7 @@ class AiCfoConversationRouter {
           intent: AiCfoConversationIntent.unsupported,
           title: 'Unsupported CFO request',
           message:
-              'I can help with business health, cash flow, inventory, profit, receivables, evidence explanation, and guarded proposals. I cannot make unsupported claims or execute vague operations.',
+              'I can help with business health, cash flow, inventory, profit, receivables, evidence explanation, and guarded proposals. Ask for one area at a time, for example "review inventory risk" or "what data is missing for cash flow?". I cannot make unsupported claims or execute vague operations.',
           isBlocked: true,
           blockedReason: 'Unsupported request.',
           canExecute: false,
@@ -180,7 +180,10 @@ class AiCfoConversationRouter {
         type: AiCfoResponseType.clarificationNeeded,
         intent: intent,
         title: title,
-        message: _withCompleteness(missingMessage, context),
+        message: _withCompleteness(
+          '$missingMessage ${_lowDataGuidance(area)}',
+          context,
+        ),
       );
     }
     return AiCfoConversationResponse(
@@ -188,7 +191,7 @@ class AiCfoConversationRouter {
       intent: intent,
       title: title,
       message: _withCompleteness(
-        'Here is the grounded CFO view from available evidence only.',
+        'Here is the grounded CFO view from available evidence only. ${_nextQuestionGuidance(area)}',
         context,
       ),
       evidence: evidence,
@@ -204,7 +207,7 @@ class AiCfoConversationRouter {
         intent: AiCfoConversationIntent.explainEvidence,
         title: 'Evidence explanation',
         message: _withCompleteness(
-          'There is no evidence in the current snapshot to explain.',
+          'There is no evidence in the current snapshot to explain. Add products, customers, invoices, sales, payments, or expenses first; then ask me to explain which records support the answer.',
           context,
         ),
       );
@@ -278,6 +281,42 @@ class AiCfoConversationRouter {
     return '$message Data completeness: ${context.dataCompletenessNotes.join(' ')}';
   }
 
+  String _lowDataGuidance(AiCfoContextArea area) {
+    return switch (area) {
+      AiCfoContextArea.cash =>
+        'Add issued invoices, recorded payments, expenses, or ledger entries next. After that you can ask "what cash risk should I watch this week?".',
+      AiCfoContextArea.sales =>
+        'Record sales through Quick Sell or issue invoices with product quantities and prices next. After that you can ask "which products are moving?", "is sales data enough to judge performance?", or "what stock should I check?".',
+      AiCfoContextArea.inventory =>
+        'Add products with stock, cost, selling price, and low-stock thresholds next. After that you can ask "which stock needs attention?".',
+      AiCfoContextArea.receivables =>
+        'Add customers and invoices with paid or unpaid balances next. After that you can ask "which customers need collection follow-up?".',
+      AiCfoContextArea.businessHealth =>
+        'Add products, customers, invoices, sales, payments, and expenses next. After that you can ask "what is the weakest part of the business today?".',
+      AiCfoContextArea.ledger ||
+      AiCfoContextArea.recentSales =>
+        'Add real ledger or sales records next, then ask me to explain the evidence behind the latest activity.',
+    };
+  }
+
+  String _nextQuestionGuidance(AiCfoContextArea area) {
+    return switch (area) {
+      AiCfoContextArea.cash =>
+        'You can next ask about collection timing, expense pressure, or whether cash evidence is still incomplete.',
+      AiCfoContextArea.sales =>
+        'You can next ask which products are moving, whether sales are enough to judge performance, what stock to check, or what sales data is still missing.',
+      AiCfoContextArea.inventory =>
+        'You can next ask about low-stock risk, reorder priorities, or slow-moving inventory evidence.',
+      AiCfoContextArea.receivables =>
+        'You can next ask which balances need follow-up or what customer data is missing.',
+      AiCfoContextArea.businessHealth =>
+        'You can next ask me to zoom into cash flow, inventory, profit, or receivables.',
+      AiCfoContextArea.ledger ||
+      AiCfoContextArea.recentSales =>
+        'You can next ask me to explain the evidence or compare recent activity.',
+    };
+  }
+
   String _normalize(String value) => value.toLowerCase().trim();
 
   bool _containsAny(String value, List<String> terms) {
@@ -289,6 +328,15 @@ class AiCfoConversationRouter {
     'business doing',
     'financial overview',
     'how is the business',
+    'how is my business',
+    'what should i focus on',
+    'what should i do today',
+    'what should i do next',
+    'focus today',
+    'first risk',
+    'what are my risks',
+    'risk should i check',
+    'next best action',
     'ظƒظٹظپ ظˆط¶ط¹',
     'ظˆط¶ط¹ ط§ظ„ط´ط±ظƒط©',
     'كيف وضع',
@@ -384,6 +432,12 @@ class AiCfoConversationRouter {
     'evidence',
     'why did you say',
     'explain evidence',
+    'what data is missing',
+    'data is missing',
+    'missing data',
+    'what is missing',
+    'before i make a decision',
+    'before i decide',
     'ظ„ظٹط´ ظ‚ظ„طھ',
     'ط§ظ„ط¯ظ„ظٹظ„',
     'ليش قلت',

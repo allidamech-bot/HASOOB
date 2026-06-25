@@ -165,7 +165,6 @@ class _CloudSyncPassiveBanner extends StatelessWidget {
               key: const Key('local-mode-banner-top'),
               child: Material(
                 color: AppTheme.surfaceSecondary.withValues(alpha: 0.98),
-                borderRadius: BorderRadius.circular(30),
                 elevation: 4,
                 shadowColor: Colors.black26,
                 shape: StadiumBorder(

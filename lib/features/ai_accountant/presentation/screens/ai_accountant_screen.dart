@@ -22,6 +22,7 @@ import '../../../../screens/settings_screen.dart';
 import '../../data/models/ai_proposal_model.dart';
 import '../../data/repositories/ai_accountant_repository_factory.dart';
 import '../../domain/ai_cfo_execution_outcome.dart';
+import '../../domain/ai_cfo_conversation_intent.dart';
 import '../../domain/ai_cfo_conversation_response.dart';
 import '../../domain/ai_cfo_evidence.dart';
 import '../../domain/ai_cfo_proposal_command.dart';
@@ -440,7 +441,17 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             'Review business health',
             'Continue discussion',
           ]
-        : const <String>[];
+        : response.evidence.isEmpty
+            ? const [
+                'What data is missing?',
+                'Review inventory risk',
+                'Review cash flow',
+              ]
+            : const [
+                'Explain evidence',
+                'What data is missing?',
+                'Review next risk',
+              ];
     _appendMessage(
       role: AiChatRole.assistant,
       type: response.isBlocked
@@ -512,19 +523,133 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   String _kernelResponseText(AiCfoConversationResponse response) {
     final lines = <String>[
       response.title,
-      response.message,
+      '',
+      'Current picture:',
+      _currentPictureLine(response),
+      '',
+      'Available evidence:',
+      _availableEvidenceLine(response),
+      '',
+      'Missing data:',
+      _missingDataLine(response),
+      '',
+      'Risk:',
+      _riskLine(response),
+      '',
+      'Recommended next action:',
+      _recommendedNextActionLine(response),
     ];
     if (response.evidence.isNotEmpty) {
-      lines.add('Evidence:');
+      lines.add('');
+      lines.add('Evidence details:');
       lines.addAll(response.evidence
-          .take(6)
-          .map((item) => '- ${item.label}: ${item.value} (${item.source})'));
+          .take(4)
+          .map((item) => '- ${item.label}: ${item.value}'));
+      lines.add('');
+      lines.add('Evidence sources:');
+      lines.addAll(response.evidence.take(6).map((item) => '- ${item.source}'));
+    } else {
+      lines.add('');
+      lines.add('What to add next:');
+      lines.add('- Products with stock, cost, and selling price.');
+      lines.add('- Customers and invoices with paid or unpaid balances.');
+      lines.add('- Recorded sales, payments, expenses, or ledger entries.');
+      lines.add('');
+      lines.add('Useful next questions:');
+      lines.add('- What cash-flow data is missing?');
+      lines.add('- Which stock needs attention?');
+      lines.add('- What can you say from the data I have?');
     }
-    if (response.risks.isNotEmpty) {
+    if (response.risks.isNotEmpty || response.blockedReason != null) {
+      lines.add('');
       lines.add('Missing data / limits:');
+      if (response.blockedReason != null) {
+        lines.add('- ${response.blockedReason}');
+      }
       lines.addAll(response.risks.take(4).map((item) => '- $item'));
     }
     return lines.join('\n');
+  }
+
+  String _currentPictureLine(AiCfoConversationResponse response) {
+    if (response.evidence.isEmpty) {
+      return response.message;
+    }
+    final leadEvidence = response.evidence.take(3).map((item) {
+      return '${item.label}: ${item.value}';
+    }).join('; ');
+    return 'This view is based on ${response.evidence.length} local evidence record${response.evidence.length == 1 ? '' : 's'} available now: $leadEvidence.';
+  }
+
+  String _availableEvidenceLine(AiCfoConversationResponse response) {
+    if (response.evidence.isEmpty) {
+      return 'No usable local evidence is attached to this answer yet.';
+    }
+    final sources = response.evidence
+        .map((item) => item.source)
+        .where((source) => source.trim().isNotEmpty)
+        .toSet()
+        .take(3)
+        .join(', ');
+    return sources.isEmpty
+        ? 'Evidence exists, but the source labels are incomplete.'
+        : 'I can use evidence from: $sources.';
+  }
+
+  String _missingDataLine(AiCfoConversationResponse response) {
+    if (response.risks.isNotEmpty) {
+      return response.risks.take(2).join(' ');
+    }
+    if (response.evidence.isEmpty) {
+      return 'The app is missing enough recorded activity to compare trends yet. Add products, customers, invoices, sales, payments, or expenses to make the answer stronger.';
+    }
+    return 'No trend change is being claimed from this snapshot alone. Keep recording daily sales, collections, expenses, and stock updates so the next review can compare movement.';
+  }
+
+  String _riskLine(AiCfoConversationResponse response) {
+    final hasLowConfidence = response.evidence
+        .any((item) => item.confidence == AiCfoEvidenceConfidence.low);
+    if (hasLowConfidence) {
+      return 'Some evidence is low confidence, so verify the underlying records before making a financial decision.';
+    }
+    if (response.risks.isNotEmpty) {
+      return response.risks.first;
+    }
+    if (response.evidence.isEmpty) {
+      return 'The main risk is acting without enough local evidence.';
+    }
+    return 'No critical risk is proven from this answer alone; review cash flow, stock, profit, or receivables before acting.';
+  }
+
+  String _recommendedNextActionLine(AiCfoConversationResponse response) {
+    if (response.type == AiCfoResponseType.blocked ||
+        response.intent == AiCfoConversationIntent.unsupported) {
+      return 'Ask for one focused area, such as cash flow, inventory, profit, receivables, or evidence explanation.';
+    }
+    if (response.evidence.isEmpty) {
+      return 'Add one real business record, then ask the same question again so the answer can use evidence.';
+    }
+    switch (response.intent) {
+      case AiCfoConversationIntent.cashflowReview:
+        return 'Check unpaid invoices, recent collections, and upcoming expenses before spending or discounting.';
+      case AiCfoConversationIntent.inventoryReview:
+        return 'Review low-stock or out-of-stock items, then decide what to reorder based on demand and margin.';
+      case AiCfoConversationIntent.profitReview:
+        return 'Compare selling price, cost, sales volume, and expenses before changing prices or buying more stock.';
+      case AiCfoConversationIntent.receivablesReview:
+        return 'Follow up on customer balances with the highest exposure first.';
+      case AiCfoConversationIntent.explainEvidence:
+        return 'Use the evidence list below to check the source records, then ask a narrower follow-up if needed.';
+      case AiCfoConversationIntent.businessHealth:
+        return 'Pick the weakest area next: cash flow, stock, profit, or customer collection.';
+      case AiCfoConversationIntent.createProposal:
+      case AiCfoConversationIntent.approveProposal:
+      case AiCfoConversationIntent.deferProposal:
+      case AiCfoConversationIntent.executeProposal:
+        return 'Review the proposal details and approve only when the numbers match your records.';
+      case AiCfoConversationIntent.unsupported:
+        return 'Ask for one focused area, such as cash flow, inventory, profit, receivables, or evidence explanation.';
+    }
   }
 
   AiResponseMetadata _kernelResponseMetadata(
@@ -984,6 +1109,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             const SizedBox(height: 10),
             _buildCommandSignalStrip(isDesktop: false),
             const SizedBox(height: 10),
+            _buildDailyOperatingBrief(compact: true),
+            const SizedBox(height: 10),
             Expanded(child: _buildConversationPanel(isDesktop: false)),
           ],
         ),
@@ -997,6 +1124,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           _buildExecutiveCommandHeader(isDesktop: true),
           const SizedBox(height: 12),
           _buildCommandSignalStrip(isDesktop: true),
+          const SizedBox(height: 12),
+          _buildDailyOperatingBrief(compact: false),
           const SizedBox(height: 14),
           Expanded(
             child: Row(
@@ -1101,6 +1230,134 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 ),
               ],
             ),
+    );
+  }
+
+  Widget _buildDailyOperatingBrief({required bool compact}) {
+    final metadata = _latestMetadata();
+    final risks = _latestRisks()
+        .where((risk) => risk.title != 'No major risk detected')
+        .toList();
+    final recommendations = _latestRecommendations();
+    final missing = metadata?.missingEvidence.take(2).toList() ?? const [];
+    final evidenceLine = metadata == null || metadata.evidenceCount == 0
+        ? 'No evidence checked yet in this session.'
+        : '${metadata.evidenceCount} evidence record${metadata.evidenceCount == 1 ? '' : 's'} checked at ${metadata.confidenceLabel.toLowerCase()} confidence.';
+    final missingLine = missing.isEmpty
+        ? 'Ask for a focused review to identify missing data.'
+        : missing.join(' ');
+    final riskLine = risks.isEmpty
+        ? 'First risk: acting before enough sales, stock, invoice, or cash evidence is available.'
+        : 'First risk: ${risks.first.title}. ${risks.first.description}';
+    final actionLine = recommendations.isNotEmpty
+        ? recommendations.first.title
+        : (metadata == null || metadata.evidenceCount == 0
+            ? 'Add products, record a Quick Sell sale, or create an invoice, then ask for a business health review.'
+            : 'Ask a narrower question about cash flow, stock, profit, receivables, or sales movement.');
+    const suggestedQuestion =
+        'After my latest sale, which products are moving and what stock should I check?';
+
+    return Container(
+      padding: EdgeInsets.all(compact ? 12 : 14),
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.today_outlined, color: goldAccent, size: 18),
+              const SizedBox(width: 8),
+              const Expanded(
+                child: Text(
+                  'Daily Operating Brief',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              _statusPill('Beta', goldAccent),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _dailyBriefChip('Data exists', evidenceLine, Icons.folder_copy),
+              _dailyBriefChip('Missing data', missingLine, Icons.rule_rounded),
+              _dailyBriefChip(
+                  'First risk', riskLine, Icons.warning_amber_rounded),
+              _dailyBriefChip('Next action', actionLine, Icons.route_rounded),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton.icon(
+              onPressed: _isAnalyzing || _isCommitting
+                  ? null
+                  : () => _processAiCommand(customText: suggestedQuestion),
+              icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
+              label: const Text('Ask about sales movement'),
+              style: TextButton.styleFrom(
+                foregroundColor: goldAccent,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _dailyBriefChip(String label, String value, IconData icon) {
+    return Container(
+      constraints: const BoxConstraints(minWidth: 190, maxWidth: 330),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: darkBg.withValues(alpha: 0.38),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: goldAccent, size: 16),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: textSecondary,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    height: 1.25,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1660,11 +1917,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Widget _buildStarterPromptWrap({required bool compact}) {
     final prompts = [
-      ('How is my business today?', Icons.query_stats_outlined),
-      ('Analyze profitability', Icons.analytics_outlined),
-      ('Show cash flow risks', Icons.payments_outlined),
-      ('Review customer balances', Icons.people_alt_outlined),
-      ('Check inventory health', Icons.inventory_2_outlined),
+      ('What should I focus on today?', Icons.today_outlined),
+      ('How is my business doing?', Icons.query_stats_outlined),
+      ('What is the first risk I should check?', Icons.warning_amber_outlined),
+      ('What data is missing before I decide?', Icons.fact_check_outlined),
+      ('What should I do next?', Icons.route_outlined),
     ];
     if (compact) {
       return SizedBox(

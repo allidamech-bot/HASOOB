@@ -49,8 +49,9 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) =>
-        _showInvoices ? const InvoiceFormScreen() : const QuotationFormScreen(),
+        builder: (_) => _showInvoices
+            ? const InvoiceFormScreen()
+            : const QuotationFormScreen(),
       ),
     );
 
@@ -122,12 +123,12 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       );
     }
 
-    final fresh = await _repo.getQuotationById(id, _businessId);
+    final fresh = await _repo.getQuotationById(_businessId, id);
     if (fresh == null) {
       throw Exception(copy.t('documentsErrorQuotationNotFound'));
     }
 
-    final items = await _repo.getQuotationItems(id, _businessId);
+    final items = await _repo.getQuotationItems(_businessId, id);
     final profile = await _profileRepo.getBusinessProfile(_businessId);
 
     final result = await _export.generateQuotationPdf(
@@ -272,78 +273,80 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
     String paymentMethod = 'cash';
 
     final saved = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => StatefulBuilder(
-        builder: (dialogContext, setDialogState) => AlertDialog(
-          title: Text(
-            copy.documentsAddPaymentTitle(
-              invoice.invoiceNumber,
-            ),
-          ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: controller,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: InputDecoration(
-                  labelText: copy.t('amount'),
+          context: context,
+          builder: (dialogContext) => StatefulBuilder(
+            builder: (dialogContext, setDialogState) => AlertDialog(
+              title: Text(
+                copy.documentsAddPaymentTitle(
+                  invoice.invoiceNumber,
                 ),
               ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: paymentMethod,
-                decoration: InputDecoration(
-                  labelText: copy.t('paymentMethod'),
-                ),
-                items: [
-                  DropdownMenuItem(
-                    value: 'cash',
-                    child: Text(copy.t('cash')),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: controller,
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
+                    decoration: InputDecoration(
+                      labelText: copy.t('amount'),
+                    ),
                   ),
-                  DropdownMenuItem(
-                    value: 'bank_transfer',
-                    child: Text(copy.t('bankTransfer')),
+                  const SizedBox(height: 12),
+                  DropdownButtonFormField<String>(
+                    initialValue: paymentMethod,
+                    decoration: InputDecoration(
+                      labelText: copy.t('paymentMethod'),
+                    ),
+                    items: [
+                      DropdownMenuItem(
+                        value: 'cash',
+                        child: Text(copy.t('cash')),
+                      ),
+                      DropdownMenuItem(
+                        value: 'bank_transfer',
+                        child: Text(copy.t('bankTransfer')),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      setDialogState(() {
+                        paymentMethod = value ?? 'cash';
+                      });
+                    },
                   ),
                 ],
-                onChanged: (value) {
-                  setDialogState(() {
-                    paymentMethod = value ?? 'cash';
-                  });
-                },
               ),
-            ],
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(dialogContext, false),
+                  child: Text(copy.t('cancel')),
+                ),
+                FilledButton(
+                  onPressed: () async {
+                    final amount = _parseAmount(controller.text);
+
+                    if (amount <= 0) {
+                      AppMessages.error(
+                          dialogContext, copy.t('enterValidAmount'));
+                      return;
+                    }
+
+                    await _repo.addInvoicePayment(
+                      businessId: _businessId,
+                      invoiceId: invoice.id,
+                      amount: amount,
+                      paymentMethod: paymentMethod,
+                    );
+
+                    if (!dialogContext.mounted) return;
+                    Navigator.pop(dialogContext, true);
+                  },
+                  child: Text(copy.t('savePayment')),
+                ),
+              ],
+            ),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(dialogContext, false),
-              child: Text(copy.t('cancel')),
-            ),
-            FilledButton(
-              onPressed: () async {
-                final amount = _parseAmount(controller.text);
-
-                if (amount <= 0) {
-                  AppMessages.error(dialogContext, copy.t('enterValidAmount'));
-                  return;
-                }
-
-                await _repo.addInvoicePayment(
-                  businessId: _businessId,
-                  invoiceId: invoice.id,
-                  amount: amount,
-                  paymentMethod: paymentMethod,
-                );
-
-                if (!dialogContext.mounted) return;
-                Navigator.pop(dialogContext, true);
-              },
-              child: Text(copy.t('savePayment')),
-            ),
-          ],
-        ),
-      ),
-    ) ??
+        ) ??
         false;
 
     controller.dispose();
@@ -357,7 +360,9 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
   @override
   Widget build(BuildContext context) {
     final copy = AppCopy.of(context);
-    final stream = _showInvoices ? _repo.watchInvoices(_businessId) : _repo.watchQuotations(_businessId);
+    final stream = _showInvoices
+        ? _repo.watchInvoices(_businessId)
+        : _repo.watchQuotations(_businessId);
 
     return Scaffold(
       appBar: AppBar(
@@ -372,10 +377,16 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       floatingActionButton: FloatingActionButton.extended(
         onPressed: _create,
         icon: Icon(
-          _showInvoices ? Icons.receipt_long_rounded : Icons.request_quote_rounded,
+          _showInvoices
+              ? Icons.receipt_long_rounded
+              : Icons.request_quote_rounded,
         ),
         label: Text(
-          _showInvoices ? copy.t('newInvoice') : copy.t('quotations'),
+          _showInvoices
+              ? copy.t('newInvoice')
+              : copy.isEnglish
+                  ? 'New Quotation'
+                  : copy.t('documentsTabQuotations'),
         ),
       ),
       body: RefreshIndicator(
@@ -438,6 +449,8 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                   ],
                 ),
                 const SizedBox(height: 16),
+                _documentModeGuide(copy),
+                const SizedBox(height: 16),
                 if (rows.isEmpty)
                   PremiumCard(
                     padding: const EdgeInsets.symmetric(
@@ -457,12 +470,46 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
                           style: const TextStyle(fontWeight: FontWeight.w800),
                           textAlign: TextAlign.center,
                         ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _showInvoices
+                              ? (copy.isEnglish
+                                  ? 'Create an invoice after the customer confirms the sale. Use it to track what should be collected and what is already paid.'
+                                  : 'أنشئ فاتورة بعد تأكيد البيع مع العميل. استخدمها لتتبع المبلغ المطلوب تحصيله وما تم دفعه.')
+                              : (copy.isEnglish
+                                  ? 'Create a quotation while the customer is still reviewing price or quantity. Convert it to an invoice only after the sale is accepted.'
+                                  : 'أنشئ عرض سعر عندما يكون العميل ما زال يراجع السعر أو الكمية. حوّله إلى فاتورة فقط بعد قبول البيع.'),
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: AppTheme.textSecondaryFor(context),
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 20),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 12,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            FilledButton.icon(
+                              onPressed: _create,
+                              icon: Icon(_showInvoices
+                                  ? Icons.receipt_long_rounded
+                                  : Icons.request_quote_rounded),
+                              label: Text(_showInvoices
+                                  ? copy.t('newInvoice')
+                                  : copy.isEnglish
+                                      ? 'New Quotation'
+                                      : copy.t('documentsTabQuotations')),
+                            ),
+                          ],
+                        ),
                       ],
                     ),
                   )
                 else
                   ...rows.map(
-                        (row) => Padding(
+                    (row) => Padding(
                       padding: const EdgeInsets.only(bottom: 12),
                       child: _showInvoices
                           ? _invoiceCard(row as InvoiceModel, copy)
@@ -473,6 +520,59 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
             );
           },
         ),
+      ),
+    );
+  }
+
+  Widget _documentModeGuide(AppCopy copy) {
+    final title = _showInvoices
+        ? (copy.isEnglish
+            ? 'Use an invoice when the sale is confirmed.'
+            : copy.t('documentsTabInvoices'))
+        : (copy.isEnglish
+            ? 'Use a quotation before the customer approves.'
+            : copy.t('documentsTabQuotations'));
+    final body = _showInvoices
+        ? (copy.isEnglish
+            ? 'Invoices are for amounts you expect to collect. Create one after the customer agrees, then track payment from the invoice.'
+            : copy.documentsEmptySubtitle())
+        : (copy.isEnglish
+            ? 'Quotations are for proposed prices. Send one while the customer is still deciding, then convert it to an invoice when the sale is accepted.'
+            : copy.quotationsEmptySubtitle());
+
+    return PremiumCard(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            _showInvoices
+                ? Icons.receipt_long_rounded
+                : Icons.request_quote_rounded,
+            color: AppTheme.accentBlue,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(fontWeight: FontWeight.w800),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  body,
+                  style: TextStyle(
+                    color: AppTheme.textSecondaryFor(context),
+                    fontSize: 12,
+                    height: 1.4,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -488,98 +588,98 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            Text(
-              invoice.invoiceNumber,
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 16,
+          Text(
+            invoice.invoiceNumber,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            invoice.customerName.trim().isNotEmpty == true
+                ? invoice.customerName
+                : copy.documentsCustomerFallback(),
+            style: TextStyle(
+              color: AppTheme.textSecondaryFor(context),
+            ),
+          ),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              _chip(
+                copy.t('total'),
+                AppFormatters.currency(total, currencyLabel: currencyCode),
               ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              invoice.customerName.trim().isNotEmpty == true
-                  ? invoice.customerName
-                  : copy.documentsCustomerFallback(),
-              style: TextStyle(
-                color: AppTheme.textSecondaryFor(context),
+              _chip(
+                copy.t('paid'),
+                AppFormatters.currency(paid, currencyLabel: currencyCode),
               ),
-            ),
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                _chip(
-                  copy.t('total'),
-                  AppFormatters.currency(total, currencyLabel: currencyCode),
-                ),
-                _chip(
-                  copy.t('paid'),
-                  AppFormatters.currency(paid, currencyLabel: currencyCode),
-                ),
-                _chip(
-                  copy.t('remaining'),
-                  AppFormatters.currency(remaining, currencyLabel: currencyCode),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                FilledButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => InvoiceDetailsScreen(
-                          invoiceId: invoice.id,
-                        ),
+              _chip(
+                copy.t('remaining'),
+                AppFormatters.currency(remaining, currencyLabel: currencyCode),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              FilledButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => InvoiceDetailsScreen(
+                        invoiceId: invoice.id,
                       ),
-                    );
-                  },
-                  child: Text(copy.t('details')),
+                    ),
+                  );
+                },
+                child: Text(copy.t('details')),
+              ),
+              OutlinedButton(
+                onPressed: () => _addPayment(invoice),
+                child: Text(copy.t('addPayment')),
+              ),
+              OutlinedButton(
+                onPressed: () async {
+                  try {
+                    final result = await _invoicePdf(invoice);
+                    await _preview(result);
+                  } catch (error) {
+                    if (!mounted) return;
+                    AppMessages.error(context, '$error');
+                  }
+                },
+                child: Text(copy.t('pdfPreview')),
+              ),
+              OutlinedButton(
+                onPressed: () async {
+                  try {
+                    final result = await _invoicePdf(invoice);
+                    await _share(result);
+                  } catch (error) {
+                    if (!mounted) return;
+                    AppMessages.error(context, '$error');
+                  }
+                },
+                child: Text(copy.t('pdfShare')),
+              ),
+              OutlinedButton(
+                onPressed: () => _confirmDeleteInvoice(invoice),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.danger,
                 ),
-                OutlinedButton(
-                  onPressed: () => _addPayment(invoice),
-                  child: Text(copy.t('addPayment')),
-                ),
-                OutlinedButton(
-                  onPressed: () async {
-                    try {
-                      final result = await _invoicePdf(invoice);
-                      await _preview(result);
-                    } catch (error) {
-                      if (!mounted) return;
-                      AppMessages.error(context, '$error');
-                    }
-                  },
-                  child: Text(copy.t('pdfPreview')),
-                ),
-                OutlinedButton(
-                  onPressed: () async {
-                    try {
-                      final result = await _invoicePdf(invoice);
-                      await _share(result);
-                    } catch (error) {
-                      if (!mounted) return;
-                      AppMessages.error(context, '$error');
-                    }
-                  },
-                  child: Text(copy.t('pdfShare')),
-                ),
-                OutlinedButton(
-                  onPressed: () => _confirmDeleteInvoice(invoice),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.danger,
-                  ),
-                  child: Text(copy.t('delete')),
-                ),
-              ],
-            ),
-          ],
-        ),
+                child: Text(copy.t('delete')),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -592,84 +692,84 @@ class _DocumentsScreenState extends State<DocumentsScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-            Text(
-              quotation.quotationNumber,
-              style: const TextStyle(
-                fontWeight: FontWeight.w800,
-                fontSize: 16,
-              ),
+          Text(
+            quotation.quotationNumber,
+            style: const TextStyle(
+              fontWeight: FontWeight.w800,
+              fontSize: 16,
             ),
-            const SizedBox(height: 6),
-            Text(
-              quotation.customerName.trim().isNotEmpty == true
-                  ? quotation.customerName
-                  : copy.documentsCustomerFallback(),
-              style: TextStyle(
-                color: AppTheme.textSecondaryFor(context),
-              ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            quotation.customerName.trim().isNotEmpty == true
+                ? quotation.customerName
+                : copy.documentsCustomerFallback(),
+            style: TextStyle(
+              color: AppTheme.textSecondaryFor(context),
             ),
-            const SizedBox(height: 10),
-            _chip(
-              copy.t('total'),
-              AppFormatters.currency(total, currencyLabel: currencyCode),
-            ),
-            const SizedBox(height: 20),
-            Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                FilledButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => QuotationDetailsScreen(
-                          quotationId: quotation.id,
-                        ),
+          ),
+          const SizedBox(height: 10),
+          _chip(
+            copy.t('total'),
+            AppFormatters.currency(total, currencyLabel: currencyCode),
+          ),
+          const SizedBox(height: 20),
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
+            children: [
+              FilledButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => QuotationDetailsScreen(
+                        quotationId: quotation.id,
                       ),
-                    );
-                  },
-                  child: Text(copy.t('details')),
+                    ),
+                  );
+                },
+                child: Text(copy.t('details')),
+              ),
+              OutlinedButton(
+                onPressed: () => _convert(quotation.toMap()),
+                child: Text(copy.t('convertToInvoice')),
+              ),
+              OutlinedButton(
+                onPressed: () async {
+                  try {
+                    final result = await _quotationPdf(quotation);
+                    await _preview(result);
+                  } catch (error) {
+                    if (!mounted) return;
+                    AppMessages.error(context, '$error');
+                  }
+                },
+                child: Text(copy.t('pdfPreview')),
+              ),
+              OutlinedButton(
+                onPressed: () async {
+                  try {
+                    final result = await _quotationPdf(quotation);
+                    await _share(result);
+                  } catch (error) {
+                    if (!mounted) return;
+                    AppMessages.error(context, '$error');
+                  }
+                },
+                child: Text(copy.t('pdfShare')),
+              ),
+              OutlinedButton(
+                onPressed: () => _confirmDeleteQuotation(quotation),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppTheme.danger,
                 ),
-                OutlinedButton(
-                  onPressed: () => _convert(quotation.toMap()),
-                  child: Text(copy.t('convertToInvoice')),
-                ),
-                OutlinedButton(
-                  onPressed: () async {
-                    try {
-                      final result = await _quotationPdf(quotation);
-                      await _preview(result);
-                    } catch (error) {
-                      if (!mounted) return;
-                      AppMessages.error(context, '$error');
-                    }
-                  },
-                  child: Text(copy.t('pdfPreview')),
-                ),
-                OutlinedButton(
-                  onPressed: () async {
-                    try {
-                      final result = await _quotationPdf(quotation);
-                      await _share(result);
-                    } catch (error) {
-                      if (!mounted) return;
-                      AppMessages.error(context, '$error');
-                    }
-                  },
-                  child: Text(copy.t('pdfShare')),
-                ),
-                OutlinedButton(
-                  onPressed: () => _confirmDeleteQuotation(quotation),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.danger,
-                  ),
-                  child: Text(copy.t('delete')),
-                ),
-              ],
-            ),
-          ],
-        ),
+                child: Text(copy.t('delete')),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 

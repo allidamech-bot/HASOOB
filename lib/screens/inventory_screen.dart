@@ -16,6 +16,7 @@ import '../widgets/ai_design_system.dart';
 import 'add_product_screen.dart';
 import 'edit_product_screen.dart';
 import 'product_details_screen.dart';
+import 'sales_history_screen.dart';
 import 'sell_product_screen.dart';
 import '../features/inventory/data/models/inventory_item.dart';
 import '../features/inventory/domain/repositories/inventory_repository.dart';
@@ -171,15 +172,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
 
           // Calculate summary metrics
           final totalCount = products.length;
-          final lowStockCount = products.where((p) => p.isLowStock && !p.isOutOfStock).length;
+          final lowStockCount =
+              products.where((p) => p.isLowStock && !p.isOutOfStock).length;
           final outOfStockCount = products.where((p) => p.isOutOfStock).length;
 
           return Column(
             children: [
               // Page Header
               AiPageHeader(
-                title: copy.isEnglish ? 'Inventory & Stock' : 'المخزون والمشتريات',
-                subtitle: copy.isEnglish 
+                title:
+                    copy.isEnglish ? 'Inventory & Stock' : 'المخزون والمشتريات',
+                subtitle: copy.isEnglish
                     ? 'Track quantities, unit costs, and profit margins.'
                     : 'إدارة المخزون والتكلفة والربحية وتقييم الأصول المالية.',
                 actions: const [SyncStatusIndicator()],
@@ -191,19 +194,37 @@ class _InventoryScreenState extends State<InventoryScreen> {
                   onRefresh: _refresh,
                   backgroundColor: AppTheme.aiCard,
                   color: AppTheme.aiGold,
-                  child: isDesktop 
-                    ? ListView(
-                        padding: const EdgeInsets.all(24),
-                        children: _buildContentList(copy, snapshot, hasData, products, filteredProducts, totalCount, lowStockCount, outOfStockCount, isDesktop),
-                      )
-                    : AiMobilePageShell(
-                        child: Column(
-                          children: [
-                            const SizedBox(height: AiMobileConfig.sectionGap),
-                            ..._buildContentList(copy, snapshot, hasData, products, filteredProducts, totalCount, lowStockCount, outOfStockCount, isDesktop),
-                          ],
+                  child: isDesktop
+                      ? ListView(
+                          padding: const EdgeInsets.all(24),
+                          children: _buildContentList(
+                              copy,
+                              snapshot,
+                              hasData,
+                              products,
+                              filteredProducts,
+                              totalCount,
+                              lowStockCount,
+                              outOfStockCount,
+                              isDesktop),
+                        )
+                      : AiMobilePageShell(
+                          child: Column(
+                            children: [
+                              const SizedBox(height: AiMobileConfig.sectionGap),
+                              ..._buildContentList(
+                                  copy,
+                                  snapshot,
+                                  hasData,
+                                  products,
+                                  filteredProducts,
+                                  totalCount,
+                                  lowStockCount,
+                                  outOfStockCount,
+                                  isDesktop),
+                            ],
+                          ),
                         ),
-                      ),
                 ),
               ),
             ],
@@ -213,7 +234,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
   }
 
-  List<Widget> _buildContentList(AppCopy copy, AsyncSnapshot<List<ProductModel>> snapshot, bool hasData, List<ProductModel> products, List<ProductModel> filteredProducts, int totalCount, int lowStockCount, int outOfStockCount, bool isDesktop) {
+  List<Widget> _buildContentList(
+      AppCopy copy,
+      AsyncSnapshot<List<ProductModel>> snapshot,
+      bool hasData,
+      List<ProductModel> products,
+      List<ProductModel> filteredProducts,
+      int totalCount,
+      int lowStockCount,
+      int outOfStockCount,
+      bool isDesktop) {
     return [
       // Summary Cards
       if (isDesktop)
@@ -225,34 +255,56 @@ class _InventoryScreenState extends State<InventoryScreen> {
           mainAxisSpacing: 8,
           childAspectRatio: 2.5,
           children: [
-            AiKpiCard(label: copy.isEnglish ? 'Total Items' : 'إجمالي الأصناف', value: '$totalCount', icon: Icons.inventory_2_rounded, accentColor: AppTheme.aiBlue),
-            AiKpiCard(label: copy.isEnglish ? 'Low Stock' : 'مخزون منخفض', value: '$lowStockCount', icon: Icons.warning_amber_rounded, accentColor: AppTheme.aiGold),
-            AiKpiCard(label: copy.isEnglish ? 'Out of Stock' : 'نفد من المخزون', value: '$outOfStockCount', icon: Icons.remove_shopping_cart_rounded, accentColor: AppTheme.aiRed),
+            AiKpiCard(
+                label: copy.isEnglish ? 'Total Items' : 'إجمالي الأصناف',
+                value: '$totalCount',
+                icon: Icons.inventory_2_rounded,
+                accentColor: AppTheme.aiBlue),
+            AiKpiCard(
+                label: copy.isEnglish ? 'Low Stock' : 'مخزون منخفض',
+                value: '$lowStockCount',
+                icon: Icons.warning_amber_rounded,
+                accentColor: AppTheme.aiGold),
+            AiKpiCard(
+                label: copy.isEnglish ? 'Out of Stock' : 'نفد من المخزون',
+                value: '$outOfStockCount',
+                icon: Icons.remove_shopping_cart_rounded,
+                accentColor: AppTheme.aiRed),
           ],
         )
       else
         AiMobileKpiStrip(
           children: [
-            AiMobileKpiChip(label: '${copy.isEnglish ? 'Total:' : 'الإجمالي:'} $totalCount', icon: Icons.inventory_2_rounded, color: AppTheme.aiBlue),
-            AiMobileKpiChip(label: '${copy.isEnglish ? 'Low:' : 'منخفض:'} $lowStockCount', icon: Icons.warning_amber_rounded, color: AppTheme.aiGold),
-            AiMobileKpiChip(label: '${copy.isEnglish ? 'Out:' : 'نفد:'} $outOfStockCount', icon: Icons.remove_shopping_cart_rounded, color: AppTheme.aiRed),
+            AiMobileKpiChip(
+                label: '${copy.isEnglish ? 'Total:' : 'الإجمالي:'} $totalCount',
+                icon: Icons.inventory_2_rounded,
+                color: AppTheme.aiBlue),
+            AiMobileKpiChip(
+                label: '${copy.isEnglish ? 'Low:' : 'منخفض:'} $lowStockCount',
+                icon: Icons.warning_amber_rounded,
+                color: AppTheme.aiGold),
+            AiMobileKpiChip(
+                label: '${copy.isEnglish ? 'Out:' : 'نفد:'} $outOfStockCount',
+                icon: Icons.remove_shopping_cart_rounded,
+                color: AppTheme.aiRed),
           ],
         ),
-      
+
       SizedBox(height: isDesktop ? 24 : AiMobileConfig.sectionGap),
 
       // Search & Filter Panel
       if (isDesktop)
         PremiumCard(
           padding: const EdgeInsets.all(12),
-          border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.15), width: 1),
+          border: Border.all(
+              color: AppTheme.aiGold.withValues(alpha: 0.15), width: 1),
           child: _buildFilterContent(copy, isDesktop),
         )
       else
         AiMobileFilterPanel(
           child: _buildFilterContent(copy, isDesktop),
         ),
-      
+
       SizedBox(height: isDesktop ? 24 : AiMobileConfig.sectionGap),
 
       // Section Title
@@ -260,16 +312,32 @@ class _InventoryScreenState extends State<InventoryScreen> {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            Text(copy.inventoryResultCount(filteredProducts.length), style: const TextStyle(color: AppTheme.aiGold, fontWeight: FontWeight.w900, fontSize: 15)),
-            AiActionButton(label: copy.isEnglish ? 'Add Item' : 'إضافة صنف', icon: Icons.add_circle_rounded, color: AppTheme.aiGold, isSmall: true, onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()))),
+            Text(copy.inventoryResultCount(filteredProducts.length),
+                style: const TextStyle(
+                    color: AppTheme.aiGold,
+                    fontWeight: FontWeight.w900,
+                    fontSize: 15)),
+            AiActionButton(
+                label: copy.isEnglish ? 'Add Item' : 'إضافة صنف',
+                icon: Icons.add_circle_rounded,
+                color: AppTheme.aiGold,
+                isSmall: true,
+                onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const AddProductScreen()))),
           ],
         )
       else
         AiMobileSectionHeader(
           title: copy.inventoryResultCount(filteredProducts.length),
-          trailing: IconButton(icon: const Icon(Icons.add_circle_rounded, color: AppTheme.aiGold), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen()))),
+          trailing: IconButton(
+              icon:
+                  const Icon(Icons.add_circle_rounded, color: AppTheme.aiGold),
+              onPressed: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const AddProductScreen()))),
         ),
-      
+
       SizedBox(height: isDesktop ? 16 : AiMobileConfig.sectionGap),
 
       // Products content list / empty state
@@ -281,11 +349,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
         _buildEmptyState(context, copy, isDesktop)
       else if (filteredProducts.isEmpty)
         Padding(
-          padding: EdgeInsets.symmetric(horizontal: isDesktop ? 0 : AiMobileConfig.horizontalPadding),
+          padding: EdgeInsets.symmetric(
+              horizontal: isDesktop ? 0 : AiMobileConfig.horizontalPadding),
           child: AiGlassCard(
             padding: const EdgeInsets.all(32),
             child: Center(
-              child: Text(copy.isEnglish ? 'No matching products found.' : 'لا توجد نتائج مطابقة لبحثك وتصفيتك.', style: const TextStyle(color: AppTheme.aiTextSecondary, fontWeight: FontWeight.bold)),
+              child: Text(
+                  copy.isEnglish
+                      ? 'No matching products found.'
+                      : 'لا توجد نتائج مطابقة لبحثك وتصفيتك.',
+                  style: const TextStyle(
+                      color: AppTheme.aiTextSecondary,
+                      fontWeight: FontWeight.bold)),
             ),
           ),
         )
@@ -293,14 +368,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
         ...filteredProducts.map(
           (product) => Padding(
             padding: EdgeInsets.only(
-              bottom: 12, 
-              left: isDesktop ? 0 : AiMobileConfig.horizontalPadding, 
-              right: isDesktop ? 0 : AiMobileConfig.horizontalPadding
-            ),
+                bottom: 12,
+                left: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+                right: isDesktop ? 0 : AiMobileConfig.horizontalPadding),
             child: _productCard(product, copy),
           ),
         ),
-      
+
       if (isDesktop) const SizedBox(height: 24),
 
       // ── Inventory Data Layer Section (InventoryRepositoryFactory) ──────────
@@ -312,7 +386,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           children: [
             Text(
               copy.isEnglish
-                  ? 'Product Catalog (Inventory Layer)'
+                  ? 'Additional Product Catalog'
                   : 'كتالوج المنتجات — طبقة المخزون',
               style: const TextStyle(
                 color: AppTheme.aiBlue,
@@ -324,10 +398,25 @@ class _InventoryScreenState extends State<InventoryScreen> {
         )
       else
         AiMobileSectionHeader(
-          title: copy.isEnglish
-              ? 'Product Catalog'
-              : 'كتالوج المنتجات',
+          title:
+              copy.isEnglish ? 'Additional Product Catalog' : 'كتالوج المنتجات',
         ),
+
+      Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+        ),
+        child: Text(
+          copy.isEnglish
+              ? 'This catalog is for reference. To record a sale, use the main inventory list above and choose Quick Sell on the product.'
+              : 'يعرض هذا القسم سجلات من طبقة بيانات المخزون الأحدث. استخدم قائمة المخزون الرئيسية أعلاه للبيع السريع.',
+          style: const TextStyle(
+            color: AppTheme.aiTextSecondary,
+            fontSize: 12,
+            height: 1.35,
+          ),
+        ),
+      ),
 
       SizedBox(height: isDesktop ? 16 : AiMobileConfig.sectionGap),
 
@@ -374,7 +463,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 child: Center(
                   child: Text(
                     copy.isEnglish
-                        ? 'No catalog items found.'
+                        ? 'No additional catalog items found.'
                         : 'لا توجد بنود في الكتالوج.',
                     style: const TextStyle(
                       color: AppTheme.aiTextSecondary,
@@ -411,7 +500,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
       children: [
         AiSearchField(
           controller: _searchController,
-          hintText: copy.isEnglish ? 'Search inventory...' : 'ابحث باسم الصنف أو الباركود...',
+          hintText: copy.isEnglish
+              ? 'Search inventory...'
+              : 'ابحث باسم الصنف أو الباركود...',
           onClear: _searchController.clear,
         ),
         const SizedBox(height: 12),
@@ -432,7 +523,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
         SwitchListTile(
           contentPadding: EdgeInsets.zero,
           value: _sortAscending,
-          title: Text(copy.isEnglish ? 'Ascending Order' : 'ترتيب تصاعدي', style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 13, fontWeight: FontWeight.bold)),
+          title: Text(copy.isEnglish ? 'Ascending Order' : 'ترتيب تصاعدي',
+              style: const TextStyle(
+                  color: AppTheme.aiTextPrimary,
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold)),
           onChanged: (value) => setState(() => _sortAscending = value),
         ),
       ],
@@ -443,9 +538,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return DropdownButtonFormField<InventoryFilter>(
       initialValue: _selectedFilter,
       dropdownColor: AppTheme.aiCardElevated,
-      style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.bold),
-      decoration: InputDecoration(labelText: copy.isEnglish ? 'Stock Filter' : 'تصفية المخزون', filled: true, fillColor: AppTheme.aiCardElevated),
-      items: InventoryFilter.values.map((filter) => DropdownMenuItem(value: filter, child: Text(_filterLabel(filter, copy)))).toList(),
+      style: const TextStyle(
+          color: AppTheme.aiTextPrimary, fontWeight: FontWeight.bold),
+      decoration: InputDecoration(
+          labelText: copy.isEnglish ? 'Stock Filter' : 'تصفية المخزون',
+          filled: true,
+          fillColor: AppTheme.aiCardElevated),
+      items: InventoryFilter.values
+          .map((filter) => DropdownMenuItem(
+              value: filter, child: Text(_filterLabel(filter, copy))))
+          .toList(),
       onChanged: (value) {
         if (value != null) setState(() => _selectedFilter = value);
       },
@@ -456,9 +558,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return DropdownButtonFormField<InventorySort>(
       initialValue: _selectedSort,
       dropdownColor: AppTheme.aiCardElevated,
-      style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.bold),
-      decoration: InputDecoration(labelText: copy.isEnglish ? 'Sort By' : 'ترتيب حسب', filled: true, fillColor: AppTheme.aiCardElevated),
-      items: InventorySort.values.map((sort) => DropdownMenuItem(value: sort, child: Text(_sortLabel(sort, copy)))).toList(),
+      style: const TextStyle(
+          color: AppTheme.aiTextPrimary, fontWeight: FontWeight.bold),
+      decoration: InputDecoration(
+          labelText: copy.isEnglish ? 'Sort By' : 'ترتيب حسب',
+          filled: true,
+          fillColor: AppTheme.aiCardElevated),
+      items: InventorySort.values
+          .map((sort) => DropdownMenuItem(
+              value: sort, child: Text(_sortLabel(sort, copy))))
+          .toList(),
       onChanged: (value) {
         if (value != null) setState(() => _selectedSort = value);
       },
@@ -472,11 +581,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, color: AppTheme.aiRed, size: 48),
+            const Icon(Icons.error_outline_rounded,
+                color: AppTheme.aiRed, size: 48),
             const SizedBox(height: 16),
             Text(
-              copy.isEnglish ? 'Error loading inventory' : 'فشل تحميل بيانات المخزون من الخادم المحلي.',
-              style: const TextStyle(color: AppTheme.aiTextPrimary, fontWeight: FontWeight.w800, fontSize: 15),
+              copy.isEnglish
+                  ? 'Error loading inventory'
+                  : 'فشل تحميل بيانات المخزون من الخادم المحلي.',
+              style: const TextStyle(
+                  color: AppTheme.aiTextPrimary,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 15),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -494,32 +609,40 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Widget _buildEmptyState(BuildContext context, AppCopy copy, bool isDesktop) {
     if (!isDesktop) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AiMobileConfig.horizontalPadding),
         child: AiMobileEmptyState(
           title: copy.isEnglish ? 'No products yet' : 'لا توجد أصناف بعد',
-          subtitle: copy.isEnglish ? 'Add items to track stock and sales.' : 'أضف منتجاتك الأولى لبدء التتبع والمبيعات.',
+          subtitle: copy.isEnglish
+              ? 'Add products first. Sales are recorded from a product card with Quick Sell.'
+              : 'أضف منتجاتك الأولى لبدء التتبع والمبيعات.',
           icon: Icons.inventory_2_rounded,
           actionLabel: copy.isEnglish ? 'Add Item' : 'إضافة صنف',
-          onAction: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
+          onAction: () => Navigator.push(context,
+              MaterialPageRoute(builder: (_) => const AddProductScreen())),
         ),
       );
     }
     return PremiumCard(
       padding: const EdgeInsets.all(16),
-      border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.15), width: 1),
+      border:
+          Border.all(color: AppTheme.aiGold.withValues(alpha: 0.15), width: 1),
       child: Column(
         children: [
           AiEmptyState(
             icon: Icons.inventory_2_rounded,
-            title: copy.isEnglish ? 'No products in inventory yet' : 'لا توجد أصناف في المخزون بعد',
-            subtitle: copy.isEnglish 
-                ? 'Start by adding your first product to manage costs, pricing, and profitability.'
+            title: copy.isEnglish
+                ? 'No products in inventory yet'
+                : 'لا توجد أصناف في المخزون بعد',
+            subtitle: copy.isEnglish
+                ? 'Start by adding your first product. Once stock exists, open the product card and use Quick Sell to record a sale.'
                 : 'أضف أول صنف لبدء إدارة المخزون، وحساب التكلفة والربحية وتقييم الأصول.',
             action: AiActionButton(
               label: copy.isEnglish ? 'Add Product' : 'أضف أول صنف الآن',
               icon: Icons.add_circle_outline_rounded,
               color: AppTheme.aiGold,
-              onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const AddProductScreen())),
+              onTap: () => Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const AddProductScreen())),
             ),
           ),
           const SizedBox(height: 8),
@@ -528,18 +651,23 @@ class _InventoryScreenState extends State<InventoryScreen> {
             decoration: BoxDecoration(
               color: AppTheme.aiGold.withValues(alpha: 0.05),
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.15)),
+              border:
+                  Border.all(color: AppTheme.aiGold.withValues(alpha: 0.15)),
             ),
             child: Row(
               children: [
-                const Icon(Icons.psychology_rounded, color: AppTheme.aiGold, size: 18),
+                const Icon(Icons.psychology_rounded,
+                    color: AppTheme.aiGold, size: 18),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
-                    copy.isEnglish 
-                        ? 'AI Hint: You can sync products from the cloud sync center instantly.'
+                    copy.isEnglish
+                        ? 'Sale path: add a product, keep its stock updated, then use Quick Sell on that product to record the sale.'
                         : 'تلميح ذكي: يمكنك استيراد ومزامنة أصنافك المسجلة سحابياً مباشرة من مركز المزامنة.',
-                    style: const TextStyle(color: AppTheme.aiGold, fontSize: 11, fontWeight: FontWeight.w600),
+                    style: const TextStyle(
+                        color: AppTheme.aiGold,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600),
                   ),
                 ),
               ],
@@ -555,10 +683,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
     return PremiumCard(
       padding: const EdgeInsets.all(20),
       border: Border.all(
-        color: product.isOutOfStock 
+        color: product.isOutOfStock
             ? AppTheme.aiRed.withValues(alpha: 0.2)
-            : (product.isLowStock 
-                ? AppTheme.aiGold.withValues(alpha: 0.2) 
+            : (product.isLowStock
+                ? AppTheme.aiGold.withValues(alpha: 0.2)
                 : AppTheme.aiGreen.withValues(alpha: 0.2)),
         width: 1,
       ),
@@ -571,21 +699,28 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 width: 46,
                 height: 46,
                 decoration: BoxDecoration(
-                  color: (product.isOutOfStock 
-                      ? AppTheme.aiRed 
-                      : (product.isLowStock ? AppTheme.aiGold : AppTheme.aiGreen)).withValues(alpha: 0.1),
+                  color: (product.isOutOfStock
+                          ? AppTheme.aiRed
+                          : (product.isLowStock
+                              ? AppTheme.aiGold
+                              : AppTheme.aiGreen))
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(14),
                   border: Border.all(
-                    color: product.isOutOfStock 
-                        ? AppTheme.aiRed 
-                        : (product.isLowStock ? AppTheme.aiGold : AppTheme.aiGreen),
+                    color: product.isOutOfStock
+                        ? AppTheme.aiRed
+                        : (product.isLowStock
+                            ? AppTheme.aiGold
+                            : AppTheme.aiGreen),
                   ),
                 ),
                 child: Icon(
                   Icons.inventory_2_rounded,
-                  color: product.isOutOfStock 
+                  color: product.isOutOfStock
                       ? AppTheme.aiRed
-                      : (product.isLowStock ? AppTheme.aiGold : AppTheme.aiGreen),
+                      : (product.isLowStock
+                          ? AppTheme.aiGold
+                          : AppTheme.aiGreen),
                 ),
               ),
               const SizedBox(width: 12),
@@ -621,13 +756,27 @@ class _InventoryScreenState extends State<InventoryScreen> {
             children: [
               _infoChip(copy.t('stock'), '${product.stockQty}'),
               _infoChip(copy.t('minimumLimit'), '${product.lowStockThreshold}'),
-              _infoChip(copy.t('sellingPrice'), AppFormatters.currency(product.sellingPrice)),
-              _infoChip(copy.t('unitProfit'), AppFormatters.currency(product.netProfit)),
+              _infoChip(copy.t('sellingPrice'),
+                  AppFormatters.currency(product.sellingPrice)),
+              _infoChip(copy.t('unitProfit'),
+                  AppFormatters.currency(product.netProfit)),
               if ((product.barcode ?? '').isNotEmpty)
                 _infoChip(copy.t('barcode'), product.barcode!),
             ],
           ),
           const SizedBox(height: 20),
+          if (!product.isOutOfStock) ...[
+            Text(
+              copy.isEnglish
+                  ? 'Use Quick Sell to record a sale for this product.'
+                  : 'استخدم البيع السريع لتسجيل بيع هذا المنتج.',
+              style: const TextStyle(
+                color: AppTheme.aiTextSecondary,
+                fontSize: 12,
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
           Wrap(
             spacing: 12,
             runSpacing: 12,
@@ -639,11 +788,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 isSmall: true,
                 onTap: product.isOutOfStock
                     ? () {}
-                    : () {
-                        Navigator.push(
+                    : () async {
+                        final recorded = await Navigator.push<bool>(
                           context,
                           MaterialPageRoute(
                             builder: (_) => SellProductScreen(product: product),
+                          ),
+                        );
+                        if (!mounted || recorded != true) return;
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SalesHistoryScreen(),
                           ),
                         );
                       },
@@ -692,15 +848,16 @@ class _InventoryScreenState extends State<InventoryScreen> {
   /// Card for [InventoryItem] objects from [InventoryRepositoryFactory].
   /// Maps: item.name → title, item.sku → subtitle badge,
   ///       item.quantity → stock chip, item.price → price chip.
-  Widget _inventoryItemCard(
-      InventoryItem item, AppCopy copy, bool isDesktop) {
+  Widget _inventoryItemCard(InventoryItem item, AppCopy copy, bool isDesktop) {
     final isOut = item.quantity == 0;
     final isLow = !isOut && item.quantity <= 5;
     final statusColor =
         isOut ? AppTheme.aiRed : (isLow ? AppTheme.aiGold : AppTheme.aiBlue);
     final statusLabel = isOut
         ? copy.t('outOfStock')
-        : (isLow ? copy.t('lowStock') : (copy.isEnglish ? 'In Stock' : 'متوفر'));
+        : (isLow
+            ? copy.t('lowStock')
+            : (copy.isEnglish ? 'In Stock' : 'متوفر'));
 
     return PremiumCard(
       padding: const EdgeInsets.all(20),
@@ -805,7 +962,10 @@ class _InventoryScreenState extends State<InventoryScreen> {
       ),
       child: Text(
         '$label: $value',
-        style: const TextStyle(color: AppTheme.aiTextPrimary, fontSize: 12, fontWeight: FontWeight.w600),
+        style: const TextStyle(
+            color: AppTheme.aiTextPrimary,
+            fontSize: 12,
+            fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -834,7 +994,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
       ),
       child: Text(
         text,
-        style: TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 10),
+        style:
+            TextStyle(color: color, fontWeight: FontWeight.w800, fontSize: 10),
       ),
     );
   }

@@ -16,6 +16,7 @@ import '../core/app_formatters.dart';
 import '../widgets/ai_design_system.dart';
 import '../features/customers/data/models/customer_model.dart';
 import '../features/customers/data/repositories/customer_repository_factory.dart';
+
 class CustomersScreen extends StatefulWidget {
   const CustomersScreen({super.key});
 
@@ -55,7 +56,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
       context: context,
       builder: (context) => AlertDialog(
         title: Text(
-          customer == null ? copy.t('addCustomerTitle') : copy.t('editCustomerTitle'),
+          customer == null
+              ? copy.t('addCustomerTitle')
+              : copy.t('editCustomerTitle'),
         ),
         content: SingleChildScrollView(
           child: Column(
@@ -132,9 +135,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
         actions: [
           IconButton(
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen()));
+              Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const CollectionCenterScreen()));
             },
-            icon: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.aiGold),
+            icon: const Icon(Icons.account_balance_wallet_rounded,
+                color: AppTheme.aiGold),
             tooltip: copy.t('collectionCenterTitle'),
           ),
           IconButton(
@@ -154,12 +161,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
           stream: _customerRepository.watchCustomers(_businessId),
           builder: (context, snapshot) {
             final hasData = snapshot.hasData && snapshot.data != null;
-            
+
             if (snapshot.hasError && !hasData) {
               return _buildErrorState(context, copy, snapshot.error);
             }
 
-            if (!hasData && snapshot.connectionState == ConnectionState.waiting) {
+            if (!hasData &&
+                snapshot.connectionState == ConnectionState.waiting) {
               return _buildSkeleton(context, copy);
             }
 
@@ -168,32 +176,36 @@ class _CustomersScreenState extends State<CustomersScreen> {
             }
 
             final customers = snapshot.data ?? const <Map<String, dynamic>>[];
-            
-            if (customers.isEmpty && snapshot.connectionState != ConnectionState.waiting) {
+
+            if (customers.isEmpty &&
+                snapshot.connectionState != ConnectionState.waiting) {
               return _buildEmptyState(context, copy);
             }
 
             final isDesktop = UIResponsive.isDesktop(context);
             return isDesktop
-              ? ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: _buildContentList(context, copy, customers, isDesktop),
-                )
-              : AiMobilePageShell(
-                  child: Column(
-                    children: [
-                      const SizedBox(height: AiMobileConfig.sectionGap),
-                      ..._buildContentList(context, copy, customers, isDesktop),
-                    ],
-                  ),
-                );
+                ? ListView(
+                    padding: const EdgeInsets.all(16),
+                    children:
+                        _buildContentList(context, copy, customers, isDesktop),
+                  )
+                : AiMobilePageShell(
+                    child: Column(
+                      children: [
+                        const SizedBox(height: AiMobileConfig.sectionGap),
+                        ..._buildContentList(
+                            context, copy, customers, isDesktop),
+                      ],
+                    ),
+                  );
           },
         ),
       ),
     );
   }
 
-  List<Widget> _buildContentList(BuildContext context, AppCopy copy, List<Map<String, dynamic>> customers, bool isDesktop) {
+  List<Widget> _buildContentList(BuildContext context, AppCopy copy,
+      List<Map<String, dynamic>> customers, bool isDesktop) {
     return [
       if (isDesktop) ...[
         _buildTopActionRow(context, copy, customers),
@@ -204,6 +216,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
       ...customers.map((customer) {
         final name = customer['name']?.toString() ?? '';
         final phone = customer['phone']?.toString() ?? '';
+        final notes = customer['notes']?.toString().trim() ?? '';
         final outstanding = _toDouble(customer['outstanding_balance']);
 
         return Padding(
@@ -213,7 +226,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
             right: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
           ),
           child: InkWell(
-            borderRadius: BorderRadius.circular(isDesktop ? AppTheme.radiusLarge : AiMobileConfig.cardRadius),
+            borderRadius: BorderRadius.circular(
+                isDesktop ? AppTheme.radiusLarge : AiMobileConfig.cardRadius),
             onTap: () {
               Navigator.push(
                 context,
@@ -228,12 +242,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
             child: isDesktop
                 ? PremiumCard(
                     padding: const EdgeInsets.all(20),
-                    child: _customerRowContent(context, copy, customer, name, phone, outstanding),
+                    child: _customerRowContent(context, copy, customer, name,
+                        phone, notes, outstanding),
                   )
                 : AiGlassCard(
                     borderRadius: AiMobileConfig.cardRadius,
                     padding: const EdgeInsets.all(AiMobileConfig.cardPadding),
-                    child: _customerRowContent(context, copy, customer, name, phone, outstanding),
+                    child: _customerRowContent(context, copy, customer, name,
+                        phone, notes, outstanding),
                   ),
           ),
         );
@@ -247,7 +263,7 @@ class _CustomersScreenState extends State<CustomersScreen> {
           children: [
             Text(
               copy.isEnglish
-                  ? 'Customer Directory (Domain Layer)'
+                  ? 'Additional Customer Catalog'
                   : 'دليل العملاء — طبقة النطاق',
               style: const TextStyle(
                 color: AppTheme.aiBlue,
@@ -259,8 +275,25 @@ class _CustomersScreenState extends State<CustomersScreen> {
         )
       else
         AiMobileSectionHeader(
-          title: copy.isEnglish ? 'Customer Directory' : 'دليل العملاء',
+          title:
+              copy.isEnglish ? 'Additional Customer Catalog' : 'دليل العملاء',
         ),
+
+      Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+        ),
+        child: Text(
+          copy.isEnglish
+              ? 'This section shows customer records from the newer customer data layer. It may overlap with the main list while both data paths are active.'
+              : 'يعرض هذا القسم سجلات العملاء من طبقة بيانات العملاء الأحدث، وقد يتداخل مع القائمة الرئيسية أثناء عمل المسارين.',
+          style: const TextStyle(
+            color: AppTheme.aiTextSecondary,
+            fontSize: 12,
+            height: 1.35,
+          ),
+        ),
+      ),
 
       SizedBox(height: isDesktop ? 16 : AiMobileConfig.sectionGap),
 
@@ -273,7 +306,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Padding(
               padding: EdgeInsets.symmetric(vertical: 24),
-              child: Center(child: CircularProgressIndicator(color: AppTheme.aiBlue)),
+              child: Center(
+                  child: CircularProgressIndicator(color: AppTheme.aiBlue)),
             );
           }
           final customers = snapshot.data ?? const <CustomerModel>[];
@@ -286,7 +320,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 padding: const EdgeInsets.all(24),
                 child: Center(
                   child: Text(
-                    copy.isEnglish ? 'No customers found.' : 'لا يوجد عملاء.',
+                    copy.isEnglish
+                        ? 'No additional customer records found.'
+                        : 'لا يوجد عملاء.',
                     style: const TextStyle(
                       color: AppTheme.aiTextSecondary,
                       fontWeight: FontWeight.bold,
@@ -297,14 +333,16 @@ class _CustomersScreenState extends State<CustomersScreen> {
             );
           }
           return Column(
-            children: customers.map((c) => Padding(
-              padding: EdgeInsets.only(
-                bottom: 12,
-                left: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
-                right: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
-              ),
-              child: _customerModelCard(c, copy, isDesktop),
-            )).toList(),
+            children: customers
+                .map((c) => Padding(
+                      padding: EdgeInsets.only(
+                        bottom: 12,
+                        left: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+                        right: isDesktop ? 0 : AiMobileConfig.horizontalPadding,
+                      ),
+                      child: _customerModelCard(c, copy, isDesktop),
+                    ))
+                .toList(),
           );
         },
       ),
@@ -313,14 +351,25 @@ class _CustomersScreenState extends State<CustomersScreen> {
     ];
   }
 
-  Widget _customerRowContent(BuildContext context, AppCopy copy, Map<String, dynamic> customer, String name, String phone, double outstanding) {
+  Widget _customerRowContent(
+      BuildContext context,
+      AppCopy copy,
+      Map<String, dynamic> customer,
+      String name,
+      String phone,
+      String notes,
+      double outstanding) {
+    final displayName = name.trim().isEmpty
+        ? (copy.isEnglish ? 'Unnamed customer' : 'عميل بدون اسم')
+        : name.trim();
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         CircleAvatar(
           radius: 24,
           backgroundColor: AppTheme.accent.withValues(alpha: 0.14),
           child: Text(
-            name.isEmpty ? '?' : name.substring(0, 1),
+            displayName.substring(0, 1),
             style: const TextStyle(
               color: AppTheme.accent,
               fontWeight: FontWeight.w800,
@@ -333,23 +382,45 @@ class _CustomersScreenState extends State<CustomersScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                name,
+                displayName,
                 style: const TextStyle(
                   fontWeight: FontWeight.w800,
                   fontSize: 16,
                 ),
               ),
-              const SizedBox(height: 4),
-              Text(
-                copy.customerBalanceLine(
-                  phone,
-                  outstanding.toStringAsFixed(2),
-                ),
-                style: TextStyle(
-                  color: AppTheme.textSecondaryFor(context),
-                  fontSize: 13,
-                ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  _customerInfoChip(
+                    icon: Icons.phone_outlined,
+                    label: phone.trim().isEmpty
+                        ? (copy.isEnglish ? 'No phone yet' : 'لا يوجد رقم بعد')
+                        : phone.trim(),
+                  ),
+                  _customerInfoChip(
+                    icon: Icons.account_balance_wallet_outlined,
+                    label: copy.isEnglish
+                        ? 'Outstanding ${AppFormatters.currency(outstanding)}'
+                        : 'المستحق ${AppFormatters.currency(outstanding)}',
+                    color: outstanding > 0 ? AppTheme.aiGold : AppTheme.aiGreen,
+                  ),
+                ],
               ),
+              if (notes.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  notes,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(
+                    color: AppTheme.textSecondaryFor(context),
+                    fontSize: 12,
+                    height: 1.35,
+                  ),
+                ),
+              ],
             ],
           ),
         ),
@@ -357,14 +428,47 @@ class _CustomersScreenState extends State<CustomersScreen> {
           onPressed: () => _openCustomerForm(customer),
           icon: const Icon(Icons.edit_outlined),
         ),
-        const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: AppTheme.aiTextSecondary),
+        const Icon(Icons.arrow_forward_ios_rounded,
+            size: 16, color: AppTheme.aiTextSecondary),
       ],
     );
   }
 
-  Widget _buildMobileTopActions(BuildContext context, AppCopy copy, List<Map<String, dynamic>> customers) {
-    final double totalOutstanding = customers.fold<double>(0.0, (sum, c) => sum + _toDouble(c['outstanding_balance']));
-    
+  Widget _customerInfoChip({
+    required IconData icon,
+    required String label,
+    Color color = AppTheme.aiTextSecondary,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.10),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 13, color: color),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              color: color,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMobileTopActions(BuildContext context, AppCopy copy,
+      List<Map<String, dynamic>> customers) {
+    final double totalOutstanding = customers.fold<double>(
+        0.0, (sum, c) => sum + _toDouble(c['outstanding_balance']));
+
     return Padding(
       padding: const EdgeInsets.only(bottom: AiMobileConfig.sectionGap),
       child: Column(
@@ -372,7 +476,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
           AiMobileKpiStrip(
             children: [
               AiMobileKpiChip(
-                label: '${copy.isEnglish ? 'Outstanding:' : 'إجمالي المستحقات:'} ${AppFormatters.currency(totalOutstanding)}',
+                label:
+                    '${copy.isEnglish ? 'Outstanding:' : 'إجمالي المستحقات:'} ${AppFormatters.currency(totalOutstanding)}',
                 icon: Icons.account_balance_wallet_rounded,
                 color: AppTheme.aiGold,
               ),
@@ -381,21 +486,28 @@ class _CustomersScreenState extends State<CustomersScreen> {
           const SizedBox(height: AiMobileConfig.sectionGap),
           SingleChildScrollView(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+            padding: const EdgeInsets.symmetric(
+                horizontal: AiMobileConfig.horizontalPadding),
             child: Row(
               children: [
                 AiMobileActionCard(
                   title: copy.isEnglish ? 'Collection Center' : 'مركز التحصيل',
                   icon: Icons.account_balance_wallet_rounded,
                   color: AppTheme.aiRed,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen())),
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const CollectionCenterScreen())),
                 ),
                 const SizedBox(width: 12),
                 AiMobileActionCard(
                   title: copy.isEnglish ? 'Sales Operation' : 'عملية مبيعات',
                   icon: Icons.add_shopping_cart,
                   color: AppTheme.aiBlue,
-                  onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen())),
+                  onTap: () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (_) => const DocumentsScreen())),
                 ),
               ],
             ),
@@ -419,7 +531,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline_rounded, color: AppTheme.danger, size: 48),
+            const Icon(Icons.error_outline_rounded,
+                color: AppTheme.danger, size: 48),
             const SizedBox(height: 16),
             Text(
               copy.t('loadCustomersError'),
@@ -442,10 +555,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
     final isDesktop = UIResponsive.isDesktop(context);
     if (!isDesktop) {
       return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AiMobileConfig.horizontalPadding),
+        padding: const EdgeInsets.symmetric(
+            horizontal: AiMobileConfig.horizontalPadding),
         child: AiMobileEmptyState(
           title: copy.t('noCustomersYet'),
-          subtitle: copy.isEnglish ? 'Start tracking your clients.' : 'لا توجد بيانات عملاء مسجلة حالياً.',
+          subtitle: copy.isEnglish
+              ? 'Start tracking your clients.'
+              : 'لا توجد بيانات عملاء مسجلة حالياً.',
           icon: Icons.people_outline_rounded,
           actionLabel: copy.t('newCustomer'),
           onAction: () => _openCustomerForm(),
@@ -457,12 +573,30 @@ class _CustomersScreenState extends State<CustomersScreen> {
       padding: const EdgeInsets.all(24),
       children: [
         const SizedBox(height: 40),
-        const Icon(Icons.people_outline_rounded, size: 48, color: AppTheme.accent),
+        const Icon(Icons.people_outline_rounded,
+            size: 48, color: AppTheme.accent),
         const SizedBox(height: 16),
         Center(
           child: Text(
             copy.t('noCustomersYet'),
             style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 460),
+            child: Text(
+              copy.isEnglish
+                  ? 'Create a customer before issuing invoices or tracking outstanding balances. Add phone and notes now, then open the statement later.'
+                  : 'أنشئ عميلا قبل إصدار الفواتير أو متابعة الأرصدة المستحقة. أضف الهاتف والملاحظات الآن ثم افتح الكشف لاحقا.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                color: AppTheme.aiTextSecondary,
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
           ),
         ),
         const SizedBox(height: 24),
@@ -482,9 +616,11 @@ class _CustomersScreenState extends State<CustomersScreen> {
     return double.tryParse(value?.toString() ?? '') ?? 0;
   }
 
-  Widget _buildTopActionRow(BuildContext context, AppCopy copy, List<Map<String, dynamic>> customers) {
-    final double totalOutstanding = customers.fold<double>(0.0, (sum, c) => sum + _toDouble(c['outstanding_balance']));
-    
+  Widget _buildTopActionRow(BuildContext context, AppCopy copy,
+      List<Map<String, dynamic>> customers) {
+    final double totalOutstanding = customers.fold<double>(
+        0.0, (sum, c) => sum + _toDouble(c['outstanding_balance']));
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Row(
@@ -495,14 +631,21 @@ class _CustomersScreenState extends State<CustomersScreen> {
               decoration: BoxDecoration(
                 color: AppTheme.aiCardElevated,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppTheme.aiGold.withValues(alpha: 0.2)),
+                border:
+                    Border.all(color: AppTheme.aiGold.withValues(alpha: 0.2)),
               ),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('إجمالي المستحقات', style: TextStyle(color: AppTheme.aiTextSecondary, fontSize: 11)),
+                  const Text('إجمالي المستحقات',
+                      style: TextStyle(
+                          color: AppTheme.aiTextSecondary, fontSize: 11)),
                   const SizedBox(height: 4),
-                  Text(AppFormatters.currency(totalOutstanding), style: const TextStyle(color: AppTheme.aiGold, fontSize: 14, fontWeight: FontWeight.bold)),
+                  Text(AppFormatters.currency(totalOutstanding),
+                      style: const TextStyle(
+                          color: AppTheme.aiGold,
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -510,7 +653,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
           const SizedBox(width: 12),
           InkWell(
             onTap: () {
-               Navigator.push(context, MaterialPageRoute(builder: (_) => const DocumentsScreen()));
+              Navigator.push(context,
+                  MaterialPageRoute(builder: (_) => const DocumentsScreen()));
             },
             borderRadius: BorderRadius.circular(12),
             child: Container(
@@ -523,7 +667,11 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 children: [
                   Icon(Icons.add_shopping_cart, color: Colors.white, size: 18),
                   SizedBox(width: 8),
-                  Text('عملية مبيعات', style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.bold)),
+                  Text('عملية مبيعات',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold)),
                 ],
               ),
             ),
@@ -541,7 +689,10 @@ class _CustomersScreenState extends State<CustomersScreen> {
         borderColor: AppTheme.aiGold.withValues(alpha: 0.4),
         glowColor: AppTheme.aiGold,
         onTap: () {
-          Navigator.push(context, MaterialPageRoute(builder: (_) => const CollectionCenterScreen()));
+          Navigator.push(
+              context,
+              MaterialPageRoute(
+                  builder: (_) => const CollectionCenterScreen()));
         },
         child: Row(
           children: [
@@ -551,7 +702,8 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 color: AppTheme.aiGold.withValues(alpha: 0.15),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(Icons.account_balance_wallet_rounded, color: AppTheme.aiGold, size: 24),
+              child: const Icon(Icons.account_balance_wallet_rounded,
+                  color: AppTheme.aiGold, size: 24),
             ),
             const SizedBox(width: 16),
             Expanded(
@@ -578,17 +730,21 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 ],
               ),
             ),
-            const Icon(Icons.arrow_forward_ios_rounded, color: AppTheme.aiGold, size: 16),
+            const Icon(Icons.arrow_forward_ios_rounded,
+                color: AppTheme.aiGold, size: 16),
           ],
         ),
       ),
     );
   }
 
-  Widget _customerModelCard(CustomerModel customer, AppCopy copy, bool isDesktop) {
+  Widget _customerModelCard(
+      CustomerModel customer, AppCopy copy, bool isDesktop) {
     final isActive = customer.status == 'active';
     final statusColor = isActive ? AppTheme.aiGreen : AppTheme.aiRed;
-    final statusLabel = isActive ? (copy.isEnglish ? 'Active' : 'نشط') : (copy.isEnglish ? 'Inactive' : 'غير نشط');
+    final statusLabel = isActive
+        ? (copy.isEnglish ? 'Active' : 'نشط')
+        : (copy.isEnglish ? 'Inactive' : 'غير نشط');
 
     return PremiumCard(
       padding: const EdgeInsets.all(20),
@@ -627,7 +783,9 @@ class _CustomersScreenState extends State<CustomersScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      customer.phone.isNotEmpty ? customer.phone : (copy.isEnglish ? 'No phone' : 'بدون رقم'),
+                      customer.phone.isNotEmpty
+                          ? customer.phone
+                          : (copy.isEnglish ? 'No phone' : 'بدون رقم'),
                       style: const TextStyle(
                         color: AppTheme.aiTextSecondary,
                         fontSize: 13,
@@ -637,11 +795,13 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 ),
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 decoration: BoxDecoration(
                   color: statusColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: statusColor.withValues(alpha: 0.25)),
+                  border:
+                      Border.all(color: statusColor.withValues(alpha: 0.25)),
                 ),
                 child: Text(
                   statusLabel,
@@ -659,9 +819,12 @@ class _CustomersScreenState extends State<CustomersScreen> {
             if (customer.email.isNotEmpty)
               Row(
                 children: [
-                  const Icon(Icons.email_outlined, size: 14, color: AppTheme.aiTextSecondary),
+                  const Icon(Icons.email_outlined,
+                      size: 14, color: AppTheme.aiTextSecondary),
                   const SizedBox(width: 8),
-                  Text(customer.email, style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12)),
+                  Text(customer.email,
+                      style: const TextStyle(
+                          color: AppTheme.aiTextSecondary, fontSize: 12)),
                 ],
               ),
             if (customer.address.isNotEmpty)
@@ -669,9 +832,14 @@ class _CustomersScreenState extends State<CustomersScreen> {
                 padding: const EdgeInsets.only(top: 4),
                 child: Row(
                   children: [
-                    const Icon(Icons.location_on_outlined, size: 14, color: AppTheme.aiTextSecondary),
+                    const Icon(Icons.location_on_outlined,
+                        size: 14, color: AppTheme.aiTextSecondary),
                     const SizedBox(width: 8),
-                    Expanded(child: Text(customer.address, style: const TextStyle(color: AppTheme.aiTextSecondary, fontSize: 12))),
+                    Expanded(
+                        child: Text(customer.address,
+                            style: const TextStyle(
+                                color: AppTheme.aiTextSecondary,
+                                fontSize: 12))),
                   ],
                 ),
               ),
@@ -681,18 +849,25 @@ class _CustomersScreenState extends State<CustomersScreen> {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: customer.tags.map((tag) => Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: AppTheme.aiBlue.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: AppTheme.aiBlue.withValues(alpha: 0.2)),
-                ),
-                child: Text(
-                  '#$tag',
-                  style: const TextStyle(color: AppTheme.aiBlue, fontSize: 11, fontWeight: FontWeight.bold),
-                ),
-              )).toList(),
+              children: customer.tags
+                  .map((tag) => Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppTheme.aiBlue.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(
+                              color: AppTheme.aiBlue.withValues(alpha: 0.2)),
+                        ),
+                        child: Text(
+                          '#$tag',
+                          style: const TextStyle(
+                              color: AppTheme.aiBlue,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold),
+                        ),
+                      ))
+                  .toList(),
             ),
           ],
         ],

@@ -80,9 +80,7 @@ class _AuthShellState extends State<AuthShell> {
             ),
             // Content
             SafeArea(
-              child: isWide
-                  ? _buildWideLayout(copy)
-                  : _buildNarrowLayout(copy),
+              child: isWide ? _buildWideLayout(copy) : _buildNarrowLayout(copy),
             ),
           ],
         ),
@@ -97,101 +95,103 @@ class _AuthShellState extends State<AuthShell> {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.all(48),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Logo
-                Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        gradient: AppTheme.aiBlueGradient,
-                        borderRadius: BorderRadius.circular(14),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.aiBlue.withValues(alpha: 0.3),
-                            blurRadius: 20,
-                          ),
-                        ],
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Logo
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          gradient: AppTheme.aiBlueGradient,
+                          borderRadius: BorderRadius.circular(14),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppTheme.aiBlue.withValues(alpha: 0.3),
+                              blurRadius: 20,
+                            ),
+                          ],
+                        ),
+                        child: const Icon(Icons.auto_awesome_rounded,
+                            color: Colors.white, size: 28),
                       ),
-                      child: const Icon(Icons.auto_awesome_rounded,
-                          color: Colors.white, size: 28),
-                    ),
-                    const SizedBox(width: 14),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          copy.isEnglish ? 'HASOOB' : 'حاسوب',
-                          style: const TextStyle(
-                            color: AppTheme.aiGold,
-                            fontSize: 24,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.5,
-                          ),
-                        ),
-                        Text(
-                          copy.isEnglish
-                              ? 'AI Financial OS'
-                              : 'نظام الذكاء المالي',
-                          style: const TextStyle(
-                            color: AppTheme.aiBlue,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 2,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 60),
-                AiRobotAdvisor(
-                  greeting: copy.isEnglish
-                      ? 'Your Financial AI Advisor'
-                      : 'مستشارك المالي الذكي',
-                  advisorTitle: copy.isEnglish
-                      ? 'AI FINANCIAL ADVISOR'
-                      : 'المستشار المالي الذكي',
-                  suggestion: copy.isEnglish
-                      ? 'I will help you make the best financial decisions for your business.'
-                      : 'أنا هنا لمساعدتك على اتخاذ أفضل القرارات المالية لعملك.',
-                ),
-                const SizedBox(height: 40),
-                // Feature bullets
-                ..._features(copy).map((f) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Row(
+                      const SizedBox(width: 14),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Container(
-                            width: 8,
-                            height: 8,
-                            decoration: BoxDecoration(
-                              color: AppTheme.aiGreen,
-                              shape: BoxShape.circle,
-                              boxShadow: [
-                                BoxShadow(
-                                  color:
-                                      AppTheme.aiGreen.withValues(alpha: 0.5),
-                                  blurRadius: 6,
-                                ),
-                              ],
+                          Text(
+                            copy.isEnglish ? 'HASOOB' : 'حاسوب',
+                            style: const TextStyle(
+                              color: AppTheme.aiGold,
+                              fontSize: 24,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 1.5,
                             ),
                           ),
-                          const SizedBox(width: 12),
                           Text(
-                            f,
+                            copy.isEnglish
+                                ? 'AI Financial OS'
+                                : 'نظام الذكاء المالي',
                             style: const TextStyle(
-                              color: AppTheme.aiTextSecondary,
-                              fontSize: 14,
+                              color: AppTheme.aiBlue,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              letterSpacing: 2,
                             ),
                           ),
                         ],
                       ),
-                    )),
-              ],
+                    ],
+                  ),
+                  const SizedBox(height: 60),
+                  AiRobotAdvisor(
+                    greeting: copy.isEnglish
+                        ? 'Your Financial AI Advisor'
+                        : 'مستشارك المالي الذكي',
+                    advisorTitle: copy.isEnglish
+                        ? 'AI FINANCIAL ADVISOR'
+                        : 'المستشار المالي الذكي',
+                    suggestion: copy.isEnglish
+                        ? 'I will help you make the best financial decisions for your business.'
+                        : 'أنا هنا لمساعدتك على اتخاذ أفضل القرارات المالية لعملك.',
+                  ),
+                  const SizedBox(height: 40),
+                  // Feature bullets
+                  ..._features(copy).map((f) => Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: Row(
+                          children: [
+                            Container(
+                              width: 8,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: AppTheme.aiGreen,
+                                shape: BoxShape.circle,
+                                boxShadow: [
+                                  BoxShadow(
+                                    color:
+                                        AppTheme.aiGreen.withValues(alpha: 0.5),
+                                    blurRadius: 6,
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              f,
+                              style: const TextStyle(
+                                color: AppTheme.aiTextSecondary,
+                                fontSize: 14,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )),
+                ],
+              ),
             ),
           ),
         ),
@@ -254,9 +254,7 @@ class _AuthShellState extends State<AuthShell> {
                       ),
                     ),
                     Text(
-                      copy.isEnglish
-                          ? 'AI Financial OS'
-                          : 'نظام الذكاء المالي',
+                      copy.isEnglish ? 'AI Financial OS' : 'نظام الذكاء المالي',
                       style: const TextStyle(
                         color: AppTheme.aiBlue,
                         fontSize: 9,

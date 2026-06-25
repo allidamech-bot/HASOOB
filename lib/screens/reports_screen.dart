@@ -29,6 +29,8 @@ import '../features/analytics/presentation/widgets/predictive_runway_widget.dart
 import '../features/shipping_logistics/presentation/widgets/container_simulation_widget.dart';
 import '../features/analytics/presentation/widgets/autonomous_audit_widget.dart';
 import '../features/analytics/presentation/widgets/diagnostic_panel_widget.dart';
+import 'add_product_screen.dart';
+import 'invoice_form_screen.dart';
 
 // ignore: avoid_web_libraries_in_flutter
 import 'dart:io' as io;
@@ -337,6 +339,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
       ),
       const SizedBox(height: 16),
       _hero(data, copy),
+      const SizedBox(height: 24),
+      _reportReadingGuide(data, copy),
       const SizedBox(height: 24),
       _buildDomainLayerReports(copy),
       const SizedBox(height: 24),
@@ -840,7 +844,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _bestSelling(ReportsSnapshot data, AppCopy copy) {
     return _listSection(
       title: copy.t('bestSellingProducts'),
+      helper: copy.isEnglish
+          ? 'Shows which products are driving sales and profit. Use it to decide what to reorder, promote, or price-check.'
+          : null,
       empty: copy.t('noBestSellingData'),
+      emptySubtitle: copy.isEnglish
+          ? 'After you record sales for stocked products, this section will show demand and profit leaders. Add products, then record sales or invoices with quantities.'
+          : 'بعد تسجيل مبيعات المنتجات سيظهر هنا ما يحقق الطلب والربح. أضف المنتجات ثم سجل المبيعات أو الفواتير بالكميات.',
       children: data.bestSellingProducts.map((item) {
         return _ListSurface(
           child: ListTile(
@@ -871,7 +881,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _lowStock(ReportsSnapshot data, AppCopy copy) {
     return _listSection(
       title: copy.t('lowStockProducts'),
+      helper: copy.isEnglish
+          ? 'Shows products that may interrupt sales soon. Check these before promising delivery or buying new stock.'
+          : null,
       empty: copy.t('noLowStockNow'),
+      emptySubtitle: copy.isEnglish
+          ? 'This section will flag products below their stock threshold. Add products with quantities and keep stock updated after sales.'
+          : 'سيعرض هذا القسم المنتجات التي تنخفض عن حد المخزون. أضف المنتجات بكمياتها وحدّث المخزون بعد البيع.',
       children: data.lowStockItems.take(6).map((product) {
         return _ListSurface(
           child: ListTile(
@@ -902,7 +918,13 @@ class _ReportsScreenState extends State<ReportsScreen> {
   Widget _recentSales(ReportsSnapshot data, AppCopy copy) {
     return _listSection(
       title: copy.t('recentSales'),
+      helper: copy.isEnglish
+          ? 'Shows the latest recorded sales activity. If this is empty, reports will not yet show daily movement.'
+          : null,
       empty: copy.t('noSalesYet'),
+      emptySubtitle: copy.isEnglish
+          ? 'Recent sales will appear after you sell stocked products or issue sales invoices. Add one real sale to start seeing movement.'
+          : 'ستظهر المبيعات الحديثة بعد بيع منتجات من المخزون أو إصدار فواتير بيع. سجّل عملية بيع حقيقية لبدء عرض الحركة.',
       children: data.recentSales.map((row) {
         return _ListSurface(
           child: ListTile(
@@ -941,23 +963,71 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   Widget _listSection({
     required String title,
+    String? helper,
     required String empty,
+    String? emptySubtitle,
     required List<Widget> children,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         AppSectionHeader(title: title),
+        if (helper != null) ...[
+          const SizedBox(height: 6),
+          Text(
+            helper,
+            style: TextStyle(color: _muted, fontSize: 12, height: 1.4),
+          ),
+        ],
         const SizedBox(height: 12),
         if (children.isEmpty)
           AiGlassCard(
             borderColor: AppTheme.aiGold.withValues(alpha: 0.15),
-            child: AiEmptyState(
-              icon: Icons.analytics_outlined,
-              title: empty,
-              subtitle: AppCopy.of(context).isEnglish
-                  ? "No transactions have been recorded in this category yet."
-                  : "ظ„ظ… ظٹطھظ… طھط³ط¬ظٹظ„ ط£ظٹ ط¹ظ…ظ„ظٹط§طھ طھط¬ط§ط±ظٹط© ط£ظˆ ظ…ط¨ظٹط¹ط§طھ ظپظٹ ظ‡ط°ط§ ط§ظ„ظ‚ط³ظ… ط­طھظ‰ ط§ظ„ط¢ظ†.",
+            child: Column(
+              children: [
+                AiEmptyState(
+                  icon: Icons.analytics_outlined,
+                  title: empty,
+                  subtitle: emptySubtitle ??
+                      (AppCopy.of(context).isEnglish
+                          ? "This section needs real products, sales, or invoices before it can guide a decision."
+                          : "ظ„ظ… ظٹطھظ… طھط³ط¬ظٹظ„ ط£ظٹ ط¹ظ…ظ„ظٹط§طھ طھط¬ط§ط±ظٹط© ط£ظˆ ظ…ط¨ظٹط¹ط§طھ طپظٹ ط‡ط°ط§ ط§ظ„ظ‚ط³ظ… ط­طھظ‰ ط§ظ„ط¢ظ†."),
+                ),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 12,
+                  runSpacing: 12,
+                  alignment: WrapAlignment.center,
+                  children: [
+                    AiActionButton(
+                      label: AppCopy.of(context).t('dashboardAddProduct'),
+                      icon: Icons.add_rounded,
+                      color: AppTheme.aiBlue,
+                      isSmall: true,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const AddProductScreen()),
+                        );
+                      },
+                    ),
+                    AiActionButton(
+                      label: AppCopy.of(context).t('dashboardCreateInvoice'),
+                      icon: Icons.receipt_long_rounded,
+                      color: AppTheme.aiGold,
+                      isSmall: true,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (_) => const InvoiceFormScreen()),
+                        );
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
           )
         else
@@ -1012,16 +1082,63 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 Text(
                   hasData
                       ? (copy.isEnglish
-                          ? 'Operating liquidity is growing robustly at +14.8%. The optimal financial path is to decrease customer invoice collection periods while maintaining stable stock levels of profitable items.'
-                          : 'ظ†ظ…ظˆ ط§ظ„ط³ظٹظˆظ„ط© ط§ظ„طھط´ط؛ظٹظ„ظٹط© ظˆط§ظ„ط±ط¨ط­ظٹط© ظ…ظ…طھط§ط² ط¨ظ†ط³ط¨ط© +14.8% ظ‡ط°ط§ ط§ظ„ط´ظ‡ط±. ط§ظ„ط®ظٹط§ط± ط§ظ„ظ…ط§ظ„ظٹ ط§ظ„ط£ظپط¶ظ„ ط§ظ„ط¢ظ† ظ‡ظˆ ط§ظ„ط¹ظ…ظ„ ط¹ظ„ظ‰ طھظ‚طµظٹط± ظپطھط±ط§طھ طھط­طµظٹظ„ ط§ظ„ظپظˆط§طھظٹط± ط§ظ„ظ…ظپطھظˆط­ط© ظ…ط¹ ط§ظ„ط­ظپط§ط¸ ط¹ظ„ظ‰ ظ…ط³طھظˆظٹط§طھ ظ…ط®ط²ظˆظ† ط¢ظ…ظ†ط© ظ„ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„ط£ظƒط«ط± ط±ط¨ط­ظٹط©.')
+                          ? 'Reports are using your recorded products and sales. Check customer collection, low-stock items, and profit evidence before making decisions.'
+                          : 'ظ†ظ…ظˆ ط§ظ„ط³ظٹظˆظ„ط© ط§ظ„طھط´ط؛ظٹظ„ظٹط© ظˆط§ظ„ط±ط¨ط­ظٹط© ظ…ظ…طھط§ط² ط¨ظ†ط³ط¨ط© حسب البيانات المسجلة ظ‡ط°ط§ ط§ظ„ط´ظ‡ط±. ط§ظ„ط®ظٹط§ط± ط§ظ„ظ…ط§ظ„ظٹ ط§ظ„ط£ظپط¶ظ„ ط§ظ„ط¢ظ† ظ‡ظˆ ط§ظ„ط¹ظ…ظ„ ط¹ظ„ظ‰ طھظ‚طµظٹط± ظپطھط±ط§طھ طھط­طµظٹظ„ ط§ظ„ظپظˆط§طھظٹط± ط§ظ„ظ…ظپطھظˆط­ط© ظ…ط¹ ط§ظ„ط­ظپط§ط¸ ط¹ظ„ظ‰ ظ…ط³طھظˆظٹط§طھ ظ…ط®ط²ظˆظ† ط¢ظ…ظ†ط© ظ„ظ„ظ…ظ†طھط¬ط§طھ ط§ظ„ط£ظƒط«ط± ط±ط¨ط­ظٹط©.')
                       : (copy.isEnglish
-                          ? 'Not enough local financial data is available to generate diagnostic AI insights. Start recording sales transactions and products to construct your ultra-cockpit model.'
+                          ? 'Not enough local financial data is available for useful report insights yet. Add products, record sales, and issue invoices to make reports meaningful.'
                           : 'ظ„ط§ طھظˆط¬ط¯ ط¨ظٹط§ظ†ط§طھ ظ…ط§ظ„ظٹط© ظƒط§ظپظٹط© ط­ط§ظ„ظٹط§ظ‹ ظ„ط¥ط¬ط±ط§ط، ط§ظ„طھط­ظ„ظٹظ„ط§طھ ظˆط§ظ„طھظ‚ط¯ظٹط±ط§طھ ط§ظ„ط°ظƒظٹط© ط§ظ„طھظ†ط¨ط¤ظٹط©. ط£ط¶ظپ ط§ظ„ط£طµظ†ط§ظپ ظپظٹ ط§ظ„ظ…ط®ط²ظˆظ† ظˆط³ط¬ظ„ ظپظˆط§طھظٹط± ظ…ط¨ظٹط¹ط§طھظƒ ظ„طھظ…ظƒظٹظ† ظ†ظ…ظˆط°ط¬ ط§ظ„ط°ظƒط§ط، ط§ظ„ظ…ط§ظ„ظٹ ظ…ظ† ط­ط³ط§ط¨ ط§ظ„ظƒظپط§ط،ط© ط§ظ„ظ…ط§ظ„ظٹط© ظˆظ‡ط§ظ…ط´ ط§ظ„ط£ظ…ط§ظ†.'),
                   style: const TextStyle(
                     color: AppTheme.aiTextPrimary,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                     height: 1.5,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _reportReadingGuide(ReportsSnapshot data, AppCopy copy) {
+    final hasSales = data.recentSales.isNotEmpty || data.totalSales > 0;
+    final hasProducts = data.totalProducts > 0;
+    final body = copy.isEnglish
+        ? (hasSales || hasProducts
+            ? 'Use this page as a daily readout: sales show movement, low stock shows supply risk, best sellers show demand, and accounting shows whether balances need review.'
+            : 'Reports need real business activity before they can guide decisions. Add products first, then record sales or invoices so trends, profit, and stock signals become useful.')
+        : copy.t('notEnoughData');
+
+    return AiGlassCard(
+      borderColor: AppTheme.aiBlue.withValues(alpha: 0.18),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.insights_rounded, color: AppTheme.aiBlue),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  copy.isEnglish
+                      ? 'How to read today\'s reports'
+                      : copy.t('reportsTitle'),
+                  style: const TextStyle(
+                    color: AppTheme.aiTextPrimary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  body,
+                  style: const TextStyle(
+                    color: AppTheme.aiTextSecondary,
+                    fontSize: 12,
+                    height: 1.45,
                   ),
                 ),
               ],
@@ -1096,7 +1213,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return const Center(
-              child: Text('Error loading domain reports',
+              child: Text('Error loading financial summary',
                   style: TextStyle(color: AppTheme.aiRed)));
         }
         if (snapshot.connectionState == ConnectionState.waiting) {
@@ -1120,14 +1237,20 @@ class _ReportsScreenState extends State<ReportsScreen> {
           children: [
             AppSectionHeader(
                 title: copy.isEnglish
-                    ? 'Domain Layer KPIs'
+                    ? 'Additional Financial Summary'
                     : 'ظ…ط¤ط´ط±ط§طھ ط§ظ„ط£ط¯ط§ط، â€” ط·ط¨ظ‚ط© ط§ظ„ظ†ط·ط§ظ‚',
                 hasAccentLine: true),
+            if (copy.isEnglish) ...[
+              const SizedBox(height: 8),
+              Text(
+                'Revenue, collected amounts, overdue balances, and customer ranking help you check collection and sales concentration.',
+                style: TextStyle(color: _muted, fontSize: 12, height: 1.4),
+              ),
+            ],
             const SizedBox(height: 16),
             GridView.count(
-              crossAxisCount: isDesktop
-                  ? 3
-                  : (UIResponsive.isPhone(context) ? 1 : 2),
+              crossAxisCount:
+                  isDesktop ? 3 : (UIResponsive.isPhone(context) ? 1 : 2),
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               shrinkWrap: true,
@@ -1163,14 +1286,16 @@ class _ReportsScreenState extends State<ReportsScreen> {
             const SizedBox(height: 24),
             _chartCard(
                 copy.isEnglish
-                    ? 'Monthly Sales (Domain)'
+                    ? 'Monthly Sales'
                     : 'ط§ظ„ظ…ط¨ظٹط¹ط§طھ ط§ظ„ط´ظ‡ط±ظٹط©',
                 _lineChart(chartPoints, _blue, copy)),
             const SizedBox(height: 24),
             _listSection(
-              title: copy.isEnglish
-                  ? 'Top Customers (Domain)'
-                  : 'ط£ظپط¶ظ„ ط§ظ„ط¹ظ…ظ„ط§ط،',
+              title:
+                  copy.isEnglish ? 'Top Customers' : 'ط£ظپط¶ظ„ ط§ظ„ط¹ظ…ظ„ط§ط،',
+              helper: copy.isEnglish
+                  ? 'Shows customer concentration. If one customer dominates, review collection risk before offering more credit.'
+                  : null,
               empty: copy.isEnglish
                   ? 'No top customers found.'
                   : 'ظ„ط§ ظٹظˆط¬ط¯ ط¹ظ…ظ„ط§ط، ظ…طھظ…ظٹط²ظˆظ†.',
