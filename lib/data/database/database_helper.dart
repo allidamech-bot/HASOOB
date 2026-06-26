@@ -12,7 +12,7 @@ import 'package:hasoob_app/data/services/database_initializer.dart';
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
-  static const _databaseVersion = 24;
+  static const _databaseVersion = 25;
 
   static const _cashAccountCode = '101';
   static const _inventoryAccountCode = '102';
@@ -195,6 +195,10 @@ class DBHelper {
 
           if (oldVersion < 24) {
             await _upgradeToV24(db);
+          }
+
+          if (oldVersion < 25) {
+            await _upgradeToV25(db);
           }
 
           await _repairAccountNamesForV12(db);
@@ -532,6 +536,7 @@ class DBHelper {
 
     await _createSmartAssistantHistoryTable(db);
     await _createAiCopilotTables(db);
+    await _createAiCfoSessionsTable(db);
     await _createPerformanceIndexes(db);
   }
 
@@ -4915,5 +4920,30 @@ class DBHelper {
         'CREATE INDEX IF NOT EXISTS idx_ai_action_drafts_bus_stat ON ai_action_drafts(businessId, status)');
     await db.execute(
         'CREATE INDEX IF NOT EXISTS idx_ai_action_logs_draft_crt ON ai_action_logs(draftId, createdAt)');
+  }
+
+  // ── V25 — AI CFO Session Archive (non-ledger, isolated) ─────────────────
+
+  static Future<void> _upgradeToV25(DatabaseExecutor db) async {
+    await _createAiCfoSessionsTable(db);
+  }
+
+  static Future<void> _createAiCfoSessionsTable(DatabaseExecutor db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ai_cfo_sessions(
+        id TEXT PRIMARY KEY,
+        businessId TEXT NOT NULL,
+        title TEXT NOT NULL,
+        summary TEXT,
+        reportBody TEXT,
+        draftsJson TEXT,
+        status TEXT NOT NULL DEFAULT 'archived',
+        createdAt TEXT NOT NULL,
+        updatedAt TEXT NOT NULL
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_cfo_sessions_bus_crt ON ai_cfo_sessions(businessId, createdAt)',
+    );
   }
 }

@@ -681,11 +681,11 @@ class AiConversationOrchestrator {
       return AiAdvisorResponse(
         mode: AiAdvisorMode.chat,
         text:
-            'Welcome. I can help you price shipments, test export decisions, review profitability, think through inventory and customer balances, or prepare accounting operations for review. Tell me what decision is in front of you.',
+            'Hello. Think of me as your accountant inside HASOOB.\n\nYou can talk to me naturally about any financial or accounting situation — invoices, cash position, customer balances, expenses, inventory, or decisions you need to make. I will reason through it with you, tell you what is missing, and help you organise the conversation into structured accounting work items.\n\nWhat is on your mind today?',
         suggestedReplies: const [
-          'Price a shipment',
-          'Review profitability',
-          'Prepare a purchase',
+          'Is my cash situation safe?',
+          'A customer is late on payment',
+          'Analyze my profitability',
         ],
         memory: _memory,
       );
@@ -694,11 +694,11 @@ class AiConversationOrchestrator {
       return AiAdvisorResponse(
         mode: AiAdvisorMode.advice,
         text:
-            'I can work with you in a practical flow: first we clarify the business decision, then collect the numbers that matter, compare trade-offs, and only then prepare a reviewable purchase, sale, or pricing proposal if you want one. Nothing is posted to the books from discussion alone.',
+            'Here is how I work:\n\n1. You talk to me naturally — describe a business situation, ask a financial question, or tell me about an accounting problem.\n\n2. I analyse it like an accountant would: I identify what you are describing, what the accounting meaning is, what information is missing, and what risks exist.\n\n3. You can then organise our conversation into structured drafts — invoices, accounts, reports, tasks, and notes.\n\n4. Review and edit the drafts, mark them Ready, then generate a final Accounting Session Report.\n\n5. Save the session report as a non-ledger archive. Nothing is ever posted to your books without your explicit approval.\n\nWhat would you like to start with?',
         suggestedReplies: const [
-          'Price a shipment',
-          'Compare three scenarios',
-          'Analyze inventory risk',
+          'Review my receivables',
+          'Analyze cash flow',
+          'Prepare a purchase',
         ],
         memory: _memory,
       );
@@ -815,11 +815,11 @@ class AiConversationOrchestrator {
     return AiAdvisorResponse(
       mode: AiAdvisorMode.advice,
       text:
-          'I can help, but I need to know the business area first: pricing, export, profitability, inventory, customer balances, cash flow, or preparing a purchase or sale for review. Pick one and I will guide the next step.',
+          'I want to give you a useful answer, not a generic one. To do that, I need to understand the specific situation better.\n\nTell me more: are you asking about cash flow, a specific invoice or customer, inventory, expenses, profitability, or a financial decision you need to make? The more context you give me, the more useful my analysis will be.',
       suggestedReplies: const [
-        'Price a shipment',
-        'Review profitability',
-        'Analyze inventory risk',
+        'Analyze my cash flow',
+        'Review customer balances',
+        'Check inventory risk',
       ],
       memory: _memory,
     );

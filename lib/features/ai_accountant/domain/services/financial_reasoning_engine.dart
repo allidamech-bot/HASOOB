@@ -25,11 +25,11 @@ class FinancialReasoningEngine {
       case AiAccountantIntent.invoiceAnalysis:
         return _invoice(evidence);
       case AiAccountantIntent.purchasePreparation:
-        return 'To prepare a purchase proposal safely, I need product, quantity, unit cost or total cost, and supplier/payment info. Once those are clear, I can prepare a reviewable proposal card. I will not record anything until you approve it.';
+        return 'Good. To prepare this purchase properly, I need a few things from you:\n\n1. Product name and quantity\n2. Unit cost or total cost\n3. Supplier name\n4. Payment terms (cash now, credit, installments?)\n\nOnce you give me these, I will prepare a reviewable proposal card. Nothing is recorded until you review and explicitly approve it.';
       case AiAccountantIntent.salePreparation:
-        return 'To prepare a sale proposal safely, I need product, quantity, selling price, customer, and payment terms. Once those are clear, I can prepare a reviewable proposal card. I will not record anything until you approve it.';
+        return 'Understood. To prepare this sale properly, I need:\n\n1. Product name and quantity\n2. Selling price per unit\n3. Customer name\n4. Payment terms (cash, credit, due date?)\n\nOnce confirmed, I will prepare a reviewable proposal. Nothing is recorded until you approve it.';
       case AiAccountantIntent.executionIntent:
-        return 'I need a clear proposal before execution. Do you want to prepare a purchase, sale, or pricing simulation?';
+        return 'I want to make sure we do this correctly. I need a clear, complete proposal before anything is recorded. Would you like to prepare a purchase, a sale, or run a pricing simulation first?';
       case AiAccountantIntent.pricingDecision:
       case AiAccountantIntent.exportDecision:
       case AiAccountantIntent.generalAdvice:
@@ -140,10 +140,20 @@ class FinancialReasoningEngine {
           checked: 'financial summary and invoices');
     }
     return [
-      'What I checked: financial summary and invoices.',
-      'What I found: net cash flow ${_value(summary, 'netCashFlow')}, receivables ${_value(summary, 'accountsReceivable')}, invoice outstanding ${_value(invoices, 'outstanding')}.',
-      'Risk: cash pressure usually comes from slow collection or upcoming purchases landing before invoices are paid.',
-      'Recommendation: review due invoices before approving new stock commitments.',
+      'Cash Flow Analysis',
+      '',
+      'What I understand: you want to know the real cash position — not just profit on paper.',
+      '',
+      'What I found in your records:',
+      '• Net cash flow: ${_value(summary, 'netCashFlow')}',
+      '• Receivables (cash owed to you): ${_value(summary, 'accountsReceivable')}',
+      '• Invoice outstanding: ${_value(invoices, 'outstanding')}',
+      '',
+      'Accounting meaning: cash pressure usually comes from two places — slow invoice collection and purchases arriving before you have collected what customers owe you.',
+      '',
+      'Risk: if your outstanding invoices are high relative to cash on hand, you are exposed to a liquidity gap.',
+      '',
+      'Recommended next step: review the oldest unpaid invoices first, then decide whether you can safely commit to new purchases.',
       _missingLine(evidence),
     ].where((line) => line.isNotEmpty).join('\n');
   }
@@ -154,28 +164,42 @@ class FinancialReasoningEngine {
       return _notEnoughData(evidence, checked: 'invoices');
     }
     return [
-      'What I checked: invoice records.',
-      'What I found: invoice count ${_value(invoices, 'count')}, total ${_value(invoices, 'totalAmount')}, paid ${_value(invoices, 'totalPaid')}, outstanding ${_value(invoices, 'outstanding')}.',
-      'Risk: unpaid invoices reduce cash flexibility.',
-      'Recommendation: sort invoices by age and collection probability before planning purchases.',
+      'Invoice / Receivables Review',
+      '',
+      'What I found in your invoice records:',
+      '• Invoice count: ${_value(invoices, 'count')}',
+      '• Total invoiced: ${_value(invoices, 'totalAmount')}',
+      '• Total collected: ${_value(invoices, 'totalPaid')}',
+      '• Still outstanding: ${_value(invoices, 'outstanding')}',
+      '',
+      'Accounting meaning: outstanding invoices are receivables on your balance sheet. They represent real value, but only when collected.',
+      '',
+      'Risk: unpaid invoices reduce your actual cash flexibility even if profit looks good.',
+      '',
+      'Recommended next step: sort invoices by age. Focus collection efforts on the oldest balances first. Consider whether any are overdue enough to require a formal follow-up.',
       _missingLine(evidence),
     ].where((line) => line.isNotEmpty).join('\n');
   }
 
   String _advisoryOnly(AiToolPlan plan) {
     if (plan.missingInputs.isEmpty) {
-      return 'I can advise, but I do not have enough confirmed data to calculate that yet. Share the relevant numbers or ask me to check available system data.';
+      return 'I understand what you are asking. Let me be direct with you: I do not have enough confirmed figures from your records to give you a reliable answer right now.\n\nTo help you properly, I need you to either share the relevant numbers directly in the chat, or add the data to HASOOB so I can pull it from your actual records.\n\nWhat specific number or situation would you like to work through?';
     }
-    return 'I do not have enough confirmed data to calculate that yet.\nMissing information: ${plan.missingInputs.join(', ')}.\nRecommendation: provide those inputs first, then I can compare the decision safely.';
+    return 'I understand the question, but I am missing some key information before I can give you a reliable answer.\n\nMissing: ${plan.missingInputs.join(', ')}.\n\nProvide these and I can give you a proper analysis with the accounting implications and recommended next steps.';
   }
 
   String _notEnoughData(AiEvidenceBundle evidence, {required String checked}) {
+    final missing = _missingLine(evidence);
     return [
-      'What I checked: $checked.',
-      'What I found: I do not have enough confirmed data to calculate that yet.',
-      'Risk: making a decision from incomplete records can overstate profit or cash availability.',
-      'Recommendation: provide the missing inputs or confirm the records are available.',
-      _missingLine(evidence),
+      'I checked $checked in your records.',
+      '',
+      'Honest assessment: the data available is not enough for me to give you a reliable figure. I will not estimate or guess — that would be worse than no answer.',
+      '',
+      'The risk of acting on incomplete records is that it can overstate profit, understate costs, or hide cash pressure.',
+      '',
+      if (missing.isNotEmpty) missing,
+      '',
+      'What to do next: add the missing records to HASOOB, or tell me the numbers directly and I will work through the analysis with you.',
     ].where((line) => line.isNotEmpty).join('\n');
   }
 
