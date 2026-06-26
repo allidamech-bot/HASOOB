@@ -131,6 +131,13 @@ class ProductRepository {
   }
 
   Future<void> deleteProduct(String businessId, String id) async {
+    final existing = await DBHelper.getProductById(businessId, id);
+    if (existing == null) {
+      throw StateError(
+        'deleteProduct: product $id does not exist locally for business $businessId.',
+      );
+    }
+
     try {
       await DBHelper.deleteProduct(businessId, id);
     } catch (e) {
