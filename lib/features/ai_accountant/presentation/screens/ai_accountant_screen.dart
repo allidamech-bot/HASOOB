@@ -1240,22 +1240,25 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         .toList();
     final recommendations = _latestRecommendations();
     final missing = metadata?.missingEvidence.take(2).toList() ?? const [];
-    final evidenceLine = metadata == null || metadata.evidenceCount == 0
+    final hasEvidence = metadata != null && metadata.evidenceCount > 0;
+    final evidenceLine = !hasEvidence
         ? 'No evidence checked yet in this session.'
         : '${metadata.evidenceCount} evidence record${metadata.evidenceCount == 1 ? '' : 's'} checked at ${metadata.confidenceLabel.toLowerCase()} confidence.';
     final missingLine = missing.isEmpty
-        ? 'Ask for a focused review to identify missing data.'
+        ? 'Add product, record sale, add customer, or create invoice/quotation to build evidence.'
         : missing.join(' ');
     final riskLine = risks.isEmpty
-        ? 'First risk: acting before enough sales, stock, invoice, or cash evidence is available.'
+        ? (!hasEvidence ? 'First risk: low data confidence. Not enough sales, stock, or invoice evidence to compare trends.'
+        : 'First risk: acting before enough evidence to compare trends. Add more activity before trusting insights.')
         : 'First risk: ${risks.first.title}. ${risks.first.description}';
     final actionLine = recommendations.isNotEmpty
         ? recommendations.first.title
-        : (metadata == null || metadata.evidenceCount == 0
-            ? 'Add products, record a Quick Sell sale, or create an invoice, then ask for a business health review.'
-            : 'Ask a narrower question about cash flow, stock, profit, receivables, or sales movement.');
-    const suggestedQuestion =
-        'After my latest sale, which products are moving and what stock should I check?';
+        : !hasEvidence
+            ? 'Add products first, then record a sale with Quick Sell. Then ask AI CFO what changed.'
+            : 'Ask AI CFO what changed after adding new data.';
+    final suggestedQuestion = hasEvidence
+        ? 'After my latest sale, which products are moving and what stock should I check?'
+        : 'What data should I add before asking for financial analysis?';
 
     return Container(
       padding: EdgeInsets.all(compact ? 12 : 14),
@@ -1304,7 +1307,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                   ? null
                   : () => _processAiCommand(customText: suggestedQuestion),
               icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
-              label: const Text('Ask about sales movement'),
+              label: Text(hasEvidence ? 'Ask about sales movement' : 'What data is missing?'),
               style: TextButton.styleFrom(
                 foregroundColor: goldAccent,
                 padding:

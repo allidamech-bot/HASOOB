@@ -768,6 +768,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
       );
     }
+    if (data.totalSales < 100 || data.salesRecords.length < 5) {
+      return _DashboardFocus(
+        title: copy.isEnglish ? 'Add more sales data' : 'أضف بيانات مبيعات',
+        subtitle: copy.isEnglish
+            ? 'Limited sales recorded. Add invoices or Quick Sell transactions to trust financial insights and trends.'
+            : 'مبيعات محدودة. أضف الفواتير أو عمليات البيع السريع لتفعيل التحليلات المالية.',
+        actionLabel: copy.isEnglish ? 'Open AI CFO' : 'فتح المدير المالي',
+        icon: Icons.trending_up_rounded,
+        actionIcon: Icons.chat_bubble_outline_rounded,
+        color: AppTheme.aiGold,
+        onTap: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const AiAccountantScreen()),
+        ),
+      );
+    }
     if (data.recentSales.isNotEmpty || data.totalSales > 0) {
       return _DashboardFocus(
         title: copy.isEnglish
