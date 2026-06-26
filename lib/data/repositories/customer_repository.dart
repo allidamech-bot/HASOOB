@@ -78,12 +78,7 @@ class CustomerRepository {
   }
 
   Future<void> deleteCustomer(String businessId, String id) async {
-    final db = await DBHelper.database();
-    await db.delete(
-      'customers',
-      where: 'businessId = ? AND id = ?',
-      whereArgs: [businessId, id],
-    );
+    await DBHelper.deleteCustomer(businessId, id);
 
     await SyncQueueService.instance.enqueue(
       entityName: 'customers',
