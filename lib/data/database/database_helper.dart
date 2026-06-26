@@ -2002,7 +2002,47 @@ class DBHelper {
 
   static Future<int> deleteProduct(String businessId, String id) async {
     final db = await database();
-    final previous = await getProductById(businessId, id);
+    final product = await getProductById(businessId, id);
+
+    if (product == null) {
+      return 0;
+    }
+
+    final stockQty = _toInt(product['stock_qty']);
+    final salesCount = await getProductSalesCount(businessId, id);
+
+    final hasInvoiceItems = await db.query(
+      'invoice_items',
+      where: 'product_id = ? AND businessId = ?',
+      whereArgs: [id, businessId],
+      limit: 1,
+    );
+    final hasQuotationItems = await db.query(
+      'quotation_items',
+      where: 'product_id = ? AND businessId = ?',
+      whereArgs: [id, businessId],
+      limit: 1,
+    );
+
+    if (stockQty > 0) {
+      throw Exception(
+          'لا يمكن حذف الصنف طالما لديه رصيد مخزون. صفّر الرصيد أولًا ثم احذف.');
+    }
+
+    if (salesCount > 0) {
+      throw Exception(
+          'لا يمكن حذف الصنف لأنه مرتبط بسجلات مبيعات. حفاظًا على سلامة التقارير والمحاسبة.');
+    }
+
+    if (hasInvoiceItems.isNotEmpty) {
+      throw Exception(
+          'لا يمكن حذف الصنف لأنه مرتبط ببنود فواتير. احذف الفاتورة أولًا إذا رغب في حذف الصنف.');
+    }
+
+    if (hasQuotationItems.isNotEmpty) {
+      throw Exception(
+          'لا يمكن حذف الصنف لأنه مرتبط ببنود عروض أسعار. احذف عرض السعر أولًا إذا رغب في حذف الصنف.');
+    }
 
     final result = await db.delete(
       'products',
@@ -2010,17 +2050,216 @@ class DBHelper {
       whereArgs: [id, businessId],
     );
 
-    if (result > 0 && previous != null) {
+    if (result > 0) {
       await AuditService().log(
         businessId: businessId,
         entityType: 'product',
         entityId: id,
         action: 'delete',
-        oldValue: jsonEncode(previous),
+        oldValue: jsonEncode(product),
       );
     }
 
     return result;
+  }
+
+  static Future<bool> canDeleteCustomer(String businessId, String customerId) async {
+    final db = await database();
+
+    final invoiceCount = Sqflite.firstIntValue(
+          await db.rawQuery(
+            'SELECT COUNT(*) FROM invoices WHERE businessId = ? AND customer_id = ?',
+            [businessId, customerId],
+          ),
+        ) ??
+        0;
+
+    if (invoiceCount > 0) {
+      return false;
+    }
+
+    final paymentCount = Sqflite.firstIntValue(
+          await db.rawQuery(
+            'SELECT COUNT(*) FROM payments WHERE businessId = ? AND customer_id = ?',
+            [businessId, customerId],
+          ),
+        ) ??
+        0;
+
+    if (paymentCount > 0) {
+      return false;
+    }
+
+    final quotationCount = Sqflite.firstIntValue(
+          await db.rawQuery(
+            'SELECT COUNT(*) FROM quotations WHERE businessId = ? AND customer_id = ?',
+            [businessId, customerId],
+          ),
+        ) ??
+        0;
+
+    if (quotationCount > 0) {
+      return false;
+    }
+
+    return true;
+  }
+
+  static Future<int> deleteCustomer(String businessId, String id) async {
+    final canDelete = await canDeleteCustomer(businessId, id);
+    if (!canDelete) {
+      throw Exception(
+          'لا يمكن حذف العميل لأنه مرتبط بفواتير أو عروض أسعار أو دفعات. حفاظًا على سلامة السجلات المالية.');
+    }
+
+    final db = await database();
+    final previous = await db.query(
+      'customers',
+      where: 'id = ? AND businessId = ?',
+      whereArgs: [id, businessId],
+      limit: 1,
+    );
+
+    final result = await db.delete(
+      'customers',
+      where: 'id = ? AND businessId = ?',
+      whereArgs: [id, businessId],
+    );
+
+    if (result > 0 && previous.isNotEmpty) {
+      await AuditService().log(
+        businessId: businessId,
+        entityType: 'customer',
+        entityId: id,
+        action: 'delete',
+        oldValue: jsonEncode(previous.first),
+      );
+    }
+
+    return result;
+  }
+
+  static Future<Map<String, dynamic>> getFinancialIntegrityReport(
+      String businessId) async {
+    final db = await database();
+
+    final orphanInvoiceItems = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count FROM invoice_items ii
+      WHERE ii.businessId = ?
+      AND NOT EXISTS (
+        SELECT 1 FROM invoices i WHERE i.id = ii.invoice_id AND i.businessId = ii.businessId
+      )
+      ''',
+      [businessId],
+    );
+
+    final orphanInvoiceItemsMissingProduct = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count FROM invoice_items ii
+      WHERE ii.businessId = ? AND ii.product_id IS NOT NULL AND ii.product_id != ''
+      AND NOT EXISTS (
+        SELECT 1 FROM products p WHERE p.id = ii.product_id AND p.businessId = ii.businessId
+      )
+      ''',
+      [businessId],
+    );
+
+    final orphanPaymentsMissingInvoice = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count FROM payments p
+      WHERE p.businessId = ?
+      AND NOT EXISTS (
+        SELECT 1 FROM invoices i WHERE i.id = p.invoice_id AND i.businessId = p.businessId
+      )
+      ''',
+      [businessId],
+    );
+
+    final orphanPaymentsMissingCustomer = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count FROM payments p
+      WHERE p.businessId = ? AND p.customer_id IS NOT NULL AND p.customer_id != ''
+      AND NOT EXISTS (
+        SELECT 1 FROM customers c WHERE c.id = p.customer_id AND c.businessId = p.businessId
+      )
+      ''',
+      [businessId],
+    );
+
+    final orphanInvoicesMissingCustomer = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count FROM invoices i
+      WHERE i.businessId = ? AND i.customer_id IS NOT NULL AND i.customer_id != ''
+      AND NOT EXISTS (
+        SELECT 1 FROM customers c WHERE c.id = i.customer_id AND c.businessId = i.businessId
+      )
+      ''',
+      [businessId],
+    );
+
+    final orphanQuotationItems = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count FROM quotation_items qi
+      WHERE qi.businessId = ?
+      AND NOT EXISTS (
+        SELECT 1 FROM quotations q WHERE q.id = qi.quotation_id AND q.businessId = qi.businessId
+      )
+      ''',
+      [businessId],
+    );
+
+    final orphanQuotationItemsMissingProduct = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count FROM quotation_items qi
+      WHERE qi.businessId = ? AND qi.product_id IS NOT NULL AND qi.product_id != ''
+      AND NOT EXISTS (
+        SELECT 1 FROM products p WHERE p.id = qi.product_id AND p.businessId = qi.businessId
+      )
+      ''',
+      [businessId],
+    );
+
+    final orphanSalesRecordsMissingProduct = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count FROM sales_records s
+      WHERE s.businessId = ? AND s.product_id IS NOT NULL AND s.product_id != ''
+      AND NOT EXISTS (
+        SELECT 1 FROM products p WHERE p.id = s.product_id AND p.businessId = s.businessId
+      )
+      ''',
+      [businessId],
+    );
+
+    final orphanProductMovementsMissingProduct = await db.rawQuery(
+      '''
+      SELECT COUNT(*) as count FROM product_movements pm
+      WHERE pm.businessId = ? AND pm.product_id IS NOT NULL AND pm.product_id != ''
+      AND NOT EXISTS (
+        SELECT 1 FROM products p WHERE p.id = pm.product_id AND p.businessId = pm.businessId
+      )
+      ''',
+      [businessId],
+    );
+
+    return {
+      'orphan_invoice_items': _toInt(orphanInvoiceItems.first['count']),
+      'orphan_invoice_items_missing_product':
+          _toInt(orphanInvoiceItemsMissingProduct.first['count']),
+      'orphan_payments_missing_invoice':
+          _toInt(orphanPaymentsMissingInvoice.first['count']),
+      'orphan_payments_missing_customer':
+          _toInt(orphanPaymentsMissingCustomer.first['count']),
+      'orphan_invoices_missing_customer':
+          _toInt(orphanInvoicesMissingCustomer.first['count']),
+      'orphan_quotation_items': _toInt(orphanQuotationItems.first['count']),
+      'orphan_quotation_items_missing_product':
+          _toInt(orphanQuotationItemsMissingProduct.first['count']),
+      'orphan_sales_records_missing_product':
+          _toInt(orphanSalesRecordsMissingProduct.first['count']),
+      'orphan_product_movements_missing_product':
+          _toInt(orphanProductMovementsMissingProduct.first['count']),
+    };
   }
 
   static Future<void> addJournalEntry({

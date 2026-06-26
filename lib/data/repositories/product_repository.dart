@@ -131,16 +131,17 @@ class ProductRepository {
   }
 
   Future<void> deleteProduct(String businessId, String id) async {
-    final deletedRows = await DBHelper.deleteProduct(businessId, id);
-
-    if (deletedRows == 0) {
+    try {
+      await DBHelper.deleteProduct(businessId, id);
+    } catch (e) {
+      if (e is Exception && e.toString().contains('لا يمكن حذف الصنف')) {
+        rethrow;
+      }
       debugPrint(
         '[ProductRepository] deleteProduct failed locally: '
-        'businessId=$businessId, id=$id',
+        'businessId=$businessId, id=$id, error: $e',
       );
-      throw StateError(
-        '???? ??? ????? ??????. ?? ??? ?????? ??? ????? ??? ?????? ??????.',
-      );
+      throw StateError('تعذر حذف الصنف. قد يكون الصنف غير موجود.');
     }
 
     await SyncQueueService.instance.enqueue(
@@ -154,10 +155,23 @@ class ProductRepository {
 
   Future<DeleteProductCheckResult> canDeleteProduct(
       ProductModel product) async {
+    final db = await DBHelper.database();
     final salesCount =
         await DBHelper.getProductSalesCount(product.businessId, product.id);
     final hasStock = product.stockQty > 0;
-    final hasSales = salesCount > 0;
+
+    final hasInvoiceItems = await db.query(
+      'invoice_items',
+      where: 'product_id = ? AND businessId = ?',
+      whereArgs: [product.id, product.businessId],
+      limit: 1,
+    );
+    final hasQuotationItems = await db.query(
+      'quotation_items',
+      where: 'product_id = ? AND businessId = ?',
+      whereArgs: [product.id, product.businessId],
+      limit: 1,
+    );
 
     if (hasStock) {
       return const DeleteProductCheckResult(
@@ -169,13 +183,33 @@ class ProductRepository {
       );
     }
 
-    if (hasSales) {
+    if (salesCount > 0) {
       return const DeleteProductCheckResult(
         canDelete: false,
         hasSales: true,
         hasStock: false,
         message:
-            'لا يمكن حذف الصنف لأنه مرتبط بسجل مبيعات، حفاظًا على سلامة التقارير والمحاسبة.',
+            'لا يمكن حذف الصنف لأنه مرتبط بسجلات مبيعات. حفاظًا على سلامة التقارير والمحاسبة.',
+      );
+    }
+
+    if (hasInvoiceItems.isNotEmpty) {
+      return const DeleteProductCheckResult(
+        canDelete: false,
+        hasSales: true,
+        hasStock: false,
+        message:
+            'لا يمكن حذف الصنف لأنه مرتبط ببنود فواتير. احذف الفاتورة أولًا إذا رغب في حذف الصنف.',
+      );
+    }
+
+    if (hasQuotationItems.isNotEmpty) {
+      return const DeleteProductCheckResult(
+        canDelete: false,
+        hasSales: true,
+        hasStock: false,
+        message:
+            'لا يمكن حذف الصنف لأنه مرتبط ببنود عروض أسعار. احذف عرض السعر أولًا إذا رغب في حذف الصنف.',
       );
     }
 
