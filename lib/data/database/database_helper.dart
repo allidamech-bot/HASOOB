@@ -12,7 +12,7 @@ import 'package:hasoob_app/data/services/database_initializer.dart';
 
 class DBHelper {
   static const _databaseName = 'hasoob_al_muheet_v3.db';
-  static const _databaseVersion = 24;
+  static const _databaseVersion = 25;
 
   static const _cashAccountCode = '101';
   static const _inventoryAccountCode = '102';
@@ -193,11 +193,15 @@ class DBHelper {
             await _upgradeToV23(db);
           }
 
-          if (oldVersion < 24) {
-            await _upgradeToV24(db);
-          }
+if (oldVersion < 24) {
+             await _upgradeToV24(db);
+           }
 
-          await _repairAccountNamesForV12(db);
+           if (oldVersion < 25) {
+             await _upgradeToV25(db);
+           }
+
+           await _repairAccountNamesForV12(db);
         },
         onOpen: (db) async {
           await _createPerformanceIndexes(db);
@@ -4815,6 +4819,24 @@ class DBHelper {
       definition: 'TEXT',
     );
     await _createPricingSimulationsTable(db);
+  }
+
+  static Future<void> _upgradeToV25(Database db) async {
+    await db.execute('''
+      CREATE TABLE IF NOT EXISTS ai_cfo_sessions(
+        id TEXT PRIMARY KEY,
+        businessId TEXT,
+        userId TEXT,
+        title TEXT,
+        reportText TEXT,
+        draftsJson TEXT,
+        createdAt TEXT,
+        updatedAt TEXT
+      )
+    ''');
+    await db.execute(
+      'CREATE INDEX IF NOT EXISTS idx_ai_cfo_sessions_bus_upd ON ai_cfo_sessions(businessId, updatedAt)',
+    );
   }
 
   static Future<void> _createPricingSimulationsTable(
