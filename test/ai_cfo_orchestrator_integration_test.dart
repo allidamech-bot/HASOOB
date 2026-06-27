@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasoob_app/core/business/business_context.dart';
+import 'package:hasoob_app/features/ai_accountant/data/tools/financial_tools.dart';
 import 'package:hasoob_app/features/ai_accountant/domain/services/ai_conversation_orchestrator.dart';
+import 'package:hasoob_app/features/ai_accountant/domain/services/ai_evidence_bundle.dart';
 
 void main() {
   group('AiConversationOrchestrator CFO decision integration', () {
@@ -58,5 +60,492 @@ void main() {
       expect(response.text, contains('Scenarios:'));
       expect(response.shouldPrepareProposal, isFalse);
     });
+
+    test('local English sale message returns command card', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'sold 10 units at 25 cost 15',
+      );
+
+      expect(response.text, contains('Command interpreted as a sale'));
+      expect(response.text, contains('Operation summary'));
+      expect(response.text, contains('Revenue'));
+      expect(response.text, contains('Profit margin'));
+      expect(response.text, contains('Ready as a reviewable draft'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.revenue, 250);
+      expect(response.localCommandDraft!.profit, 100);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local English sale message shows missing unit cost', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'I sold 5 boxes for 40 each',
+      );
+
+      expect(response.text, contains('Operation summary'));
+      expect(response.text, contains('Revenue'));
+      expect(response.text, contains('Missing data'));
+      expect(response.text, contains('Unit cost'));
+      expect(response.memory.missingData, contains('unit cost'));
+      expect(response.localCommandDraft, isNull);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local English expense message returns command card', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'paid shipping expense 300',
+      );
+
+      expect(response.text, contains('Command interpreted as an expense'));
+      expect(response.text, contains('Expense summary'));
+      expect(response.text, contains('Category'));
+      expect(response.text, contains('Amount'));
+      expect(response.text, contains('Reviewable draft'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.amount, 300);
+      expect(response.localCommandDraft!.categoryEnglish, 'shipping');
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic sale message returns command card', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'بعت 10 قطع بسعر 25 وتكلفتها 15',
+      );
+
+      expect(response.text, contains('ملخص العملية'));
+      expect(response.text, contains('الإيراد'));
+      expect(response.text, contains('الربح'));
+      expect(response.text, contains('هامش الربح'));
+      expect(response.text, contains('جاهزة كمسودة'));
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic sale message shows missing unit cost', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'بعت 5 كراتين بسعر 40',
+      );
+
+      expect(response.text, contains('ملخص العملية'));
+      expect(response.text, contains('البيانات الناقصة'));
+      expect(response.text, contains('تكلفة الوحدة'));
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic expense message returns command card', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'دفعت مصروف شحن 300',
+      );
+
+      expect(response.text, contains('ملخص المصروف'));
+      expect(response.text, contains('التصنيف'));
+      expect(response.text, contains('المبلغ'));
+      expect(response.text, contains('مسودة بانتظار المراجعة'));
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+    test('local English sale missing cost accepts cost follow-up', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      await orchestrator.generateResponse(
+        userText: 'I sold 5 boxes for 40 each',
+      );
+      final response = await orchestrator.generateResponse(
+        userText: 'cost was 28',
+      );
+
+      expect(response.text, contains('Previous operation updated'));
+      expect(response.text, contains('* Quantity: 5'));
+      expect(response.text, contains('* Unit selling price: 40'));
+      expect(response.text, contains('* Unit cost: 28'));
+      expect(response.text, contains('* Revenue: 200'));
+      expect(response.text, contains('* Cost: 140'));
+      expect(response.text, contains('* Profit: 60'));
+      expect(response.text, contains('* Profit margin: 30%'));
+      expect(response.text, contains('Ready as a reviewable draft'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.source, 'local accounting command follow-up');
+      expect(response.localCommandDraft!.revenue, 200);
+      expect(response.localCommandDraft!.profit, 60);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic sale missing cost accepts cost follow-up', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      await orchestrator.generateResponse(
+        userText: 'بعت 5 كراتين بسعر 40',
+      );
+      final response = await orchestrator.generateResponse(
+        userText: 'تكلفتها 28',
+      );
+
+      expect(response.text, contains('تم تحديث العملية السابقة'));
+      expect(response.text, contains('الكمية'));
+      expect(response.text, contains('تكلفة الوحدة'));
+      expect(response.text, contains('الإيراد'));
+      expect(response.text, contains('التكلفة'));
+      expect(response.text, contains('الربح'));
+      expect(response.text, contains('هامش الربح'));
+      expect(response.text, contains('جاهزة كمسودة'));
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test(
+        'cost follow-up state does not intercept business health without pending sale',
+        () async {
+      final orchestrator = AiConversationOrchestrator(
+        financialTools: _IntegrationFinancialTools(),
+      );
+
+      final response = await orchestrator.generateResponse(
+        userText: 'What is my current business health?',
+      );
+
+      expect(response.text, isNot(contains('Previous operation updated')));
+      expect(response.metadata, isNotNull);
+      expect(
+        response.metadata!.confidenceLevel,
+        isNot(AiEvidenceConfidence.low),
+      );
+      expect(response.metadata!.executedTools, isNotEmpty);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+    test('local Arabic purchase returns command card and draft metadata', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'اشتريت 20 كرتون بسعر 18',
+      );
+
+      expect(response.text, contains('شراء'));
+      expect(response.text, contains('إجمالي التكلفة'));
+      expect(response.text, contains('360'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.type, LocalAccountingCommandDraftType.purchase);
+      expect(response.localCommandDraft!.totalCost, 360);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local English purchase returns command card and draft metadata', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'purchased 20 boxes at 18',
+      );
+
+      expect(response.text, contains('Command interpreted as a purchase'));
+      expect(response.text, contains('Total cost: 360'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.type, LocalAccountingCommandDraftType.purchase);
+      expect(response.localCommandDraft!.totalCost, 360);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic inventory intake returns command card and draft metadata', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'دخلت 50 قطعة تكلفة 7',
+      );
+
+      expect(response.text, contains('إدخال مخزون'));
+      expect(response.text, contains('إجمالي التكلفة'));
+      expect(response.text, contains('350'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(
+        response.localCommandDraft!.type,
+        LocalAccountingCommandDraftType.inventoryIntake,
+      );
+      expect(response.localCommandDraft!.totalCost, 350);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local purchase missing unit cost does not expose draft metadata', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'اشتريت 10 كراتين',
+      );
+
+      expect(response.text, contains('تكلفة الوحدة'));
+      expect(response.localCommandDraft, isNull);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local purchase missing quantity does not expose draft metadata', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'اشتريت بسكويت بسعر 12',
+      );
+
+      expect(response.text, contains('الكمية'));
+      expect(response.localCommandDraft, isNull);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local purchase missing cost accepts cost follow-up', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      await orchestrator.generateResponse(
+        userText: 'اشتريت 10 كراتين',
+      );
+      final response = await orchestrator.generateResponse(
+        userText: 'سعرها 18',
+      );
+
+      expect(response.text, contains('تم تحديث العملية السابقة'));
+      expect(response.text, contains('180'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.source, 'local accounting command follow-up');
+      expect(response.localCommandDraft!.totalCost, 180);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic customer receivable returns command card and draft metadata',
+        () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'العميل أحمد عليه 500',
+      );
+
+      expect(response.text, contains('ذمم مدينة'));
+      expect(response.text, contains('أحمد'));
+      expect(response.text, contains('500'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.type, LocalAccountingCommandDraftType.receivable);
+      expect(response.localCommandDraft!.partyName, 'أحمد');
+      expect(response.localCommandDraft!.amount, 500);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local English customer receivable returns command card and draft metadata',
+        () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'customer Ahmad owes 500',
+      );
+
+      expect(response.text, contains('customer receivable'));
+      expect(response.text, contains('Ahmad'));
+      expect(response.text, contains('500'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.type, LocalAccountingCommandDraftType.receivable);
+      expect(response.localCommandDraft!.partyName, 'Ahmad');
+      expect(response.localCommandDraft!.amount, 500);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic customer receipt returns command card and draft metadata',
+        () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'استلمت من أحمد 300',
+      );
+
+      expect(response.text, contains('قبض من عميل'));
+      expect(response.text, contains('أحمد'));
+      expect(response.text, contains('300'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(
+        response.localCommandDraft!.type,
+        LocalAccountingCommandDraftType.customerReceipt,
+      );
+      expect(response.localCommandDraft!.partyName, 'أحمد');
+      expect(response.localCommandDraft!.amount, 300);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic supplier payable returns command card and draft metadata',
+        () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'المورد خالد له 700',
+      );
+
+      expect(response.text, contains('ذمم دائنة'));
+      expect(response.text, contains('خالد'));
+      expect(response.text, contains('700'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(
+        response.localCommandDraft!.type,
+        LocalAccountingCommandDraftType.supplierPayable,
+      );
+      expect(response.localCommandDraft!.partyName, 'خالد');
+      expect(response.localCommandDraft!.amount, 700);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic supplier payment returns command card and draft metadata',
+        () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'دفعت للمورد خالد 700',
+      );
+
+      expect(response.text, contains('دفع لمورد'));
+      expect(response.text, contains('خالد'));
+      expect(response.text, contains('700'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(
+        response.localCommandDraft!.type,
+        LocalAccountingCommandDraftType.supplierPayment,
+      );
+      expect(response.localCommandDraft!.partyName, 'خالد');
+      expect(response.localCommandDraft!.amount, 700);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local receivable missing amount does not expose draft metadata',
+        () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'العميل أحمد عليه',
+      );
+
+      expect(response.text, contains('المبلغ'));
+      expect(response.localCommandDraft, isNull);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local customer receipt missing party does not expose draft metadata',
+        () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'استلمت 300',
+      );
+
+      expect(response.text, contains('العميل'));
+      expect(response.localCommandDraft, isNull);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local receivable missing amount accepts amount follow-up', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      await orchestrator.generateResponse(
+        userText: 'العميل أحمد عليه',
+      );
+      final response = await orchestrator.generateResponse(
+        userText: '500',
+      );
+
+      expect(response.text, contains('تم تحديث العملية السابقة'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.source, 'local accounting command follow-up');
+      expect(response.localCommandDraft!.partyName, 'أحمد');
+      expect(response.localCommandDraft!.amount, 500);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local customer receipt missing party accepts party follow-up', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      await orchestrator.generateResponse(
+        userText: 'استلمت 300',
+      );
+      final response = await orchestrator.generateResponse(
+        userText: 'من أحمد',
+      );
+
+      expect(response.text, contains('تم تحديث العملية السابقة'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.source, 'local accounting command follow-up');
+      expect(response.localCommandDraft!.partyName, 'أحمد');
+      expect(response.localCommandDraft!.amount, 300);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
   });
+}
+
+class _IntegrationFinancialTools extends FinancialTools {
+  @override
+  Future<FinancialToolResult> getFinancialSummary({
+    required String businessId,
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    return FinancialToolResult.success({
+      'totalIncome': 12000,
+      'totalExpenses': 9000,
+      'totalProfit': 3000,
+      'netCashFlow': 3000,
+      'accountsReceivable': 8500,
+      'profitMargin': 25,
+    });
+  }
+
+  @override
+  Future<FinancialToolResult> getInvoices({
+    required String businessId,
+    String? status,
+    int limit = 100,
+  }) async {
+    return FinancialToolResult.success({
+      'totalAmount': 10000,
+      'totalPaid': 1500,
+      'outstanding': 8500,
+      'count': 2,
+      'records': const [],
+    });
+  }
+
+  @override
+  Future<FinancialToolResult> getCustomers({
+    required String businessId,
+    String? searchQuery,
+    int limit = 100,
+  }) async {
+    return FinancialToolResult.success({
+      'totalOutstanding': 8500,
+      'count': 1,
+      'records': const [],
+    });
+  }
+
+  @override
+  Future<FinancialToolResult> getProducts({
+    required String businessId,
+    String? searchQuery,
+    bool lowStockOnly = false,
+    int limit = 100,
+  }) async {
+    return FinancialToolResult.success({
+      'totalValue': 1200,
+      'count': 1,
+      'records': const [],
+    });
+  }
 }

@@ -229,15 +229,17 @@ class _MainNavigationScreenState extends State<MainNavigationScreen> {
               final isDesktop =
                   UIResponsive.isDesktopWidth(constraints.maxWidth);
               if (isDesktop) {
+                final isAiCfoWorkspace = _index == 0;
                 return Directionality(
                   textDirection:
                       localeKey == 'ar' ? TextDirection.rtl : TextDirection.ltr,
                   child: Row(
                     children: [
-                      DesktopSidebar(
-                        selectedIndex: _index,
-                        onDestinationSelected: _onDestinationSelected,
-                      ),
+                      if (!isAiCfoWorkspace)
+                        DesktopSidebar(
+                          selectedIndex: _index,
+                          onDestinationSelected: _onDestinationSelected,
+                        ),
                       Expanded(
                         child: IndexedStack(
                           index: _index,
