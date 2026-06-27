@@ -258,6 +258,13 @@ class AiConversationOrchestrator {
 
     _lastInputWasArabic = _containsArabic(userText);
     final normalized = _normalized(userText);
+    final localAccountingResponse =
+        _tryHandleLocalAccountingMessage(userText, normalized);
+    if (localAccountingResponse != null) {
+      _rememberAssistant(localAccountingResponse);
+      return localAccountingResponse;
+    }
+
     final decisionResponse = await _tryHandleFinancialDecision(userText);
     if (decisionResponse != null) {
       _rememberAssistant(decisionResponse);
@@ -679,7 +686,8 @@ class AiConversationOrchestrator {
     AiToolPlan plan,
     AiEvidenceBundle evidence,
   ) {
-    if (_containsAny(normalized, ['hello', 'hi', 'hey', 'مرحبا', 'اهلا', 'اهلاً'])) {
+    if (_containsAny(
+        normalized, ['hello', 'hi', 'hey', 'مرحبا', 'اهلا', 'اهلاً'])) {
       final isArabic = _isArabic;
       return AiAdvisorResponse(
         mode: AiAdvisorMode.chat,
@@ -694,7 +702,12 @@ class AiConversationOrchestrator {
         memory: _memory,
       );
     }
-    if (_containsAny(normalized, ['how can you help', 'what can you do', 'كيف تقدر تساعدني', 'ماذا تفعل'])) {
+    if (_containsAny(normalized, [
+      'how can you help',
+      'what can you do',
+      'كيف تقدر تساعدني',
+      'ماذا تفعل'
+    ])) {
       return AiAdvisorResponse(
         mode: AiAdvisorMode.advice,
         text: _isArabic
@@ -708,13 +721,17 @@ class AiConversationOrchestrator {
         memory: _memory,
       );
     }
-    if (_containsAny(normalized, ['scenario', 'compare', 'balanced', 'سيناريو', 'قارن'])) {
+    if (_containsAny(
+        normalized, ['scenario', 'compare', 'balanced', 'سيناريو', 'قارن'])) {
       return _scenarioResponse();
     }
-    if (_containsAny(normalized, ['export', 'saudi', 'shipping', 'customs', 'تصدير', 'شحنة', 'سعودي'])) {
+    if (_containsAny(normalized,
+        ['export', 'saudi', 'shipping', 'customs', 'تصدير', 'شحنة', 'سعودي'])) {
       final isArabic = _isArabic;
-      final product = _memory.currentProduct ?? (isArabic ? 'المنتج' : 'the product');
-      final destination = _memory.currentDestination ?? (isArabic ? 'الوجهة' : 'the destination');
+      final product =
+          _memory.currentProduct ?? (isArabic ? 'المنتج' : 'the product');
+      final destination = _memory.currentDestination ??
+          (isArabic ? 'الوجهة' : 'the destination');
       return AiAdvisorResponse(
         mode: AiAdvisorMode.export,
         text: isArabic
@@ -730,7 +747,8 @@ class AiConversationOrchestrator {
         ),
       );
     }
-    if (_containsAny(normalized, ['margin', '25%', 'percent', 'هامش', 'نسبة'])) {
+    if (_containsAny(
+        normalized, ['margin', '25%', 'percent', 'هامش', 'نسبة'])) {
       return AiAdvisorResponse(
         mode: AiAdvisorMode.pricing,
         text: _isArabic
@@ -763,7 +781,7 @@ class AiConversationOrchestrator {
         ),
       );
     }
-if (plan.requiresTools) {
+    if (plan.requiresTools) {
       return AiAdvisorResponse(
         mode: AiAdvisorMode.analysis,
         text: FinancialReasoningEngine().buildGroundedResponse(
@@ -874,7 +892,8 @@ if (plan.requiresTools) {
   }
 
   String _profitabilityFallback(String normalized) {
-    if (_containsAny(normalized, ['ربح', 'ربحي', 'ربحية', 'profit', 'profitability', 'today'])) {
+    if (_containsAny(normalized,
+        ['ربح', 'ربحي', 'ربحية', 'profit', 'profitability', 'today'])) {
       return _isArabic
           ? 'فهمت عليك. أقدر أساعدك في تقييم الربح، لكن حاليًا أحتاج بيانات بيع وتكلفة ومصروفات كافية حتى أعطيك رقمًا موثوقًا. أفضل خطوة الآن أن تسجل عملية بيع أو ترفع فاتورة/مصروف مرتبط بها، وبعدها أقدر أراجع الربحية بشكل أدق.'
           : 'I understand you want to check profitability, but I do not have enough reliable sales, cost, and expense data yet to give you a trustworthy number. Best next step is to record a sale or add an invoice/expense tied to it, then I can review profit more precisely.';
@@ -1119,6 +1138,400 @@ Return only JSON matching the response contract.
     }).toList();
   }
 
+  AiAdvisorResponse? _tryHandleLocalAccountingMessage(
+    String input,
+    String normalized,
+  ) {
+    final localSale = _parseLocalSale(input, normalized);
+    if (localSale != null) return _localSaleResponse(localSale);
+
+    final localExpense = _parseLocalExpense(input, normalized);
+    if (localExpense != null) return _localExpenseResponse(localExpense);
+
+    return null;
+  }
+
+  _LocalSaleAnalysis? _parseLocalSale(String input, String normalized) {
+    final isSale = _containsAnyLocalAccountingTerm(normalized, [
+      'sold',
+      'sale',
+      'sales',
+      'بيع',
+      'بعت',
+      'مبيعات',
+    ]);
+    if (!isSale) return null;
+
+    final numbers = _numberMatches(input);
+    final quantity = _numberAfterAny(input, [
+          'qty',
+          'quantity',
+          'عدد',
+          'كمية',
+        ]) ??
+        _numberBeforeAny(input, [
+          'unit',
+          'units',
+          'item',
+          'items',
+          'box',
+          'boxes',
+          'piece',
+          'pieces',
+          'قطعة',
+          'قطع',
+          'كرتون',
+          'كراتين',
+          'منتج',
+          'منتجات',
+        ]) ??
+        (numbers.length >= 2 ? numbers.first.value : null);
+
+    final sellingPrice = _numberAfterAny(input, [
+          'at',
+          'for',
+          'price',
+          'بسعر',
+          'سعر',
+        ]) ??
+        (numbers.length >= 2 ? numbers[1].value : null);
+
+    final unitCost = _numberAfterAny(input, [
+      'cost',
+      'تكلفة',
+      'تكلفتها',
+      'وتكلفتها',
+    ]);
+
+    if (quantity == null && sellingPrice == null && unitCost == null) {
+      return null;
+    }
+
+    return _LocalSaleAnalysis(
+      isArabic: _containsArabic(input),
+      quantity: quantity,
+      sellingPrice: sellingPrice,
+      unitCost: unitCost,
+    );
+  }
+
+  _LocalExpenseAnalysis? _parseLocalExpense(String input, String normalized) {
+    final isExpense = _containsAnyLocalAccountingTerm(normalized, [
+      'expense',
+      'paid',
+      'pay supplier',
+      'paid supplier',
+      'rent',
+      'shipping',
+      'electricity',
+      'marketing',
+      'مصروف',
+      'دفعت',
+      'سجل',
+      'إيجار',
+      'ايجار',
+      'شحن',
+      'كهرباء',
+      'تسويق',
+      'مورد',
+    ]);
+    if (!isExpense) return null;
+
+    final numbers = _numberMatches(input);
+    final amount = _numberAfterAny(input, [
+          'expense',
+          'paid',
+          'rent',
+          'shipping',
+          'electricity',
+          'marketing',
+          'supplier',
+          'مصروف',
+          'دفعت',
+          'إيجار',
+          'ايجار',
+          'شحن',
+          'كهرباء',
+          'تسويق',
+          'مورد',
+        ]) ??
+        (numbers.isEmpty ? null : numbers.last.value);
+    final category = _expenseCategory(input);
+
+    if (amount == null && category == null) return null;
+
+    return _LocalExpenseAnalysis(
+      isArabic: _containsArabic(input),
+      amount: amount,
+      category: category,
+    );
+  }
+
+  AiAdvisorResponse _localSaleResponse(_LocalSaleAnalysis sale) {
+    final missing = <String>[
+      if (sale.quantity == null) sale.isArabic ? 'الكمية' : 'quantity',
+      if (sale.sellingPrice == null)
+        sale.isArabic ? 'سعر البيع' : 'selling price',
+      if (sale.unitCost == null) sale.isArabic ? 'تكلفة الوحدة' : 'unit cost',
+    ];
+    final canComputeRevenue =
+        sale.quantity != null && sale.sellingPrice != null;
+    final revenue =
+        canComputeRevenue ? sale.quantity! * sale.sellingPrice! : null;
+    final totalCost = revenue != null && sale.unitCost != null
+        ? sale.quantity! * sale.unitCost!
+        : null;
+    final profit = totalCost != null ? revenue! - totalCost : null;
+    final margin = profit != null && revenue != null && revenue > 0
+        ? (profit / revenue) * 100
+        : null;
+
+    final text = sale.isArabic
+        ? _arabicSaleText(
+            sale: sale,
+            revenue: revenue,
+            totalCost: totalCost,
+            profit: profit,
+            margin: margin,
+          )
+        : _englishSaleText(
+            sale: sale,
+            revenue: revenue,
+            totalCost: totalCost,
+            profit: profit,
+            margin: margin,
+          );
+
+    return AiAdvisorResponse(
+      mode: AiAdvisorMode.advice,
+      text: text,
+      memory: _memory.copyWith(
+        latestTopic: 'local_sale_analysis',
+        missingData: missing,
+      ),
+      suggestedReplies: sale.unitCost == null
+          ? const ['Add unit cost', 'Prepare review draft', 'Explain margin']
+          : const ['Prepare review draft', 'Explain profit', 'Analyze expense'],
+      metadata: AiResponseMetadata.low(missingEvidence: missing),
+    );
+  }
+
+  AiAdvisorResponse _localExpenseResponse(_LocalExpenseAnalysis expense) {
+    final missing = <String>[
+      if (expense.amount == null) expense.isArabic ? 'المبلغ' : 'amount',
+      if (expense.category == null) expense.isArabic ? 'التصنيف' : 'category',
+    ];
+    final categoryArabic = expense.category?.arabic;
+    final categoryEnglish = expense.category?.english;
+    final text = expense.isArabic
+        ? [
+            if (expense.amount != null && categoryArabic != null)
+              'تم فهم مصروف $categoryArabic بقيمة ${_formatNumber(expense.amount!)}.'
+            else if (expense.amount != null)
+              'تم فهم مصروف بقيمة ${_formatNumber(expense.amount!)}.'
+            else if (categoryArabic != null)
+              'تم فهم مصروف $categoryArabic، لكن المبلغ غير موجود.',
+            if (expense.amount == null)
+              'أرسل مبلغ المصروف حتى أستطيع تجهيز مسودة للمراجعة.',
+            if (categoryArabic == null)
+              'أرسل تصنيف المصروف مثل شحن، إيجار، كهرباء، تسويق، أو مورد.',
+            if (expense.amount != null && categoryArabic != null)
+              'أستطيع تجهيزه كمسودة مصروف للمراجعة، ولن يتم تسجيله قبل الاعتماد.',
+          ].whereType<String>().join('\n')
+        : [
+            if (expense.amount != null && categoryEnglish != null)
+              '${_capitalize(categoryEnglish)} expense understood for ${_formatNumber(expense.amount!)}.'
+            else if (expense.amount != null)
+              'Expense understood for ${_formatNumber(expense.amount!)}.'
+            else if (categoryEnglish != null)
+              '${_capitalize(categoryEnglish)} expense understood, but the amount is missing.',
+            if (expense.amount == null)
+              'Send the expense amount so I can prepare it for review.',
+            if (categoryEnglish == null)
+              'Send the expense category, such as shipping, rent, electricity, marketing, or supplier.',
+            if (expense.amount != null && categoryEnglish != null)
+              'This can be prepared as an expense draft for review and will not be posted before approval.',
+          ].whereType<String>().join('\n');
+
+    return AiAdvisorResponse(
+      mode: AiAdvisorMode.advice,
+      text: text,
+      memory: _memory.copyWith(
+        latestTopic: 'local_expense_analysis',
+        missingData: missing,
+      ),
+      suggestedReplies: const [
+        'Prepare review draft',
+        'Add missing details',
+        'Analyze sale',
+      ],
+      metadata: AiResponseMetadata.low(missingEvidence: missing),
+    );
+  }
+
+  String _arabicSaleText({
+    required _LocalSaleAnalysis sale,
+    required double? revenue,
+    required double? totalCost,
+    required double? profit,
+    required double? margin,
+  }) {
+    if (sale.quantity == null || sale.sellingPrice == null) {
+      return [
+        'فهمت أنها عملية بيع، لكن البيانات غير كاملة.',
+        if (sale.quantity == null) 'أرسل الكمية.',
+        if (sale.sellingPrice == null) 'أرسل سعر البيع للوحدة.',
+        'لن يتم تسجيل أي شيء قبل المراجعة والاعتماد.',
+      ].join('\n');
+    }
+    if (sale.unitCost == null) {
+      return [
+        'تم فهم عملية بيع بإجمالي ${_formatNumber(revenue!)}.',
+        'لا أستطيع حساب الربح لأن تكلفة الوحدة غير موجودة. أرسل تكلفة الوحدة أو اربط العملية بمنتج موجود.',
+        'يمكن تجهيزها كمسودة للمراجعة قبل أي تنفيذ.',
+      ].join('\n');
+    }
+    return [
+      'تم تحليل عملية البيع:',
+      'الإيراد: ${_formatNumber(revenue!)}',
+      'التكلفة: ${_formatNumber(totalCost!)}',
+      'الربح: ${_formatNumber(profit!)}',
+      'هامش الربح: ${_formatPercent(margin!)}',
+      'يمكن تجهيزها كمسودة للمراجعة قبل أي تنفيذ.',
+    ].join('\n');
+  }
+
+  String _englishSaleText({
+    required _LocalSaleAnalysis sale,
+    required double? revenue,
+    required double? totalCost,
+    required double? profit,
+    required double? margin,
+  }) {
+    if (sale.quantity == null || sale.sellingPrice == null) {
+      return [
+        'I understood this as a sale, but the details are incomplete.',
+        if (sale.quantity == null) 'Send the quantity.',
+        if (sale.sellingPrice == null) 'Send the selling price per unit.',
+        'Nothing will be posted before review and approval.',
+      ].join('\n');
+    }
+    if (sale.unitCost == null) {
+      return [
+        'Sale understood with total revenue ${_formatNumber(revenue!)}.',
+        'I cannot calculate profit because unit cost is missing. Send the unit cost or link the sale to an existing product.',
+        'This can be prepared as a reviewable draft before execution.',
+      ].join('\n');
+    }
+    return [
+      'Sale analyzed:',
+      'Revenue: ${_formatNumber(revenue!)}',
+      'Cost: ${_formatNumber(totalCost!)}',
+      'Profit: ${_formatNumber(profit!)}',
+      'Profit margin: ${_formatPercent(margin!)}',
+      'This can be prepared as a reviewable draft before execution.',
+    ].join('\n');
+  }
+
+  List<_LocalNumberMatch> _numberMatches(String text) {
+    return RegExp(r'(\d+(?:[.,]\d+)?)')
+        .allMatches(text)
+        .map((match) => _LocalNumberMatch(
+              value: double.parse(match.group(1)!.replaceAll(',', '.')),
+              start: match.start,
+            ))
+        .toList();
+  }
+
+  double? _numberAfterAny(String text, List<String> keywords) {
+    final lower = text.toLowerCase();
+    _LocalNumberMatch? best;
+    for (final keyword in keywords) {
+      final index = lower.indexOf(keyword.toLowerCase());
+      if (index < 0) continue;
+      for (final number in _numberMatches(text)) {
+        if (number.start < index) continue;
+        if (best == null || number.start < best.start) best = number;
+      }
+    }
+    return best?.value;
+  }
+
+  double? _numberBeforeAny(String text, List<String> keywords) {
+    final lower = text.toLowerCase();
+    for (final keyword in keywords) {
+      final index = lower.indexOf(keyword.toLowerCase());
+      if (index < 0) continue;
+      final before = _numberMatches(text)
+          .where((number) => number.start < index)
+          .toList(growable: false);
+      if (before.isNotEmpty) return before.last.value;
+    }
+    return null;
+  }
+
+  _LocalExpenseCategory? _expenseCategory(String text) {
+    final normalized = _normalized(text);
+    const categories = [
+      _LocalExpenseCategory(
+        arabic: 'شحن',
+        english: 'shipping',
+        tokens: ['shipping', 'freight', 'شحن'],
+      ),
+      _LocalExpenseCategory(
+        arabic: 'إيجار',
+        english: 'rent',
+        tokens: ['rent', 'إيجار', 'ايجار'],
+      ),
+      _LocalExpenseCategory(
+        arabic: 'كهرباء',
+        english: 'electricity',
+        tokens: ['electricity', 'power', 'كهرباء'],
+      ),
+      _LocalExpenseCategory(
+        arabic: 'تسويق',
+        english: 'marketing',
+        tokens: ['marketing', 'ads', 'advertising', 'تسويق'],
+      ),
+      _LocalExpenseCategory(
+        arabic: 'مورد',
+        english: 'supplier',
+        tokens: ['supplier', 'vendor', 'مورد'],
+      ),
+    ];
+    for (final category in categories) {
+      if (_containsAnyLocalAccountingTerm(normalized, category.tokens)) {
+        return category;
+      }
+    }
+    return null;
+  }
+
+  bool _containsAnyLocalAccountingTerm(String normalized, List<String> terms) {
+    return terms.any((term) => _containsLocalAccountingTerm(normalized, term));
+  }
+
+  bool _containsLocalAccountingTerm(String normalized, String term) {
+    if (_containsArabic(term)) return normalized.contains(term);
+    final escaped = RegExp.escape(term.toLowerCase());
+    return RegExp('(^|[^a-z0-9])$escaped([^a-z0-9]|\$)').hasMatch(normalized);
+  }
+
+  String _formatNumber(double value) {
+    if (value == value.roundToDouble()) return value.toStringAsFixed(0);
+    return value.toStringAsFixed(2);
+  }
+
+  String _formatPercent(double value) {
+    if (value == value.roundToDouble()) return '${value.toStringAsFixed(0)}%';
+    return '${value.toStringAsFixed(1)}%';
+  }
+
+  String _capitalize(String value) {
+    if (value.isEmpty) return value;
+    return '${value[0].toUpperCase()}${value.substring(1)}';
+  }
+
   bool isExecutionIntent(String normalized) {
     return _containsAny(normalized, [
       'execute',
@@ -1227,4 +1640,52 @@ Return only JSON matching the response contract.
   static bool _containsArabic(String text) {
     return RegExp(r'[\u0600-\u06FF]').hasMatch(text);
   }
+}
+
+class _LocalNumberMatch {
+  final double value;
+  final int start;
+
+  const _LocalNumberMatch({
+    required this.value,
+    required this.start,
+  });
+}
+
+class _LocalSaleAnalysis {
+  final bool isArabic;
+  final double? quantity;
+  final double? sellingPrice;
+  final double? unitCost;
+
+  const _LocalSaleAnalysis({
+    required this.isArabic,
+    required this.quantity,
+    required this.sellingPrice,
+    required this.unitCost,
+  });
+}
+
+class _LocalExpenseCategory {
+  final String arabic;
+  final String english;
+  final List<String> tokens;
+
+  const _LocalExpenseCategory({
+    required this.arabic,
+    required this.english,
+    required this.tokens,
+  });
+}
+
+class _LocalExpenseAnalysis {
+  final bool isArabic;
+  final double? amount;
+  final _LocalExpenseCategory? category;
+
+  const _LocalExpenseAnalysis({
+    required this.isArabic,
+    required this.amount,
+    required this.category,
+  });
 }
