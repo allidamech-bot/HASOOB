@@ -569,6 +569,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     }
 
     if (_isExecutionIntent(text)) {
+      _addLocalCommandDraftIfAvailable(advisorResponse.localCommandDraft);
       final proposal = _activeProposal ?? _confirmationProposal;
       if (proposal != null && _canDelegateProposalExecution(proposal)) {
         await _handleExecutionIntent(text);
@@ -3672,6 +3673,114 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   // ── Intake Callback ───────────────────────────────────────────────────────
+
+  void _addLocalCommandDraftIfAvailable(LocalAccountingCommandDraft? command) {
+    if (command == null || !command.isReviewable) return;
+    final draft = _draftFromLocalAccountingCommand(command);
+    setState(() {
+      _workspaceDrafts.add(draft);
+      _workspaceTabIndex = 0;
+    });
+  }
+
+  _AccountingDraft _draftFromLocalAccountingCommand(
+    LocalAccountingCommandDraft command,
+  ) {
+    final now = DateTime.now().millisecondsSinceEpoch;
+    return switch (command.type) {
+      LocalAccountingCommandDraftType.sale => _AccountingDraft(
+          id: 'local-sale-$now',
+          type: _DraftType.account,
+          source: _DraftSource.chat,
+          title: command.isArabic ? 'مسودة بيع' : 'Sale draft',
+          summary: command.isArabic
+              ? 'مسودة بيع بانتظار المراجعة. لن يتم التسجيل قبل الاعتماد.'
+              : 'Sale draft. Pending review. Nothing will be posted before approval.',
+          details: _localSaleDraftDetails(command),
+          status: _DraftStatus.needsReview,
+          confidence: _DraftConfidence.high,
+          sourceSummary: command.source,
+          amount: command.revenue,
+          category: command.isArabic ? 'بيع' : 'Sale',
+          missingInfo: const [],
+          recommendedNextAction: command.isArabic
+              ? 'راجع المسودة قبل أي تنفيذ.'
+              : 'Review before execution.',
+        ),
+      LocalAccountingCommandDraftType.expense => _AccountingDraft(
+          id: 'local-expense-$now',
+          type: _DraftType.account,
+          source: _DraftSource.chat,
+          title: command.isArabic ? 'مسودة مصروف' : 'Expense draft',
+          summary: command.isArabic
+              ? 'مسودة مصروف بانتظار المراجعة. لن يتم التسجيل قبل الاعتماد.'
+              : 'Expense draft. Pending review. Nothing will be posted before approval.',
+          details: _localExpenseDraftDetails(command),
+          status: _DraftStatus.needsReview,
+          confidence: _DraftConfidence.high,
+          sourceSummary: command.source,
+          amount: command.amount,
+          category: command.isArabic
+              ? command.categoryArabic
+              : _capitalizeDraftLabel(command.categoryEnglish),
+          missingInfo: const [],
+          recommendedNextAction: command.isArabic
+              ? 'راجع المسودة قبل أي تنفيذ.'
+              : 'Review before execution.',
+        ),
+    };
+  }
+
+  String _localSaleDraftDetails(LocalAccountingCommandDraft command) {
+    if (command.isArabic) {
+      return [
+        'الكمية: ${_formatDraftNumber(command.quantity)}',
+        'سعر البيع للوحدة: ${_formatDraftNumber(command.unitSellingPrice)}',
+        'تكلفة الوحدة: ${_formatDraftNumber(command.unitCost)}',
+        'الإيراد: ${_formatDraftNumber(command.revenue)}',
+        'التكلفة: ${_formatDraftNumber(command.totalCost)}',
+        'الربح: ${_formatDraftNumber(command.profit)}',
+        'هامش الربح: ${_formatDraftNumber(command.marginPercent)}%',
+        'لن يتم التسجيل قبل الاعتماد.',
+      ].join('\n');
+    }
+    return [
+      'Quantity: ${_formatDraftNumber(command.quantity)}',
+      'Unit selling price: ${_formatDraftNumber(command.unitSellingPrice)}',
+      'Unit cost: ${_formatDraftNumber(command.unitCost)}',
+      'Revenue: ${_formatDraftNumber(command.revenue)}',
+      'Total cost: ${_formatDraftNumber(command.totalCost)}',
+      'Profit: ${_formatDraftNumber(command.profit)}',
+      'Margin: ${_formatDraftNumber(command.marginPercent)}%',
+      'Nothing will be posted before approval.',
+    ].join('\n');
+  }
+
+  String _localExpenseDraftDetails(LocalAccountingCommandDraft command) {
+    if (command.isArabic) {
+      return [
+        'التصنيف: ${command.categoryArabic ?? command.categoryEnglish ?? '-'}',
+        'المبلغ: ${_formatDraftNumber(command.amount)}',
+        'لن يتم التسجيل قبل الاعتماد.',
+      ].join('\n');
+    }
+    return [
+      'Category: ${_capitalizeDraftLabel(command.categoryEnglish) ?? command.categoryArabic ?? '-'}',
+      'Amount: ${_formatDraftNumber(command.amount)}',
+      'Nothing will be posted before approval.',
+    ].join('\n');
+  }
+
+  String _formatDraftNumber(double? value) {
+    if (value == null) return '-';
+    if (value == value.roundToDouble()) return value.toStringAsFixed(0);
+    return value.toStringAsFixed(2);
+  }
+
+  String? _capitalizeDraftLabel(String? value) {
+    if (value == null || value.isEmpty) return value;
+    return '${value[0].toUpperCase()}${value.substring(1)}';
+  }
 
   void _onDraftCreatedFromIntake(_AccountingDraft draft, String chatMessage) {
     setState(() => _workspaceDrafts.add(draft));

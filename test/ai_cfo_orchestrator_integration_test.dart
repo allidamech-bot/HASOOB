@@ -73,6 +73,10 @@ void main() {
       expect(response.text, contains('Revenue'));
       expect(response.text, contains('Profit margin'));
       expect(response.text, contains('Ready as a reviewable draft'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.revenue, 250);
+      expect(response.localCommandDraft!.profit, 100);
       expect(response.shouldPrepareProposal, isFalse);
     });
 
@@ -88,6 +92,7 @@ void main() {
       expect(response.text, contains('Missing data'));
       expect(response.text, contains('Unit cost'));
       expect(response.memory.missingData, contains('unit cost'));
+      expect(response.localCommandDraft, isNull);
       expect(response.shouldPrepareProposal, isFalse);
     });
 
@@ -103,6 +108,10 @@ void main() {
       expect(response.text, contains('Category'));
       expect(response.text, contains('Amount'));
       expect(response.text, contains('Reviewable draft'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.amount, 300);
+      expect(response.localCommandDraft!.categoryEnglish, 'shipping');
       expect(response.shouldPrepareProposal, isFalse);
     });
 
@@ -166,6 +175,11 @@ void main() {
       expect(response.text, contains('* Profit: 60'));
       expect(response.text, contains('* Profit margin: 30%'));
       expect(response.text, contains('Ready as a reviewable draft'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.source, 'local accounting command follow-up');
+      expect(response.localCommandDraft!.revenue, 200);
+      expect(response.localCommandDraft!.profit, 60);
       expect(response.shouldPrepareProposal, isFalse);
     });
 

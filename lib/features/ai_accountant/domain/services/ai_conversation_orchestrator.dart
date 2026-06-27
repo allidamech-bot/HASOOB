@@ -79,6 +79,59 @@ class AiDecisionOption {
   }
 }
 
+enum LocalAccountingCommandDraftType { sale, expense }
+
+class LocalAccountingCommandDraft {
+  final LocalAccountingCommandDraftType type;
+  final bool isArabic;
+  final String source;
+  final double? quantity;
+  final double? unitSellingPrice;
+  final double? unitCost;
+  final double? revenue;
+  final double? totalCost;
+  final double? profit;
+  final double? marginPercent;
+  final String? categoryArabic;
+  final String? categoryEnglish;
+  final double? amount;
+
+  const LocalAccountingCommandDraft({
+    required this.type,
+    required this.isArabic,
+    required this.source,
+    this.quantity,
+    this.unitSellingPrice,
+    this.unitCost,
+    this.revenue,
+    this.totalCost,
+    this.profit,
+    this.marginPercent,
+    this.categoryArabic,
+    this.categoryEnglish,
+    this.amount,
+  });
+
+  bool get isCompleteSale {
+    return type == LocalAccountingCommandDraftType.sale &&
+        quantity != null &&
+        unitSellingPrice != null &&
+        unitCost != null &&
+        revenue != null &&
+        totalCost != null &&
+        profit != null &&
+        marginPercent != null;
+  }
+
+  bool get isCompleteExpense {
+    return type == LocalAccountingCommandDraftType.expense &&
+        amount != null &&
+        (categoryArabic != null || categoryEnglish != null);
+  }
+
+  bool get isReviewable => isCompleteSale || isCompleteExpense;
+}
+
 class AiConversationMemory {
   final String? currentProduct;
   final String? currentDestination;
@@ -145,6 +198,7 @@ class AiAdvisorResponse {
   final List<AiDecisionOption> decisionOptions;
   final AiConversationMemory memory;
   final bool shouldPrepareProposal;
+  final LocalAccountingCommandDraft? localCommandDraft;
   final AiResponseMetadata? metadata;
   final AiFinancialSnapshot? financialSnapshot;
   final List<AiFinancialInsight> insights;
@@ -160,6 +214,7 @@ class AiAdvisorResponse {
     this.suggestedReplies = const [],
     this.decisionOptions = const [],
     this.shouldPrepareProposal = false,
+    this.localCommandDraft,
     this.metadata,
     this.financialSnapshot,
     this.insights = const [],
@@ -176,6 +231,7 @@ class AiAdvisorResponse {
     List<AiDecisionOption>? decisionOptions,
     AiConversationMemory? memory,
     bool? shouldPrepareProposal,
+    LocalAccountingCommandDraft? localCommandDraft,
     AiResponseMetadata? metadata,
     AiFinancialSnapshot? financialSnapshot,
     List<AiFinancialInsight>? insights,
@@ -192,6 +248,7 @@ class AiAdvisorResponse {
       memory: memory ?? this.memory,
       shouldPrepareProposal:
           shouldPrepareProposal ?? this.shouldPrepareProposal,
+      localCommandDraft: localCommandDraft ?? this.localCommandDraft,
       metadata: metadata ?? this.metadata,
       financialSnapshot: financialSnapshot ?? this.financialSnapshot,
       insights: insights ?? this.insights,
@@ -1457,6 +1514,23 @@ Return only JSON matching the response contract.
             ? 'تم تحديث العملية السابقة.\n\n$cardText'
             : 'Previous operation updated.\n\n$cardText'
         : cardText;
+    final localDraft =
+        sale.quantity != null && sale.sellingPrice != null && sale.unitCost != null
+            ? LocalAccountingCommandDraft(
+                type: LocalAccountingCommandDraftType.sale,
+                isArabic: sale.isArabic,
+                source: updatedPrevious
+                    ? 'local accounting command follow-up'
+                    : 'local accounting command',
+                quantity: sale.quantity,
+                unitSellingPrice: sale.sellingPrice,
+                unitCost: sale.unitCost,
+                revenue: revenue,
+                totalCost: totalCost,
+                profit: profit,
+                marginPercent: margin,
+              )
+            : null;
 
     return AiAdvisorResponse(
       mode: AiAdvisorMode.advice,
@@ -1468,6 +1542,7 @@ Return only JSON matching the response contract.
       suggestedReplies: sale.unitCost == null
           ? const ['Add unit cost', 'Prepare review draft', 'Explain margin']
           : const ['Prepare review draft', 'Explain profit', 'Analyze expense'],
+      localCommandDraft: localDraft,
       metadata: AiResponseMetadata.low(missingEvidence: missing),
     );
   }
@@ -1478,6 +1553,19 @@ Return only JSON matching the response contract.
       if (expense.category == null) expense.isArabic ? 'التصنيف' : 'category',
     ];
     final text = _expenseCommandCardText(expense, missing);
+    final categoryArabic = expense.category?.arabic;
+    final categoryEnglish = expense.category?.english;
+    final localDraft =
+        expense.amount != null && (categoryArabic != null || categoryEnglish != null)
+            ? LocalAccountingCommandDraft(
+                type: LocalAccountingCommandDraftType.expense,
+                isArabic: expense.isArabic,
+                source: 'local accounting command',
+                categoryArabic: categoryArabic,
+                categoryEnglish: categoryEnglish,
+                amount: expense.amount,
+              )
+            : null;
 
     return AiAdvisorResponse(
       mode: AiAdvisorMode.advice,
@@ -1491,6 +1579,7 @@ Return only JSON matching the response contract.
         'Add missing details',
         'Analyze sale',
       ],
+      localCommandDraft: localDraft,
       metadata: AiResponseMetadata.low(missingEvidence: missing),
     );
   }
