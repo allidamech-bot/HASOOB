@@ -416,7 +416,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       role: AiChatRole.assistant,
       type: AiChatMessageType.question,
       text:
-          'Welcome. I am your AI financial advisor and accountant inside HASOOB.\n\nYou can talk to me like a real accountant — ask about invoices, cash flow, receivables, expenses, inventory, profitability, or financial risks.\n\nAdd invoices, customers, products, expenses, and sales to unlock evidence-backed analysis.\n\nWhen you are ready, tap "Organize" to extract structured accounting drafts from our conversation for review.\n\nWhat would you like to work on?',
+          'مرحبًا. أنا محاسبك الذكي ومستشارك المالي في HASOOB.\n\nاسألني عن الربح، التدفق النقدي، المخزون، المستحقات، أو ارفع مستندًا ليتم تحليله كمراجعة مالية.\n\nAdd invoices, customers, products, expenses, and sales to unlock evidence-backed analysis.',
       timestamp: DateTime(2026, 6, 11),
       suggestedReplies: [
         'Is my cash situation safe?',
@@ -469,7 +469,10 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   Future<void> _loadSavedSessions() async {
     try {
       final sessions = await _SavedAiCfoSession.loadAll();
-      if (mounted) setState(() => _savedSessions..clear()..addAll(sessions));
+      if (mounted)
+        setState(() => _savedSessions
+          ..clear()
+          ..addAll(sessions));
     } catch (e) {
       debugPrint('[AiAccountantScreen] _loadSavedSessions: $e');
     }
@@ -689,7 +692,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ])
         : emptyEvidence
             ? (_lastInputWasArabic
-                ? const ['أي بيانات متوفرة؟', 'راجع خطر المخزون', 'راجع تدفق النقدية']
+                ? const [
+                    'أي بيانات متوفرة؟',
+                    'راجع خطر المخزون',
+                    'راجع تدفق النقدية'
+                  ]
                 : const [
                     'What data is missing?',
                     'Review inventory risk',
@@ -808,14 +815,25 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     } else {
       lines.add('');
       lines.add(ar ? 'شي لازم تضيفه:' : 'What to add next:');
-      lines.add(ar ? '- منتجات بمخزون وتكلفة وسعر بيع.' : '- Products with stock, cost, and selling price.');
-      lines.add(ar ? '- عملاء وفواتير بأرصدة مدفوعة أو غير مدفوعة.' : '- Customers and invoices with paid or unpaid balances.');
-      lines.add(ar ? '- مبيعات، مدفوعات، مصروفات أو قيود محاسبية مسجلة.' : '- Recorded sales, payments, expenses, or ledger entries.');
+      lines.add(ar
+          ? '- منتجات بمخزون وتكلفة وسعر بيع.'
+          : '- Products with stock, cost, and selling price.');
+      lines.add(ar
+          ? '- عملاء وفواتير بأرصدة مدفوعة أو غير مدفوعة.'
+          : '- Customers and invoices with paid or unpaid balances.');
+      lines.add(ar
+          ? '- مبيعات، مدفوعات، مصروفات أو قيود محاسبية مسجلة.'
+          : '- Recorded sales, payments, expenses, or ledger entries.');
       lines.add('');
       lines.add(ar ? 'أسئلة مفيدة الآن:' : 'Useful next questions:');
-      lines.add(ar ? '- أي بيانات تدفق النقدية متوفرة؟' : '- What cash-flow data is missing?');
-      lines.add(ar ? '- أي مخزون يحتاج انتباه؟' : '- Which stock needs attention?');
-      lines.add(ar ? '- أي حاجة تقدر تقولها من البيانات اللي عندي؟' : '- What can you say from the data I have?');
+      lines.add(ar
+          ? '- أي بيانات تدفق النقدية متوفرة؟'
+          : '- What cash-flow data is missing?');
+      lines.add(
+          ar ? '- أي مخزون يحتاج انتباه؟' : '- Which stock needs attention?');
+      lines.add(ar
+          ? '- أي حاجة تقدر تقولها من البيانات اللي عندي؟'
+          : '- What can you say from the data I have?');
     }
     if (response.risks.isNotEmpty || response.blockedReason != null) {
       lines.add('');
@@ -844,7 +862,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   String _availableEvidenceLine(AiCfoConversationResponse response) {
     final ar = _lastInputWasArabic;
     if (response.evidence.isEmpty) {
-      return ar ? 'ما في برهان قابلة للاستخدام مرتبطة بالجواب دلوقتي.' : 'No usable local evidence is attached to this answer yet.';
+      return ar
+          ? 'ما في برهان قابلة للاستخدام مرتبطة بالجواب دلوقتي.'
+          : 'No usable local evidence is attached to this answer yet.';
     }
     final sources = response.evidence
         .map((item) => item.source)
@@ -853,8 +873,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         .take(3)
         .join(', ');
     return sources.isEmpty
-        ? ar ? 'البراهين موجودة، بس التسميات غير مكتملة.' : 'Evidence exists, but the source labels are incomplete.'
-        : ar ? 'أقدر أستخدم البراهين من: $sources.' : 'I can use evidence from: $sources.';
+        ? ar
+            ? 'البراهين موجودة، بس التسميات غير مكتملة.'
+            : 'Evidence exists, but the source labels are incomplete.'
+        : ar
+            ? 'أقدر أستخدم البراهين من: $sources.'
+            : 'I can use evidence from: $sources.';
   }
 
   String _missingDataLine(AiCfoConversationResponse response) {
@@ -863,9 +887,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       return response.risks.take(2).join(' ');
     }
     if (response.evidence.isEmpty) {
-      return ar ? 'التطبيق ناقص أنشطة مسجلة كفاية عشان أقارن الاتجاهات. أضف منتجات، عملاء، فواتير، مبيعات، مدفوعات، أو مصروفات تحتاجها.' : 'The app is missing enough recorded activity to compare trends yet. Add products, customers, invoices, sales, payments, or expenses to make the answer stronger.';
+      return ar
+          ? 'التطبيق ناقص أنشطة مسجلة كفاية عشان أقارن الاتجاهات. أضف منتجات، عملاء، فواتير، مبيعات، مدفوعات، أو مصروفات تحتاجها.'
+          : 'The app is missing enough recorded activity to compare trends yet. Add products, customers, invoices, sales, payments, or expenses to make the answer stronger.';
     }
-    return ar ? 'ما بصراحة أي تغيير في الاتجاه من اللقطة دي بس. استمر في تسجيل المبيعات اليومية، التحصيلات، المصروفات، وتحديثات المخزون عشان مراجعتنا الجاية تقدر تقارن الحركة.' : 'No trend change is being claimed from this snapshot alone. Keep recording daily sales, collections, expenses, and stock updates so the next review can compare movement.';
+    return ar
+        ? 'ما بصراحة أي تغيير في الاتجاه من اللقطة دي بس. استمر في تسجيل المبيعات اليومية، التحصيلات، المصروفات، وتحديثات المخزون عشان مراجعتنا الجاية تقدر تقارن الحركة.'
+        : 'No trend change is being claimed from this snapshot alone. Keep recording daily sales, collections, expenses, and stock updates so the next review can compare movement.';
   }
 
   String _riskLine(AiCfoConversationResponse response) {
@@ -873,29 +901,41 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final hasLowConfidence = response.evidence
         .any((item) => item.confidence == AiCfoEvidenceConfidence.low);
     if (hasLowConfidence) {
-      return ar ? 'بعض البراهين منخفضة الثقة، فحاول تأكيد السجلات قبل أخذ قرار مالي.' : 'Some evidence is low confidence, so verify the underlying records before making a financial decision.';
+      return ar
+          ? 'بعض البراهين منخفضة الثقة، فحاول تأكيد السجلات قبل أخذ قرار مالي.'
+          : 'Some evidence is low confidence, so verify the underlying records before making a financial decision.';
     }
     if (response.risks.isNotEmpty) {
       return response.risks.first;
     }
     if (response.evidence.isEmpty) {
-      return ar ? 'المخاطر الأساسية من اتخاذ قرار من غير برهان محلي كافي.' : 'The main risk is acting without enough local evidence.';
+      return ar
+          ? 'المخاطر الأساسية من اتخاذ قرار من غير برهان محلي كافي.'
+          : 'The main risk is acting without enough local evidence.';
     }
-    return ar ? 'ما في مخاطر حاسمة مؤكدة من الجواب ده بس؛ راجع تدفق النقدية، المخزون، الربح، أو الذمم قبل أي إجراء.' : 'No critical risk is proven from this answer alone; review cash flow, stock, profit, or receivables before acting.';
+    return ar
+        ? 'ما في مخاطر حاسمة مؤكدة من الجواب ده بس؛ راجع تدفق النقدية، المخزون، الربح، أو الذمم قبل أي إجراء.'
+        : 'No critical risk is proven from this answer alone; review cash flow, stock, profit, or receivables before acting.';
   }
 
   String _recommendedNextActionLine(AiCfoConversationResponse response) {
     final ar = _lastInputWasArabic;
     if (response.type == AiCfoResponseType.blocked ||
         response.intent == AiCfoConversationIntent.unsupported) {
-      return ar ? 'اسأل عن مجال محدد، مثلاً: تدفق نقدي، مخزون، ربح، أرصدة، أو تفسير البراهين.' : 'Ask for one focused area, such as cash flow, inventory, profit, receivables, or evidence explanation.';
+      return ar
+          ? 'اسأل عن مجال محدد، مثلاً: تدفق نقدي، مخزون، ربح، أرصدة، أو تفسير البراهين.'
+          : 'Ask for one focused area, such as cash flow, inventory, profit, receivables, or evidence explanation.';
     }
     if (response.evidence.isEmpty) {
-      return ar ? 'أضف سجل عمل حقيقي، وبعدين اسأل السؑال تاني عشان الجواب يقدر يستخدم البراهين.' : 'Add one real business record, then ask the same question again so the answer can use evidence.';
+      return ar
+          ? 'أضف سجل عمل حقيقي، وبعدين اسأل السؑال تاني عشان الجواب يقدر يستخدم البراهين.'
+          : 'Add one real business record, then ask the same question again so the answer can use evidence.';
     }
     switch (response.intent) {
       case AiCfoConversationIntent.cashflowReview:
-        return ar ? 'راجع الفواتير غير المدفوعة، التحصيلات الأخيرة، والمصروفات القادمة قبل أي طلب دفع أو خصم.' : 'Check unpaid invoices, recent collections, and upcoming expenses before spending or discounting.';
+        return ar
+            ? 'راجع الفواتير غير المدفوعة، التحصيلات الأخيرة، والمصروفات القادمة قبل أي طلب دفع أو خصم.'
+            : 'Check unpaid invoices, recent collections, and upcoming expenses before spending or discounting.';
       case AiCfoConversationIntent.inventoryReview:
         return ar
             ? 'راجع المنتجات منخفضة المخزون أو غير المتوفر، وبعدين قرر إيش تشتري بناءً على الطلب والربحية.'
@@ -905,18 +945,28 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ? 'قارن سعر البيع، التكلفة، حجم المبيعات، والمصروفات قبل ما تغير الأسعار أو تشتري مخزون إضافي.'
             : 'Compare selling price, cost, sales volume, and expenses before changing prices or buying more stock.';
       case AiCfoConversationIntent.receivablesReview:
-        return ar ? 'تابع أرصدة العملاء اللي عندهم أعلى مستوى تعرض أولاً.' : 'Follow up on customer balances with the highest exposure first.';
+        return ar
+            ? 'تابع أرصدة العملاء اللي عندهم أعلى مستوى تعرض أولاً.'
+            : 'Follow up on customer balances with the highest exposure first.';
       case AiCfoConversationIntent.explainEvidence:
-        return ar ? 'استخدم قائمة البراهين تحت تحقق من سجلات المصادر، وبعدين اسأل سؑال محدد إذا لزم.' : 'Use the evidence list below to check the source records, then ask a narrower follow-up if needed.';
+        return ar
+            ? 'استخدم قائمة البراهين تحت تحقق من سجلات المصادر، وبعدين اسأل سؑال محدد إذا لزم.'
+            : 'Use the evidence list below to check the source records, then ask a narrower follow-up if needed.';
       case AiCfoConversationIntent.businessHealth:
-        return ar ? 'اختر المجال الأضعف التالي: تدفق النقدية، المخزون، الربح، أو تحصيل العملاء.' : 'Pick the weakest area next: cash flow, stock, profit, or customer collection.';
+        return ar
+            ? 'اختر المجال الأضعف التالي: تدفق النقدية، المخزون، الربح، أو تحصيل العملاء.'
+            : 'Pick the weakest area next: cash flow, stock, profit, or customer collection.';
       case AiCfoConversationIntent.createProposal:
       case AiCfoConversationIntent.approveProposal:
       case AiCfoConversationIntent.deferProposal:
       case AiCfoConversationIntent.executeProposal:
-        return ar ? 'راجع تفاصيل المقترح وأوافق بس لما الأرقام تطابق سجلاتك.' : 'Review the proposal details and approve only when the numbers match your records.';
+        return ar
+            ? 'راجع تفاصيل المقترح وأوافق بس لما الأرقام تطابق سجلاتك.'
+            : 'Review the proposal details and approve only when the numbers match your records.';
       case AiCfoConversationIntent.unsupported:
-        return ar ? 'اسأل عن مجال محدد، مثلاً: تدفق نقدي، مخزون، ربح، أرصدة، أو تفسير البراهين.' : 'Ask for one focused area, such as cash flow, inventory, profit, receivables, or evidence explanation.';
+        return ar
+            ? 'اسأل عن مجال محدد، مثلاً: تدفق نقدي، مخزون، ربح، أرصدة، أو تفسير البراهين.'
+            : 'Ask for one focused area, such as cash flow, inventory, profit, receivables, or evidence explanation.';
     }
   }
 
@@ -1373,12 +1423,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         padding: padding,
         child: Column(
           children: [
-            _buildExecutiveCommandHeader(isDesktop: false),
-            const SizedBox(height: 10),
-            _buildCommandSignalStrip(isDesktop: false),
-            const SizedBox(height: 10),
-            _buildDailyOperatingBrief(compact: true),
-            const SizedBox(height: 10),
             Expanded(child: _buildConversationPanel(isDesktop: false)),
           ],
         ),
@@ -1387,35 +1431,89 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
     return Padding(
       padding: padding,
-      child: Column(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _buildExecutiveCommandHeader(isDesktop: true),
-          const SizedBox(height: 12),
-          _buildCommandSignalStrip(isDesktop: true),
-          const SizedBox(height: 12),
-          _buildDailyOperatingBrief(compact: false),
-          const SizedBox(height: 14),
           Expanded(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(
-                  flex: 72,
-                  child: _buildConversationPanel(isDesktop: true),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  flex: 24,
-                  child: _buildRightContextPanel(),
-                ),
-              ],
-            ),
+            flex: 24,
+            child: _buildLeftContextRail(),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            flex: 52,
+            child: _buildCenterConversationPanel(),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            flex: 24,
+            child: _buildRightContextRail(),
           ),
         ],
       ),
     );
   }
 
+  Widget _buildLeftContextRail() {
+    return Container(
+      decoration: BoxDecoration(
+        color: premiumPanelSoft,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildRailHeader(
+              icon: Icons.monitor_heart_outlined,
+              arabicTitle: 'الوضع المالي',
+              englishTitle: 'Financial Status',
+            ),
+            const SizedBox(height: 10),
+            Command360ContextModule(
+              title: 'ملخص اليوم / Today Summary',
+              icon: Icons.today_outlined,
+              child: _buildTodaySummarySection(),
+            ),
+            Command360ContextModule(
+              title: 'المؤشرات / Signals',
+              icon: Icons.signal_cellular_alt,
+              child: _buildCommandSignalStrip(isDesktop: true),
+            ),
+            Command360ContextModule(
+              title: 'الحسابات / Accounts',
+              icon: Icons.account_balance_outlined,
+              child: _buildAccountsMonitorSection(),
+            ),
+            Command360ContextModule(
+              title: 'المخاطر / Risks',
+              icon: Icons.warning_amber_rounded,
+              child: _buildRiskMonitorSection(),
+            ),
+            Command360ContextModule(
+              title: 'البيانات الناقصة / Missing Data',
+              icon: Icons.rule_folder_outlined,
+              child: _buildMissingDataSection(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCenterConversationPanel() {
+    return Container(
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: _buildConversationPanel(isDesktop: true),
+    );
+  }
+
+  // ignore: unused_element
   Widget _buildExecutiveCommandHeader({required bool isDesktop}) {
     final score = _businessHealthScore();
     final risks = _latestRisks()
@@ -1501,6 +1599,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  // ignore: unused_element
   Widget _buildDailyOperatingBrief({required bool compact}) {
     final metadata = _latestMetadata();
     final risks = _latestRisks()
@@ -1516,8 +1615,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         ? 'Add product, record sale, add customer, or create invoice/quotation to build evidence.'
         : missing.join(' ');
     final riskLine = risks.isEmpty
-        ? (!hasEvidence ? 'First risk: low data confidence. Not enough sales, stock, or invoice evidence to compare trends.'
-        : 'First risk: acting before enough evidence to compare trends. Add more activity before trusting insights.')
+        ? (!hasEvidence
+            ? 'First risk: low data confidence. Not enough sales, stock, or invoice evidence to compare trends.'
+            : 'First risk: acting before enough evidence to compare trends. Add more activity before trusting insights.')
         : 'First risk: ${risks.first.title}. ${risks.first.description}';
     final actionLine = recommendations.isNotEmpty
         ? recommendations.first.title
@@ -1544,7 +1644,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               const SizedBox(width: 8),
               const Expanded(
                 child: Text(
-                  'Daily Operating Brief',
+                  'الملخص التشغيلي اليومي',
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 14,
@@ -1560,11 +1660,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             spacing: 8,
             runSpacing: 8,
             children: [
-              _dailyBriefChip('Data exists', evidenceLine, Icons.folder_copy),
-              _dailyBriefChip('Missing data', missingLine, Icons.rule_rounded),
+              _dailyBriefChip('البيانات', evidenceLine, Icons.folder_copy),
               _dailyBriefChip(
-                  'First risk', riskLine, Icons.warning_amber_rounded),
-              _dailyBriefChip('Next action', actionLine, Icons.route_rounded),
+                  'البيانات الناقصة', missingLine, Icons.rule_rounded),
+              _dailyBriefChip(
+                  'أول مخاطرة', riskLine, Icons.warning_amber_rounded),
+              _dailyBriefChip(
+                  'الخطوة التالية', actionLine, Icons.route_rounded),
             ],
           ),
           const SizedBox(height: 10),
@@ -1575,7 +1677,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                   ? null
                   : () => _processAiCommand(customText: suggestedQuestion),
               icon: const Icon(Icons.chat_bubble_outline_rounded, size: 16),
-              label: Text(hasEvidence ? 'Ask about sales movement' : 'What data is missing?'),
+              label: Text(hasEvidence
+                  ? 'Ask about sales movement'
+                  : 'What data is missing?'),
               style: TextButton.styleFrom(
                 foregroundColor: goldAccent,
                 padding:
@@ -1771,35 +1875,35 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     return [
       _CommandSignalData(
         icon: Icons.payments_outlined,
-        label: 'Cash',
+        label: 'النقدية / Cash',
         value: _firstInsightSignal(['cash', 'payment', 'liquidity']) ??
-            'No cash signal yet',
+            'تحتاج بيانات / Needs data',
         color: tealSuccess,
         hasEvidence: _hasInsightSignal(['cash', 'payment', 'liquidity']),
       ),
       _CommandSignalData(
         icon: Icons.trending_up_rounded,
-        label: 'Revenue',
+        label: 'الإيرادات / Revenue',
         value: _firstInsightSignal(['revenue', 'sales', 'profit']) ??
-            'Awaiting revenue analysis',
+            'تحتاج تحليل / Needs analysis',
         color: goldAccent,
         hasEvidence: _hasInsightSignal(['revenue', 'sales', 'profit']),
       ),
       _CommandSignalData(
         icon: Icons.inventory_2_outlined,
-        label: 'Inventory',
+        label: 'المخزون / Inventory',
         value: _orchestrator.businessMemory.recentProducts.isEmpty
-            ? 'No inventory focus yet'
+            ? 'تحتاج بيانات / Needs data'
             : _orchestrator.businessMemory.recentProducts.first,
         color: AppTheme.aiBlue,
         hasEvidence: _orchestrator.businessMemory.recentProducts.isNotEmpty,
       ),
       _CommandSignalData(
         icon: Icons.people_alt_outlined,
-        label: 'Receivables',
+        label: 'المستحقات / Receivables',
         value: _orchestrator.memory.latestCustomer ??
             _firstInsightSignal(['receivable', 'customer', 'balance']) ??
-            'No receivables signal yet',
+            'تحتاج بيانات / Needs data',
         color: const Color(0xFF8B5CF6),
         hasEvidence: _orchestrator.memory.latestCustomer != null ||
             _hasInsightSignal(['receivable', 'customer', 'balance']),
@@ -1886,51 +1990,90 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       decoration: const BoxDecoration(
         border: Border(bottom: BorderSide(color: premiumStroke)),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Container(
-            width: 34,
-            height: 34,
-            decoration: BoxDecoration(
-              color: goldAccent.withValues(alpha: 0.12),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
-            ),
-            child: const Icon(
-              Icons.account_balance_wallet_outlined,
-              color: goldAccent,
-              size: 18,
-            ),
-          ),
-          const SizedBox(width: 10),
-          const Expanded(
-            child: Text(
-              'AI Accountant',
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 16,
-                fontWeight: FontWeight.w900,
+          Row(
+            children: [
+              Container(
+                width: 34,
+                height: 34,
+                decoration: BoxDecoration(
+                  color: goldAccent.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
+                ),
+                child: const Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: goldAccent,
+                  size: 18,
+                ),
               ),
+              const SizedBox(width: 10),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      'مركز الأوامر المالية',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 2),
+                    Text(
+                      'Financial Command Center',
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: goldAccent,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _statusPill('AI CFO Beta', goldAccent),
+              const SizedBox(width: 8),
+              _buildExtractDraftsButton(isDesktop: isDesktop),
+              const SizedBox(width: 6),
+              if (!isDesktop)
+                IconButton(
+                  tooltip: 'الأدوات والتنفيذ / Tools & Execution',
+                  icon: const Icon(Icons.view_sidebar_outlined,
+                      color: textSecondary),
+                  onPressed: _showMobileContextSheet,
+                )
+              else
+                _statusPill(
+                  _activeProposal != null ? 'Proposal ready' : 'Advisory mode',
+                  _activeProposal != null ? goldAccent : tealSuccess,
+                ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'اكتب ما حدث في تجارتك، وحاسوب يحوّله إلى حسابات ومسودات وتقارير.',
+            style: TextStyle(
+              color: Colors.white,
+              fontSize: 11.5,
+              height: 1.35,
+              fontWeight: FontWeight.w700,
             ),
           ),
-          _statusPill('AI CFO Beta', goldAccent),
-          const SizedBox(width: 8),
-          // Workspace extract button
-          _buildExtractDraftsButton(isDesktop: isDesktop),
-          const SizedBox(width: 6),
-          if (!isDesktop)
-            IconButton(
-              tooltip: 'Context',
-              icon:
-                  const Icon(Icons.view_sidebar_outlined, color: textSecondary),
-              onPressed: _showMobileContextSheet,
-            )
-          else
-            _statusPill(
-              _activeProposal != null ? 'Proposal ready' : 'Advisory mode',
-              _activeProposal != null ? goldAccent : tealSuccess,
+          const SizedBox(height: 2),
+          const Text(
+            'Write what happened in your business, and HASOOB turns it into calculations, drafts, and reports.',
+            style: TextStyle(
+              color: textSecondary,
+              fontSize: 10.5,
+              height: 1.35,
             ),
+          ),
         ],
       ),
     );
@@ -1943,9 +2086,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     final reviewCount = _workspaceDrafts
         .where((d) => d.status == _DraftStatus.needsReview)
         .length;
-    final label = hasDrafts
-        ? '${_workspaceDrafts.length} drafts'
-        : 'Organize';
+    final label = hasDrafts ? '${_workspaceDrafts.length} drafts' : 'Organize';
     final tooltip = hasDrafts
         ? '$readyCount ready · $reviewCount needs review'
         : 'Extract accounting drafts from conversation';
@@ -1963,17 +2104,15 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 }
               },
         child: Container(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
           decoration: BoxDecoration(
             color: hasDrafts
                 ? goldAccent.withValues(alpha: 0.13)
                 : Colors.transparent,
             borderRadius: BorderRadius.circular(7),
             border: Border.all(
-              color: hasDrafts
-                  ? goldAccent.withValues(alpha: 0.4)
-                  : premiumStroke,
+              color:
+                  hasDrafts ? goldAccent.withValues(alpha: 0.4) : premiumStroke,
             ),
           ),
           child: Row(
@@ -2105,7 +2244,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             heightFactor: 0.82,
             child: Padding(
               padding: const EdgeInsets.all(10),
-              child: _buildRightContextPanel(),
+              child: _buildRightContextRail(),
             ),
           ),
         );
@@ -2867,8 +3006,19 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
     // 1. Invoice / document draft
     final invoiceKeywords = [
-      'invoice', 'bill', 'receipt', 'quotation', 'payment', 'due date',
-      'customer', 'supplier', 'amount', 'vat', 'tax', 'paid', 'unpaid',
+      'invoice',
+      'bill',
+      'receipt',
+      'quotation',
+      'payment',
+      'due date',
+      'customer',
+      'supplier',
+      'amount',
+      'vat',
+      'tax',
+      'paid',
+      'unpaid',
       'collection',
     ];
     if (_containsAny(allText, invoiceKeywords)) {
@@ -2877,28 +3027,47 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       final missing = <String>[
         if (customer == null) 'Customer / Supplier name',
         if (amount == null) 'Amount',
-        'Currency', 'Due date', 'VAT / Tax status', 'Payment status',
+        'Currency',
+        'Due date',
+        'VAT / Tax status',
+        'Payment status',
       ];
       drafts.add(_AccountingDraft(
         id: 'draft-invoice-${drafts.length}',
         type: _DraftType.invoice,
         source: _DraftSource.chat,
         title: 'Invoice / Document Draft',
-        summary: 'Conversation mentions invoice or payment topics. Complete missing fields before saving.',
-        status: (amount != null && customer != null) ? _DraftStatus.draft : _DraftStatus.needsReview,
-        confidence: (amount != null && customer != null) ? _DraftConfidence.medium : _DraftConfidence.low,
+        summary:
+            'Conversation mentions invoice or payment topics. Complete missing fields before saving.',
+        status: (amount != null && customer != null)
+            ? _DraftStatus.draft
+            : _DraftStatus.needsReview,
+        confidence: (amount != null && customer != null)
+            ? _DraftConfidence.medium
+            : _DraftConfidence.low,
         sourceSummary: 'Extracted from chat',
         amount: amount,
         customerOrSupplier: customer,
         missingInfo: missing,
-        recommendedNextAction: 'Provide customer, amount, due date, and VAT status. Mark Ready when complete.',
+        recommendedNextAction:
+            'Provide customer, amount, due date, and VAT status. Mark Ready when complete.',
       ));
     }
 
     // 2. Account entry draft
     final accountKeywords = [
-      'cash', 'bank', 'receivable', 'payable', 'expense', 'revenue',
-      'capital', 'liability', 'asset', 'account', 'balance', 'reconciliation',
+      'cash',
+      'bank',
+      'receivable',
+      'payable',
+      'expense',
+      'revenue',
+      'capital',
+      'liability',
+      'asset',
+      'account',
+      'balance',
+      'reconciliation',
     ];
     if (_containsAny(allText, accountKeywords)) {
       drafts.add(_AccountingDraft(
@@ -2906,20 +3075,35 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         type: _DraftType.account,
         source: _DraftSource.chat,
         title: 'Account Entry Draft',
-        summary: 'Conversation mentions accounting entries, balances, or classifications.',
+        summary:
+            'Conversation mentions accounting entries, balances, or classifications.',
         status: _DraftStatus.needsReview,
         confidence: _DraftConfidence.medium,
         sourceSummary: 'Extracted from chat',
         category: _extractAccountCategoryFromText(allText),
-        missingInfo: const ['Account name', 'Amount / Balance', 'Classification', 'Period'],
-        recommendedNextAction: 'Confirm account name, amount, and classification. Review before reporting.',
+        missingInfo: const [
+          'Account name',
+          'Amount / Balance',
+          'Classification',
+          'Period'
+        ],
+        recommendedNextAction:
+            'Confirm account name, amount, and classification. Review before reporting.',
       ));
     }
 
     // 3. Report draft
     final reportKeywords = [
-      'sales', 'profit', 'loss', 'margin', 'inventory', 'stock',
-      'business health', 'monthly summary', 'financial position', 'performance',
+      'sales',
+      'profit',
+      'loss',
+      'margin',
+      'inventory',
+      'stock',
+      'business health',
+      'monthly summary',
+      'financial position',
+      'performance',
     ];
     if (_containsAny(allText, reportKeywords)) {
       drafts.add(_AccountingDraft(
@@ -2927,20 +3111,38 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         type: _DraftType.report,
         source: _DraftSource.chat,
         title: 'Financial Report Draft',
-        summary: 'Conversation covers financial analysis topics that could form a report.',
+        summary:
+            'Conversation covers financial analysis topics that could form a report.',
         status: _DraftStatus.draft,
         confidence: _DraftConfidence.medium,
         sourceSummary: 'Extracted from chat',
         category: _extractReportCategoryFromText(allText),
-        missingInfo: const ['Report period', 'Source data', 'Key figures', 'Conclusion'],
-        recommendedNextAction: 'Confirm period and figures, then generate the Session Report.',
+        missingInfo: const [
+          'Report period',
+          'Source data',
+          'Key figures',
+          'Conclusion'
+        ],
+        recommendedNextAction:
+            'Confirm period and figures, then generate the Session Report.',
       ));
     }
 
     // 4. Task draft
     final taskKeywords = [
-      'follow up', 'collect', 'pay', 'prepare', 'review', 'check',
-      'reconcile', 'remind', 'call', 'send', 'approve', 'action', 'next step',
+      'follow up',
+      'collect',
+      'pay',
+      'prepare',
+      'review',
+      'check',
+      'reconcile',
+      'remind',
+      'call',
+      'send',
+      'approve',
+      'action',
+      'next step',
     ];
     if (_containsAny(allText, taskKeywords)) {
       drafts.add(_AccountingDraft(
@@ -2952,8 +3154,14 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         status: _DraftStatus.needsReview,
         confidence: _DraftConfidence.medium,
         sourceSummary: 'Extracted from chat',
-        missingInfo: const ['Task owner', 'Due date', 'Exact action', 'Related customer / document'],
-        recommendedNextAction: 'Define the action, due date, and responsible party. Mark Ready.',
+        missingInfo: const [
+          'Task owner',
+          'Due date',
+          'Exact action',
+          'Related customer / document'
+        ],
+        recommendedNextAction:
+            'Define the action, due date, and responsible party. Mark Ready.',
       ));
     }
 
@@ -2976,7 +3184,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         status: _DraftStatus.draft,
         confidence: _DraftConfidence.high,
         sourceSummary: '${_messages.length} messages',
-        recommendedNextAction: 'Generate the Session Report to archive this conversation.',
+        recommendedNextAction:
+            'Generate the Session Report to archive this conversation.',
       ));
     }
 
@@ -2986,11 +3195,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         type: _DraftType.note,
         source: _DraftSource.chat,
         title: 'Conversation Note',
-        summary: 'Discuss invoices, cash flow, receivables, expenses, or decisions to extract structured drafts.',
+        summary:
+            'Discuss invoices, cash flow, receivables, expenses, or decisions to extract structured drafts.',
         status: _DraftStatus.draft,
         confidence: _DraftConfidence.low,
         sourceSummary: '${_messages.length} messages',
-        recommendedNextAction: 'Continue chatting about specific financial topics.',
+        recommendedNextAction:
+            'Continue chatting about specific financial topics.',
       ));
     }
 
@@ -3027,7 +3238,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   String? _extractReportCategoryFromText(String text) {
-    if (_containsAny(text, ['profit', 'loss', 'margin'])) return 'Profit & Loss';
+    if (_containsAny(text, ['profit', 'loss', 'margin']))
+      return 'Profit & Loss';
     if (_containsAny(text, ['inventory', 'stock'])) return 'Inventory';
     if (_containsAny(text, ['cash'])) return 'Cash Flow';
     if (_containsAny(text, ['sales'])) return 'Sales Report';
@@ -3106,8 +3318,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 decoration: BoxDecoration(
                   color: goldAccent.withValues(alpha: 0.14),
                   borderRadius: BorderRadius.circular(6),
-                  border:
-                      Border.all(color: goldAccent.withValues(alpha: 0.38)),
+                  border: Border.all(color: goldAccent.withValues(alpha: 0.38)),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -3126,7 +3337,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                           size: 12, color: goldAccent),
                     const SizedBox(width: 5),
                     Text(
-                      _workspaceDrafts.isEmpty ? 'Extract drafts' : 'Re-extract',
+                      _workspaceDrafts.isEmpty
+                          ? 'Extract drafts'
+                          : 'Re-extract',
                       style: const TextStyle(
                         color: goldAccent,
                         fontSize: 10,
@@ -3162,8 +3375,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                 return GestureDetector(
                   onTap: () => setState(() => _workspaceTabIndex = i),
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 9, vertical: 4),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
                       color: selected
                           ? goldAccent.withValues(alpha: 0.18)
@@ -3246,182 +3459,192 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     return GestureDetector(
       onTap: () => _showDraftDetailSheet(draft),
       child: Container(
-      margin: const EdgeInsets.only(bottom: 8),
-      padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
-        color: darkBg.withValues(alpha: 0.52),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: statusColor.withValues(alpha: 0.22)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            children: [
-              Icon(draft.typeIcon, color: goldAccent, size: 14),
-              const SizedBox(width: 7),
-              Expanded(
-                child: Text(
-                  draft.title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w900,
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.all(11),
+        decoration: BoxDecoration(
+          color: darkBg.withValues(alpha: 0.52),
+          borderRadius: BorderRadius.circular(10),
+          border: Border.all(color: statusColor.withValues(alpha: 0.22)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Row(
+              children: [
+                Icon(draft.typeIcon, color: goldAccent, size: 14),
+                const SizedBox(width: 7),
+                Expanded(
+                  child: Text(
+                    draft.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: premiumPanelSoft,
-                  borderRadius: BorderRadius.circular(4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: premiumPanelSoft,
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    draft.sourceLabel,
+                    style: const TextStyle(
+                        color: textSecondary,
+                        fontSize: 8,
+                        fontWeight: FontWeight.w700),
+                  ),
                 ),
+                const SizedBox(width: 4),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: statusColor.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(4),
+                    border:
+                        Border.all(color: statusColor.withValues(alpha: 0.3)),
+                  ),
+                  child: Text(
+                    draft.statusLabel,
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              draft.summary,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: textSecondary,
+                fontSize: 10.5,
+                height: 1.35,
+              ),
+            ),
+            if (draft.amount != null ||
+                draft.customerOrSupplier != null ||
+                draft.category != null) ...[
+              const SizedBox(height: 6),
+              Wrap(
+                spacing: 5,
+                runSpacing: 4,
+                children: [
+                  if (draft.amount != null)
+                    _draftMetaChip(
+                      Icons.payments_outlined,
+                      '${draft.amount!.toStringAsFixed(2)} ${draft.currency ?? ''}',
+                    ),
+                  if (draft.customerOrSupplier != null)
+                    _draftMetaChip(
+                      Icons.person_outline,
+                      draft.customerOrSupplier!,
+                    ),
+                  if (draft.category != null)
+                    _draftMetaChip(Icons.label_outline, draft.category!),
+                ],
+              ),
+            ],
+            if (draft.sourceSummary != null) ...[
+              const SizedBox(height: 4),
+              Text(
+                draft.sourceSummary!,
+                style: const TextStyle(
+                  color: AppTheme.aiTextMuted,
+                  fontSize: 9,
+                ),
+              ),
+            ],
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: confidenceColor.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    '${draft.confidenceLabel} confidence',
+                    style: TextStyle(color: confidenceColor, fontSize: 9),
+                  ),
+                ),
+                const Spacer(),
+                if (draft.status != _DraftStatus.ready)
+                  GestureDetector(
+                    onTap: () => _markDraftReady(draft),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: tealSuccess.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                            color: tealSuccess.withValues(alpha: 0.3)),
+                      ),
+                      child: const Text(
+                        'Mark Ready',
+                        style: TextStyle(
+                          color: tealSuccess,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  GestureDetector(
+                    onTap: () => _markDraftNeedsReview(draft),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: goldAccent.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(5),
+                        border: Border.all(
+                            color: goldAccent.withValues(alpha: 0.3)),
+                      ),
+                      child: const Text(
+                        'Needs Review',
+                        style: TextStyle(
+                          color: goldAccent,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+            const SizedBox(height: 5),
+            Row(children: [
+              const Expanded(
                 child: Text(
-                  draft.sourceLabel,
-                  style: const TextStyle(color: textSecondary, fontSize: 8, fontWeight: FontWeight.w700),
+                  'Session draft only — not posted to accounting records.',
+                  style: TextStyle(
+                      color: AppTheme.aiTextMuted, fontSize: 9, height: 1.3),
                 ),
               ),
               const SizedBox(width: 4),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: statusColor.withValues(alpha: 0.14),
-                  borderRadius: BorderRadius.circular(4),
-                  border:
-                      Border.all(color: statusColor.withValues(alpha: 0.3)),
-                ),
-                child: Text(
-                  draft.statusLabel,
+              const Text('Edit ›',
                   style: TextStyle(
-                    color: statusColor,
-                    fontSize: 9,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          Text(
-            draft.summary,
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              color: textSecondary,
-              fontSize: 10.5,
-              height: 1.35,
-            ),
-          ),
-          if (draft.amount != null ||
-              draft.customerOrSupplier != null ||
-              draft.category != null) ...[
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 5,
-              runSpacing: 4,
-              children: [
-                if (draft.amount != null)
-                  _draftMetaChip(
-                    Icons.payments_outlined,
-                    '${draft.amount!.toStringAsFixed(2)} ${draft.currency ?? ''}',
-                  ),
-                if (draft.customerOrSupplier != null)
-                  _draftMetaChip(
-                    Icons.person_outline,
-                    draft.customerOrSupplier!,
-                  ),
-                if (draft.category != null)
-                  _draftMetaChip(Icons.label_outline, draft.category!),
-              ],
-            ),
+                      color: AppTheme.aiTextSecondary,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w800)),
+            ]),
           ],
-          if (draft.sourceSummary != null) ...[
-            const SizedBox(height: 4),
-            Text(
-              draft.sourceSummary!,
-              style: const TextStyle(
-                color: AppTheme.aiTextMuted,
-                fontSize: 9,
-              ),
-            ),
-          ],
-          const SizedBox(height: 8),
-          Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                decoration: BoxDecoration(
-                  color: confidenceColor.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  '${draft.confidenceLabel} confidence',
-                  style: TextStyle(color: confidenceColor, fontSize: 9),
-                ),
-              ),
-              const Spacer(),
-              if (draft.status != _DraftStatus.ready)
-                GestureDetector(
-                  onTap: () => _markDraftReady(draft),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: tealSuccess.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(
-                          color: tealSuccess.withValues(alpha: 0.3)),
-                    ),
-                    child: const Text(
-                      'Mark Ready',
-                      style: TextStyle(
-                        color: tealSuccess,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                )
-              else
-                GestureDetector(
-                  onTap: () => _markDraftNeedsReview(draft),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(
-                      color: goldAccent.withValues(alpha: 0.1),
-                      borderRadius: BorderRadius.circular(5),
-                      border: Border.all(
-                          color: goldAccent.withValues(alpha: 0.3)),
-                    ),
-                    child: const Text(
-                      'Needs Review',
-                      style: TextStyle(
-                        color: goldAccent,
-                        fontSize: 9,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 5),
-          Row(children: [
-            const Expanded(
-              child: Text(
-                'Session draft only — not posted to accounting records.',
-                style: TextStyle(color: AppTheme.aiTextMuted, fontSize: 9, height: 1.3),
-              ),
-            ),
-            const SizedBox(width: 4),
-            const Text('Edit ›', style: TextStyle(color: AppTheme.aiTextSecondary, fontSize: 9, fontWeight: FontWeight.w800)),
-          ]),
-        ],
-      ),
+        ),
       ),
     );
   }
@@ -3490,26 +3713,35 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       final lines = ['■ $label (${items.length})', ''];
       for (final d in items) {
         lines.add('  [${d.statusLabel}] ${d.title}');
-        if (d.customerOrSupplier != null) lines.add('    Customer/Supplier: ${d.customerOrSupplier}');
-        if (d.amount != null) lines.add('    Amount: ${d.amount!.toStringAsFixed(2)} ${d.currency ?? ''}');
+        if (d.customerOrSupplier != null)
+          lines.add('    Customer/Supplier: ${d.customerOrSupplier}');
+        if (d.amount != null)
+          lines.add(
+              '    Amount: ${d.amount!.toStringAsFixed(2)} ${d.currency ?? ''}');
         if (d.category != null) lines.add('    Category: ${d.category}');
-        if (d.missingInfo.isNotEmpty) lines.add('    Missing: ${d.missingInfo.take(3).join(', ')}');
+        if (d.missingInfo.isNotEmpty)
+          lines.add('    Missing: ${d.missingInfo.take(3).join(', ')}');
         lines.add('');
       }
       return lines.join('\n');
     }
 
     final chatDrafts = bySource('Chat Drafts', _DraftSource.chat);
-    final docDrafts = bySource('Document Intake Drafts', _DraftSource.documentIntake);
-    final txDrafts = bySource('Quick Transaction Drafts', _DraftSource.quickTransaction);
-    final recDrafts = bySource('Receivables Follow-up', _DraftSource.receivablesFollowUp);
-    final payDrafts = bySource('Payables / Expense Drafts', _DraftSource.payablesExpense);
+    final docDrafts =
+        bySource('Document Intake Drafts', _DraftSource.documentIntake);
+    final txDrafts =
+        bySource('Quick Transaction Drafts', _DraftSource.quickTransaction);
+    final recDrafts =
+        bySource('Receivables Follow-up', _DraftSource.receivablesFollowUp);
+    final payDrafts =
+        bySource('Payables / Expense Drafts', _DraftSource.payablesExpense);
 
     final allMissing = _workspaceDrafts.expand((d) => d.missingInfo).toSet();
     final userHighlights = _messages
         .where((m) => m.role == AiChatRole.user && m.text.trim().isNotEmpty)
         .take(5)
-        .map((m) => '  • ${m.text.length > 120 ? '${m.text.substring(0, 120)}…' : m.text}')
+        .map((m) =>
+            '  • ${m.text.length > 120 ? '${m.text.substring(0, 120)}…' : m.text}')
         .join('\n');
 
     return [
@@ -3587,8 +3819,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       _appendMessage(
         role: AiChatRole.assistant,
         type: AiChatMessageType.question,
-        text: 'No accounting drafts have been extracted yet. Use the Intake modules or tap "Organize" to extract drafts from the conversation, then generate the report.',
-        suggestedReplies: const ['Organize conversation', 'What should I enter?'],
+        text:
+            'No accounting drafts have been extracted yet. Use the Intake modules or tap "Organize" to extract drafts from the conversation, then generate the report.',
+        suggestedReplies: const [
+          'Organize conversation',
+          'What should I enter?'
+        ],
       );
       return;
     }
@@ -3621,7 +3857,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         id: 'aicfo_${now.millisecondsSinceEpoch}',
         title: 'AI CFO Session',
         reportText: text,
-        draftsJson: jsonEncode(_workspaceDrafts.map((d) => d.toArchiveMap()).toList()),
+        draftsJson:
+            jsonEncode(_workspaceDrafts.map((d) => d.toArchiveMap()).toList()),
         createdAt: now,
       );
       await session.save();
@@ -3631,11 +3868,15 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         _savedSessions.insert(0, session);
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: const Text('AI CFO session saved.'), backgroundColor: tealSuccess),
+        SnackBar(
+            content: const Text('AI CFO session saved.'),
+            backgroundColor: tealSuccess),
       );
     } catch (e) {
       debugPrint('[AiAccountantScreen] _saveSessionReport: $e');
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Save failed.')));
+      if (mounted)
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('Save failed.')));
     } finally {
       if (mounted) setState(() => _isSavingSession = false);
     }
@@ -3659,17 +3900,30 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             label: 'Copy',
             icon: Icons.copy_outlined,
             color: goldAccent,
-            onTap: () { Navigator.pop(ctx); _copySessionReport(); },
+            onTap: () {
+              Navigator.pop(ctx);
+              _copySessionReport();
+            },
           ),
           _SheetAction(
             label: _savedSessionId != null ? 'Saved' : 'Save',
-            icon: _savedSessionId != null ? Icons.check_circle_outline : Icons.save_outlined,
+            icon: _savedSessionId != null
+                ? Icons.check_circle_outline
+                : Icons.save_outlined,
             color: tealSuccess,
             enabled: _savedSessionId == null,
-            onTap: () async { await _saveSessionReport(); if (ctx.mounted) Navigator.pop(ctx); },
+            onTap: () async {
+              await _saveSessionReport();
+              if (ctx.mounted) Navigator.pop(ctx);
+            },
           ),
         ],
-        child: SelectableText(report, style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.6, fontFamily: 'monospace')),
+        child: SelectableText(report,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                height: 1.6,
+                fontFamily: 'monospace')),
       ),
     );
   }
@@ -3706,7 +3960,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             color: goldAccent,
             onTap: () async {
               await Clipboard.setData(ClipboardData(text: session.reportText));
-              if (ctx.mounted) { Navigator.pop(ctx); ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Copied.'))); }
+              if (ctx.mounted) {
+                Navigator.pop(ctx);
+                ScaffoldMessenger.of(context)
+                    .showSnackBar(const SnackBar(content: Text('Copied.')));
+              }
             },
           ),
           _SheetAction(
@@ -3715,12 +3973,19 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             color: AppTheme.aiRed,
             onTap: () async {
               await session.delete();
-              if (mounted) setState(() => _savedSessions.removeWhere((s) => s.id == session.id));
+              if (mounted)
+                setState(() =>
+                    _savedSessions.removeWhere((s) => s.id == session.id));
               if (ctx.mounted) Navigator.pop(ctx);
             },
           ),
         ],
-        child: SelectableText(session.reportText, style: const TextStyle(color: Colors.white, fontSize: 12, height: 1.6, fontFamily: 'monospace')),
+        child: SelectableText(session.reportText,
+            style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                height: 1.6,
+                fontFamily: 'monospace')),
       ),
     );
   }
@@ -3792,11 +4057,17 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   String _workspaceSummaryText() {
     final total = _workspaceDrafts.length;
     if (total == 0) return 'No drafts yet';
-    final ready = _workspaceDrafts.where((d) => d.status == _DraftStatus.ready).length;
-    final review = _workspaceDrafts.where((d) => d.status == _DraftStatus.needsReview).length;
-    final inv = _workspaceDrafts.where((d) => d.type == _DraftType.invoice).length;
-    final acct = _workspaceDrafts.where((d) => d.type == _DraftType.account).length;
-    final rpt = _workspaceDrafts.where((d) => d.type == _DraftType.report).length;
+    final ready =
+        _workspaceDrafts.where((d) => d.status == _DraftStatus.ready).length;
+    final review = _workspaceDrafts
+        .where((d) => d.status == _DraftStatus.needsReview)
+        .length;
+    final inv =
+        _workspaceDrafts.where((d) => d.type == _DraftType.invoice).length;
+    final acct =
+        _workspaceDrafts.where((d) => d.type == _DraftType.account).length;
+    final rpt =
+        _workspaceDrafts.where((d) => d.type == _DraftType.report).length;
     final tsk = _workspaceDrafts.where((d) => d.type == _DraftType.task).length;
     final parts = <String>[];
     if (inv > 0) parts.add('$inv inv');
@@ -3823,24 +4094,47 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               borderRadius: BorderRadius.circular(7),
               border: Border.all(color: premiumStroke),
             ),
-            child: Text(_workspaceSummaryText(), style: const TextStyle(color: textSecondary, fontSize: 10, height: 1.35)),
+            child: Text(_workspaceSummaryText(),
+                style: const TextStyle(
+                    color: textSecondary, fontSize: 10, height: 1.35)),
           ),
         Row(children: [
           Expanded(
             child: GestureDetector(
-              onTap: canGenerate ? (_sessionReportGenerated ? _showSessionReportSheet : _generateSessionReport) : null,
+              onTap: canGenerate
+                  ? (_sessionReportGenerated
+                      ? _showSessionReportSheet
+                      : _generateSessionReport)
+                  : null,
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 8),
                 decoration: BoxDecoration(
-                  color: canGenerate ? goldAccent.withValues(alpha: 0.14) : Colors.transparent,
+                  color: canGenerate
+                      ? goldAccent.withValues(alpha: 0.14)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(7),
-                  border: Border.all(color: canGenerate ? goldAccent.withValues(alpha: 0.42) : premiumStroke),
+                  border: Border.all(
+                      color: canGenerate
+                          ? goldAccent.withValues(alpha: 0.42)
+                          : premiumStroke),
                 ),
-                child: Row(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  Icon(_sessionReportGenerated ? Icons.summarize_outlined : Icons.auto_awesome_outlined, color: canGenerate ? goldAccent : textSecondary, size: 13),
+                child:
+                    Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+                  Icon(
+                      _sessionReportGenerated
+                          ? Icons.summarize_outlined
+                          : Icons.auto_awesome_outlined,
+                      color: canGenerate ? goldAccent : textSecondary,
+                      size: 13),
                   const SizedBox(width: 5),
-                  Text(_sessionReportGenerated ? 'View Report' : 'Generate Report',
-                    style: TextStyle(color: canGenerate ? goldAccent : textSecondary, fontSize: 11, fontWeight: FontWeight.w900)),
+                  Text(
+                      _sessionReportGenerated
+                          ? 'View Report'
+                          : 'Generate Report',
+                      style: TextStyle(
+                          color: canGenerate ? goldAccent : textSecondary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w900)),
                 ]),
               ),
             ),
@@ -3851,22 +4145,37 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               onTap: _copySessionReport,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
-                decoration: BoxDecoration(borderRadius: BorderRadius.circular(7), border: Border.all(color: premiumStroke)),
-                child: const Icon(Icons.copy_outlined, color: textSecondary, size: 14),
+                decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(7),
+                    border: Border.all(color: premiumStroke)),
+                child: const Icon(Icons.copy_outlined,
+                    color: textSecondary, size: 14),
               ),
             ),
             const SizedBox(width: 6),
             GestureDetector(
-              onTap: (_savedSessionId != null || _isSavingSession) ? null : _saveSessionReport,
+              onTap: (_savedSessionId != null || _isSavingSession)
+                  ? null
+                  : _saveSessionReport,
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 8),
                 decoration: BoxDecoration(
-                  color: _savedSessionId != null ? tealSuccess.withValues(alpha: 0.12) : Colors.transparent,
+                  color: _savedSessionId != null
+                      ? tealSuccess.withValues(alpha: 0.12)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(7),
-                  border: Border.all(color: _savedSessionId != null ? tealSuccess.withValues(alpha: 0.38) : premiumStroke),
+                  border: Border.all(
+                      color: _savedSessionId != null
+                          ? tealSuccess.withValues(alpha: 0.38)
+                          : premiumStroke),
                 ),
-                child: Icon(_savedSessionId != null ? Icons.check_circle_outline : Icons.save_outlined,
-                    color: _savedSessionId != null ? tealSuccess : textSecondary, size: 14),
+                child: Icon(
+                    _savedSessionId != null
+                        ? Icons.check_circle_outline
+                        : Icons.save_outlined,
+                    color:
+                        _savedSessionId != null ? tealSuccess : textSecondary,
+                    size: 14),
               ),
             ),
           ],
@@ -3877,10 +4186,30 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Widget _buildIntakePanel() {
     final buttons = [
-      (Icons.paste_outlined, 'Document', 'Paste invoice / receipt / quotation text', _showDocumentIntakeSheet),
-      (Icons.receipt_outlined, 'Transaction', 'Quick sale / expense / payment note', _showQuickTransactionSheet),
-      (Icons.people_alt_outlined, 'Receivable', 'Customer follow-ups & payments', _showReceivablesSheet),
-      (Icons.payment_outlined, 'Payable/Exp', 'Supplier payables & expenses', _showPayablesSheet),
+      (
+        Icons.paste_outlined,
+        'مستند',
+        'لصق الفاتورة، الإيصال، أو عرض السعر',
+        _showDocumentIntakeSheet
+      ),
+      (
+        Icons.receipt_outlined,
+        'عملية',
+        'ملاحظة بيع أو مصروف أو دفعة سريعة',
+        _showQuickTransactionSheet
+      ),
+      (
+        Icons.people_alt_outlined,
+        'مستحقات العملاء',
+        'متابعة ودفعات العملاء',
+        _showReceivablesSheet
+      ),
+      (
+        Icons.payment_outlined,
+        'مصروف/مورد',
+        'دفعات الموردين والمصاريف',
+        _showPayablesSheet
+      ),
     ];
     return Wrap(
       spacing: 7,
@@ -3900,7 +4229,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               child: Row(mainAxisSize: MainAxisSize.min, children: [
                 Icon(btn.$1, color: goldAccent, size: 13),
                 const SizedBox(width: 5),
-                Text(btn.$2, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+                Text(btn.$2,
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800)),
               ]),
             ),
           ),
@@ -3913,42 +4246,527 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     if (_savedSessions.isEmpty) {
       return const _EmptyHint(
         icon: Icons.archive_outlined,
-        title: 'No saved sessions yet',
-        body: 'Generate a Session Report and save it. Saved AI CFO sessions appear here.',
+        title: 'لا توجد جلسات محفوظة بعد',
+        body: 'أنشئ تقرير جلسة واحفظه. جلسات AI CFO المحفوظة تظهر هنا.',
       );
     }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: _savedSessions.take(5).map((s) => GestureDetector(
-        onTap: () => _showSavedSessionSheet(s),
-        child: Container(
-          margin: const EdgeInsets.only(bottom: 8),
-          padding: const EdgeInsets.all(10),
-          decoration: BoxDecoration(
-            color: darkBg.withValues(alpha: 0.42),
-            borderRadius: BorderRadius.circular(9),
-            border: Border.all(color: tealSuccess.withValues(alpha: 0.22)),
-          ),
-          child: Row(children: [
-            const Icon(Icons.check_circle_outline, color: tealSuccess, size: 13),
-            const SizedBox(width: 8),
-            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-              Text(s.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900)),
-              Text(s.shortDate,
-                  maxLines: 1, overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(color: textSecondary, fontSize: 9.5)),
-            ])),
-            const Icon(Icons.chevron_right_rounded, color: textSecondary, size: 15),
-          ]),
-        ),
-      )).toList(),
+      children: _savedSessions
+          .take(5)
+          .map((s) => GestureDetector(
+                onTap: () => _showSavedSessionSheet(s),
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: darkBg.withValues(alpha: 0.42),
+                    borderRadius: BorderRadius.circular(9),
+                    border:
+                        Border.all(color: tealSuccess.withValues(alpha: 0.22)),
+                  ),
+                  child: Row(children: [
+                    const Icon(Icons.check_circle_outline,
+                        color: tealSuccess, size: 13),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                          Text(s.title,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w900)),
+                          Text(s.shortDate,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                  color: textSecondary, fontSize: 9.5)),
+                        ])),
+                    const Icon(Icons.chevron_right_rounded,
+                        color: textSecondary, size: 15),
+                  ]),
+                ),
+              ))
+          .toList(),
     );
   }
 
   // ──────────────────────────────────────────────────────────────────────────
 
-  Widget _buildRightContextPanel() {
+  Widget _buildRailHeader({
+    required IconData icon,
+    required String arabicTitle,
+    required String englishTitle,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: darkBg.withValues(alpha: 0.38),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: goldAccent.withValues(alpha: 0.24)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: goldAccent, size: 18),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  arabicTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  englishTitle,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: textSecondary,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTodaySummarySection() {
+    final items = [
+      (
+        Icons.point_of_sale_outlined,
+        'المبيعات',
+        'Sales',
+        _firstInsightSignal(['sales', 'revenue']) ??
+            'تحتاج بيانات / Needs data',
+      ),
+      (
+        Icons.trending_down_rounded,
+        'المصاريف',
+        'Expenses',
+        _firstInsightSignal(['expense', 'cost']) ?? 'تحتاج بيانات / Needs data',
+      ),
+      (
+        Icons.show_chart_rounded,
+        'الربح',
+        'Profit',
+        _firstInsightSignal(['profit', 'margin']) ??
+            'تحتاج تحليل / Needs analysis',
+      ),
+      (
+        Icons.payments_outlined,
+        'النقدية',
+        'Cash',
+        _firstInsightSignal(['cash', 'payment', 'liquidity']) ??
+            'تحتاج بيانات / Needs data',
+      ),
+    ];
+
+    return Column(
+      children: items.map((item) {
+        return _railStatusTile(
+          icon: item.$1,
+          title: '${item.$2} / ${item.$3}',
+          value: item.$4,
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildAccountsMonitorSection() {
+    final accounts = [
+      (Icons.account_balance_wallet_outlined, 'الصندوق', 'Cashbox'),
+      (Icons.point_of_sale_outlined, 'المبيعات', 'Sales'),
+      (Icons.receipt_long_outlined, 'المصاريف', 'Expenses'),
+      (Icons.people_alt_outlined, 'العملاء', 'Customers'),
+      (Icons.local_shipping_outlined, 'الموردون', 'Suppliers'),
+      (Icons.inventory_2_outlined, 'المخزون', 'Inventory'),
+    ];
+
+    return Wrap(
+      spacing: 7,
+      runSpacing: 7,
+      children: accounts.map((account) {
+        return _railActionButton(
+          icon: account.$1,
+          label: '${account.$2} / ${account.$3}',
+          onTap: _isAnalyzing || _isCommitting
+              ? null
+              : () =>
+                  _processAiCommand(customText: 'Review ${account.$3} account'),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildRiskMonitorSection() {
+    final risks = _latestRisks()
+        .where((risk) => risk.title != 'No major risk detected')
+        .take(4)
+        .map((risk) => '${risk.levelLabel}: ${risk.title}')
+        .toList();
+    return _contextRows(
+      risks,
+      empty:
+          'لا توجد مخاطر مؤكدة من بيانات الجلسة الحالية / No active risk signal',
+    );
+  }
+
+  Widget _buildMissingDataSection() {
+    final metadata = _latestMetadata();
+    final missing = metadata?.missingEvidence.take(5).toList() ?? const [];
+    final empty = metadata == null
+        ? 'ابدأ بسؤال أو أدخل مستندًا ليحدد حاسوب البيانات الناقصة / Ask or add a document to detect missing data'
+        : 'لا توجد بيانات ناقصة محددة في آخر تحليل / No specific missing data in the latest analysis';
+    return _contextRows(missing, empty: empty);
+  }
+
+  Widget _railStatusTile({
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 7),
+      padding: const EdgeInsets.all(9),
+      decoration: BoxDecoration(
+        color: darkBg.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: goldAccent, size: 14),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: textSecondary,
+                    fontSize: 10,
+                    height: 1.3,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _railActionButton({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onTap,
+  }) {
+    return Tooltip(
+      message: label,
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+          decoration: BoxDecoration(
+            color: darkBg.withValues(alpha: 0.36),
+            borderRadius: BorderRadius.circular(7),
+            border: Border.all(color: premiumStroke),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: goldAccent, size: 13),
+              const SizedBox(width: 5),
+              Flexible(
+                child: Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildQuickEntrySection() {
+    final actions = [
+      (
+        Icons.point_of_sale_outlined,
+        'بيع جديد / New Sale',
+        _showQuickTransactionSheet
+      ),
+      (
+        Icons.inventory_2_outlined,
+        'شراء مخزون / Stock Purchase',
+        _showQuickTransactionSheet
+      ),
+      (
+        Icons.receipt_long_outlined,
+        'مصروف / Expense',
+        _showQuickTransactionSheet
+      ),
+      (
+        Icons.people_alt_outlined,
+        'مستحقات عميل / Customer Receivable',
+        _showReceivablesSheet
+      ),
+      (
+        Icons.payment_outlined,
+        'مورد/مصروف / Payable/Supplier',
+        _showPayablesSheet
+      ),
+    ];
+    return Wrap(
+      spacing: 7,
+      runSpacing: 7,
+      children: actions.map((action) {
+        return _railActionButton(
+          icon: action.$1,
+          label: action.$2,
+          onTap: action.$3,
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildDocumentsSection() {
+    final actions = [
+      (
+        Icons.description_outlined,
+        'مستند / Document',
+        _showDocumentIntakeSheet
+      ),
+      (Icons.receipt_outlined, 'فاتورة / Invoice', _showDocumentIntakeSheet),
+      (
+        Icons.request_quote_outlined,
+        'عرض سعر / Quotation',
+        _showDocumentIntakeSheet
+      ),
+      (
+        Icons.fact_check_outlined,
+        'مراجعة مستند / Review Document',
+        _showDocumentIntakeSheet
+      ),
+    ];
+    return Wrap(
+      spacing: 7,
+      runSpacing: 7,
+      children: actions.map((action) {
+        return _railActionButton(
+          icon: action.$1,
+          label: action.$2,
+          onTap: action.$3,
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildReportsSection() {
+    final prompts = [
+      (
+        Icons.today_outlined,
+        'تقرير اليوم / Daily Report',
+        'Prepare a daily financial report'
+      ),
+      (
+        Icons.show_chart_rounded,
+        'تقرير الربح / Profit Report',
+        'Prepare a profit report'
+      ),
+      (
+        Icons.inventory_2_outlined,
+        'تقرير المخزون / Inventory Report',
+        'Prepare an inventory report'
+      ),
+      (
+        Icons.people_alt_outlined,
+        'تقرير العملاء / Customer Report',
+        'Prepare a customer report'
+      ),
+    ];
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Wrap(
+          spacing: 7,
+          runSpacing: 7,
+          children: prompts.map((prompt) {
+            return _railActionButton(
+              icon: prompt.$1,
+              label: prompt.$2,
+              onTap: _isAnalyzing || _isCommitting
+                  ? null
+                  : () => _processAiCommand(customText: prompt.$3),
+            );
+          }).toList(),
+        ),
+        const SizedBox(height: 8),
+        _railActionButton(
+          icon: Icons.auto_awesome_outlined,
+          label: 'إنشاء التقرير / Generate Report',
+          onTap: _workspaceDrafts.isEmpty
+              ? null
+              : (_sessionReportGenerated
+                  ? _showSessionReportSheet
+                  : _generateSessionReport),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildReconciliationSection() {
+    final prompts = [
+      (
+        Icons.payments_outlined,
+        'تسوية النقدية / Cash Reconciliation',
+        'Review cash reconciliation'
+      ),
+      (
+        Icons.receipt_long_outlined,
+        'الفواتير غير المدفوعة / Unpaid Invoices',
+        'Review unpaid invoices'
+      ),
+      (
+        Icons.category_outlined,
+        'مصاريف غير مصنفة / Uncategorized Expenses',
+        'Review uncategorized expenses'
+      ),
+      (
+        Icons.lock_clock_outlined,
+        'الإغلاق اليومي / Daily Closing',
+        'Prepare daily closing review'
+      ),
+    ];
+    return Wrap(
+      spacing: 7,
+      runSpacing: 7,
+      children: prompts.map((prompt) {
+        return _railActionButton(
+          icon: prompt.$1,
+          label: prompt.$2,
+          onTap: _isAnalyzing || _isCommitting
+              ? null
+              : () => _processAiCommand(customText: prompt.$3),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildRightContextRail() {
+    final workflow = _orchestrator.activeWorkflow;
+    final proposal = _activeProposal ?? _confirmationProposal;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: premiumPanel,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildRailHeader(
+              icon: Icons.construction_outlined,
+              arabicTitle: 'الأدوات والتنفيذ',
+              englishTitle: 'Tools & Execution',
+            ),
+            const SizedBox(height: 10),
+            Command360ContextModule(
+              title: 'الإدخال السريع / Quick Entry',
+              icon: Icons.add_circle_outline,
+              child: _buildQuickEntrySection(),
+            ),
+            Command360ContextModule(
+              title: 'المستندات / Documents',
+              icon: Icons.description_outlined,
+              child: _buildDocumentsSection(),
+            ),
+            Command360ContextModule(
+              title: 'المسودات بانتظار المراجعة / Pending Drafts',
+              icon: Icons.folder_special_outlined,
+              child: _buildWorkspaceDraftsPanel(),
+            ),
+            Command360ContextModule(
+              title: 'التقارير / Reports',
+              icon: Icons.summarize_outlined,
+              child: _buildReportsSection(),
+            ),
+            Command360ContextModule(
+              title: 'التسوية والمراجعة / Reconciliation & Review',
+              icon: Icons.fact_check_outlined,
+              child: _buildReconciliationSection(),
+            ),
+            Command360ContextModule(
+              title: 'المقترح النشط / Active Proposal',
+              icon: Icons.fact_check_outlined,
+              child: _buildDecisionCockpit(
+                proposal: proposal,
+                workflow: workflow,
+              ),
+            ),
+            Command360ContextModule(
+              title: 'تقرير الجلسة / Session Report',
+              icon: Icons.archive_outlined,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  _buildReportActionBar(),
+                  const SizedBox(height: 10),
+                  _buildSavedSessionsPanel(),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ignore: unused_element
+  Widget _buildRightContextRailLegacy() {
     final score = _businessHealthScore();
     final risks = _latestRisks();
     final insights = _latestInsights();
@@ -3968,27 +4786,27 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Command360ContextModule(
-              title: 'Intake',
+              title: 'الإدخال السريع',
               icon: Icons.add_circle_outline,
               child: _buildIntakePanel(),
             ),
             Command360ContextModule(
-              title: 'Session Report',
+              title: 'تقرير الجلسة',
               icon: Icons.summarize_outlined,
               child: _buildReportActionBar(),
             ),
             Command360ContextModule(
-              title: 'Accounting Workspace',
+              title: 'مساحة محاسبة',
               icon: Icons.folder_special_outlined,
               child: _buildWorkspaceDraftsPanel(),
             ),
             Command360ContextModule(
-              title: 'Saved Sessions',
+              title: 'الجلسات المحفوظة',
               icon: Icons.archive_outlined,
               child: _buildSavedSessionsPanel(),
             ),
             Command360ContextModule(
-              title: 'Business Health',
+              title: 'الصحة المالية',
               icon: Icons.query_stats_outlined,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -4016,7 +4834,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
             Command360ContextModule(
-              title: 'Detected Risks',
+              title: 'مخاطر النظام',
               icon: Icons.warning_amber_rounded,
               child: _contextRows(
                 risks
@@ -4028,38 +4846,38 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
             Command360ContextModule(
-              title: 'Insights',
+              title: 'رؤى',
               icon: Icons.lightbulb_outline,
               child: _contextRows(
                 insights.take(4).map((item) => item.title).toList(),
-                empty: 'No insight generated yet',
+                empty: 'لم تُنشأ رؤى بعد',
               ),
             ),
             Command360ContextModule(
-              title: 'Recommended Next Actions',
+              title: 'الإجراءات الموصى بها',
               icon: Icons.task_alt_outlined,
               child: _contextRows(
                 recommendations.take(4).map((item) => item.title).toList(),
-                empty: 'Ask for analysis to generate actions',
+                empty: 'اسأل عن التحليل لتوليد إجراءات',
               ),
             ),
             Command360ContextModule(
-              title: 'Memory',
+              title: 'الذاكرة',
               icon: Icons.memory_outlined,
               child: _buildContextSummary(compact: true),
             ),
             Command360ContextModule(
-              title: 'CFO Operating Timeline',
+              title: 'الجدول الزمني التشغيلي',
               icon: Icons.timeline_outlined,
               child: _buildOperatingTimeline(compact: true),
             ),
             Command360ContextModule(
-              title: 'CFO Follow-up',
+              title: 'المتابعة الذكية',
               icon: Icons.pending_actions_outlined,
               child: _buildFollowUpLoop(compact: true),
             ),
             Command360ContextModule(
-              title: 'Active Proposal / Workflow',
+              title: 'المقترح النشط / سير العمل',
               icon: Icons.fact_check_outlined,
               child: _buildDecisionCockpit(
                 proposal: proposal,
@@ -6987,7 +7805,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               textInputAction: TextInputAction.send,
               decoration: const InputDecoration(
                 contentPadding: EdgeInsets.symmetric(horizontal: 14),
-                hintText: 'Ask about invoices, cash, expenses, or any financial topic...',
+                hintText:
+                    'Ask about invoices, cash, expenses, or any financial topic...',
                 hintStyle: TextStyle(color: AppTheme.aiTextMuted, fontSize: 12),
                 border: InputBorder.none,
               ),
@@ -7715,20 +8534,20 @@ class _InsightCard extends StatelessWidget {
                 const SizedBox(height: 3),
                 Text(
                   data.value,
-                   overflow: TextOverflow.ellipsis,
-                   style: const TextStyle(
-                     color: Colors.white,
-                     fontSize: 14,
-                     fontWeight: FontWeight.w900,
-                   ),
-                 ),
-               ],
-             ),
-           ),
-         ],
-       ),
-     );
-   }
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 // ─── Shared Colors Helper ─────────────────────────────────────────────────────
@@ -7818,11 +8637,22 @@ class _FullHeightSheet extends StatelessWidget {
                 child: Row(children: [
                   Icon(icon, color: c.goldAccent, size: 18),
                   const SizedBox(width: 8),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text(title, style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900), maxLines: 1, overflow: TextOverflow.ellipsis),
-                    if (subtitle.isNotEmpty)
-                      Text(subtitle, style: TextStyle(color: c.textSecondary, fontSize: 10)),
-                  ])),
+                  Expanded(
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                        Text(title,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 14,
+                                fontWeight: FontWeight.w900),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                        if (subtitle.isNotEmpty)
+                          Text(subtitle,
+                              style: TextStyle(
+                                  color: c.textSecondary, fontSize: 10)),
+                      ])),
                   IconButton(
                     icon: Icon(Icons.close, color: c.textSecondary, size: 18),
                     onPressed: () => Navigator.pop(context),
@@ -7830,30 +8660,40 @@ class _FullHeightSheet extends StatelessWidget {
                 ]),
               ),
               Divider(color: c.premiumStroke, height: 1),
-              Expanded(child: SingleChildScrollView(padding: const EdgeInsets.all(16), child: child)),
+              Expanded(
+                  child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(16), child: child)),
               if (actions.isNotEmpty) ...[
                 Divider(color: c.premiumStroke, height: 1),
                 Padding(
                   padding: const EdgeInsets.all(12),
-                  child: Row(children: actions.map((a) {
-                    Widget btn = a.enabled
-                        ? OutlinedButton.icon(
-                            onPressed: a.onTap,
-                            icon: Icon(a.icon, size: 14),
-                            label: Text(a.label),
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: a.color,
-                              side: BorderSide(color: a.color.withValues(alpha: 0.4)),
-                            ),
-                          )
-                        : OutlinedButton.icon(
-                            onPressed: null,
-                            icon: Icon(a.icon, size: 14),
-                            label: Text(a.label),
-                            style: OutlinedButton.styleFrom(foregroundColor: c.textSecondary),
-                          );
-                    return Expanded(child: btn);
-                  }).expand((w) => [w, const SizedBox(width: 8)]).toList()..removeLast()),
+                  child: Row(
+                      children: actions
+                          .map((a) {
+                            Widget btn = a.enabled
+                                ? OutlinedButton.icon(
+                                    onPressed: a.onTap,
+                                    icon: Icon(a.icon, size: 14),
+                                    label: Text(a.label),
+                                    style: OutlinedButton.styleFrom(
+                                      foregroundColor: a.color,
+                                      side: BorderSide(
+                                          color:
+                                              a.color.withValues(alpha: 0.4)),
+                                    ),
+                                  )
+                                : OutlinedButton.icon(
+                                    onPressed: null,
+                                    icon: Icon(a.icon, size: 14),
+                                    label: Text(a.label),
+                                    style: OutlinedButton.styleFrom(
+                                        foregroundColor: c.textSecondary),
+                                  );
+                            return Expanded(child: btn);
+                          })
+                          .expand((w) => [w, const SizedBox(width: 8)])
+                          .toList()
+                        ..removeLast()),
                 ),
               ],
             ],
@@ -7870,7 +8710,8 @@ class _EmptyHint extends StatelessWidget {
   final IconData icon;
   final String title;
   final String body;
-  const _EmptyHint({required this.icon, required this.title, required this.body});
+  const _EmptyHint(
+      {required this.icon, required this.title, required this.body});
 
   @override
   Widget build(BuildContext context) {
@@ -7885,10 +8726,18 @@ class _EmptyHint extends StatelessWidget {
         Row(children: [
           Icon(icon, color: _AiAccountantScreenState.textSecondary, size: 14),
           const SizedBox(width: 6),
-          Text(title, style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w900)),
+          Text(title,
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900)),
         ]),
         const SizedBox(height: 5),
-        Text(body, style: const TextStyle(color: _AiAccountantScreenState.textSecondary, fontSize: 10.5, height: 1.4)),
+        Text(body,
+            style: const TextStyle(
+                color: _AiAccountantScreenState.textSecondary,
+                fontSize: 10.5,
+                height: 1.4)),
       ]),
     );
   }
@@ -7932,7 +8781,8 @@ class _DraftDetailSheetState extends State<_DraftDetailSheet> {
     _titleCtrl = TextEditingController(text: d.title);
     _summaryCtrl = TextEditingController(text: d.summary);
     _customerCtrl = TextEditingController(text: d.customerOrSupplier ?? '');
-    _amountCtrl = TextEditingController(text: d.amount != null ? d.amount!.toStringAsFixed(2) : '');
+    _amountCtrl = TextEditingController(
+        text: d.amount != null ? d.amount!.toStringAsFixed(2) : '');
     _currencyCtrl = TextEditingController(text: d.currency ?? '');
     _dateCtrl = TextEditingController(text: d.dateOrDueDate ?? '');
     _categoryCtrl = TextEditingController(text: d.category ?? '');
@@ -7941,20 +8791,38 @@ class _DraftDetailSheetState extends State<_DraftDetailSheet> {
 
   @override
   void dispose() {
-    for (final c in [_titleCtrl, _summaryCtrl, _customerCtrl, _amountCtrl, _currencyCtrl, _dateCtrl, _categoryCtrl, _detailsCtrl]) c.dispose();
+    for (final c in [
+      _titleCtrl,
+      _summaryCtrl,
+      _customerCtrl,
+      _amountCtrl,
+      _currencyCtrl,
+      _dateCtrl,
+      _categoryCtrl,
+      _detailsCtrl
+    ]) c.dispose();
     super.dispose();
   }
 
   _AccountingDraft _built() => widget.draft.copyWith(
-    title: _titleCtrl.text.trim().isEmpty ? null : _titleCtrl.text.trim(),
-    summary: _summaryCtrl.text.trim().isEmpty ? null : _summaryCtrl.text.trim(),
-    customerOrSupplier: _customerCtrl.text.trim().isEmpty ? null : _customerCtrl.text.trim(),
-    amount: double.tryParse(_amountCtrl.text.replaceAll(',', '.')),
-    currency: _currencyCtrl.text.trim().isEmpty ? null : _currencyCtrl.text.trim(),
-    dateOrDueDate: _dateCtrl.text.trim().isEmpty ? null : _dateCtrl.text.trim(),
-    category: _categoryCtrl.text.trim().isEmpty ? null : _categoryCtrl.text.trim(),
-    details: _detailsCtrl.text.trim().isEmpty ? null : _detailsCtrl.text.trim(),
-  );
+        title: _titleCtrl.text.trim().isEmpty ? null : _titleCtrl.text.trim(),
+        summary:
+            _summaryCtrl.text.trim().isEmpty ? null : _summaryCtrl.text.trim(),
+        customerOrSupplier: _customerCtrl.text.trim().isEmpty
+            ? null
+            : _customerCtrl.text.trim(),
+        amount: double.tryParse(_amountCtrl.text.replaceAll(',', '.')),
+        currency: _currencyCtrl.text.trim().isEmpty
+            ? null
+            : _currencyCtrl.text.trim(),
+        dateOrDueDate:
+            _dateCtrl.text.trim().isEmpty ? null : _dateCtrl.text.trim(),
+        category: _categoryCtrl.text.trim().isEmpty
+            ? null
+            : _categoryCtrl.text.trim(),
+        details:
+            _detailsCtrl.text.trim().isEmpty ? null : _detailsCtrl.text.trim(),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -7970,79 +8838,140 @@ class _DraftDetailSheetState extends State<_DraftDetailSheet> {
         heightFactor: 0.92,
         child: Container(
           margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-          decoration: BoxDecoration(color: c.premiumPanel, borderRadius: BorderRadius.circular(14), border: Border.all(color: c.premiumStroke)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          decoration: BoxDecoration(
+              color: c.premiumPanel,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: c.premiumStroke)),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 8, 0),
               child: Row(children: [
                 Icon(d.typeIcon, color: c.goldAccent, size: 17),
                 const SizedBox(width: 8),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('${d.typeLabel} · ${d.sourceLabel}', style: TextStyle(color: c.goldAccent, fontSize: 10, fontWeight: FontWeight.w800)),
-                  Text(d.title, maxLines: 1, overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
-                ])),
+                Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('${d.typeLabel} · ${d.sourceLabel}',
+                          style: TextStyle(
+                              color: c.goldAccent,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800)),
+                      Text(d.title,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900)),
+                    ])),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
-                  decoration: BoxDecoration(color: statusColor.withValues(alpha: 0.14), borderRadius: BorderRadius.circular(5)),
-                  child: Text(d.statusLabel, style: TextStyle(color: statusColor, fontSize: 9, fontWeight: FontWeight.w900)),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+                  decoration: BoxDecoration(
+                      color: statusColor.withValues(alpha: 0.14),
+                      borderRadius: BorderRadius.circular(5)),
+                  child: Text(d.statusLabel,
+                      style: TextStyle(
+                          color: statusColor,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900)),
                 ),
                 IconButton(
                   icon: Icon(Icons.close, color: c.textSecondary, size: 18),
-                  onPressed: () { widget.onUpdate(_built()); Navigator.pop(context); },
+                  onPressed: () {
+                    widget.onUpdate(_built());
+                    Navigator.pop(context);
+                  },
                 ),
               ]),
             ),
             const Padding(
               padding: EdgeInsets.fromLTRB(16, 2, 16, 6),
-              child: Text('Session draft only — not posted to accounting records.', style: TextStyle(color: AppTheme.aiTextMuted, fontSize: 9)),
+              child: Text(
+                  'Session draft only — not posted to accounting records.',
+                  style: TextStyle(color: AppTheme.aiTextMuted, fontSize: 9)),
             ),
             Divider(color: c.premiumStroke, height: 1),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  _field('Title', _titleCtrl, c),
-                  _field('Summary', _summaryCtrl, c, maxLines: 3),
-                  _field('Customer / Supplier', _customerCtrl, c, hint: 'e.g. Al-Noor Trading'),
-                  Row(children: [
-                    Expanded(child: _field('Amount', _amountCtrl, c, hint: '2500.00', keyboardType: const TextInputType.numberWithOptions(decimal: true))),
-                    const SizedBox(width: 10),
-                    Expanded(child: _field('Currency', _currencyCtrl, c, hint: 'SAR')),
-                  ]),
-                  _field('Date / Due Date', _dateCtrl, c, hint: 'e.g. 2026-07-15'),
-                  _field('Category', _categoryCtrl, c, hint: 'e.g. Receivables'),
-                  _field('Notes / Details', _detailsCtrl, c, maxLines: 4),
-                  if (d.missingInfo.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Text('Missing Information', style: TextStyle(color: c.goldAccent, fontSize: 11, fontWeight: FontWeight.w900)),
-                    const SizedBox(height: 6),
-                    ...d.missingInfo.map((m) => Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Icon(Icons.info_outline, size: 12, color: c.goldAccent),
-                        const SizedBox(width: 6),
-                        Expanded(child: Text(m, style: TextStyle(color: c.textSecondary, fontSize: 10.5, height: 1.35))),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _field('Title', _titleCtrl, c),
+                      _field('Summary', _summaryCtrl, c, maxLines: 3),
+                      _field('Customer / Supplier', _customerCtrl, c,
+                          hint: 'e.g. Al-Noor Trading'),
+                      Row(children: [
+                        Expanded(
+                            child: _field('Amount', _amountCtrl, c,
+                                hint: '2500.00',
+                                keyboardType:
+                                    const TextInputType.numberWithOptions(
+                                        decimal: true))),
+                        const SizedBox(width: 10),
+                        Expanded(
+                            child: _field('Currency', _currencyCtrl, c,
+                                hint: 'SAR')),
                       ]),
-                    )),
-                  ],
-                  if (d.recommendedNextAction != null) ...[
-                    const SizedBox(height: 10),
-                    Container(
-                      padding: const EdgeInsets.all(10),
-                      decoration: BoxDecoration(
-                        color: c.tealSuccess.withValues(alpha: 0.08),
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: c.tealSuccess.withValues(alpha: 0.2)),
-                      ),
-                      child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Icon(Icons.lightbulb_outline, size: 13, color: c.tealSuccess),
-                        const SizedBox(width: 7),
-                        Expanded(child: Text(d.recommendedNextAction!, style: TextStyle(color: c.tealSuccess, fontSize: 10.5, height: 1.35))),
-                      ]),
-                    ),
-                  ],
-                ]),
+                      _field('Date / Due Date', _dateCtrl, c,
+                          hint: 'e.g. 2026-07-15'),
+                      _field('Category', _categoryCtrl, c,
+                          hint: 'e.g. Receivables'),
+                      _field('Notes / Details', _detailsCtrl, c, maxLines: 4),
+                      if (d.missingInfo.isNotEmpty) ...[
+                        const SizedBox(height: 10),
+                        Text('Missing Information',
+                            style: TextStyle(
+                                color: c.goldAccent,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w900)),
+                        const SizedBox(height: 6),
+                        ...d.missingInfo.map((m) => Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Icon(Icons.info_outline,
+                                        size: 12, color: c.goldAccent),
+                                    const SizedBox(width: 6),
+                                    Expanded(
+                                        child: Text(m,
+                                            style: TextStyle(
+                                                color: c.textSecondary,
+                                                fontSize: 10.5,
+                                                height: 1.35))),
+                                  ]),
+                            )),
+                      ],
+                      if (d.recommendedNextAction != null) ...[
+                        const SizedBox(height: 10),
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: c.tealSuccess.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(
+                                color: c.tealSuccess.withValues(alpha: 0.2)),
+                          ),
+                          child: Row(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Icon(Icons.lightbulb_outline,
+                                    size: 13, color: c.tealSuccess),
+                                const SizedBox(width: 7),
+                                Expanded(
+                                    child: Text(d.recommendedNextAction!,
+                                        style: TextStyle(
+                                            color: c.tealSuccess,
+                                            fontSize: 10.5,
+                                            height: 1.35))),
+                              ]),
+                        ),
+                      ],
+                    ]),
               ),
             ),
             Divider(color: c.premiumStroke, height: 1),
@@ -8052,19 +8981,32 @@ class _DraftDetailSheetState extends State<_DraftDetailSheet> {
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () {
-                      if (d.status != _DraftStatus.needsReview) widget.onMarkNeedsReview(); else widget.onMarkReady();
+                      if (d.status != _DraftStatus.needsReview)
+                        widget.onMarkNeedsReview();
+                      else
+                        widget.onMarkReady();
                       widget.onUpdate(_built());
                       Navigator.pop(context);
                     },
-                    style: OutlinedButton.styleFrom(foregroundColor: c.goldAccent, side: BorderSide(color: c.goldAccent.withValues(alpha: 0.4))),
-                    child: Text(d.status == _DraftStatus.ready ? 'Needs Review' : 'Mark Ready'),
+                    style: OutlinedButton.styleFrom(
+                        foregroundColor: c.goldAccent,
+                        side: BorderSide(
+                            color: c.goldAccent.withValues(alpha: 0.4))),
+                    child: Text(d.status == _DraftStatus.ready
+                        ? 'Needs Review'
+                        : 'Mark Ready'),
                   ),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: FilledButton(
-                    onPressed: () { widget.onUpdate(_built()); Navigator.pop(context); },
-                    style: FilledButton.styleFrom(backgroundColor: c.tealSuccess.withValues(alpha: 0.18), foregroundColor: c.tealSuccess),
+                    onPressed: () {
+                      widget.onUpdate(_built());
+                      Navigator.pop(context);
+                    },
+                    style: FilledButton.styleFrom(
+                        backgroundColor: c.tealSuccess.withValues(alpha: 0.18),
+                        foregroundColor: c.tealSuccess),
                     child: const Text('Save Changes'),
                   ),
                 ),
@@ -8076,11 +9018,16 @@ class _DraftDetailSheetState extends State<_DraftDetailSheet> {
     );
   }
 
-  Widget _field(String label, TextEditingController ctrl, _SheetColors c, {String? hint, int maxLines = 1, TextInputType? keyboardType}) {
+  Widget _field(String label, TextEditingController ctrl, _SheetColors c,
+      {String? hint, int maxLines = 1, TextInputType? keyboardType}) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 12),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Text(label, style: TextStyle(color: c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800)),
+        Text(label,
+            style: TextStyle(
+                color: c.textSecondary,
+                fontSize: 10,
+                fontWeight: FontWeight.w800)),
         const SizedBox(height: 4),
         TextField(
           controller: ctrl,
@@ -8090,12 +9037,20 @@ class _DraftDetailSheetState extends State<_DraftDetailSheet> {
           decoration: InputDecoration(
             hintText: hint,
             hintStyle: TextStyle(color: AppTheme.aiTextMuted, fontSize: 12),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
             filled: true,
             fillColor: c.darkBg.withValues(alpha: 0.6),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.premiumStroke)),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.premiumStroke)),
-            focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.goldAccent.withValues(alpha: 0.5))),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: c.premiumStroke)),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: BorderSide(color: c.premiumStroke)),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide:
+                    BorderSide(color: c.goldAccent.withValues(alpha: 0.5))),
           ),
         ),
       ]),
@@ -8142,7 +9097,8 @@ class _SavedAiCfoSession {
       title: map['title']?.toString() ?? 'Untitled',
       reportText: map['reportText']?.toString() ?? '',
       draftsJson: map['draftsJson']?.toString() ?? '[]',
-      createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ?? DateTime.now(),
+      createdAt: DateTime.tryParse(map['createdAt']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 
@@ -8182,24 +9138,39 @@ class _SavedAiCfoSession {
 
 // ─── Document Intake Sheet ────────────────────────────────────────────────────
 
-typedef _IntakeCallback = void Function(_AccountingDraft draft, String chatMessage);
+typedef _IntakeCallback = void Function(
+    _AccountingDraft draft, String chatMessage);
 
 class _DocumentIntakeSheet extends StatefulWidget {
   final _SheetColors colors;
   final _IntakeCallback onDraftCreated;
-  const _DocumentIntakeSheet({required this.colors, required this.onDraftCreated});
+  const _DocumentIntakeSheet(
+      {required this.colors, required this.onDraftCreated});
   @override
   State<_DocumentIntakeSheet> createState() => _DocumentIntakeSheetState();
 }
 
 class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
-  final _typeOptions = const ['Invoice', 'Receipt', 'Quotation', 'Payment Note', 'Expense Note', 'Receivable Note', 'Payable Note', 'General Note'];
+  final _typeOptions = const [
+    'Invoice',
+    'Receipt',
+    'Quotation',
+    'Payment Note',
+    'Expense Note',
+    'Receivable Note',
+    'Payable Note',
+    'General Note'
+  ];
   String _selectedType = 'Invoice';
   final _titleCtrl = TextEditingController();
   final _textCtrl = TextEditingController();
 
   @override
-  void dispose() { _titleCtrl.dispose(); _textCtrl.dispose(); super.dispose(); }
+  void dispose() {
+    _titleCtrl.dispose();
+    _textCtrl.dispose();
+    super.dispose();
+  }
 
   double? _extractAmount(String text) {
     final m = RegExp(r'(\d{2,}(?:[.,]\d+)?)').firstMatch(text.toLowerCase());
@@ -8217,26 +9188,46 @@ class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
 
   String? _extractCustomer(String text) {
     final t = text.toLowerCase();
-    final patterns = ['from:', 'to:', 'customer:', 'supplier:', 'bill to:', 'sold to:', 'client:'];
+    final patterns = [
+      'from:',
+      'to:',
+      'customer:',
+      'supplier:',
+      'bill to:',
+      'sold to:',
+      'client:'
+    ];
     for (final p in patterns) {
       final idx = t.indexOf(p);
       if (idx >= 0) {
         final rest = text.substring(idx + p.length).trim();
         final end = rest.indexOf('\n');
-        return (end > 0 ? rest.substring(0, end) : rest).trim().split(',').first.trim();
+        return (end > 0 ? rest.substring(0, end) : rest)
+            .trim()
+            .split(',')
+            .first
+            .trim();
       }
     }
     return null;
   }
 
   String? _extractDate(String text) {
-    final m = RegExp(r'\d{4}[-/]\d{2}[-/]\d{2}|\d{2}[-/]\d{2}[-/]\d{4}').firstMatch(text);
+    final m = RegExp(r'\d{4}[-/]\d{2}[-/]\d{2}|\d{2}[-/]\d{2}[-/]\d{4}')
+        .firstMatch(text);
     return m?.group(0);
   }
 
   String? _extractRef(String text) {
     final t = text.toLowerCase();
-    final patterns = ['invoice #', 'inv #', 'ref:', 'reference:', 'no.:', 'no:'];
+    final patterns = [
+      'invoice #',
+      'inv #',
+      'ref:',
+      'reference:',
+      'no.:',
+      'no:'
+    ];
     for (final p in patterns) {
       final idx = t.indexOf(p);
       if (idx >= 0) {
@@ -8247,36 +9238,48 @@ class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
     return null;
   }
 
-  bool _containsAny(String text, List<String> keywords) => keywords.any(text.toLowerCase().contains);
+  bool _containsAny(String text, List<String> keywords) =>
+      keywords.any(text.toLowerCase().contains);
 
   void _analyze() {
     final pasted = _textCtrl.text.trim();
     if (pasted.isEmpty) return;
     final isArabic = _containsArabicText(pasted);
-    final title = _titleCtrl.text.trim().isEmpty ? '$_selectedType Draft' : _titleCtrl.text.trim();
+    final title = _titleCtrl.text.trim().isEmpty
+        ? '$_selectedType Draft'
+        : _titleCtrl.text.trim();
     final amount = _extractAmount(pasted);
     final currency = _extractCurrency(pasted);
     final customer = _extractCustomer(pasted);
     final date = _extractDate(pasted);
     final ref = _extractRef(pasted);
-    final src = pasted.length > 100 ? '${pasted.substring(0, 100)}…' : pasted;
     final hasVat = _containsAny(pasted, ['vat', 'tax', '15%', 'ضريبة']);
     final hasPaid = _containsAny(pasted, ['paid', 'مدفوع']);
     final missing = <String>[
-      if (customer == null) (isArabic ? 'العميل / المورد' : 'Customer / Supplier'),
+      if (customer == null)
+        (isArabic ? 'العميل / المورد' : 'Customer / Supplier'),
       if (amount == null) (isArabic ? 'المبلغ' : 'Amount'),
       if (currency == null) (isArabic ? 'العملة' : 'Currency'),
-      if (date == null) (isArabic ? 'التاريخ / تاريخ الاستحقاق' : 'Date / Due Date'),
+      if (date == null)
+        (isArabic ? 'التاريخ / تاريخ الاستحقاق' : 'Date / Due Date'),
       if (!hasVat) (isArabic ? 'حالة الضريبة' : 'VAT / Tax status'),
       if (!hasPaid) (isArabic ? 'حالة الدفع' : 'Payment status'),
     ];
     final draftType = switch (_selectedType) {
-      'Invoice' || 'Receipt' || 'Quotation' || 'Payment Note' || 'Receivable Note' => _DraftType.invoice,
+      'Invoice' ||
+      'Receipt' ||
+      'Quotation' ||
+      'Payment Note' ||
+      'Receivable Note' =>
+        _DraftType.invoice,
       'Expense Note' || 'Payable Note' => _DraftType.account,
       _ => _DraftType.note,
     };
-    final confidence = (amount != null && customer != null) ? _DraftConfidence.medium : _DraftConfidence.low;
-    final status = missing.length > 3 ? _DraftStatus.needsReview : _DraftStatus.draft;
+    final confidence = (amount != null && customer != null)
+        ? _DraftConfidence.medium
+        : _DraftConfidence.low;
+    final status =
+        missing.length > 3 ? _DraftStatus.needsReview : _DraftStatus.draft;
 
     final draft = _AccountingDraft(
       id: 'doc_${DateTime.now().millisecondsSinceEpoch}',
@@ -8289,7 +9292,8 @@ class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
       details: pasted,
       status: status,
       confidence: confidence,
-      sourceSummary: isArabic ? 'إدخال مستند — نص ملصق' : 'Document Intake — pasted text',
+      sourceSummary:
+          isArabic ? 'إدخال مستند — نص ملصق' : 'Document Intake — pasted text',
       amount: amount,
       currency: currency,
       customerOrSupplier: customer,
@@ -8301,8 +9305,12 @@ class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
     );
 
     final foundMsg = <String>[
-      if (amount != null) (isArabic ? 'المبلغ ${amount.toStringAsFixed(2)} ${currency ?? ''}' : 'amount ${amount.toStringAsFixed(2)} ${currency ?? ''}'),
-      if (customer != null) (isArabic ? 'العميل "$customer"' : 'party "$customer"'),
+      if (amount != null)
+        (isArabic
+            ? 'المبلغ ${amount.toStringAsFixed(2)} ${currency ?? ''}'
+            : 'amount ${amount.toStringAsFixed(2)} ${currency ?? ''}'),
+      if (customer != null)
+        (isArabic ? 'العميل "$customer"' : 'party "$customer"'),
       if (date != null) (isArabic ? 'التاريخ $date' : 'date $date'),
       if (ref != null) (isArabic ? 'المرجع $ref' : 'reference $ref'),
     ];
@@ -8321,53 +9329,106 @@ class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
         heightFactor: 0.88,
         child: Container(
           margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-          decoration: BoxDecoration(color: c.premiumPanel, borderRadius: BorderRadius.circular(14), border: Border.all(color: c.premiumStroke)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          decoration: BoxDecoration(
+              color: c.premiumPanel,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: c.premiumStroke)),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 8, 0),
               child: Row(children: [
                 Icon(Icons.paste_outlined, color: c.goldAccent, size: 18),
                 const SizedBox(width: 8),
-                const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Document Intake', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
-                  Text('Paste invoice / receipt / quotation text. HASOOB extracts what is clear.', style: TextStyle(color: _AiAccountantScreenState.textSecondary, fontSize: 10)),
-                ])),
-                IconButton(icon: Icon(Icons.close, color: c.textSecondary, size: 18), onPressed: () => Navigator.pop(context)),
+                const Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('Document Intake',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900)),
+                      Text(
+                          'Paste invoice / receipt / quotation text. HASOOB extracts what is clear.',
+                          style: TextStyle(
+                              color: _AiAccountantScreenState.textSecondary,
+                              fontSize: 10)),
+                    ])),
+                IconButton(
+                    icon: Icon(Icons.close, color: c.textSecondary, size: 18),
+                    onPressed: () => Navigator.pop(context)),
               ]),
             ),
             Divider(color: c.premiumStroke, height: 1),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  Text('Document Type', style: TextStyle(color: c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 6),
-                  Wrap(spacing: 6, runSpacing: 6, children: _typeOptions.map((t) {
-                    final sel = t == _selectedType;
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedType = t),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: sel ? c.goldAccent.withValues(alpha: 0.18) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: sel ? c.goldAccent.withValues(alpha: 0.5) : c.premiumStroke),
-                        ),
-                        child: Text(t, style: TextStyle(color: sel ? c.goldAccent : c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800)),
-                      ),
-                    );
-                  }).toList()),
-                  const SizedBox(height: 14),
-                  Text('Title / Reference (optional)', style: TextStyle(color: c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 4),
-                  _buildTextField(c, _titleCtrl, hint: 'e.g. Invoice INV-2026-001'),
-                  const SizedBox(height: 12),
-                  Text('Paste Document / Note Text', style: TextStyle(color: c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800)),
-                  const SizedBox(height: 4),
-                  _buildTextField(c, _textCtrl, hint: 'Paste invoice text, receipt details, quotation content, or any accounting note here...', maxLines: 9),
-                  const SizedBox(height: 6),
-                  Text('Session draft only — not posted to accounting records.', style: TextStyle(color: AppTheme.aiTextMuted, fontSize: 9)),
-                ]),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Text('Document Type',
+                          style: TextStyle(
+                              color: c.textSecondary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 6),
+                      Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: _typeOptions.map((t) {
+                            final sel = t == _selectedType;
+                            return GestureDetector(
+                              onTap: () => setState(() => _selectedType = t),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: sel
+                                      ? c.goldAccent.withValues(alpha: 0.18)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                      color: sel
+                                          ? c.goldAccent.withValues(alpha: 0.5)
+                                          : c.premiumStroke),
+                                ),
+                                child: Text(t,
+                                    style: TextStyle(
+                                        color: sel
+                                            ? c.goldAccent
+                                            : c.textSecondary,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800)),
+                              ),
+                            );
+                          }).toList()),
+                      const SizedBox(height: 14),
+                      Text('Title / Reference (optional)',
+                          style: TextStyle(
+                              color: c.textSecondary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 4),
+                      _buildTextField(c, _titleCtrl,
+                          hint: 'e.g. Invoice INV-2026-001'),
+                      const SizedBox(height: 12),
+                      Text('Paste Document / Note Text',
+                          style: TextStyle(
+                              color: c.textSecondary,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 4),
+                      _buildTextField(c, _textCtrl,
+                          hint:
+                              'Paste invoice text, receipt details, quotation content, or any accounting note here...',
+                          maxLines: 9),
+                      const SizedBox(height: 6),
+                      Text(
+                          'Session draft only — not posted to accounting records.',
+                          style: TextStyle(
+                              color: AppTheme.aiTextMuted, fontSize: 9)),
+                    ]),
               ),
             ),
             Divider(color: c.premiumStroke, height: 1),
@@ -8376,8 +9437,13 @@ class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
               child: Row(children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () { _titleCtrl.clear(); _textCtrl.clear(); },
-                    style: OutlinedButton.styleFrom(foregroundColor: c.textSecondary, side: BorderSide(color: c.premiumStroke)),
+                    onPressed: () {
+                      _titleCtrl.clear();
+                      _textCtrl.clear();
+                    },
+                    style: OutlinedButton.styleFrom(
+                        foregroundColor: c.textSecondary,
+                        side: BorderSide(color: c.premiumStroke)),
                     child: const Text('Clear'),
                   ),
                 ),
@@ -8388,7 +9454,9 @@ class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
                     onPressed: _textCtrl.text.trim().isEmpty ? null : _analyze,
                     icon: const Icon(Icons.auto_awesome_outlined, size: 15),
                     label: const Text('Analyze & Create Draft'),
-                    style: FilledButton.styleFrom(backgroundColor: c.goldAccent.withValues(alpha: 0.22), foregroundColor: c.goldAccent),
+                    style: FilledButton.styleFrom(
+                        backgroundColor: c.goldAccent.withValues(alpha: 0.22),
+                        foregroundColor: c.goldAccent),
                   ),
                 ),
               ]),
@@ -8399,7 +9467,8 @@ class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
     );
   }
 
-  Widget _buildTextField(_SheetColors c, TextEditingController ctrl, {String? hint, int maxLines = 1}) {
+  Widget _buildTextField(_SheetColors c, TextEditingController ctrl,
+      {String? hint, int maxLines = 1}) {
     return TextField(
       controller: ctrl,
       maxLines: maxLines,
@@ -8408,12 +9477,19 @@ class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(color: AppTheme.aiTextMuted, fontSize: 11),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         filled: true,
         fillColor: c.darkBg.withValues(alpha: 0.6),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.premiumStroke)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.premiumStroke)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.goldAccent.withValues(alpha: 0.5))),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: c.premiumStroke)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: c.premiumStroke)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: c.goldAccent.withValues(alpha: 0.5))),
       ),
     );
   }
@@ -8424,13 +9500,22 @@ class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
 class _QuickTransactionSheet extends StatefulWidget {
   final _SheetColors colors;
   final _IntakeCallback onDraftCreated;
-  const _QuickTransactionSheet({required this.colors, required this.onDraftCreated});
+  const _QuickTransactionSheet(
+      {required this.colors, required this.onDraftCreated});
   @override
   State<_QuickTransactionSheet> createState() => _QuickTransactionSheetState();
 }
 
 class _QuickTransactionSheetState extends State<_QuickTransactionSheet> {
-  final _txTypes = const ['Sale', 'Expense', 'Payment Received', 'Payment Made', 'Transfer', 'Adjustment', 'General'];
+  final _txTypes = const [
+    'Sale',
+    'Expense',
+    'Payment Received',
+    'Payment Made',
+    'Transfer',
+    'Adjustment',
+    'General'
+  ];
   String _txType = 'Sale';
   final _amountCtrl = TextEditingController();
   final _currencyCtrl = TextEditingController(text: 'SAR');
@@ -8440,14 +9525,24 @@ class _QuickTransactionSheetState extends State<_QuickTransactionSheet> {
   String _payStatus = 'Unpaid';
 
   @override
-  void dispose() { for (final c in [_amountCtrl, _currencyCtrl, _partyCtrl, _dateCtrl, _noteCtrl]) c.dispose(); super.dispose(); }
+  void dispose() {
+    for (final c in [
+      _amountCtrl,
+      _currencyCtrl,
+      _partyCtrl,
+      _dateCtrl,
+      _noteCtrl
+    ]) c.dispose();
+    super.dispose();
+  }
 
   void _create() {
     final amt = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
     final party = _partyCtrl.text.trim();
     final date = _dateCtrl.text.trim();
     final note = _noteCtrl.text.trim();
-    final currency = _currencyCtrl.text.trim().isEmpty ? 'SAR' : _currencyCtrl.text.trim();
+    final currency =
+        _currencyCtrl.text.trim().isEmpty ? 'SAR' : _currencyCtrl.text.trim();
     final isArabic = _containsArabicText('$party$note');
 
     final draftType = switch (_txType) {
@@ -8458,17 +9553,23 @@ class _QuickTransactionSheetState extends State<_QuickTransactionSheet> {
     };
     final missing = <String>[
       if (amt == null) (isArabic ? 'المبلغ' : 'Amount'),
-      if (party.isEmpty) (isArabic ? 'العميل / المورد / الحساب' : 'Customer / Supplier / Account'),
+      if (party.isEmpty)
+        (isArabic
+            ? 'العميل / المورد / الحساب'
+            : 'Customer / Supplier / Account'),
       if (date.isEmpty) (isArabic ? 'التاريخ' : 'Date'),
     ];
-    final confidence = (amt != null && party.isNotEmpty) ? _DraftConfidence.medium : _DraftConfidence.low;
+    final confidence = (amt != null && party.isNotEmpty)
+        ? _DraftConfidence.medium
+        : _DraftConfidence.low;
 
     final draft = _AccountingDraft(
       id: 'tx_${DateTime.now().millisecondsSinceEpoch}',
       type: draftType,
       source: _DraftSource.quickTransaction,
       title: '$_txType${party.isNotEmpty ? ' — $party' : ''}',
-      summary: '$_txType${amt != null ? ': ${amt.toStringAsFixed(2)} $currency' : ''}.${party.isNotEmpty ? ' Party: $party.' : ''}${date.isNotEmpty ? ' Date: $date.' : ''} Status: $_payStatus.',
+      summary:
+          '$_txType${amt != null ? ': ${amt.toStringAsFixed(2)} $currency' : ''}.${party.isNotEmpty ? ' Party: $party.' : ''}${date.isNotEmpty ? ' Date: $date.' : ''} Status: $_payStatus.',
       details: note.isNotEmpty ? note : null,
       status: missing.isEmpty ? _DraftStatus.draft : _DraftStatus.needsReview,
       confidence: confidence,
@@ -8479,11 +9580,16 @@ class _QuickTransactionSheetState extends State<_QuickTransactionSheet> {
       dateOrDueDate: date.isEmpty ? null : date,
       missingInfo: missing,
       recommendedNextAction: isArabic
-          ? (_txType == 'Sale' ? 'أكّد الحساب والفئة والحالة. هذا ليس بيعًا مسجلاً — راجع قبل أي تسجيل رسمي.' : 'أكّد التصنيف والحساب والحالة. لم يُرفع للقيد بعد.')
-          : (_txType == 'Sale' ? 'Confirm account/category and payment status. This is not a posted sale — review before any official recording.' : 'Confirm classification, account, and payment status. Not posted to ledger.'),
+          ? (_txType == 'Sale'
+              ? 'أكّد الحساب والفئة والحالة. هذا ليس بيعًا مسجلاً — راجع قبل أي تسجيل رسمي.'
+              : 'أكّد التصنيف والحساب والحالة. لم يُرفع للقيد بعد.')
+          : (_txType == 'Sale'
+              ? 'Confirm account/category and payment status. This is not a posted sale — review before any official recording.'
+              : 'Confirm classification, account, and payment status. Not posted to ledger.'),
     );
 
-    final txTypeArabic = switch (_txType) {
+    // ignore: unused_local_variable, no_leading_underscores_for_local_identifiers
+    final _txTypeArabic = switch (_txType) {
       'Sale' => 'بيع',
       'Expense' => 'مصروف',
       'Payment Received' => 'دفعة مستلمة',
@@ -8507,89 +9613,153 @@ class _QuickTransactionSheetState extends State<_QuickTransactionSheet> {
         heightFactor: 0.88,
         child: Container(
           margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-          decoration: BoxDecoration(color: c.premiumPanel, borderRadius: BorderRadius.circular(14), border: Border.all(color: c.premiumStroke)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          decoration: BoxDecoration(
+              color: c.premiumPanel,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: c.premiumStroke)),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 8, 0),
               child: Row(children: [
                 Icon(Icons.receipt_outlined, color: c.goldAccent, size: 18),
                 const SizedBox(width: 8),
-                const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Quick Transaction Note', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
-                  Text('Record a transaction note. Not posted to ledger — creates a review draft only.', style: TextStyle(color: _AiAccountantScreenState.textSecondary, fontSize: 10)),
-                ])),
-                IconButton(icon: Icon(Icons.close, color: c.textSecondary, size: 18), onPressed: () => Navigator.pop(context)),
+                const Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('Quick Transaction Note',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900)),
+                      Text(
+                          'Record a transaction note. Not posted to ledger — creates a review draft only.',
+                          style: TextStyle(
+                              color: _AiAccountantScreenState.textSecondary,
+                              fontSize: 10)),
+                    ])),
+                IconButton(
+                    icon: Icon(Icons.close, color: c.textSecondary, size: 18),
+                    onPressed: () => Navigator.pop(context)),
               ]),
             ),
             Divider(color: c.premiumStroke, height: 1),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  _label('Transaction Type', c),
-                  const SizedBox(height: 6),
-                  Wrap(spacing: 6, runSpacing: 6, children: _txTypes.map((t) {
-                    final sel = t == _txType;
-                    return GestureDetector(
-                      onTap: () => setState(() => _txType = t),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: sel ? c.goldAccent.withValues(alpha: 0.18) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(6),
-                          border: Border.all(color: sel ? c.goldAccent.withValues(alpha: 0.5) : c.premiumStroke),
-                        ),
-                        child: Text(t, style: TextStyle(color: sel ? c.goldAccent : c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800)),
-                      ),
-                    );
-                  }).toList()),
-                  const SizedBox(height: 14),
-                  Row(children: [
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      _label('Amount', c),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _label('Transaction Type', c),
+                      const SizedBox(height: 6),
+                      Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: _txTypes.map((t) {
+                            final sel = t == _txType;
+                            return GestureDetector(
+                              onTap: () => setState(() => _txType = t),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 10, vertical: 5),
+                                decoration: BoxDecoration(
+                                  color: sel
+                                      ? c.goldAccent.withValues(alpha: 0.18)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(6),
+                                  border: Border.all(
+                                      color: sel
+                                          ? c.goldAccent.withValues(alpha: 0.5)
+                                          : c.premiumStroke),
+                                ),
+                                child: Text(t,
+                                    style: TextStyle(
+                                        color: sel
+                                            ? c.goldAccent
+                                            : c.textSecondary,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800)),
+                              ),
+                            );
+                          }).toList()),
+                      const SizedBox(height: 14),
+                      Row(children: [
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              _label('Amount', c),
+                              const SizedBox(height: 4),
+                              _tf(c, _amountCtrl,
+                                  hint: '2500.00',
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true)),
+                            ])),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                            width: 80,
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _label('Currency', c),
+                                  const SizedBox(height: 4),
+                                  _tf(c, _currencyCtrl, hint: 'SAR'),
+                                ])),
+                      ]),
+                      const SizedBox(height: 12),
+                      _label('Customer / Supplier / Account', c),
                       const SizedBox(height: 4),
-                      _tf(c, _amountCtrl, hint: '2500.00', keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-                    ])),
-                    const SizedBox(width: 10),
-                    SizedBox(width: 80, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      _label('Currency', c),
+                      _tf(c, _partyCtrl, hint: 'e.g. Ahmed Trading'),
+                      const SizedBox(height: 12),
+                      _label('Date', c),
                       const SizedBox(height: 4),
-                      _tf(c, _currencyCtrl, hint: 'SAR'),
-                    ])),
-                  ]),
-                  const SizedBox(height: 12),
-                  _label('Customer / Supplier / Account', c),
-                  const SizedBox(height: 4),
-                  _tf(c, _partyCtrl, hint: 'e.g. Ahmed Trading'),
-                  const SizedBox(height: 12),
-                  _label('Date', c),
-                  const SizedBox(height: 4),
-                  _tf(c, _dateCtrl, hint: '2026-07-01'),
-                  const SizedBox(height: 12),
-                  _label('Payment Status', c),
-                  const SizedBox(height: 6),
-                  Wrap(spacing: 6, children: ['Paid', 'Unpaid', 'Partial', 'N/A'].map((s) {
-                    final sel = s == _payStatus;
-                    return GestureDetector(
-                      onTap: () => setState(() => _payStatus = s),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: sel ? c.tealSuccess.withValues(alpha: 0.14) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(5),
-                          border: Border.all(color: sel ? c.tealSuccess.withValues(alpha: 0.4) : c.premiumStroke),
-                        ),
-                        child: Text(s, style: TextStyle(color: sel ? c.tealSuccess : c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800)),
-                      ),
-                    );
-                  }).toList()),
-                  const SizedBox(height: 12),
-                  _label('Note / Description', c),
-                  const SizedBox(height: 4),
-                  _tf(c, _noteCtrl, hint: 'Additional details...', maxLines: 3),
-                  const SizedBox(height: 6),
-                  Text('Not posted to ledger — creates a review draft only.', style: TextStyle(color: AppTheme.aiTextMuted, fontSize: 9)),
-                ]),
+                      _tf(c, _dateCtrl, hint: '2026-07-01'),
+                      const SizedBox(height: 12),
+                      _label('Payment Status', c),
+                      const SizedBox(height: 6),
+                      Wrap(
+                          spacing: 6,
+                          children:
+                              ['Paid', 'Unpaid', 'Partial', 'N/A'].map((s) {
+                            final sel = s == _payStatus;
+                            return GestureDetector(
+                              onTap: () => setState(() => _payStatus = s),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: sel
+                                      ? c.tealSuccess.withValues(alpha: 0.14)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(
+                                      color: sel
+                                          ? c.tealSuccess.withValues(alpha: 0.4)
+                                          : c.premiumStroke),
+                                ),
+                                child: Text(s,
+                                    style: TextStyle(
+                                        color: sel
+                                            ? c.tealSuccess
+                                            : c.textSecondary,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800)),
+                              ),
+                            );
+                          }).toList()),
+                      const SizedBox(height: 12),
+                      _label('Note / Description', c),
+                      const SizedBox(height: 4),
+                      _tf(c, _noteCtrl,
+                          hint: 'Additional details...', maxLines: 3),
+                      const SizedBox(height: 6),
+                      Text(
+                          'Not posted to ledger — creates a review draft only.',
+                          style: TextStyle(
+                              color: AppTheme.aiTextMuted, fontSize: 9)),
+                    ]),
               ),
             ),
             Divider(color: c.premiumStroke, height: 1),
@@ -8599,7 +9769,9 @@ class _QuickTransactionSheetState extends State<_QuickTransactionSheet> {
                 onPressed: _create,
                 icon: const Icon(Icons.add_circle_outline, size: 15),
                 label: const Text('Create Draft'),
-                style: FilledButton.styleFrom(backgroundColor: c.goldAccent.withValues(alpha: 0.22), foregroundColor: c.goldAccent),
+                style: FilledButton.styleFrom(
+                    backgroundColor: c.goldAccent.withValues(alpha: 0.22),
+                    foregroundColor: c.goldAccent),
               ),
             ),
           ]),
@@ -8608,9 +9780,12 @@ class _QuickTransactionSheetState extends State<_QuickTransactionSheet> {
     );
   }
 
-  Widget _label(String text, _SheetColors c) => Text(text, style: TextStyle(color: c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800));
+  Widget _label(String text, _SheetColors c) => Text(text,
+      style: TextStyle(
+          color: c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800));
 
-  Widget _tf(_SheetColors c, TextEditingController ctrl, {String? hint, int maxLines = 1, TextInputType? keyboardType}) {
+  Widget _tf(_SheetColors c, TextEditingController ctrl,
+      {String? hint, int maxLines = 1, TextInputType? keyboardType}) {
     return TextField(
       controller: ctrl,
       maxLines: maxLines,
@@ -8619,12 +9794,19 @@ class _QuickTransactionSheetState extends State<_QuickTransactionSheet> {
       decoration: InputDecoration(
         hintText: hint,
         hintStyle: TextStyle(color: AppTheme.aiTextMuted, fontSize: 11),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         filled: true,
         fillColor: c.darkBg.withValues(alpha: 0.6),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.premiumStroke)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.premiumStroke)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.goldAccent.withValues(alpha: 0.5))),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: c.premiumStroke)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: c.premiumStroke)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: c.goldAccent.withValues(alpha: 0.5))),
       ),
     );
   }
@@ -8650,12 +9832,24 @@ class _ReceivablesSheetState extends State<_ReceivablesSheet> {
   final _noteCtrl = TextEditingController();
 
   @override
-  void dispose() { for (final c in [_customerCtrl, _amountCtrl, _currencyCtrl, _dueDateCtrl, _overdueDaysCtrl, _refCtrl, _noteCtrl]) c.dispose(); super.dispose(); }
+  void dispose() {
+    for (final c in [
+      _customerCtrl,
+      _amountCtrl,
+      _currencyCtrl,
+      _dueDateCtrl,
+      _overdueDaysCtrl,
+      _refCtrl,
+      _noteCtrl
+    ]) c.dispose();
+    super.dispose();
+  }
 
   void _create() {
     final customer = _customerCtrl.text.trim();
     final amt = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
-    final currency = _currencyCtrl.text.trim().isEmpty ? 'SAR' : _currencyCtrl.text.trim();
+    final currency =
+        _currencyCtrl.text.trim().isEmpty ? 'SAR' : _currencyCtrl.text.trim();
     final dueDate = _dueDateCtrl.text.trim();
     final overdue = _overdueDaysCtrl.text.trim();
     final ref = _refCtrl.text.trim();
@@ -8666,20 +9860,28 @@ class _ReceivablesSheetState extends State<_ReceivablesSheet> {
       if (customer.isEmpty) (isArabic ? 'اسم العميل' : 'Customer name'),
       if (amt == null) (isArabic ? 'المبلغ' : 'Amount'),
       if (dueDate.isEmpty) (isArabic ? 'تاريخ الاستحقاق' : 'Due date'),
-      if (ref.isEmpty) (isArabic ? 'رقم الفاتورة / المرجع' : 'Invoice / Reference number'),
+      if (ref.isEmpty)
+        (isArabic ? 'رقم الفاتورة / المرجع' : 'Invoice / Reference number'),
     ];
 
-    final urgency = overdue.isNotEmpty ? (int.tryParse(overdue) ?? 0) > 30 ? (isArabic ? 'عاجل جدًا' : 'High urgency') : (isArabic ? 'أولوية متوسطة' : 'Medium urgency') : (isArabic ? 'تحقق من حالة التأخير' : 'Check overdue status');
+    final urgency = overdue.isNotEmpty
+        ? (int.tryParse(overdue) ?? 0) > 30
+            ? (isArabic ? 'عاجل جدًا' : 'High urgency')
+            : (isArabic ? 'أولوية متوسطة' : 'Medium urgency')
+        : (isArabic ? 'تحقق من حالة التأخير' : 'Check overdue status');
 
     final draft = _AccountingDraft(
       id: 'rec_${DateTime.now().millisecondsSinceEpoch}',
       type: _DraftType.task,
       source: _DraftSource.receivablesFollowUp,
       title: 'Receivable Follow-up${customer.isNotEmpty ? ' — $customer' : ''}',
-      summary: '${customer.isNotEmpty ? 'Customer: $customer. ' : ''}${amt != null ? 'Amount: ${amt.toStringAsFixed(2)} $currency. ' : ''}${dueDate.isNotEmpty ? 'Due: $dueDate. ' : ''}${overdue.isNotEmpty ? '$overdue days overdue. ' : ''}$urgency.',
+      summary:
+          '${customer.isNotEmpty ? 'Customer: $customer. ' : ''}${amt != null ? 'Amount: ${amt.toStringAsFixed(2)} $currency. ' : ''}${dueDate.isNotEmpty ? 'Due: $dueDate. ' : ''}${overdue.isNotEmpty ? '$overdue days overdue. ' : ''}$urgency.',
       details: note.isNotEmpty ? note : null,
       status: missing.isEmpty ? _DraftStatus.draft : _DraftStatus.needsReview,
-      confidence: (customer.isNotEmpty && amt != null) ? _DraftConfidence.medium : _DraftConfidence.low,
+      confidence: (customer.isNotEmpty && amt != null)
+          ? _DraftConfidence.medium
+          : _DraftConfidence.low,
       sourceSummary: 'Receivables Follow-up Intake',
       amount: amt,
       currency: currency,
@@ -8688,8 +9890,12 @@ class _ReceivablesSheetState extends State<_ReceivablesSheet> {
       category: 'Receivables',
       missingInfo: missing,
       recommendedNextAction: ref.isNotEmpty
-          ? (isArabic ? 'أكّد الفاتورة $ref واتّصل بـ $customer وحدد تاريخ متابعة.' : 'Confirm invoice $ref is correct. Contact $customer and set a follow-up date.')
-          : (isArabic ? 'أكّد مرجع الفاتورة واتّصل بـ $customer. علّم جاهزًا بعد تأكيد المبلغ وتاريخ الاستحقاق.' : 'Confirm invoice reference and contact $customer. Mark Ready after confirming amount and due date.'),
+          ? (isArabic
+              ? 'أكّد الفاتورة $ref واتّصل بـ $customer وحدد تاريخ متابعة.'
+              : 'Confirm invoice $ref is correct. Contact $customer and set a follow-up date.')
+          : (isArabic
+              ? 'أكّد مرجع الفاتورة واتّصل بـ $customer. علّم جاهزًا بعد تأكيد المبلغ وتاريخ الاستحقاق.'
+              : 'Confirm invoice reference and contact $customer. Mark Ready after confirming amount and due date.'),
     );
 
     final chatMsg = isArabic
@@ -8707,60 +9913,109 @@ class _ReceivablesSheetState extends State<_ReceivablesSheet> {
         heightFactor: 0.88,
         child: Container(
           margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-          decoration: BoxDecoration(color: c.premiumPanel, borderRadius: BorderRadius.circular(14), border: Border.all(color: c.premiumStroke)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          decoration: BoxDecoration(
+              color: c.premiumPanel,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: c.premiumStroke)),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 8, 0),
               child: Row(children: [
                 Icon(Icons.people_alt_outlined, color: c.goldAccent, size: 18),
                 const SizedBox(width: 8),
-                const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Receivables Follow-up', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
-                  Text('Log a customer receivable follow-up task. Does not update customer balance.', style: TextStyle(color: _AiAccountantScreenState.textSecondary, fontSize: 10)),
-                ])),
-                IconButton(icon: Icon(Icons.close, color: c.textSecondary, size: 18), onPressed: () => Navigator.pop(context)),
+                const Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('Receivables Follow-up',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900)),
+                      Text(
+                          'Log a customer receivable follow-up task. Does not update customer balance.',
+                          style: TextStyle(
+                              color: _AiAccountantScreenState.textSecondary,
+                              fontSize: 10)),
+                    ])),
+                IconButton(
+                    icon: Icon(Icons.close, color: c.textSecondary, size: 18),
+                    onPressed: () => Navigator.pop(context)),
               ]),
             ),
             Divider(color: c.premiumStroke, height: 1),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  _lbl('Customer Name', c), const SizedBox(height: 4),
-                  _tf(c, _customerCtrl, hint: 'e.g. Ahmed Al-Salam'),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      _lbl('Amount', c), const SizedBox(height: 4),
-                      _tf(c, _amountCtrl, hint: '1200.00', keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-                    ])),
-                    const SizedBox(width: 10),
-                    SizedBox(width: 80, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      _lbl('Currency', c), const SizedBox(height: 4),
-                      _tf(c, _currencyCtrl, hint: 'SAR'),
-                    ])),
-                  ]),
-                  const SizedBox(height: 12),
-                  _lbl('Due Date', c), const SizedBox(height: 4),
-                  _tf(c, _dueDateCtrl, hint: '2026-07-01'),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      _lbl('Days Overdue (if known)', c), const SizedBox(height: 4),
-                      _tf(c, _overdueDaysCtrl, hint: 'e.g. 14', keyboardType: TextInputType.number),
-                    ])),
-                    const SizedBox(width: 10),
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      _lbl('Invoice / Reference', c), const SizedBox(height: 4),
-                      _tf(c, _refCtrl, hint: 'INV-001'),
-                    ])),
-                  ]),
-                  const SizedBox(height: 12),
-                  _lbl('Note', c), const SizedBox(height: 4),
-                  _tf(c, _noteCtrl, hint: 'Additional context...', maxLines: 3),
-                  const SizedBox(height: 6),
-                  Text('Does not update customer balance — creates a follow-up task draft only.', style: TextStyle(color: AppTheme.aiTextMuted, fontSize: 9)),
-                ]),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _lbl('Customer Name', c),
+                      const SizedBox(height: 4),
+                      _tf(c, _customerCtrl, hint: 'e.g. Ahmed Al-Salam'),
+                      const SizedBox(height: 12),
+                      Row(children: [
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              _lbl('Amount', c),
+                              const SizedBox(height: 4),
+                              _tf(c, _amountCtrl,
+                                  hint: '1200.00',
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true)),
+                            ])),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                            width: 80,
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _lbl('Currency', c),
+                                  const SizedBox(height: 4),
+                                  _tf(c, _currencyCtrl, hint: 'SAR'),
+                                ])),
+                      ]),
+                      const SizedBox(height: 12),
+                      _lbl('Due Date', c),
+                      const SizedBox(height: 4),
+                      _tf(c, _dueDateCtrl, hint: '2026-07-01'),
+                      const SizedBox(height: 12),
+                      Row(children: [
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              _lbl('Days Overdue (if known)', c),
+                              const SizedBox(height: 4),
+                              _tf(c, _overdueDaysCtrl,
+                                  hint: 'e.g. 14',
+                                  keyboardType: TextInputType.number),
+                            ])),
+                        const SizedBox(width: 10),
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              _lbl('Invoice / Reference', c),
+                              const SizedBox(height: 4),
+                              _tf(c, _refCtrl, hint: 'INV-001'),
+                            ])),
+                      ]),
+                      const SizedBox(height: 12),
+                      _lbl('Note', c),
+                      const SizedBox(height: 4),
+                      _tf(c, _noteCtrl,
+                          hint: 'Additional context...', maxLines: 3),
+                      const SizedBox(height: 6),
+                      Text(
+                          'Does not update customer balance — creates a follow-up task draft only.',
+                          style: TextStyle(
+                              color: AppTheme.aiTextMuted, fontSize: 9)),
+                    ]),
               ),
             ),
             Divider(color: c.premiumStroke, height: 1),
@@ -8770,7 +10025,9 @@ class _ReceivablesSheetState extends State<_ReceivablesSheet> {
                 onPressed: _create,
                 icon: const Icon(Icons.task_alt_outlined, size: 15),
                 label: const Text('Create Follow-up Task'),
-                style: FilledButton.styleFrom(backgroundColor: c.goldAccent.withValues(alpha: 0.22), foregroundColor: c.goldAccent),
+                style: FilledButton.styleFrom(
+                    backgroundColor: c.goldAccent.withValues(alpha: 0.22),
+                    foregroundColor: c.goldAccent),
               ),
             ),
           ]),
@@ -8779,18 +10036,32 @@ class _ReceivablesSheetState extends State<_ReceivablesSheet> {
     );
   }
 
-  Widget _lbl(String t, _SheetColors c) => Text(t, style: TextStyle(color: c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800));
-  Widget _tf(_SheetColors c, TextEditingController ctrl, {String? hint, int maxLines = 1, TextInputType? keyboardType}) {
+  Widget _lbl(String t, _SheetColors c) => Text(t,
+      style: TextStyle(
+          color: c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800));
+  Widget _tf(_SheetColors c, TextEditingController ctrl,
+      {String? hint, int maxLines = 1, TextInputType? keyboardType}) {
     return TextField(
-      controller: ctrl, maxLines: maxLines, keyboardType: keyboardType,
+      controller: ctrl,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
       style: const TextStyle(color: Colors.white, fontSize: 12),
       decoration: InputDecoration(
-        hintText: hint, hintStyle: TextStyle(color: AppTheme.aiTextMuted, fontSize: 11),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        filled: true, fillColor: c.darkBg.withValues(alpha: 0.6),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.premiumStroke)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.premiumStroke)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.goldAccent.withValues(alpha: 0.5))),
+        hintText: hint,
+        hintStyle: TextStyle(color: AppTheme.aiTextMuted, fontSize: 11),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        filled: true,
+        fillColor: c.darkBg.withValues(alpha: 0.6),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: c.premiumStroke)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: c.premiumStroke)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: c.goldAccent.withValues(alpha: 0.5))),
       ),
     );
   }
@@ -8816,19 +10087,39 @@ class _PayablesSheetState extends State<_PayablesSheet> {
   final _noteCtrl = TextEditingController();
   String _payStatus = 'Unpaid';
 
-  final _categories = const ['Rent', 'Utilities', 'Salaries', 'Freight', 'Raw Materials', 'Services', 'Maintenance', 'Other'];
+  final _categories = const [
+    'Rent',
+    'Utilities',
+    'Salaries',
+    'Freight',
+    'Raw Materials',
+    'Services',
+    'Maintenance',
+    'Other'
+  ];
   String? _selectedCategory;
 
   @override
-  void dispose() { for (final c in [_supplierCtrl, _amountCtrl, _currencyCtrl, _dueDateCtrl, _categoryCtrl, _refCtrl, _noteCtrl]) c.dispose(); super.dispose(); }
+  void dispose() {
+    for (final c in [
+      _supplierCtrl,
+      _amountCtrl,
+      _currencyCtrl,
+      _dueDateCtrl,
+      _categoryCtrl,
+      _refCtrl,
+      _noteCtrl
+    ]) c.dispose();
+    super.dispose();
+  }
 
   void _create() {
     final supplier = _supplierCtrl.text.trim();
     final amt = double.tryParse(_amountCtrl.text.replaceAll(',', '.'));
-    final currency = _currencyCtrl.text.trim().isEmpty ? 'SAR' : _currencyCtrl.text.trim();
+    final currency =
+        _currencyCtrl.text.trim().isEmpty ? 'SAR' : _currencyCtrl.text.trim();
     final dueDate = _dueDateCtrl.text.trim();
     final category = _selectedCategory ?? _categoryCtrl.text.trim();
-    final ref = _refCtrl.text.trim();
     final note = _noteCtrl.text.trim();
     final isArabic = _containsArabicText('$supplier$category$note');
 
@@ -8843,11 +10134,15 @@ class _PayablesSheetState extends State<_PayablesSheet> {
       id: 'pay_${DateTime.now().millisecondsSinceEpoch}',
       type: _DraftType.account,
       source: _DraftSource.payablesExpense,
-      title: 'Payable/Expense${supplier.isNotEmpty ? ' — $supplier' : ''}${category.isNotEmpty ? ' ($category)' : ''}',
-      summary: '${supplier.isNotEmpty ? 'Supplier: $supplier. ' : ''}${amt != null ? 'Amount: ${amt.toStringAsFixed(2)} $currency. ' : ''}${category.isNotEmpty ? 'Category: $category. ' : ''}${dueDate.isNotEmpty ? 'Due: $dueDate. ' : ''}Payment status: $_payStatus.',
+      title:
+          'Payable/Expense${supplier.isNotEmpty ? ' — $supplier' : ''}${category.isNotEmpty ? ' ($category)' : ''}',
+      summary:
+          '${supplier.isNotEmpty ? 'Supplier: $supplier. ' : ''}${amt != null ? 'Amount: ${amt.toStringAsFixed(2)} $currency. ' : ''}${category.isNotEmpty ? 'Category: $category. ' : ''}${dueDate.isNotEmpty ? 'Due: $dueDate. ' : ''}Payment status: $_payStatus.',
       details: note.isNotEmpty ? note : null,
       status: missing.isEmpty ? _DraftStatus.draft : _DraftStatus.needsReview,
-      confidence: (supplier.isNotEmpty && amt != null) ? _DraftConfidence.medium : _DraftConfidence.low,
+      confidence: (supplier.isNotEmpty && amt != null)
+          ? _DraftConfidence.medium
+          : _DraftConfidence.low,
       sourceSummary: 'Payables / Expense Intake',
       amount: amt,
       currency: currency,
@@ -8875,87 +10170,158 @@ class _PayablesSheetState extends State<_PayablesSheet> {
         heightFactor: 0.88,
         child: Container(
           margin: const EdgeInsets.fromLTRB(10, 0, 10, 10),
-          decoration: BoxDecoration(color: c.premiumPanel, borderRadius: BorderRadius.circular(14), border: Border.all(color: c.premiumStroke)),
-          child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
+          decoration: BoxDecoration(
+              color: c.premiumPanel,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: c.premiumStroke)),
+          child:
+              Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 14, 8, 0),
               child: Row(children: [
                 Icon(Icons.payment_outlined, color: c.goldAccent, size: 18),
                 const SizedBox(width: 8),
-                const Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  Text('Payable / Expense Note', style: TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w900)),
-                  Text('Log a supplier payable or expense note. Does not affect supplier balance or ledger.', style: TextStyle(color: _AiAccountantScreenState.textSecondary, fontSize: 10)),
-                ])),
-                IconButton(icon: Icon(Icons.close, color: c.textSecondary, size: 18), onPressed: () => Navigator.pop(context)),
+                const Expanded(
+                    child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                      Text('Payable / Expense Note',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w900)),
+                      Text(
+                          'Log a supplier payable or expense note. Does not affect supplier balance or ledger.',
+                          style: TextStyle(
+                              color: _AiAccountantScreenState.textSecondary,
+                              fontSize: 10)),
+                    ])),
+                IconButton(
+                    icon: Icon(Icons.close, color: c.textSecondary, size: 18),
+                    onPressed: () => Navigator.pop(context)),
               ]),
             ),
             Divider(color: c.premiumStroke, height: 1),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.stretch, children: [
-                  _lbl('Supplier / Payee', c), const SizedBox(height: 4),
-                  _tf(c, _supplierCtrl, hint: 'e.g. Al-Noor Supplies'),
-                  const SizedBox(height: 12),
-                  Row(children: [
-                    Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      _lbl('Amount', c), const SizedBox(height: 4),
-                      _tf(c, _amountCtrl, hint: '3500.00', keyboardType: const TextInputType.numberWithOptions(decimal: true)),
-                    ])),
-                    const SizedBox(width: 10),
-                    SizedBox(width: 80, child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                      _lbl('Currency', c), const SizedBox(height: 4),
-                      _tf(c, _currencyCtrl, hint: 'SAR'),
-                    ])),
-                  ]),
-                  const SizedBox(height: 12),
-                  _lbl('Due Date', c), const SizedBox(height: 4),
-                  _tf(c, _dueDateCtrl, hint: '2026-07-15'),
-                  const SizedBox(height: 12),
-                  _lbl('Expense Category', c),
-                  const SizedBox(height: 6),
-                  Wrap(spacing: 6, runSpacing: 6, children: _categories.map((cat) {
-                    final sel = cat == _selectedCategory;
-                    return GestureDetector(
-                      onTap: () => setState(() => _selectedCategory = sel ? null : cat),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: sel ? c.goldAccent.withValues(alpha: 0.16) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(5),
-                          border: Border.all(color: sel ? c.goldAccent.withValues(alpha: 0.4) : c.premiumStroke),
-                        ),
-                        child: Text(cat, style: TextStyle(color: sel ? c.goldAccent : c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800)),
-                      ),
-                    );
-                  }).toList()),
-                  const SizedBox(height: 8),
-                  _lbl('Or type custom category', c), const SizedBox(height: 4),
-                  _tf(c, _categoryCtrl, hint: 'e.g. Import Duties'),
-                  const SizedBox(height: 12),
-                  _lbl('Payment Status', c),
-                  const SizedBox(height: 6),
-                  Wrap(spacing: 6, children: ['Unpaid', 'Paid', 'Partial', 'Scheduled'].map((s) {
-                    final sel = s == _payStatus;
-                    return GestureDetector(
-                      onTap: () => setState(() => _payStatus = s),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: sel ? c.tealSuccess.withValues(alpha: 0.14) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(5),
-                          border: Border.all(color: sel ? c.tealSuccess.withValues(alpha: 0.4) : c.premiumStroke),
-                        ),
-                        child: Text(s, style: TextStyle(color: sel ? c.tealSuccess : c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800)),
-                      ),
-                    );
-                  }).toList()),
-                  const SizedBox(height: 12),
-                  _lbl('Note / Reference', c), const SizedBox(height: 4),
-                  _tf(c, _noteCtrl, hint: 'Invoice ref, note...', maxLines: 3),
-                  const SizedBox(height: 6),
-                  Text('Does not affect supplier balance or ledger — creates a review draft only.', style: TextStyle(color: AppTheme.aiTextMuted, fontSize: 9)),
-                ]),
+                child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _lbl('Supplier / Payee', c),
+                      const SizedBox(height: 4),
+                      _tf(c, _supplierCtrl, hint: 'e.g. Al-Noor Supplies'),
+                      const SizedBox(height: 12),
+                      Row(children: [
+                        Expanded(
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                              _lbl('Amount', c),
+                              const SizedBox(height: 4),
+                              _tf(c, _amountCtrl,
+                                  hint: '3500.00',
+                                  keyboardType:
+                                      const TextInputType.numberWithOptions(
+                                          decimal: true)),
+                            ])),
+                        const SizedBox(width: 10),
+                        SizedBox(
+                            width: 80,
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  _lbl('Currency', c),
+                                  const SizedBox(height: 4),
+                                  _tf(c, _currencyCtrl, hint: 'SAR'),
+                                ])),
+                      ]),
+                      const SizedBox(height: 12),
+                      _lbl('Due Date', c),
+                      const SizedBox(height: 4),
+                      _tf(c, _dueDateCtrl, hint: '2026-07-15'),
+                      const SizedBox(height: 12),
+                      _lbl('Expense Category', c),
+                      const SizedBox(height: 6),
+                      Wrap(
+                          spacing: 6,
+                          runSpacing: 6,
+                          children: _categories.map((cat) {
+                            final sel = cat == _selectedCategory;
+                            return GestureDetector(
+                              onTap: () => setState(
+                                  () => _selectedCategory = sel ? null : cat),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: sel
+                                      ? c.goldAccent.withValues(alpha: 0.16)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(
+                                      color: sel
+                                          ? c.goldAccent.withValues(alpha: 0.4)
+                                          : c.premiumStroke),
+                                ),
+                                child: Text(cat,
+                                    style: TextStyle(
+                                        color: sel
+                                            ? c.goldAccent
+                                            : c.textSecondary,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800)),
+                              ),
+                            );
+                          }).toList()),
+                      const SizedBox(height: 8),
+                      _lbl('Or type custom category', c),
+                      const SizedBox(height: 4),
+                      _tf(c, _categoryCtrl, hint: 'e.g. Import Duties'),
+                      const SizedBox(height: 12),
+                      _lbl('Payment Status', c),
+                      const SizedBox(height: 6),
+                      Wrap(
+                          spacing: 6,
+                          children: ['Unpaid', 'Paid', 'Partial', 'Scheduled']
+                              .map((s) {
+                            final sel = s == _payStatus;
+                            return GestureDetector(
+                              onTap: () => setState(() => _payStatus = s),
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 9, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: sel
+                                      ? c.tealSuccess.withValues(alpha: 0.14)
+                                      : Colors.transparent,
+                                  borderRadius: BorderRadius.circular(5),
+                                  border: Border.all(
+                                      color: sel
+                                          ? c.tealSuccess.withValues(alpha: 0.4)
+                                          : c.premiumStroke),
+                                ),
+                                child: Text(s,
+                                    style: TextStyle(
+                                        color: sel
+                                            ? c.tealSuccess
+                                            : c.textSecondary,
+                                        fontSize: 10,
+                                        fontWeight: FontWeight.w800)),
+                              ),
+                            );
+                          }).toList()),
+                      const SizedBox(height: 12),
+                      _lbl('Note / Reference', c),
+                      const SizedBox(height: 4),
+                      _tf(c, _noteCtrl,
+                          hint: 'Invoice ref, note...', maxLines: 3),
+                      const SizedBox(height: 6),
+                      Text(
+                          'Does not affect supplier balance or ledger — creates a review draft only.',
+                          style: TextStyle(
+                              color: AppTheme.aiTextMuted, fontSize: 9)),
+                    ]),
               ),
             ),
             Divider(color: c.premiumStroke, height: 1),
@@ -8965,7 +10331,9 @@ class _PayablesSheetState extends State<_PayablesSheet> {
                 onPressed: _create,
                 icon: const Icon(Icons.add_circle_outline, size: 15),
                 label: const Text('Create Payable/Expense Draft'),
-                style: FilledButton.styleFrom(backgroundColor: c.goldAccent.withValues(alpha: 0.22), foregroundColor: c.goldAccent),
+                style: FilledButton.styleFrom(
+                    backgroundColor: c.goldAccent.withValues(alpha: 0.22),
+                    foregroundColor: c.goldAccent),
               ),
             ),
           ]),
@@ -8974,18 +10342,32 @@ class _PayablesSheetState extends State<_PayablesSheet> {
     );
   }
 
-  Widget _lbl(String t, _SheetColors c) => Text(t, style: TextStyle(color: c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800));
-  Widget _tf(_SheetColors c, TextEditingController ctrl, {String? hint, int maxLines = 1, TextInputType? keyboardType}) {
+  Widget _lbl(String t, _SheetColors c) => Text(t,
+      style: TextStyle(
+          color: c.textSecondary, fontSize: 10, fontWeight: FontWeight.w800));
+  Widget _tf(_SheetColors c, TextEditingController ctrl,
+      {String? hint, int maxLines = 1, TextInputType? keyboardType}) {
     return TextField(
-      controller: ctrl, maxLines: maxLines, keyboardType: keyboardType,
+      controller: ctrl,
+      maxLines: maxLines,
+      keyboardType: keyboardType,
       style: const TextStyle(color: Colors.white, fontSize: 12),
       decoration: InputDecoration(
-        hintText: hint, hintStyle: TextStyle(color: AppTheme.aiTextMuted, fontSize: 11),
-        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        filled: true, fillColor: c.darkBg.withValues(alpha: 0.6),
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.premiumStroke)),
-        enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.premiumStroke)),
-        focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(8), borderSide: BorderSide(color: c.goldAccent.withValues(alpha: 0.5))),
+        hintText: hint,
+        hintStyle: TextStyle(color: AppTheme.aiTextMuted, fontSize: 11),
+        contentPadding:
+            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        filled: true,
+        fillColor: c.darkBg.withValues(alpha: 0.6),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: c.premiumStroke)),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: c.premiumStroke)),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: BorderSide(color: c.goldAccent.withValues(alpha: 0.5))),
       ),
     );
   }
