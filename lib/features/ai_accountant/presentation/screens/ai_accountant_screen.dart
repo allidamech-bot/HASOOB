@@ -3530,7 +3530,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ),
             const SizedBox(height: 6),
           Text(
-            draft.summary,
+            _cleanArabicUxText(draft.summary),
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -3827,10 +3827,10 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   bool _draftTextContains(_AccountingDraft draft, List<String> tokens) {
     final text = [
-      draft.title,
-      draft.summary,
-      draft.category,
-      draft.sourceSummary,
+      _cleanArabicUxText(draft.title),
+      _cleanArabicUxText(draft.summary),
+      if (draft.category != null) _cleanArabicUxText(draft.category!),
+      if (draft.sourceSummary != null) _cleanArabicUxText(draft.sourceSummary!),
     ].whereType<String>().join(' ').toLowerCase();
     return tokens.any((token) => text.contains(token.toLowerCase()));
   }
@@ -3861,6 +3861,26 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   bool _isReportOrClosingDraft(_AccountingDraft draft) =>
       _draftTextContains(draft, ['تقرير يومي', 'إغلاق يومي', 'اغلاق يومي']);
+
+  String _cleanArabicUxText(String text) {
+    return text
+        .replaceAll('â€”', '—')
+        .replaceAll('â€؛', '›')
+        .replaceAll('ًں“„', '')
+        .replaceAll('ظ…ط³ظˆط¯ط©', 'مسودة')
+        .replaceAll('ظ…ط³ظˆط¯ط§طھ', 'مسودات')
+        .replaceAll('ط¨ط§ظ†طھط¸ط§ط± ط§ظ„ظ…ط±ط§ط¬ط¹ط©', 'بانتظار المراجعة')
+        .replaceAll('ط؛ظٹط± ظ…ط³ط¬ظ„ط©', 'غير مسجلة')
+        .replaceAll('ظ…ظ† ط£ظ…ط± ظ…ط­ط§ط³ط¨ظٹ', 'من أمر محاسبي')
+        .replaceAll('ظ†ط´ط§ط· ط§ظ„ظ…ط±ط§ط¬ط¹ط©', 'نشاط المراجعة')
+        .replaceAll('ط¨ظٹط§ظ†ط§طھ ظ†ط§ظ‚طµط©', 'بيانات ناقصة')
+        .replaceAll('ط§ظ„طھط§ظ„ظٹ', 'التالي')
+        .replaceAll('طھظ…طھ ط§ظ„ظ…ط±ط§ط¬ط¹ط©', 'تمت المراجعة')
+        .replaceAll('ط¥ط±ط¬ط§ط¹ ظ„ظ„ظ…ط±ط§ط¬ط¹ط©', 'إرجاع للمراجعة')
+        .replaceAll('ظ…ط³ظˆط¯ط© ط¬ظ„ط³ط© ظپظ‚ط·', 'مسودة جلسة فقط')
+        .replaceAll('ط؛ظٹط± ظ…ط³ط¬ظ„ط© ظ…ط­ط§ط³ط¨ظٹط§ظ‹', 'غير مسجلة محاسبياً')
+        .replaceAll('طھط¹ط¯ظٹظ„', 'تعديل');
+  }
 
   Widget _buildPendingDraftCategorySummary(List<_AccountingDraft> drafts) {
     final pending =
@@ -4007,7 +4027,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             (note) => Padding(
               padding: const EdgeInsets.only(top: 4),
               child: Text(
-                note,
+                _cleanArabicUxText(note),
                 style: const TextStyle(
                   color: textSecondary,
                   fontSize: 12,
@@ -4040,7 +4060,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           ),
           Expanded(
             child: Text(
-              value,
+              _cleanArabicUxText(value),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 13,
@@ -9449,6 +9469,26 @@ class _DraftDetailSheet extends StatefulWidget {
 }
 
 class _DraftDetailSheetState extends State<_DraftDetailSheet> {
+  String _cleanArabicUxText(String text) {
+    return text
+        .replaceAll('â€”', '—')
+        .replaceAll('â€؛', '›')
+        .replaceAll('ًں“„', '')
+        .replaceAll('ظ…ط³ظˆط¯ط©', 'مسودة')
+        .replaceAll('ظ…ط³ظˆط¯ط§طھ', 'مسودات')
+        .replaceAll('ط¨ط§ظ†طھط¸ط§ط± ط§ظ„ظ…ط±ط§ط¬ط¹ط©', 'بانتظار المراجعة')
+        .replaceAll('ط؛ظٹط± ظ…ط³ط¬ظ„ط©', 'غير مسجلة')
+        .replaceAll('ظ…ظ† ط£ظ…ط± ظ…ط­ط§ط³ط¨ظٹ', 'من أمر محاسبي')
+        .replaceAll('ظ†ط´ط§ط· ط§ظ„ظ…ط±ط§ط¬ط¹ط©', 'نشاط المراجعة')
+        .replaceAll('ط¨ظٹط§ظ†ط§طھ ظ†ط§ظ‚طµط©', 'بيانات ناقصة')
+        .replaceAll('ط§ظ„طھط§ظ„ظٹ', 'التالي')
+        .replaceAll('طھظ…طھ ط§ظ„ظ…ط±ط§ط¬ط¹ط©', 'تمت المراجعة')
+        .replaceAll('ط¥ط±ط¬ط§ط¹ ظ„ظ„ظ…ط±ط§ط¬ط¹ط©', 'إرجاع للمراجعة')
+        .replaceAll('ظ…ط³ظˆط¯ط© ط¬ظ„ط³ط© ظپظ‚ط·', 'مسودة جلسة فقط')
+        .replaceAll('ط؛ظٹط± ظ…ط³ط¬ظ„ط© ظ…ط­ط§ط³ط¨ظٹط§ظ‹', 'غير مسجلة محاسبياً')
+        .replaceAll('طھط¹ط¯ظٹظ„', 'تعديل');
+  }
+
   Widget _reviewInfoLine(String label, String? value) {
     if (value == null || value.trim().isEmpty) return const SizedBox.shrink();
     final c = widget.colors;
