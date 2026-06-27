@@ -3864,14 +3864,21 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       pending.toList(growable: false),
     );
     if (lines.isEmpty) return const SizedBox.shrink();
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: premiumPanelSoft,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Text(
+          Text(
             'ملخص المسودات',
             style: TextStyle(
+              color: goldAccent,
               fontWeight: FontWeight.w700,
               fontSize: 13,
             ),
@@ -3879,9 +3886,12 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           const SizedBox(height: 6),
           Text(
             'عدد المسودات: ${pending.length}',
-            style: const TextStyle(fontSize: 12),
+            style: TextStyle(
+              color: textSecondary,
+              fontSize: 12,
+            ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Wrap(
             spacing: 6,
             runSpacing: 6,
@@ -3890,6 +3900,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                   (line) => Chip(
                     label: Text(line),
                     visualDensity: VisualDensity.compact,
+                    backgroundColor: darkBg,
+                    side: BorderSide(color: premiumStroke),
+                    labelStyle: TextStyle(
+                      color: tealSuccess,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 )
                 .toList(growable: false),
