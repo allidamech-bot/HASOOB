@@ -224,6 +224,101 @@ void main() {
       expect(response.metadata!.executedTools, isNotEmpty);
       expect(response.shouldPrepareProposal, isFalse);
     });
+    test('local Arabic purchase returns command card and draft metadata', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'اشتريت 20 كرتون بسعر 18',
+      );
+
+      expect(response.text, contains('شراء'));
+      expect(response.text, contains('إجمالي التكلفة'));
+      expect(response.text, contains('360'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.type, LocalAccountingCommandDraftType.purchase);
+      expect(response.localCommandDraft!.totalCost, 360);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local English purchase returns command card and draft metadata', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'purchased 20 boxes at 18',
+      );
+
+      expect(response.text, contains('Command interpreted as a purchase'));
+      expect(response.text, contains('Total cost: 360'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.type, LocalAccountingCommandDraftType.purchase);
+      expect(response.localCommandDraft!.totalCost, 360);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic inventory intake returns command card and draft metadata', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'دخلت 50 قطعة تكلفة 7',
+      );
+
+      expect(response.text, contains('إدخال مخزون'));
+      expect(response.text, contains('إجمالي التكلفة'));
+      expect(response.text, contains('350'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(
+        response.localCommandDraft!.type,
+        LocalAccountingCommandDraftType.inventoryIntake,
+      );
+      expect(response.localCommandDraft!.totalCost, 350);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local purchase missing unit cost does not expose draft metadata', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'اشتريت 10 كراتين',
+      );
+
+      expect(response.text, contains('تكلفة الوحدة'));
+      expect(response.localCommandDraft, isNull);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local purchase missing quantity does not expose draft metadata', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'اشتريت بسكويت بسعر 12',
+      );
+
+      expect(response.text, contains('الكمية'));
+      expect(response.localCommandDraft, isNull);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local purchase missing cost accepts cost follow-up', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      await orchestrator.generateResponse(
+        userText: 'اشتريت 10 كراتين',
+      );
+      final response = await orchestrator.generateResponse(
+        userText: 'سعرها 18',
+      );
+
+      expect(response.text, contains('تم تحديث العملية السابقة'));
+      expect(response.text, contains('180'));
+      expect(response.localCommandDraft, isNotNull);
+      expect(response.localCommandDraft!.isReviewable, isTrue);
+      expect(response.localCommandDraft!.source, 'local accounting command follow-up');
+      expect(response.localCommandDraft!.totalCost, 180);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
   });
 }
 

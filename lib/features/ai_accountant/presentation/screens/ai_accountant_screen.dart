@@ -3728,6 +3728,45 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ? 'راجع المسودة قبل أي تنفيذ.'
               : 'Review before execution.',
         ),
+      LocalAccountingCommandDraftType.purchase => _AccountingDraft(
+          id: 'local-purchase-$now',
+          type: _DraftType.account,
+          source: _DraftSource.chat,
+          title: command.isArabic ? 'مسودة شراء' : 'Purchase draft',
+          summary: command.isArabic
+              ? 'مسودة شراء بانتظار المراجعة. لن يتم التسجيل قبل الاعتماد.'
+              : 'Purchase draft. Pending review. Nothing will be posted before approval.',
+          details: _localPurchaseDraftDetails(command),
+          status: _DraftStatus.needsReview,
+          confidence: _DraftConfidence.high,
+          sourceSummary: command.source,
+          amount: command.totalCost,
+          category: command.isArabic ? 'شراء' : 'Purchase',
+          missingInfo: const [],
+          recommendedNextAction: command.isArabic
+              ? 'راجع المسودة قبل أي تنفيذ.'
+              : 'Review before execution.',
+        ),
+      LocalAccountingCommandDraftType.inventoryIntake => _AccountingDraft(
+          id: 'local-inventory-intake-$now',
+          type: _DraftType.account,
+          source: _DraftSource.chat,
+          title:
+              command.isArabic ? 'مسودة إدخال مخزون' : 'Inventory intake draft',
+          summary: command.isArabic
+              ? 'مسودة إدخال مخزون بانتظار المراجعة. لن يتم تحديث المخزون قبل الاعتماد.'
+              : 'Inventory intake draft. Pending review. Stock will not be updated before approval.',
+          details: _localPurchaseDraftDetails(command),
+          status: _DraftStatus.needsReview,
+          confidence: _DraftConfidence.high,
+          sourceSummary: command.source,
+          amount: command.totalCost,
+          category: command.isArabic ? 'إدخال مخزون' : 'Inventory intake',
+          missingInfo: const [],
+          recommendedNextAction: command.isArabic
+              ? 'راجع المسودة قبل أي تنفيذ.'
+              : 'Review before execution.',
+        ),
     };
   }
 
@@ -3768,6 +3807,32 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       'Category: ${_capitalizeDraftLabel(command.categoryEnglish) ?? command.categoryArabic ?? '-'}',
       'Amount: ${_formatDraftNumber(command.amount)}',
       'Nothing will be posted before approval.',
+    ].join('\n');
+  }
+
+  String _localPurchaseDraftDetails(LocalAccountingCommandDraft command) {
+    final inventory = command.type == LocalAccountingCommandDraftType.inventoryIntake;
+    if (command.isArabic) {
+      return [
+        if (command.productName != null) 'الصنف: ${command.productName}',
+        'الكمية: ${_formatDraftNumber(command.quantity)}',
+        'تكلفة الوحدة: ${_formatDraftNumber(command.unitCost)}',
+        inventory
+            ? 'إجمالي التكلفة: ${_formatDraftNumber(command.totalCost)}'
+            : 'الإجمالي: ${_formatDraftNumber(command.totalCost)}',
+        inventory
+            ? 'لن يتم تحديث المخزون قبل الاعتماد.'
+            : 'لن يتم التسجيل قبل الاعتماد.',
+      ].join('\n');
+    }
+    return [
+      if (command.productName != null) 'Product: ${command.productName}',
+      'Quantity: ${_formatDraftNumber(command.quantity)}',
+      'Unit cost: ${_formatDraftNumber(command.unitCost)}',
+      'Total cost: ${_formatDraftNumber(command.totalCost)}',
+      inventory
+          ? 'Stock will not be updated before approval.'
+          : 'Nothing will be posted before approval.',
     ].join('\n');
   }
 

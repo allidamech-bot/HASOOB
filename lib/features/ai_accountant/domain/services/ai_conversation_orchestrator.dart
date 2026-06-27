@@ -79,7 +79,7 @@ class AiDecisionOption {
   }
 }
 
-enum LocalAccountingCommandDraftType { sale, expense }
+enum LocalAccountingCommandDraftType { sale, expense, purchase, inventoryIntake }
 
 class LocalAccountingCommandDraft {
   final LocalAccountingCommandDraftType type;
@@ -95,6 +95,7 @@ class LocalAccountingCommandDraft {
   final String? categoryArabic;
   final String? categoryEnglish;
   final double? amount;
+  final String? productName;
 
   const LocalAccountingCommandDraft({
     required this.type,
@@ -110,6 +111,7 @@ class LocalAccountingCommandDraft {
     this.categoryArabic,
     this.categoryEnglish,
     this.amount,
+    this.productName,
   });
 
   bool get isCompleteSale {
@@ -129,7 +131,15 @@ class LocalAccountingCommandDraft {
         (categoryArabic != null || categoryEnglish != null);
   }
 
-  bool get isReviewable => isCompleteSale || isCompleteExpense;
+  bool get isCompletePurchase {
+    return (type == LocalAccountingCommandDraftType.purchase ||
+            type == LocalAccountingCommandDraftType.inventoryIntake) &&
+        quantity != null &&
+        unitCost != null &&
+        totalCost != null;
+  }
+
+  bool get isReviewable => isCompleteSale || isCompleteExpense || isCompletePurchase;
 }
 
 class AiConversationMemory {
@@ -284,6 +294,7 @@ class AiConversationOrchestrator {
   final List<AiConversationTurn> _history = [];
   AiConversationMemory _memory = const AiConversationMemory();
   _LocalSaleAnalysis? _pendingSaleMissingUnitCost;
+  _LocalPurchaseAnalysis? _pendingPurchaseMissingUnitCost;
 
   AiConversationMemory get memory => _memory;
   AiBusinessMemory get businessMemory => _businessMemoryManager.memory;
@@ -321,6 +332,12 @@ class AiConversationOrchestrator {
     if (pendingCostResponse != null) {
       _rememberAssistant(pendingCostResponse);
       return pendingCostResponse;
+    }
+    final pendingPurchaseCostResponse =
+        _tryHandlePendingPurchaseCostFollowUp(userText, normalized);
+    if (pendingPurchaseCostResponse != null) {
+      _rememberAssistant(pendingPurchaseCostResponse);
+      return pendingPurchaseCostResponse;
     }
 
     final localAccountingResponse =
@@ -1210,6 +1227,9 @@ Return only JSON matching the response contract.
     final localSale = _parseLocalSale(input, normalized);
     if (localSale != null) return _localSaleResponse(localSale);
 
+    final localPurchase = _parseLocalPurchase(input, normalized);
+    if (localPurchase != null) return _localPurchaseResponse(localPurchase);
+
     final localExpense = _parseLocalExpense(input, normalized);
     if (localExpense != null) return _localExpenseResponse(localExpense);
 
@@ -1448,6 +1468,12 @@ Return only JSON matching the response contract.
           'electricity',
           'marketing',
           'supplier',
+          'purchased',
+          'bought',
+          'added',
+          'stocked',
+          'received inventory',
+          'added stock',
         ]) ||
         _containsAny(normalized, [
           'بعت',
@@ -1461,6 +1487,14 @@ Return only JSON matching the response contract.
           'كهرباء',
           'تسويق',
           'مورد',
+          'اشتريت',
+          'اشترينا',
+          'شراء',
+          'دخلت',
+          'ادخلت',
+          'أضفت للمخزون',
+          'اضفت للمخزون',
+          'دخلت للمخزون',
         ]);
   }
 
@@ -1545,6 +1579,360 @@ Return only JSON matching the response contract.
       localCommandDraft: localDraft,
       metadata: AiResponseMetadata.low(missingEvidence: missing),
     );
+  }
+
+  _LocalPurchaseAnalysis? _parseLocalPurchase(String input, String normalized) {
+    final isInventoryIntake = _containsAnyLocalAccountingTerm(normalized, [
+          'added',
+          'stocked',
+          'received inventory',
+          'added stock',
+          'inventory intake',
+        ]) ||
+        _containsAny(normalized, [
+          'دخلت',
+          'ادخلت',
+          'أضفت للمخزون',
+          'اضفت للمخزون',
+          'دخلت للمخزون',
+        ]);
+    final isPurchase = isInventoryIntake ||
+        _containsAnyLocalAccountingTerm(normalized, [
+          'purchased',
+          'bought',
+        ]) ||
+        _containsAny(normalized, [
+          'اشتريت',
+          'اشترينا',
+          'شراء',
+        ]);
+    if (!isPurchase) return null;
+
+    final numbers = _numberMatches(input);
+    final quantity = _numberAfterAny(input, [
+          'qty',
+          'quantity',
+          'عدد',
+          'كمية',
+        ]) ??
+        _numberBeforeAny(input, [
+          'unit',
+          'units',
+          'box',
+          'boxes',
+          'carton',
+          'cartons',
+          'piece',
+          'pieces',
+          'item',
+          'items',
+          'وحدة',
+          'وحدات',
+          'كرتون',
+          'كراتين',
+          'قطعة',
+          'قطع',
+          'منتج',
+          'منتجات',
+        ]) ??
+        (numbers.length >= 2 ? numbers.first.value : null);
+    final unitCost = _numberAfterAny(input, [
+          'at a cost of',
+          'unit cost',
+          'purchase cost',
+          'cost',
+          'price',
+          'at',
+          'بسعر',
+          'تكلفة',
+          'تكلفتها',
+          'سعرها',
+          'سعر الوحدة',
+        ]) ??
+        (numbers.length >= 2 ? numbers[1].value : null);
+
+    if (quantity == null && unitCost == null) return null;
+
+    return _LocalPurchaseAnalysis(
+      isArabic: _containsArabic(input),
+      isInventoryIntake: isInventoryIntake,
+      quantity: quantity,
+      unitCost: unitCost,
+      productName: _extractLocalPurchaseProductName(input),
+    );
+  }
+
+  AiAdvisorResponse? _tryHandlePendingPurchaseCostFollowUp(
+    String input,
+    String normalized,
+  ) {
+    final pendingPurchase = _pendingPurchaseMissingUnitCost;
+    if (pendingPurchase == null) return null;
+    if (_isProtectedCfoFlow(normalized)) return null;
+
+    final cost = _extractPurchaseUnitCostFollowUp(input, normalized);
+    if (cost != null) {
+      final completedPurchase = pendingPurchase.copyWith(unitCost: cost);
+      _pendingPurchaseMissingUnitCost = null;
+      return _localPurchaseResponse(completedPurchase, updatedPrevious: true);
+    }
+
+    if (_numberMatches(input).isNotEmpty &&
+        !_looksLikeClearAccountingCommand(normalized)) {
+      final isArabic = _containsArabic(input) || pendingPurchase.isArabic;
+      return AiAdvisorResponse(
+        mode: AiAdvisorMode.advice,
+        text: isArabic
+            ? 'هل هذا الرقم هو تكلفة الوحدة لعملية الشراء السابقة؟ اكتب مثلًا: سعرها 18.'
+            : 'Is this number the unit cost for the previous purchase? For example: unit cost 18.',
+        memory: _memory.copyWith(
+          latestTopic: 'local_purchase_missing_cost_follow_up',
+          missingData: [isArabic ? 'تكلفة الوحدة' : 'unit cost'],
+        ),
+        suggestedReplies: const ['Unit cost 18', 'Cancel', 'Prepare review draft'],
+        metadata: AiResponseMetadata.low(
+          missingEvidence: [isArabic ? 'تكلفة الوحدة' : 'unit cost'],
+        ),
+      );
+    }
+
+    return null;
+  }
+
+  double? _extractPurchaseUnitCostFollowUp(String input, String normalized) {
+    final hasCostTerm = _containsAnyLocalAccountingTerm(normalized, [
+          'cost',
+          'unit cost',
+          'purchase cost',
+          'price',
+        ]) ||
+        _containsAny(normalized, [
+          'سعرها',
+          'تكلفة',
+          'تكلفتها',
+          'سعر الوحدة',
+          'بسعر',
+        ]);
+    if (!hasCostTerm) return null;
+    final numbers = _numberMatches(input);
+    return _numberAfterAny(input, [
+          'cost was',
+          'unit cost',
+          'purchase cost',
+          'it cost',
+          'price',
+          'cost',
+          'سعرها',
+          'تكلفة الوحدة',
+          'التكلفة',
+          'تكلفة',
+          'سعر التكلفة',
+          'بسعر',
+        ]) ??
+        (numbers.isEmpty ? null : numbers.last.value);
+  }
+
+  AiAdvisorResponse _localPurchaseResponse(
+    _LocalPurchaseAnalysis purchase, {
+    bool updatedPrevious = false,
+  }) {
+    final missing = <String>[
+      if (purchase.quantity == null) purchase.isArabic ? 'الكمية' : 'quantity',
+      if (purchase.unitCost == null)
+        purchase.isArabic ? 'تكلفة الوحدة' : 'unit cost',
+    ];
+    final totalCost = purchase.quantity != null && purchase.unitCost != null
+        ? purchase.quantity! * purchase.unitCost!
+        : null;
+
+    if (purchase.quantity != null && purchase.unitCost == null) {
+      _pendingPurchaseMissingUnitCost = purchase;
+    } else if (purchase.unitCost != null) {
+      _pendingPurchaseMissingUnitCost = null;
+    }
+
+    final cardText = purchase.isArabic
+        ? _arabicPurchaseText(
+            purchase: purchase,
+            totalCost: totalCost,
+          )
+        : _englishPurchaseText(
+            purchase: purchase,
+            totalCost: totalCost,
+          );
+    final text = updatedPrevious
+        ? purchase.isArabic
+            ? 'تم تحديث العملية السابقة.\n\n$cardText'
+            : 'Previous operation updated.\n\n$cardText'
+        : cardText;
+    final localDraft =
+        purchase.quantity != null && purchase.unitCost != null && totalCost != null
+            ? LocalAccountingCommandDraft(
+                type: purchase.isInventoryIntake
+                    ? LocalAccountingCommandDraftType.inventoryIntake
+                    : LocalAccountingCommandDraftType.purchase,
+                isArabic: purchase.isArabic,
+                source: updatedPrevious
+                    ? 'local accounting command follow-up'
+                    : 'local accounting command',
+                productName: purchase.productName,
+                quantity: purchase.quantity,
+                unitCost: purchase.unitCost,
+                totalCost: totalCost,
+              )
+            : null;
+
+    return AiAdvisorResponse(
+      mode: AiAdvisorMode.advice,
+      text: text,
+      memory: _memory.copyWith(
+        latestTopic: purchase.isInventoryIntake
+            ? 'local_inventory_intake_analysis'
+            : 'local_purchase_analysis',
+        missingData: missing,
+      ),
+      suggestedReplies: purchase.unitCost == null
+          ? const ['Add unit cost', 'Prepare review draft', 'Cancel']
+          : const ['Prepare review draft', 'Review impact', 'Analyze sale'],
+      localCommandDraft: localDraft,
+      metadata: AiResponseMetadata.low(missingEvidence: missing),
+    );
+  }
+
+  String _arabicPurchaseText({
+    required _LocalPurchaseAnalysis purchase,
+    required double? totalCost,
+  }) {
+    final missingQuantity = purchase.quantity == null;
+    final missingCost = purchase.unitCost == null;
+    return [
+      purchase.isInventoryIntake
+          ? 'تم تفسير الأمر كإدخال مخزون.'
+          : 'تم تفسير الأمر كشراء.',
+      '',
+      'ملخص العملية:',
+      '',
+      if (purchase.productName != null) '* الصنف: ${purchase.productName}',
+      if (purchase.quantity != null) '* الكمية: ${_formatNumber(purchase.quantity!)}',
+      if (purchase.unitCost != null)
+        '* تكلفة الوحدة: ${_formatNumber(purchase.unitCost!)}',
+      if (totalCost != null) '* إجمالي التكلفة: ${_formatNumber(totalCost)}',
+      if (missingQuantity || missingCost) ...[
+        '',
+        'البيانات الناقصة:',
+        '',
+        if (missingQuantity) '* الكمية',
+        if (missingCost) '* تكلفة الوحدة',
+      ],
+      '',
+      'الحالة:',
+      if (!missingQuantity && !missingCost) ...[
+        '* جاهزة كمسودة بانتظار المراجعة',
+        purchase.isInventoryIntake
+            ? '* لن يتم تحديث المخزون قبل الاعتماد'
+            : '* لن يتم التسجيل قبل الاعتماد',
+      ] else
+        'تحتاج بيانات قبل تجهيز مسودة دقيقة للمراجعة.',
+      '',
+      'الخطوة التالية:',
+      if (!missingQuantity && !missingCost)
+        'راجع المسودة قبل أي تنفيذ.'
+      else if (missingCost)
+        'أرسل تكلفة الوحدة، ولن يتم تسجيل أي شيء قبل الاعتماد.'
+      else
+        'أرسل الكمية، ولن يتم تسجيل أي شيء قبل الاعتماد.',
+    ].join('\n');
+  }
+
+  String _englishPurchaseText({
+    required _LocalPurchaseAnalysis purchase,
+    required double? totalCost,
+  }) {
+    final missingQuantity = purchase.quantity == null;
+    final missingCost = purchase.unitCost == null;
+    return [
+      purchase.isInventoryIntake
+          ? 'Command interpreted as inventory intake.'
+          : 'Command interpreted as a purchase.',
+      '',
+      'Operation summary:',
+      '',
+      if (purchase.productName != null) '* Product: ${purchase.productName}',
+      if (purchase.quantity != null) '* Quantity: ${_formatNumber(purchase.quantity!)}',
+      if (purchase.unitCost != null)
+        '* Unit cost: ${_formatNumber(purchase.unitCost!)}',
+      if (totalCost != null) '* Total cost: ${_formatNumber(totalCost)}',
+      if (missingQuantity || missingCost) ...[
+        '',
+        'Missing data:',
+        '',
+        if (missingQuantity) '* Quantity',
+        if (missingCost) '* Unit cost',
+      ],
+      '',
+      'Status:',
+      if (!missingQuantity && !missingCost) ...[
+        '* Ready as a reviewable draft',
+        purchase.isInventoryIntake
+            ? '* Stock will not be updated before approval'
+            : '* Nothing will be posted before approval',
+      ] else
+        'Needs more data before a reliable review draft.',
+      '',
+      'Next action:',
+      if (!missingQuantity && !missingCost)
+        'Review the draft before execution.'
+      else if (missingCost)
+        'Send the unit cost. Nothing will be posted before approval.'
+      else
+        'Send the quantity. Nothing will be posted before approval.',
+    ].join('\n');
+  }
+
+  String? _extractLocalPurchaseProductName(String input) {
+    var text = input.replaceAll(RegExp(r'\d+(?:[.,]\d+)?'), ' ');
+    for (final token in [
+      'purchased',
+      'bought',
+      'added',
+      'stocked',
+      'received inventory',
+      'added stock',
+      'at a cost of',
+      'unit cost',
+      'purchase cost',
+      'cost',
+      'price',
+      'at',
+      'اشتريت',
+      'اشترينا',
+      'شراء',
+      'دخلت',
+      'ادخلت',
+      'أضفت للمخزون',
+      'اضفت للمخزون',
+      'دخلت للمخزون',
+      'بسعر',
+      'تكلفة',
+      'تكلفتها',
+      'سعرها',
+      'سعر الوحدة',
+      'كرتون',
+      'كراتين',
+      'قطعة',
+      'قطع',
+      'boxes',
+      'box',
+      'units',
+      'unit',
+      'pieces',
+      'piece',
+    ]) {
+      text = text.replaceAll(token, ' ');
+    }
+    text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (text.length < 2) return null;
+    return text;
   }
 
   AiAdvisorResponse _localExpenseResponse(_LocalExpenseAnalysis expense) {
@@ -2122,6 +2510,38 @@ class _LocalSaleAnalysis {
       quantity: quantity ?? this.quantity,
       sellingPrice: sellingPrice ?? this.sellingPrice,
       unitCost: unitCost ?? this.unitCost,
+    );
+  }
+}
+
+class _LocalPurchaseAnalysis {
+  final bool isArabic;
+  final bool isInventoryIntake;
+  final double? quantity;
+  final double? unitCost;
+  final String? productName;
+
+  const _LocalPurchaseAnalysis({
+    required this.isArabic,
+    required this.isInventoryIntake,
+    required this.quantity,
+    required this.unitCost,
+    this.productName,
+  });
+
+  _LocalPurchaseAnalysis copyWith({
+    bool? isArabic,
+    bool? isInventoryIntake,
+    double? quantity,
+    double? unitCost,
+    String? productName,
+  }) {
+    return _LocalPurchaseAnalysis(
+      isArabic: isArabic ?? this.isArabic,
+      isInventoryIntake: isInventoryIntake ?? this.isInventoryIntake,
+      quantity: quantity ?? this.quantity,
+      unitCost: unitCost ?? this.unitCost,
+      productName: productName ?? this.productName,
     );
   }
 }
