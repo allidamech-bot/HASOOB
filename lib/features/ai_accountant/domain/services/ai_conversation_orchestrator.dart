@@ -88,6 +88,8 @@ enum LocalAccountingCommandDraftType {
   customerReceipt,
   supplierPayable,
   supplierPayment,
+  dailyReport,
+  dailyClosing,
 }
 
 class LocalAccountingCommandDraft {
@@ -1261,6 +1263,12 @@ Return only JSON matching the response contract.
       return null;
     }
 
+    final localDailyReportOrClosing =
+        _parseLocalDailyReportOrClosing(input, normalized);
+    if (localDailyReportOrClosing != null) {
+      return _localDailyReportOrClosingResponse(localDailyReportOrClosing);
+    }
+
     final localSale = _parseLocalSale(input, normalized);
     if (localSale != null) return _localSaleResponse(localSale);
 
@@ -1489,6 +1497,17 @@ Return only JSON matching the response contract.
           'payable',
           'we owe',
           'is owed',
+          'daily report',
+          'today report',
+          'prepare today report',
+          'summarize today',
+          'summarize today drafts',
+          'review today drafts',
+          'daily closing',
+          'close today',
+          'prepare daily closing',
+          'prepare today closing',
+          'review today for closing',
         ]) ||
         _containsAny(normalized, [
           'بعت',
@@ -1518,6 +1537,19 @@ Return only JSON matching the response contract.
           'للمورد',
           'علينا للمورد',
           'ذمة المورد',
+          'تقرير اليوم',
+          'تقرير يومي',
+          'لخص عمليات اليوم',
+          'لخص مسودات اليوم',
+          'راجع مسودات اليوم',
+          'إغلاق يومي',
+          'اغلاق يومي',
+          'إغلاق اليوم',
+          'اغلاق اليوم',
+          'أغلق اليوم',
+          'اغلق اليوم',
+          'راجع اليوم للإغلاق',
+          'راجع اليوم للاغلاق',
         ]);
   }
 
@@ -2181,6 +2213,155 @@ Return only JSON matching the response contract.
     );
   }
 
+  _LocalDailyReportAnalysis? _parseLocalDailyReportOrClosing(
+    String input,
+    String normalized,
+  ) {
+    final isArabic = _containsArabic(input);
+    final isDailyReport = _containsAnyLocalAccountingTerm(normalized, [
+          'daily report',
+          'today report',
+          'prepare today report',
+          'summarize today',
+          'summarize today drafts',
+          'review today drafts',
+        ]) ||
+        _containsAny(normalized, [
+          'تقرير اليوم',
+          'تقرير يومي',
+          'لخص عمليات اليوم',
+          'لخص مسودات اليوم',
+          'راجع مسودات اليوم',
+        ]);
+    final isDailyClosing = _containsAnyLocalAccountingTerm(normalized, [
+          'daily closing',
+          'close today',
+          'prepare daily closing',
+          'prepare today closing',
+          'review today for closing',
+        ]) ||
+        _containsAny(normalized, [
+          'إغلاق يومي',
+          'اغلاق يومي',
+          'إغلاق اليوم',
+          'اغلاق اليوم',
+          'أغلق اليوم',
+          'اغلق اليوم',
+          'راجع اليوم للإغلاق',
+          'راجع اليوم للاغلاق',
+        ]);
+
+    if (isDailyClosing) {
+      return _LocalDailyReportAnalysis(
+        type: LocalAccountingCommandDraftType.dailyClosing,
+        isArabic: isArabic,
+      );
+    }
+    if (isDailyReport) {
+      return _LocalDailyReportAnalysis(
+        type: LocalAccountingCommandDraftType.dailyReport,
+        isArabic: isArabic,
+      );
+    }
+    return null;
+  }
+
+  AiAdvisorResponse _localDailyReportOrClosingResponse(
+    _LocalDailyReportAnalysis analysis,
+  ) {
+    final isClosing =
+        analysis.type == LocalAccountingCommandDraftType.dailyClosing;
+    final text = analysis.isArabic
+        ? isClosing
+            ? [
+                'تم تفسير الأمر كإغلاق يومي.',
+                '',
+                'ملخص الإغلاق:',
+                '',
+                '* النطاق: اليوم',
+                '* الحالة: مسودة إغلاق بانتظار المراجعة',
+                '* المطلوب: مراجعة المسودات والبيانات قبل الاعتماد',
+                '',
+                'ملاحظة:',
+                'لن يتم إغلاق اليوم أو تسجيل قيود قبل الاعتماد.',
+                '',
+                'الخطوة التالية:',
+                'راجع مسودة الإغلاق قبل أي تنفيذ.',
+              ].join('\n')
+            : [
+                'تم تفسير الأمر كتقرير يومي.',
+                '',
+                'ملخص التقرير:',
+                '',
+                '* النطاق: اليوم',
+                '* المصدر: بيانات الجلسة والمسودات الحالية',
+                '* الحالة: جاهز كمسودة بانتظار المراجعة',
+                '',
+                'ملاحظة:',
+                'لن يتم تسجيل أو إغلاق أي عملية قبل الاعتماد.',
+                '',
+                'الخطوة التالية:',
+                'راجع التقرير قبل أي تنفيذ.',
+              ].join('\n')
+        : isClosing
+            ? [
+                'Command interpreted as daily closing.',
+                '',
+                'Closing summary:',
+                '',
+                '* Scope: today',
+                '* Status: closing draft pending review',
+                '* Required: review drafts and data before approval',
+                '',
+                'Note:',
+                'The day will not be closed and no entries will be posted before approval.',
+                '',
+                'Next action:',
+                'Review the closing draft before execution.',
+              ].join('\n')
+            : [
+                'Command interpreted as a daily report.',
+                '',
+                'Report summary:',
+                '',
+                '* Scope: today',
+                '* Source: current session and reviewable drafts',
+                '* Status: ready as a reviewable draft',
+                '',
+                'Note:',
+                'Nothing will be posted or closed before approval.',
+                '',
+                'Next action:',
+                'Review the report before execution.',
+              ].join('\n');
+
+    return AiAdvisorResponse(
+      mode: AiAdvisorMode.advice,
+      text: text,
+      memory: _memory.copyWith(
+        latestTopic: isClosing ? 'daily_closing_draft' : 'daily_report_draft',
+        missingData: const [],
+      ),
+      suggestedReplies: analysis.isArabic
+          ? const [
+              'راجع المسودة',
+              'لخص مسودات اليوم',
+              'ما وضع الكاش؟',
+            ]
+          : const [
+              'Review draft',
+              'Summarize today drafts',
+              'What is cashflow today?',
+            ],
+      localCommandDraft: LocalAccountingCommandDraft(
+        type: analysis.type,
+        isArabic: analysis.isArabic,
+        source: 'local accounting command',
+      ),
+      metadata: AiResponseMetadata.low(missingEvidence: const []),
+    );
+  }
+
   bool _hasClearExpenseContext(String normalized) {
     return _containsAnyLocalAccountingTerm(normalized, [
           'expense',
@@ -2399,6 +2580,10 @@ Return only JSON matching the response contract.
         'لن يتم تعديل رصيد المورد قبل الاعتماد',
       LocalAccountingCommandDraftType.supplierPayment =>
         'لن يتم تسجيل الدفع قبل الاعتماد',
+      LocalAccountingCommandDraftType.dailyReport =>
+        'لن يتم تسجيل أو إغلاق أي عملية قبل الاعتماد',
+      LocalAccountingCommandDraftType.dailyClosing =>
+        'لن يتم إغلاق اليوم أو تسجيل قيود قبل الاعتماد',
       _ => 'لن يتم التسجيل قبل الاعتماد',
     };
   }
@@ -2413,6 +2598,10 @@ Return only JSON matching the response contract.
         'Supplier balance will not be updated before approval',
       LocalAccountingCommandDraftType.supplierPayment =>
         'Supplier payment will not be posted before approval',
+      LocalAccountingCommandDraftType.dailyReport =>
+        'Nothing will be posted or closed before approval',
+      LocalAccountingCommandDraftType.dailyClosing =>
+        'The day will not be closed and no entries will be posted before approval',
       _ => 'Nothing will be posted before approval',
     };
   }
@@ -3083,6 +3272,16 @@ class _LocalPurchaseAnalysis {
       productName: productName ?? this.productName,
     );
   }
+}
+
+class _LocalDailyReportAnalysis {
+  final LocalAccountingCommandDraftType type;
+  final bool isArabic;
+
+  const _LocalDailyReportAnalysis({
+    required this.type,
+    required this.isArabic,
+  });
 }
 
 class _LocalReceivablePayableAnalysis {

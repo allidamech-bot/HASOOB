@@ -366,6 +366,58 @@ class AiAccountantScreen extends StatefulWidget {
     this.workspaceMode = false,
   });
 
+  void _addDailyReportOrClosingDraftIfAvailable(
+    LocalAccountingCommandDraft? draft,
+  ) {
+    if (draft == null) return;
+    if (draft.type == LocalAccountingCommandDraftType.dailyReport) {
+      _workspaceDrafts.insert(
+        0,
+        _AccountingDraft(
+          id: 'local-daily-report-${DateTime.now().microsecondsSinceEpoch}',
+          type: _DraftType.report,
+          title: 'مسودة تقرير يومي',
+          summary: 'تقرير يومي بانتظار المراجعة',
+          details: const [
+            'النطاق: اليوم',
+            'المصدر: الجلسة الحالية والمسودات',
+            'الحالة: بانتظار المراجعة',
+            'لن يتم تسجيل أو إغلاق أي عملية قبل الاعتماد',
+          ],
+          status: _DraftStatus.needsReview,
+          confidence: _DraftConfidence.medium,
+          source: _DraftSource.chat,
+          sourceSummary: 'من أمر محاسبي',
+          dateOrDueDate: 'اليوم',
+          recommendedNextAction: 'راجع التقرير قبل أي تنفيذ',
+        ),
+      );
+    }
+    if (draft.type == LocalAccountingCommandDraftType.dailyClosing) {
+      _workspaceDrafts.insert(
+        0,
+        _AccountingDraft(
+          id: 'local-daily-closing-${DateTime.now().microsecondsSinceEpoch}',
+          type: _DraftType.report,
+          title: 'مسودة إغلاق يومي',
+          summary: 'إغلاق يومي بانتظار المراجعة',
+          details: const [
+            'النطاق: اليوم',
+            'الحالة: بانتظار المراجعة',
+            'المطلوب: مراجعة المسودات والبيانات',
+            'لن يتم إغلاق اليوم أو تسجيل قيود قبل الاعتماد',
+          ],
+          status: _DraftStatus.needsReview,
+          confidence: _DraftConfidence.medium,
+          source: _DraftSource.chat,
+          sourceSummary: 'من أمر محاسبي',
+          dateOrDueDate: 'اليوم',
+          recommendedNextAction: 'راجع مسودة الإغلاق قبل أي تنفيذ',
+        ),
+      );
+    }
+  }
+
   @override
   State<AiAccountantScreen> createState() => _AiAccountantScreenState();
 }
@@ -592,6 +644,15 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     }
 
     if (!advisorResponse.shouldPrepareProposal) {
+      _addDailyReportOrClosingDraftIfAvailable(
+        advisorResponse.localCommandDraft,
+      );
+      if (advisorResponse.localCommandDraft?.type !=
+              LocalAccountingCommandDraftType.dailyReport &&
+          advisorResponse.localCommandDraft?.type !=
+              LocalAccountingCommandDraftType.dailyClosing) {
+        _addLocalCommandDraftIfAvailable(advisorResponse.localCommandDraft);
+      }
       _appendMessage(
         role: AiChatRole.assistant,
         type: _messageTypeForMode(advisorResponse.mode),
