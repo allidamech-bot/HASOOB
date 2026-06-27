@@ -2097,6 +2097,8 @@ Return only JSON matching the response contract.
     String input,
     String normalized,
   ) {
+    if (_hasClearExpenseContext(normalized)) return null;
+
     final isArabic = _containsArabic(input);
     final amount = _numberMatches(input).isEmpty
         ? null
@@ -2177,6 +2179,25 @@ Return only JSON matching the response contract.
       partyName: party,
       amount: amount,
     );
+  }
+
+  bool _hasClearExpenseContext(String normalized) {
+    return _containsAnyLocalAccountingTerm(normalized, [
+          'expense',
+          'paid expense',
+          'shipping expense',
+          'rent expense',
+          'marketing expense',
+          'paid shipping expense',
+        ]) ||
+        _containsAny(normalized, [
+          'مصروف',
+          'دفعت مصروف',
+          'مصروف شحن',
+          'مصروف إيجار',
+          'مصروف ايجار',
+          'مصروف تسويق',
+        ]);
   }
 
   AiAdvisorResponse? _tryHandlePendingReceivablePayableFollowUp(
@@ -2420,6 +2441,11 @@ Return only JSON matching the response contract.
       'is owed',
       'remaining for',
       'transferred',
+      'دفعت للمورد',
+      'سددت للمورد',
+      'حولت للمورد',
+      'علينا للمورد',
+      'باقي للمورد',
       'العميل',
       'ذمة العميل',
       'على العميل',
@@ -2430,17 +2456,15 @@ Return only JSON matching the response contract.
       'قبضت',
       'وصلني',
       'من',
-      'دفع',
-      'سدد',
-      'المورد',
       'للمورد',
-      'علينا للمورد',
-      'باقي للمورد',
-      'باقي',
-      'له',
+      'المورد',
       'دفعت',
       'سددت',
       'حولت',
+      'دفع',
+      'سدد',
+      'باقي',
+      'له',
     ]) {
       text = text.replaceAll(token, ' ');
     }
