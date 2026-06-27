@@ -226,6 +226,7 @@ class AiConversationOrchestrator {
   final AiCfoPolicy _cfoPolicy;
   final List<AiConversationTurn> _history = [];
   AiConversationMemory _memory = const AiConversationMemory();
+  _LocalSaleAnalysis? _pendingSaleMissingUnitCost;
 
   AiConversationMemory get memory => _memory;
   AiBusinessMemory get businessMemory => _businessMemoryManager.memory;
@@ -258,6 +259,13 @@ class AiConversationOrchestrator {
 
     _lastInputWasArabic = _containsArabic(userText);
     final normalized = _normalized(userText);
+    final pendingCostResponse =
+        _tryHandlePendingSaleCostFollowUp(userText, normalized);
+    if (pendingCostResponse != null) {
+      _rememberAssistant(pendingCostResponse);
+      return pendingCostResponse;
+    }
+
     final localAccountingResponse =
         _tryHandleLocalAccountingMessage(userText, normalized);
     if (localAccountingResponse != null) {
@@ -1151,6 +1159,47 @@ Return only JSON matching the response contract.
     return null;
   }
 
+  AiAdvisorResponse? _tryHandlePendingSaleCostFollowUp(
+    String input,
+    String normalized,
+  ) {
+    final pendingSale = _pendingSaleMissingUnitCost;
+    if (pendingSale == null) return null;
+    if (_isProtectedCfoFlow(normalized)) return null;
+
+    final cost = _extractUnitCostFollowUp(input, normalized);
+    if (cost != null) {
+      final completedSale = pendingSale.copyWith(unitCost: cost);
+      _pendingSaleMissingUnitCost = null;
+      return _localSaleResponse(completedSale, updatedPrevious: true);
+    }
+
+    if (_numberMatches(input).isNotEmpty &&
+        !_looksLikeClearAccountingCommand(normalized)) {
+      final isArabic = _containsArabic(input) || pendingSale.isArabic;
+      return AiAdvisorResponse(
+        mode: AiAdvisorMode.advice,
+        text: isArabic
+            ? 'هل هذا الرقم هو تكلفة الوحدة للعملية السابقة؟ اكتب مثلًا: تكلفة الوحدة 28.'
+            : 'Is this number the unit cost for the previous sale? For example: unit cost 28.',
+        memory: _memory.copyWith(
+          latestTopic: 'local_sale_missing_cost_follow_up',
+          missingData: [isArabic ? 'تكلفة الوحدة' : 'unit cost'],
+        ),
+        suggestedReplies: const [
+          'Unit cost 28',
+          'Cancel',
+          'Prepare review draft'
+        ],
+        metadata: AiResponseMetadata.low(
+          missingEvidence: [isArabic ? 'تكلفة الوحدة' : 'unit cost'],
+        ),
+      );
+    }
+
+    return null;
+  }
+
   _LocalSaleAnalysis? _parseLocalSale(String input, String normalized) {
     final isSale = _containsAnyLocalAccountingTerm(normalized, [
       'sold',
@@ -1267,7 +1316,101 @@ Return only JSON matching the response contract.
     );
   }
 
-  AiAdvisorResponse _localSaleResponse(_LocalSaleAnalysis sale) {
+  double? _extractUnitCostFollowUp(String input, String normalized) {
+    final hasCostTerm = _containsAnyLocalAccountingTerm(normalized, [
+      'cost',
+      'unit cost',
+      'purchase cost',
+      'تكلفته',
+      'تكلفتها',
+      'تكلفة',
+      'التكلفة',
+      'كلفني',
+    ]);
+    if (!hasCostTerm) return null;
+    final numbers = _numberMatches(input);
+    return _numberAfterAny(input, [
+          'cost was',
+          'unit cost',
+          'purchase cost',
+          'it cost',
+          'cost',
+          'تكلفته',
+          'تكلفتها',
+          'تكلفة الوحدة',
+          'التكلفة',
+          'تكلفة',
+          'سعر التكلفة',
+          'كلفني',
+        ]) ??
+        (numbers.isEmpty ? null : numbers.last.value);
+  }
+
+  bool _isProtectedCfoFlow(String normalized) {
+    return _containsAnyLocalAccountingTerm(normalized, [
+          'business health',
+          'cashflow',
+          'cash flow',
+          'inventory',
+          'proposal',
+          'approve',
+          'execute',
+          'import',
+          'risk',
+          'risks',
+          'customer',
+          'customers',
+          'memory',
+          'profitability',
+          'current business health',
+        ]) ||
+        _containsAny(normalized, [
+          'الصحة المالية',
+          'الوضع المالي',
+          'التدفق النقدي',
+          'النقدية',
+          'المخزون',
+          'مقترح',
+          'اعتماد',
+          'نفذ',
+          'استيراد',
+          'المخاطر',
+          'العملاء',
+        ]);
+  }
+
+  bool _looksLikeClearAccountingCommand(String normalized) {
+    return _containsAnyLocalAccountingTerm(normalized, [
+          'sold',
+          'sale',
+          'sales',
+          'expense',
+          'paid',
+          'shipping',
+          'rent',
+          'electricity',
+          'marketing',
+          'supplier',
+        ]) ||
+        _containsAny(normalized, [
+          'بعت',
+          'بيع',
+          'مبيعات',
+          'مصروف',
+          'دفعت',
+          'شحن',
+          'إيجار',
+          'ايجار',
+          'كهرباء',
+          'تسويق',
+          'مورد',
+        ]);
+  }
+
+  AiAdvisorResponse _localSaleResponse(
+    _LocalSaleAnalysis sale, {
+    bool updatedPrevious = false,
+  }) {
     final missing = <String>[
       if (sale.quantity == null) sale.isArabic ? 'الكمية' : 'quantity',
       if (sale.sellingPrice == null)
@@ -1286,7 +1429,15 @@ Return only JSON matching the response contract.
         ? (profit / revenue) * 100
         : null;
 
-    final text = sale.isArabic
+    if (sale.quantity != null &&
+        sale.sellingPrice != null &&
+        sale.unitCost == null) {
+      _pendingSaleMissingUnitCost = sale;
+    } else if (sale.unitCost != null) {
+      _pendingSaleMissingUnitCost = null;
+    }
+
+    final cardText = sale.isArabic
         ? _arabicSaleText(
             sale: sale,
             revenue: revenue,
@@ -1301,6 +1452,11 @@ Return only JSON matching the response contract.
             profit: profit,
             margin: margin,
           );
+    final text = updatedPrevious
+        ? sale.isArabic
+            ? 'تم تحديث العملية السابقة.\n\n$cardText'
+            : 'Previous operation updated.\n\n$cardText'
+        : cardText;
 
     return AiAdvisorResponse(
       mode: AiAdvisorMode.advice,
@@ -1865,6 +2021,20 @@ class _LocalSaleAnalysis {
     required this.sellingPrice,
     required this.unitCost,
   });
+
+  _LocalSaleAnalysis copyWith({
+    bool? isArabic,
+    double? quantity,
+    double? sellingPrice,
+    double? unitCost,
+  }) {
+    return _LocalSaleAnalysis(
+      isArabic: isArabic ?? this.isArabic,
+      quantity: quantity ?? this.quantity,
+      sellingPrice: sellingPrice ?? this.sellingPrice,
+      unitCost: unitCost ?? this.unitCost,
+    );
+  }
 }
 
 class _LocalExpenseCategory {

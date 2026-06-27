@@ -1,6 +1,8 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:hasoob_app/core/business/business_context.dart';
+import 'package:hasoob_app/features/ai_accountant/data/tools/financial_tools.dart';
 import 'package:hasoob_app/features/ai_accountant/domain/services/ai_conversation_orchestrator.dart';
+import 'package:hasoob_app/features/ai_accountant/domain/services/ai_evidence_bundle.dart';
 
 void main() {
   group('AiConversationOrchestrator CFO decision integration', () {
@@ -145,5 +147,128 @@ void main() {
       expect(response.text, contains('مسودة بانتظار المراجعة'));
       expect(response.shouldPrepareProposal, isFalse);
     });
+    test('local English sale missing cost accepts cost follow-up', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      await orchestrator.generateResponse(
+        userText: 'I sold 5 boxes for 40 each',
+      );
+      final response = await orchestrator.generateResponse(
+        userText: 'cost was 28',
+      );
+
+      expect(response.text, contains('Previous operation updated'));
+      expect(response.text, contains('* Quantity: 5'));
+      expect(response.text, contains('* Unit selling price: 40'));
+      expect(response.text, contains('* Unit cost: 28'));
+      expect(response.text, contains('* Revenue: 200'));
+      expect(response.text, contains('* Cost: 140'));
+      expect(response.text, contains('* Profit: 60'));
+      expect(response.text, contains('* Profit margin: 30%'));
+      expect(response.text, contains('Ready as a reviewable draft'));
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic sale missing cost accepts cost follow-up', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      await orchestrator.generateResponse(
+        userText: 'بعت 5 كراتين بسعر 40',
+      );
+      final response = await orchestrator.generateResponse(
+        userText: 'تكلفتها 28',
+      );
+
+      expect(response.text, contains('تم تحديث العملية السابقة'));
+      expect(response.text, contains('الكمية'));
+      expect(response.text, contains('تكلفة الوحدة'));
+      expect(response.text, contains('الإيراد'));
+      expect(response.text, contains('التكلفة'));
+      expect(response.text, contains('الربح'));
+      expect(response.text, contains('هامش الربح'));
+      expect(response.text, contains('جاهزة كمسودة'));
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test(
+        'cost follow-up state does not intercept business health without pending sale',
+        () async {
+      final orchestrator = AiConversationOrchestrator(
+        financialTools: _IntegrationFinancialTools(),
+      );
+
+      final response = await orchestrator.generateResponse(
+        userText: 'What is my current business health?',
+      );
+
+      expect(response.text, isNot(contains('Previous operation updated')));
+      expect(response.metadata, isNotNull);
+      expect(
+        response.metadata!.confidenceLevel,
+        isNot(AiEvidenceConfidence.low),
+      );
+      expect(response.metadata!.executedTools, isNotEmpty);
+      expect(response.shouldPrepareProposal, isFalse);
+    });
   });
+}
+
+class _IntegrationFinancialTools extends FinancialTools {
+  @override
+  Future<FinancialToolResult> getFinancialSummary({
+    required String businessId,
+    DateTime? from,
+    DateTime? to,
+  }) async {
+    return FinancialToolResult.success({
+      'totalIncome': 12000,
+      'totalExpenses': 9000,
+      'totalProfit': 3000,
+      'netCashFlow': 3000,
+      'accountsReceivable': 8500,
+      'profitMargin': 25,
+    });
+  }
+
+  @override
+  Future<FinancialToolResult> getInvoices({
+    required String businessId,
+    String? status,
+    int limit = 100,
+  }) async {
+    return FinancialToolResult.success({
+      'totalAmount': 10000,
+      'totalPaid': 1500,
+      'outstanding': 8500,
+      'count': 2,
+      'records': const [],
+    });
+  }
+
+  @override
+  Future<FinancialToolResult> getCustomers({
+    required String businessId,
+    String? searchQuery,
+    int limit = 100,
+  }) async {
+    return FinancialToolResult.success({
+      'totalOutstanding': 8500,
+      'count': 1,
+      'records': const [],
+    });
+  }
+
+  @override
+  Future<FinancialToolResult> getProducts({
+    required String businessId,
+    String? searchQuery,
+    bool lowStockOnly = false,
+    int limit = 100,
+  }) async {
+    return FinancialToolResult.success({
+      'totalValue': 1200,
+      'count': 1,
+      'records': const [],
+    });
+  }
 }
