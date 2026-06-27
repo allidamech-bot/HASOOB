@@ -44,6 +44,10 @@ import '../../domain/services/ai_workflow_session.dart';
 import '../../domain/services/proposal_execution_engine.dart';
 import '../proposal_execution_presentation_state.dart';
 
+bool _containsArabicText(String text) {
+  return RegExp(r'[\u0600-\u06FF]').hasMatch(text);
+}
+
 class LedgerEntry {
   final String code;
   final String account;
@@ -489,10 +493,14 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
+  bool _lastInputWasArabic = false;
+
   Future<void> _processAiCommand({String? customText}) async {
     final text = customText ?? _textController.text.trim();
     if (text.isEmpty) return;
     if (customText == null) _textController.clear();
+
+    _lastInputWasArabic = _containsArabicText(text);
 
     _appendMessage(
       role: AiChatRole.user,
@@ -539,13 +547,20 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       _appendMessage(
         role: AiChatRole.assistant,
         type: AiChatMessageType.error,
-        text:
-            'I could not prepare a reliable CFO answer from the available data. Please try again, or ask for a narrower analysis such as cash flow, customer risk, inventory, or shipment pricing.',
-        suggestedReplies: const [
-          'Check business health',
-          'Review customer risk',
-          'Price a shipment',
-        ],
+        text: _lastInputWasArabic
+            ? 'ما أقدر أجهّز إجابة مالية موثوقة من البيانات المتوفرة حاليًا. جرب غيره سؤال أضيق — مثلاً: تدفق نقدي، خطر عملاء، مخزون، أو تسعير شحنة.'
+            : 'I could not prepare a reliable CFO answer from the available data. Please try again, or ask for a narrower analysis such as cash flow, customer risk, inventory, or shipment pricing.',
+        suggestedReplies: _lastInputWasArabic
+            ? const [
+                'راجع الصحة المالية',
+                'راجع خطر العميل',
+                'سعر شحنة',
+              ]
+            : const [
+                'Check business health',
+                'Review customer risk',
+                'Price a shipment',
+              ],
       );
       return;
     }
@@ -603,13 +618,20 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         _appendMessage(
           role: AiChatRole.assistant,
           type: AiChatMessageType.question,
-          text:
-              'I need a little more detail before I can prepare a safe proposal. Is this a purchase, sale, or pricing simulation? Please include product, quantity, amount, and customer or supplier when relevant.',
-          suggestedReplies: const [
-            'Prepare a purchase',
-            'Prepare a sale',
-            'Run a pricing simulation',
-          ],
+          text: _lastInputWasArabic
+              ? 'عايز أكون واضح معاك. هل دي عملية شراء ولا بيع ولا تسعير؟ لازم أعرف نوع العملية، المنتج، الكمية، المبلغ، والعميل أو المورد.'
+              : 'I need a little more detail before I can prepare a safe proposal. Is this a purchase, sale, or pricing simulation? Please include product, quantity, amount, and customer or supplier when relevant.',
+          suggestedReplies: _lastInputWasArabic
+              ? const [
+                  'جهّز عملية شراء',
+                  'جهّز عملية بيع',
+                  'شغّل محاكاة تسعير',
+                ]
+              : const [
+                  'Prepare a purchase',
+                  'Prepare a sale',
+                  'Run a pricing simulation',
+                ],
         );
         return;
       }
@@ -622,8 +644,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       _appendMessage(
         role: AiChatRole.assistant,
         type: AiChatMessageType.proposal,
-        text:
-            'I prepared a reviewable proposal. Check the details before approving. Execution will still go through the guarded accounting engine.',
+        text: _lastInputWasArabic
+            ? 'أعددت مقترحًا للمراجعة. افحص التفاصيل قبل الموافقة. التنفيذ رح يروح عبر محرك المحاسبة المحمي.'
+            : 'I prepared a reviewable proposal. Check the details before approving. Execution will still go through the guarded accounting engine.',
         proposal: proposal,
         suggestedReplies: _proposalSuggestedReplies(proposal),
       );
@@ -633,13 +656,20 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       _appendMessage(
         role: AiChatRole.assistant,
         type: AiChatMessageType.error,
-        text:
-            'I could not prepare a safe proposal from that request. Please add the transaction type, product, quantity, amount, and customer or supplier when relevant.',
-        suggestedReplies: const [
-          'Try as a purchase',
-          'Try as a sale',
-          'Ask for advice instead',
-        ],
+        text: _lastInputWasArabic
+            ? 'ما أقدر أجهّز مقترح آمن من طلبك. أضف نوع العملية، المنتج، الكمية، المبلغ، والعميل أو المورد.'
+            : 'I could not prepare a safe proposal from that request. Please add the transaction type, product, quantity, amount, and customer or supplier when relevant.',
+        suggestedReplies: _lastInputWasArabic
+            ? const [
+                'جرب كعملية شراء',
+                'جرب كعملية بيع',
+                'اسأل لنصيحة بدلاً من ذلك',
+              ]
+            : const [
+                'Try as a purchase',
+                'Try as a sale',
+                'Ask for advice instead',
+              ],
       );
     } finally {
       if (mounted) setState(() => _isAnalyzing = false);
@@ -647,23 +677,31 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   void _appendKernelResponse(AiCfoConversationResponse response) {
-    final suggestions = response.type == AiCfoResponseType.blocked
-        ? const [
-            'Prepare a proposal',
-            'Review business health',
-            'Continue discussion',
-          ]
-        : response.evidence.isEmpty
-            ? const [
-                'What data is missing?',
-                'Review inventory risk',
-                'Review cash flow',
-              ]
+    final blocked = response.type == AiCfoResponseType.blocked;
+    final emptyEvidence = response.evidence.isEmpty;
+    final suggestions = blocked
+        ? (_lastInputWasArabic
+            ? const ['جهّز مقترح', 'راجع الصحة المالية', 'استمر في المحادثة']
             : const [
-                'Explain evidence',
-                'What data is missing?',
-                'Review next risk',
-              ];
+                'Prepare a proposal',
+                'Review business health',
+                'Continue discussion',
+              ])
+        : emptyEvidence
+            ? (_lastInputWasArabic
+                ? const ['أي بيانات متوفرة؟', 'راجع خطر المخزون', 'راجع تدفق النقدية']
+                : const [
+                    'What data is missing?',
+                    'Review inventory risk',
+                    'Review cash flow',
+                  ])
+            : (_lastInputWasArabic
+                ? const ['اشرح البرهان', 'أي بيانات متوفرة؟', 'راجع المخاطر']
+                : const [
+                    'Explain evidence',
+                    'What data is missing?',
+                    'Review next risk',
+                  ]);
     _appendMessage(
       role: AiChatRole.assistant,
       type: response.isBlocked
@@ -692,11 +730,17 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             role: AiChatRole.assistant,
             type: AiChatMessageType.confirmation,
             text: command.reason,
-            suggestedReplies: const [
-              'Review proposal',
-              'Prepare a proposal',
-              'Continue discussion',
-            ],
+            suggestedReplies: _lastInputWasArabic
+                ? const [
+                    'راجع المقترح',
+                    'جهّز مقترح',
+                    'استمر في المحادثة',
+                  ]
+                : const [
+                    'Review proposal',
+                    'Prepare a proposal',
+                    'Continue discussion',
+                  ],
           );
         }
         return true;
@@ -733,48 +777,49 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   String _kernelResponseText(AiCfoConversationResponse response) {
+    final ar = _lastInputWasArabic;
     final lines = <String>[
       response.title,
       '',
-      'Current picture:',
+      ar ? 'الصورة الحالية:' : 'Current picture:',
       _currentPictureLine(response),
       '',
-      'Available evidence:',
+      ar ? 'البراهين المتوفرة:' : 'Available evidence:',
       _availableEvidenceLine(response),
       '',
-      'Missing data:',
+      ar ? 'البيانات الناقصة:' : 'Missing data:',
       _missingDataLine(response),
       '',
-      'Risk:',
+      ar ? 'المخاطر:' : 'Risk:',
       _riskLine(response),
       '',
-      'Recommended next action:',
+      ar ? 'الإجراء التالي الموصى به:' : 'Recommended next action:',
       _recommendedNextActionLine(response),
     ];
     if (response.evidence.isNotEmpty) {
       lines.add('');
-      lines.add('Evidence details:');
+      lines.add(ar ? 'تفاصيل البراهين:' : 'Evidence details:');
       lines.addAll(response.evidence
           .take(4)
           .map((item) => '- ${item.label}: ${item.value}'));
       lines.add('');
-      lines.add('Evidence sources:');
+      lines.add(ar ? 'مصادر البراهين:' : 'Evidence sources:');
       lines.addAll(response.evidence.take(6).map((item) => '- ${item.source}'));
     } else {
       lines.add('');
-      lines.add('What to add next:');
-      lines.add('- Products with stock, cost, and selling price.');
-      lines.add('- Customers and invoices with paid or unpaid balances.');
-      lines.add('- Recorded sales, payments, expenses, or ledger entries.');
+      lines.add(ar ? 'شي لازم تضيفه:' : 'What to add next:');
+      lines.add(ar ? '- منتجات بمخزون وتكلفة وسعر بيع.' : '- Products with stock, cost, and selling price.');
+      lines.add(ar ? '- عملاء وفواتير بأرصدة مدفوعة أو غير مدفوعة.' : '- Customers and invoices with paid or unpaid balances.');
+      lines.add(ar ? '- مبيعات، مدفوعات، مصروفات أو قيود محاسبية مسجلة.' : '- Recorded sales, payments, expenses, or ledger entries.');
       lines.add('');
-      lines.add('Useful next questions:');
-      lines.add('- What cash-flow data is missing?');
-      lines.add('- Which stock needs attention?');
-      lines.add('- What can you say from the data I have?');
+      lines.add(ar ? 'أسئلة مفيدة الآن:' : 'Useful next questions:');
+      lines.add(ar ? '- أي بيانات تدفق النقدية متوفرة؟' : '- What cash-flow data is missing?');
+      lines.add(ar ? '- أي مخزون يحتاج انتباه؟' : '- Which stock needs attention?');
+      lines.add(ar ? '- أي حاجة تقدر تقولها من البيانات اللي عندي؟' : '- What can you say from the data I have?');
     }
     if (response.risks.isNotEmpty || response.blockedReason != null) {
       lines.add('');
-      lines.add('Missing data / limits:');
+      lines.add(ar ? 'البيانات الناقصة / الحدود:' : 'Missing data / limits:');
       if (response.blockedReason != null) {
         lines.add('- ${response.blockedReason}');
       }
@@ -787,15 +832,19 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     if (response.evidence.isEmpty) {
       return response.message;
     }
+    final ar = _lastInputWasArabic;
     final leadEvidence = response.evidence.take(3).map((item) {
       return '${item.label}: ${item.value}';
-    }).join('; ');
-    return 'This view is based on ${response.evidence.length} local evidence record${response.evidence.length == 1 ? '' : 's'} available now: $leadEvidence.';
+    }).join('؛ ');
+    return ar
+        ? 'الصورة دي بناها من ${response.evidence.length} برهان محلي${response.evidence.length == 1 ? '' : 'ة'} متوفرة دلوقتي: $leadEvidence.'
+        : 'This view is based on ${response.evidence.length} local evidence record${response.evidence.length == 1 ? '' : 's'} available now: $leadEvidence.';
   }
 
   String _availableEvidenceLine(AiCfoConversationResponse response) {
+    final ar = _lastInputWasArabic;
     if (response.evidence.isEmpty) {
-      return 'No usable local evidence is attached to this answer yet.';
+      return ar ? 'ما في برهان قابلة للاستخدام مرتبطة بالجواب دلوقتي.' : 'No usable local evidence is attached to this answer yet.';
     }
     final sources = response.evidence
         .map((item) => item.source)
@@ -804,63 +853,70 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         .take(3)
         .join(', ');
     return sources.isEmpty
-        ? 'Evidence exists, but the source labels are incomplete.'
-        : 'I can use evidence from: $sources.';
+        ? ar ? 'البراهين موجودة، بس التسميات غير مكتملة.' : 'Evidence exists, but the source labels are incomplete.'
+        : ar ? 'أقدر أستخدم البراهين من: $sources.' : 'I can use evidence from: $sources.';
   }
 
   String _missingDataLine(AiCfoConversationResponse response) {
+    final ar = _lastInputWasArabic;
     if (response.risks.isNotEmpty) {
       return response.risks.take(2).join(' ');
     }
     if (response.evidence.isEmpty) {
-      return 'The app is missing enough recorded activity to compare trends yet. Add products, customers, invoices, sales, payments, or expenses to make the answer stronger.';
+      return ar ? 'التطبيق ناقص أنشطة مسجلة كفاية عشان أقارن الاتجاهات. أضف منتجات، عملاء، فواتير، مبيعات، مدفوعات، أو مصروفات تحتاجها.' : 'The app is missing enough recorded activity to compare trends yet. Add products, customers, invoices, sales, payments, or expenses to make the answer stronger.';
     }
-    return 'No trend change is being claimed from this snapshot alone. Keep recording daily sales, collections, expenses, and stock updates so the next review can compare movement.';
+    return ar ? 'ما بصراحة أي تغيير في الاتجاه من اللقطة دي بس. استمر في تسجيل المبيعات اليومية، التحصيلات، المصروفات، وتحديثات المخزون عشان مراجعتنا الجاية تقدر تقارن الحركة.' : 'No trend change is being claimed from this snapshot alone. Keep recording daily sales, collections, expenses, and stock updates so the next review can compare movement.';
   }
 
   String _riskLine(AiCfoConversationResponse response) {
+    final ar = _lastInputWasArabic;
     final hasLowConfidence = response.evidence
         .any((item) => item.confidence == AiCfoEvidenceConfidence.low);
     if (hasLowConfidence) {
-      return 'Some evidence is low confidence, so verify the underlying records before making a financial decision.';
+      return ar ? 'بعض البراهين منخفضة الثقة، فحاول تأكيد السجلات قبل أخذ قرار مالي.' : 'Some evidence is low confidence, so verify the underlying records before making a financial decision.';
     }
     if (response.risks.isNotEmpty) {
       return response.risks.first;
     }
     if (response.evidence.isEmpty) {
-      return 'The main risk is acting without enough local evidence.';
+      return ar ? 'المخاطر الأساسية من اتخاذ قرار من غير برهان محلي كافي.' : 'The main risk is acting without enough local evidence.';
     }
-    return 'No critical risk is proven from this answer alone; review cash flow, stock, profit, or receivables before acting.';
+    return ar ? 'ما في مخاطر حاسمة مؤكدة من الجواب ده بس؛ راجع تدفق النقدية، المخزون، الربح، أو الذمم قبل أي إجراء.' : 'No critical risk is proven from this answer alone; review cash flow, stock, profit, or receivables before acting.';
   }
 
   String _recommendedNextActionLine(AiCfoConversationResponse response) {
+    final ar = _lastInputWasArabic;
     if (response.type == AiCfoResponseType.blocked ||
         response.intent == AiCfoConversationIntent.unsupported) {
-      return 'Ask for one focused area, such as cash flow, inventory, profit, receivables, or evidence explanation.';
+      return ar ? 'اسأل عن مجال محدد، مثلاً: تدفق نقدي، مخزون، ربح، أرصدة، أو تفسير البراهين.' : 'Ask for one focused area, such as cash flow, inventory, profit, receivables, or evidence explanation.';
     }
     if (response.evidence.isEmpty) {
-      return 'Add one real business record, then ask the same question again so the answer can use evidence.';
+      return ar ? 'أضف سجل عمل حقيقي، وبعدين اسأل السؑال تاني عشان الجواب يقدر يستخدم البراهين.' : 'Add one real business record, then ask the same question again so the answer can use evidence.';
     }
     switch (response.intent) {
       case AiCfoConversationIntent.cashflowReview:
-        return 'Check unpaid invoices, recent collections, and upcoming expenses before spending or discounting.';
+        return ar ? 'راجع الفواتير غير المدفوعة، التحصيلات الأخيرة، والمصروفات القادمة قبل أي طلب دفع أو خصم.' : 'Check unpaid invoices, recent collections, and upcoming expenses before spending or discounting.';
       case AiCfoConversationIntent.inventoryReview:
-        return 'Review low-stock or out-of-stock items, then decide what to reorder based on demand and margin.';
+        return ar
+            ? 'راجع المنتجات منخفضة المخزون أو غير المتوفر، وبعدين قرر إيش تشتري بناءً على الطلب والربحية.'
+            : 'Review low-stock or out-of-stock items, then decide what to reorder based on demand and margin.';
       case AiCfoConversationIntent.profitReview:
-        return 'Compare selling price, cost, sales volume, and expenses before changing prices or buying more stock.';
+        return ar
+            ? 'قارن سعر البيع، التكلفة، حجم المبيعات، والمصروفات قبل ما تغير الأسعار أو تشتري مخزون إضافي.'
+            : 'Compare selling price, cost, sales volume, and expenses before changing prices or buying more stock.';
       case AiCfoConversationIntent.receivablesReview:
-        return 'Follow up on customer balances with the highest exposure first.';
+        return ar ? 'تابع أرصدة العملاء اللي عندهم أعلى مستوى تعرض أولاً.' : 'Follow up on customer balances with the highest exposure first.';
       case AiCfoConversationIntent.explainEvidence:
-        return 'Use the evidence list below to check the source records, then ask a narrower follow-up if needed.';
+        return ar ? 'استخدم قائمة البراهين تحت تحقق من سجلات المصادر، وبعدين اسأل سؑال محدد إذا لزم.' : 'Use the evidence list below to check the source records, then ask a narrower follow-up if needed.';
       case AiCfoConversationIntent.businessHealth:
-        return 'Pick the weakest area next: cash flow, stock, profit, or customer collection.';
+        return ar ? 'اختر المجال الأضعف التالي: تدفق النقدية، المخزون، الربح، أو تحصيل العملاء.' : 'Pick the weakest area next: cash flow, stock, profit, or customer collection.';
       case AiCfoConversationIntent.createProposal:
       case AiCfoConversationIntent.approveProposal:
       case AiCfoConversationIntent.deferProposal:
       case AiCfoConversationIntent.executeProposal:
-        return 'Review the proposal details and approve only when the numbers match your records.';
+        return ar ? 'راجع تفاصيل المقترح وأوافق بس لما الأرقام تطابق سجلاتك.' : 'Review the proposal details and approve only when the numbers match your records.';
       case AiCfoConversationIntent.unsupported:
-        return 'Ask for one focused area, such as cash flow, inventory, profit, receivables, or evidence explanation.';
+        return ar ? 'اسأل عن مجال محدد، مثلاً: تدفق نقدي، مخزون، ربح، أرصدة، أو تفسير البراهين.' : 'Ask for one focused area, such as cash flow, inventory, profit, receivables, or evidence explanation.';
     }
   }
 
@@ -3166,11 +3222,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     return const _EmptyHint(
       icon: Icons.folder_open_outlined,
       title: 'No drafts yet',
-      body: 'Four ways to create drafts:\n'
-          '1. Chat — discuss invoices, cash, receivables, expenses, then tap "Organize".\n'
-          '2. Document — paste invoice/receipt/quotation text.\n'
-          '3. Transaction — record a quick sale, expense, or payment note.\n'
-          '4. Receivable / Payable — log customer or supplier follow-ups.\n\n'
+      body: 'Create your first draft using any of these 4 intake modules:\n\n'
+          '📄 Document — Paste invoice / receipt / quotation text\n'
+          '⚡ Transaction — Record a quick sale, expense, or payment\n'
+          '👤 Receivable — Log customer follow-ups or expected payments\n'
+          '💳 Payable/Exp — Log supplier payables or expense notes\n\n'
           'Nothing is posted to accounting records until you explicitly approve it.',
     );
   }
@@ -3821,29 +3877,32 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Widget _buildIntakePanel() {
     final buttons = [
-      (Icons.paste_outlined, 'Document', _showDocumentIntakeSheet),
-      (Icons.receipt_outlined, 'Transaction', _showQuickTransactionSheet),
-      (Icons.people_alt_outlined, 'Receivable', _showReceivablesSheet),
-      (Icons.payment_outlined, 'Payable/Exp', _showPayablesSheet),
+      (Icons.paste_outlined, 'Document', 'Paste invoice / receipt / quotation text', _showDocumentIntakeSheet),
+      (Icons.receipt_outlined, 'Transaction', 'Quick sale / expense / payment note', _showQuickTransactionSheet),
+      (Icons.people_alt_outlined, 'Receivable', 'Customer follow-ups & payments', _showReceivablesSheet),
+      (Icons.payment_outlined, 'Payable/Exp', 'Supplier payables & expenses', _showPayablesSheet),
     ];
     return Wrap(
       spacing: 7,
       runSpacing: 7,
       children: buttons.map((btn) {
-        return GestureDetector(
-          onTap: btn.$3,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-            decoration: BoxDecoration(
-              color: darkBg.withValues(alpha: 0.38),
-              borderRadius: BorderRadius.circular(7),
-              border: Border.all(color: goldAccent.withValues(alpha: 0.28)),
+        return Tooltip(
+          message: btn.$3,
+          child: GestureDetector(
+            onTap: btn.$4,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+              decoration: BoxDecoration(
+                color: darkBg.withValues(alpha: 0.38),
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(color: goldAccent.withValues(alpha: 0.28)),
+              ),
+              child: Row(mainAxisSize: MainAxisSize.min, children: [
+                Icon(btn.$1, color: goldAccent, size: 13),
+                const SizedBox(width: 5),
+                Text(btn.$2, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
+              ]),
             ),
-            child: Row(mainAxisSize: MainAxisSize.min, children: [
-              Icon(btn.$1, color: goldAccent, size: 13),
-              const SizedBox(width: 5),
-              Text(btn.$2, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w800)),
-            ]),
           ),
         );
       }).toList(),
@@ -7083,17 +7142,29 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   List<String> _proposalSuggestedReplies(AiProposalModel proposal) {
     if (proposal.actionType == 'pricing_simulation') {
-      return const [
-        'Explain this pricing',
-        'Convert to quote',
-        'Compare margins',
-      ];
+      return _lastInputWasArabic
+          ? const [
+              'اشرح التسعير',
+              'حول لعرض سعر',
+              'قارن الهوامش',
+            ]
+          : const [
+              'Explain this pricing',
+              'Convert to quote',
+              'Compare margins',
+            ];
     }
-    return const [
-      'Approve',
-      'Explain accounting impact',
-      'Change details',
-    ];
+    return _lastInputWasArabic
+        ? const [
+            'وافق',
+            'اشرح الأثر المحاسبي',
+            'غير التفاصيل',
+          ]
+        : const [
+            'Approve',
+            'Explain accounting impact',
+            'Change details',
+          ];
   }
 
   bool _containsAny(String value, List<String> needles) {
@@ -8181,6 +8252,7 @@ class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
   void _analyze() {
     final pasted = _textCtrl.text.trim();
     if (pasted.isEmpty) return;
+    final isArabic = _containsArabicText(pasted);
     final title = _titleCtrl.text.trim().isEmpty ? '$_selectedType Draft' : _titleCtrl.text.trim();
     final amount = _extractAmount(pasted);
     final currency = _extractCurrency(pasted);
@@ -8191,12 +8263,12 @@ class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
     final hasVat = _containsAny(pasted, ['vat', 'tax', '15%', 'ضريبة']);
     final hasPaid = _containsAny(pasted, ['paid', 'مدفوع']);
     final missing = <String>[
-      if (customer == null) 'Customer / Supplier',
-      if (amount == null) 'Amount',
-      if (currency == null) 'Currency',
-      if (date == null) 'Date / Due Date',
-      if (!hasVat) 'VAT / Tax status',
-      if (!hasPaid) 'Payment status',
+      if (customer == null) (isArabic ? 'العميل / المورد' : 'Customer / Supplier'),
+      if (amount == null) (isArabic ? 'المبلغ' : 'Amount'),
+      if (currency == null) (isArabic ? 'العملة' : 'Currency'),
+      if (date == null) (isArabic ? 'التاريخ / تاريخ الاستحقاق' : 'Date / Due Date'),
+      if (!hasVat) (isArabic ? 'حالة الضريبة' : 'VAT / Tax status'),
+      if (!hasPaid) (isArabic ? 'حالة الدفع' : 'Payment status'),
     ];
     final draftType = switch (_selectedType) {
       'Invoice' || 'Receipt' || 'Quotation' || 'Payment Note' || 'Receivable Note' => _DraftType.invoice,
@@ -8211,29 +8283,32 @@ class _DocumentIntakeSheetState extends State<_DocumentIntakeSheet> {
       type: draftType,
       source: _DraftSource.documentIntake,
       title: title,
-      summary: 'Document intake: $_selectedType. ${customer != null ? 'From/To: $customer. ' : ''}${amount != null ? 'Amount: ${amount.toStringAsFixed(2)} ${currency ?? ''}. ' : ''}${ref != null ? 'Ref: $ref.' : ''}',
+      summary: isArabic
+          ? 'ملاحظة $_selectedType. ${customer != null ? 'العميل/المورد: $customer. ' : ''}${amount != null ? 'المبلغ: ${amount.toStringAsFixed(2)} ${currency ?? ''}. ' : ''}${ref != null ? 'المرجع: $ref. ' : ''}'
+          : 'Document intake: $_selectedType. ${customer != null ? 'From/To: $customer. ' : ''}${amount != null ? 'Amount: ${amount.toStringAsFixed(2)} ${currency ?? ''}. ' : ''}${ref != null ? 'Ref: $ref.' : ''}',
       details: pasted,
       status: status,
       confidence: confidence,
-      sourceSummary: 'Document Intake — pasted text',
+      sourceSummary: isArabic ? 'إدخال مستند — نص ملصق' : 'Document Intake — pasted text',
       amount: amount,
       currency: currency,
       customerOrSupplier: customer,
       dateOrDueDate: date,
       missingInfo: missing,
-      recommendedNextAction: 'Complete missing fields in the draft detail view, then mark Ready for the final report.',
+      recommendedNextAction: isArabic
+          ? 'أكمل البيانات الناقصة في صفحة التفاصيل، ثم علّم المسودة "جاهز" للتقرير النهائي.'
+          : 'Complete missing fields in the draft detail view, then mark Ready for the final report.',
     );
 
     final foundMsg = <String>[
-      if (amount != null) 'amount ${amount.toStringAsFixed(2)} ${currency ?? ''}',
-      if (customer != null) 'party "$customer"',
-      if (date != null) 'date $date',
-      if (ref != null) 'reference $ref',
+      if (amount != null) (isArabic ? 'المبلغ ${amount.toStringAsFixed(2)} ${currency ?? ''}' : 'amount ${amount.toStringAsFixed(2)} ${currency ?? ''}'),
+      if (customer != null) (isArabic ? 'العميل "$customer"' : 'party "$customer"'),
+      if (date != null) (isArabic ? 'التاريخ $date' : 'date $date'),
+      if (ref != null) (isArabic ? 'المرجع $ref' : 'reference $ref'),
     ];
-    final chatMsg = 'I organized this $_selectedType note into a review draft. '
-        '${foundMsg.isEmpty ? 'I could not extract specific fields automatically.' : 'I found: ${foundMsg.join(', ')}.'}'
-        '${missing.isEmpty ? '' : ' Missing: ${missing.take(3).join(', ')}.'} '
-        'Review the draft, complete missing fields, and mark it Ready.';
+    final chatMsg = isArabic
+        ? 'فهمت. نظمت ملاحظة $_selectedType في مسودة للمراجعة. ${foundMsg.isEmpty ? 'البيانات مبدئية، ومحتاج أكتر لأعطيك حكمة مالية موثوقة.' : 'استخرجت: ${foundMsg.join('، ')}.'}${missing.isEmpty ? '' : ' الناقص: ${missing.take(3).join('، ')}.'} أكّد المسودة وأكمل البيانات الناقصة قبل ما تعلّمه جاهز.'
+        : 'I organized this $_selectedType note into a review draft. ${foundMsg.isEmpty ? 'I could not extract specific fields automatically.' : 'I found: ${foundMsg.join(', ')}.'}${missing.isEmpty ? '' : ' Missing: ${missing.take(3).join(', ')}.'} Review the draft, complete missing fields, and mark it Ready.';
 
     widget.onDraftCreated(draft, chatMsg);
   }
@@ -8373,6 +8448,7 @@ class _QuickTransactionSheetState extends State<_QuickTransactionSheet> {
     final date = _dateCtrl.text.trim();
     final note = _noteCtrl.text.trim();
     final currency = _currencyCtrl.text.trim().isEmpty ? 'SAR' : _currencyCtrl.text.trim();
+    final isArabic = _containsArabicText('$party$note');
 
     final draftType = switch (_txType) {
       'Sale' || 'Payment Received' => _DraftType.invoice,
@@ -8381,9 +8457,9 @@ class _QuickTransactionSheetState extends State<_QuickTransactionSheet> {
       _ => _DraftType.note,
     };
     final missing = <String>[
-      if (amt == null) 'Amount',
-      if (party.isEmpty) 'Customer / Supplier / Account',
-      if (date.isEmpty) 'Date',
+      if (amt == null) (isArabic ? 'المبلغ' : 'Amount'),
+      if (party.isEmpty) (isArabic ? 'العميل / المورد / الحساب' : 'Customer / Supplier / Account'),
+      if (date.isEmpty) (isArabic ? 'التاريخ' : 'Date'),
     ];
     final confidence = (amt != null && party.isNotEmpty) ? _DraftConfidence.medium : _DraftConfidence.low;
 
@@ -8402,15 +8478,23 @@ class _QuickTransactionSheetState extends State<_QuickTransactionSheet> {
       customerOrSupplier: party.isEmpty ? null : party,
       dateOrDueDate: date.isEmpty ? null : date,
       missingInfo: missing,
-      recommendedNextAction: _txType == 'Sale'
-          ? 'Confirm account/category and payment status. This is not a posted sale — review before any official recording.'
-          : 'Confirm classification, account, and payment status. Not posted to ledger.',
+      recommendedNextAction: isArabic
+          ? (_txType == 'Sale' ? 'أكّد الحساب والفئة والحالة. هذا ليس بيعًا مسجلاً — راجع قبل أي تسجيل رسمي.' : 'أكّد التصنيف والحساب والحالة. لم يُرفع للقيد بعد.')
+          : (_txType == 'Sale' ? 'Confirm account/category and payment status. This is not a posted sale — review before any official recording.' : 'Confirm classification, account, and payment status. Not posted to ledger.'),
     );
 
-    final chatMsg = 'I created a $_txType draft. '
-        '${amt != null ? 'Amount: ${amt.toStringAsFixed(2)} $currency. ' : ''}'
-        '${party.isNotEmpty ? 'Party: $party. ' : ''}'
-        'This is not posted to ledger. Confirm the account/category and payment status before any official recording.';
+    final txTypeArabic = switch (_txType) {
+      'Sale' => 'بيع',
+      'Expense' => 'مصروف',
+      'Payment Received' => 'دفعة مستلمة',
+      'Payment Made' => 'دفعة مدفوعة',
+      'Transfer' => 'تحويل',
+      'Adjustment' => 'تعديل',
+      _ => 'عام',
+    };
+    final chatMsg = isArabic
+        ? 'سجلت مسودة $_txType${party.isNotEmpty ? ' لـ $party' : ''}. ${amt != null ? 'المبلغ: ${amt.toStringAsFixed(2)} $currency. ' : ''}هذا لم يُرفع للقيد بعد. أكّد التصنيف والحساب والحالة قبل أي تسجيل رسمي.'
+        : 'I created a $_txType draft. ${amt != null ? 'Amount: ${amt.toStringAsFixed(2)} $currency. ' : ''}${party.isNotEmpty ? 'Party: $party. ' : ''}This is not posted to ledger. Confirm the account/category and payment status before any official recording.';
 
     widget.onDraftCreated(draft, chatMsg);
   }
@@ -8576,15 +8660,16 @@ class _ReceivablesSheetState extends State<_ReceivablesSheet> {
     final overdue = _overdueDaysCtrl.text.trim();
     final ref = _refCtrl.text.trim();
     final note = _noteCtrl.text.trim();
+    final isArabic = _containsArabicText('$customer$note');
 
     final missing = <String>[
-      if (customer.isEmpty) 'Customer name',
-      if (amt == null) 'Amount',
-      if (dueDate.isEmpty) 'Due date',
-      if (ref.isEmpty) 'Invoice / Reference number',
+      if (customer.isEmpty) (isArabic ? 'اسم العميل' : 'Customer name'),
+      if (amt == null) (isArabic ? 'المبلغ' : 'Amount'),
+      if (dueDate.isEmpty) (isArabic ? 'تاريخ الاستحقاق' : 'Due date'),
+      if (ref.isEmpty) (isArabic ? 'رقم الفاتورة / المرجع' : 'Invoice / Reference number'),
     ];
 
-    final urgency = overdue.isNotEmpty ? (int.tryParse(overdue) ?? 0) > 30 ? 'High urgency' : 'Medium urgency' : 'Check overdue status';
+    final urgency = overdue.isNotEmpty ? (int.tryParse(overdue) ?? 0) > 30 ? (isArabic ? 'عاجل جدًا' : 'High urgency') : (isArabic ? 'أولوية متوسطة' : 'Medium urgency') : (isArabic ? 'تحقق من حالة التأخير' : 'Check overdue status');
 
     final draft = _AccountingDraft(
       id: 'rec_${DateTime.now().millisecondsSinceEpoch}',
@@ -8603,14 +8688,13 @@ class _ReceivablesSheetState extends State<_ReceivablesSheet> {
       category: 'Receivables',
       missingInfo: missing,
       recommendedNextAction: ref.isNotEmpty
-          ? 'Confirm invoice $ref is correct. Contact $customer and set a follow-up date.'
-          : 'Confirm invoice reference and contact $customer. Mark Ready after confirming amount and due date.',
+          ? (isArabic ? 'أكّد الفاتورة $ref واتّصل بـ $customer وحدد تاريخ متابعة.' : 'Confirm invoice $ref is correct. Contact $customer and set a follow-up date.')
+          : (isArabic ? 'أكّد مرجع الفاتورة واتّصل بـ $customer. علّم جاهزًا بعد تأكيد المبلغ وتاريخ الاستحقاق.' : 'Confirm invoice reference and contact $customer. Mark Ready after confirming amount and due date.'),
     );
 
-    final chatMsg = 'I created a receivables follow-up task${customer.isNotEmpty ? ' for $customer' : ''}. '
-        '${amt != null ? 'Amount: ${amt.toStringAsFixed(2)} $currency. ' : ''}'
-        '${overdue.isNotEmpty ? '$overdue days overdue. ' : ''}'
-        'Confirm the invoice reference and due date, then mark it Ready for your session report.';
+    final chatMsg = isArabic
+        ? 'أنشأت مسودة متابعة ذمم مدين${customer.isNotEmpty ? ' للعميل "$customer"' : ''}. ${amt != null ? 'المبلغ: ${amt.toStringAsFixed(2)} $currency. ' : ''}${overdue.isNotEmpty ? '$overdue أيام متأخرة. ' : ''}أكّد رقم الفاتورة وتاريخ الاستحقاق، ثم علّم المسودة جاهز للتقرير.'
+        : 'I created a receivables follow-up task${customer.isNotEmpty ? ' for $customer' : ''}. ${amt != null ? 'Amount: ${amt.toStringAsFixed(2)} $currency. ' : ''}${overdue.isNotEmpty ? '$overdue days overdue. ' : ''}Confirm the invoice reference and due date, then mark it Ready for your session report.';
 
     widget.onDraftCreated(draft, chatMsg);
   }
@@ -8746,6 +8830,7 @@ class _PayablesSheetState extends State<_PayablesSheet> {
     final category = _selectedCategory ?? _categoryCtrl.text.trim();
     final ref = _refCtrl.text.trim();
     final note = _noteCtrl.text.trim();
+    final isArabic = _containsArabicText('$supplier$category$note');
 
     final missing = <String>[
       if (supplier.isEmpty) 'Supplier / Payee',
@@ -8770,13 +8855,14 @@ class _PayablesSheetState extends State<_PayablesSheet> {
       dateOrDueDate: dueDate.isEmpty ? null : dueDate,
       category: category.isEmpty ? null : category,
       missingInfo: missing,
-      recommendedNextAction: 'Confirm supplier, category, and payment status. Not posted to ledger — review before any official accounting entry.',
+      recommendedNextAction: isArabic
+          ? 'أكّد المورد والفئة والحالة. لم يُرفع للقيد بعد — راجع قبل أي تسجيل محاسبي.'
+          : 'Confirm supplier, category, and payment status. Not posted to ledger — review before any official accounting entry.',
     );
 
-    final chatMsg = 'I created a payable/expense draft${supplier.isNotEmpty ? ' for $supplier' : ''}. '
-        '${amt != null ? 'Amount: ${amt.toStringAsFixed(2)} $currency. ' : ''}'
-        '${category.isNotEmpty ? 'Category: $category. ' : ''}'
-        'Confirm supplier, category, and payment status. This is not posted to the ledger.';
+    final chatMsg = isArabic
+        ? 'أنشأت مسودة ${category.isNotEmpty ? "مصروف/$category" : "دفعة مستحقة"}${supplier.isNotEmpty ? ' للمورد "$supplier"' : ''}. ${amt != null ? 'المبلغ: ${amt.toStringAsFixed(2)} $currency. ' : ''}أكّد المورد والفئة والحالة، وهذا لم يُرفع للقيد بعد.'
+        : 'I created a payable/expense draft${supplier.isNotEmpty ? ' for $supplier' : ''}. ${amt != null ? 'Amount: ${amt.toStringAsFixed(2)} $currency. ' : ''}${category.isNotEmpty ? 'Category: $category. ' : ''}Confirm supplier, category, and payment status. This is not posted to the ledger.';
 
     widget.onDraftCreated(draft, chatMsg);
   }

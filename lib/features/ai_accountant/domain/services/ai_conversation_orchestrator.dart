@@ -207,7 +207,6 @@ class AiConversationOrchestrator {
   AiConversationOrchestrator({FinancialTools? financialTools})
       : _toolExecutor = AiToolExecutor(tools: financialTools),
         _toolPlanner = AiToolPlanner(),
-        _reasoningEngine = FinancialReasoningEngine(),
         _insightGenerator = AiInsightGenerator(),
         _riskDetector = AiRiskDetector(),
         _workflowManager = AiWorkflowManager(),
@@ -218,7 +217,6 @@ class AiConversationOrchestrator {
 
   final AiToolExecutor _toolExecutor;
   final AiToolPlanner _toolPlanner;
-  final FinancialReasoningEngine _reasoningEngine;
   final AiInsightGenerator _insightGenerator;
   final AiRiskDetector _riskDetector;
   final AiWorkflowManager _workflowManager;
@@ -233,6 +231,9 @@ class AiConversationOrchestrator {
   AiBusinessMemory get businessMemory => _businessMemoryManager.memory;
   List<AiConversationTurn> get history => List.unmodifiable(_history);
   AiWorkflowSession? get activeWorkflow => _workflowManager.activeSession;
+
+  bool get _isArabic => _lastInputWasArabic;
+  bool _lastInputWasArabic = false;
 
   void clearBusinessMemory() {
     _businessMemoryManager.clear();
@@ -255,6 +256,7 @@ class AiConversationOrchestrator {
       customer: _memory.latestCustomer,
     );
 
+    _lastInputWasArabic = _containsArabic(userText);
     final normalized = _normalized(userText);
     final decisionResponse = await _tryHandleFinancialDecision(userText);
     if (decisionResponse != null) {
@@ -677,11 +679,13 @@ class AiConversationOrchestrator {
     AiToolPlan plan,
     AiEvidenceBundle evidence,
   ) {
-    if (_containsAny(normalized, ['hello', 'hi', 'hey', 'مرحبا', 'اهلا'])) {
+    if (_containsAny(normalized, ['hello', 'hi', 'hey', 'مرحبا', 'اهلا', 'اهلاً'])) {
+      final isArabic = _isArabic;
       return AiAdvisorResponse(
         mode: AiAdvisorMode.chat,
-        text:
-            'Welcome. I can help you price shipments, test export decisions, review profitability, think through inventory and customer balances, or prepare accounting operations for review. Tell me what decision is in front of you.',
+        text: isArabic
+            ? 'مرحبًا. أقدر أساعدك في تسعير الشحنات، اختبار قرارات التصدير، مراجعة الربحية، أو تحضير عمليات محاسبة للمراجعة. قولي أي قرار عايز تناقشه؟'
+            : 'Welcome. I can help you price shipments, test export decisions, review profitability, think through inventory and customer balances, or prepare accounting operations for review. Tell me what decision is in front of you.',
         suggestedReplies: const [
           'Price a shipment',
           'Review profitability',
@@ -690,11 +694,12 @@ class AiConversationOrchestrator {
         memory: _memory,
       );
     }
-    if (_containsAny(normalized, ['how can you help', 'what can you do'])) {
+    if (_containsAny(normalized, ['how can you help', 'what can you do', 'كيف تقدر تساعدني', 'ماذا تفعل'])) {
       return AiAdvisorResponse(
         mode: AiAdvisorMode.advice,
-        text:
-            'I can work with you in a practical flow: first we clarify the business decision, then collect the numbers that matter, compare trade-offs, and only then prepare a reviewable purchase, sale, or pricing proposal if you want one. Nothing is posted to the books from discussion alone.',
+        text: _isArabic
+            ? 'أقدر أشتغل معاك بطريقة عملية: أولاً نضبط القرار المالي، بعدين نجمع البيانات اللي محتاجها، نقارن البدائل، وبعدين نجهّز مقترح شراء أو فاتورة أو تسعير للمراجعة لو اشتريت. ما في أي حفظ أو تسجيل حتى توافق على المقترح.'
+            : 'I can work with you in a practical flow: first we clarify the business decision, then collect the numbers that matter, compare trade-offs, and only then prepare a reviewable purchase, sale, or pricing proposal if you want one. Nothing is posted to the books from discussion alone.',
         suggestedReplies: const [
           'Price a shipment',
           'Compare three scenarios',
@@ -703,16 +708,18 @@ class AiConversationOrchestrator {
         memory: _memory,
       );
     }
-    if (_containsAny(normalized, ['scenario', 'compare', 'balanced'])) {
+    if (_containsAny(normalized, ['scenario', 'compare', 'balanced', 'سيناريو', 'قارن'])) {
       return _scenarioResponse();
     }
-    if (_containsAny(normalized, ['export', 'saudi', 'shipping', 'customs'])) {
-      final product = _memory.currentProduct ?? 'the product';
-      final destination = _memory.currentDestination ?? 'the destination';
+    if (_containsAny(normalized, ['export', 'saudi', 'shipping', 'customs', 'تصدير', 'شحنة', 'سعودي'])) {
+      final isArabic = _isArabic;
+      final product = _memory.currentProduct ?? (isArabic ? 'المنتج' : 'the product');
+      final destination = _memory.currentDestination ?? (isArabic ? 'الوجهة' : 'the destination');
       return AiAdvisorResponse(
         mode: AiAdvisorMode.export,
-        text:
-            'Good. For exporting $product to $destination, I would build the decision around four numbers: carton cost, shipping allocation, customs/import fees, and the target selling price. Carton cost tells us the floor, shipping and customs reveal the real landed cost, and your market goal tells us whether to enter carefully or protect margin.',
+        text: isArabic
+            ? 'طيب. لتصدير $product لـ $destination، رح أبني القرار حول أربع أرقام: تكلفة الكرتون، تكلفة الشحن، الجمارك، وسعر البيع المستهدف. تكلفة الكرتون هي الحد الأدنى، والشحن والجمارك يوضحان التكلفة الحقيقية، والهدف التسويقي يحدد إذا ندخل بحذر أو نحمي الهامش.'
+            : 'Good. For exporting $product to $destination, I would build the decision around four numbers: carton cost, shipping allocation, customs/import fees, and the target selling price. Carton cost tells us the floor, shipping and customs reveal the real landed cost, and your market goal tells us whether to enter carefully or protect margin.',
         suggestedReplies: const [
           'Carton cost is 45 dollars',
           'Compare three scenarios',
@@ -723,11 +730,12 @@ class AiConversationOrchestrator {
         ),
       );
     }
-    if (_containsAny(normalized, ['margin', '25%', 'percent'])) {
+    if (_containsAny(normalized, ['margin', '25%', 'percent', 'هامش', 'نسبة'])) {
       return AiAdvisorResponse(
         mode: AiAdvisorMode.pricing,
-        text:
-            '25% can be suitable, but it depends on demand stability, competitor pricing, and how much uncertainty sits in shipping, customs, returns, and payment timing. For a new market I would not treat 25% as automatically right; I would compare conservative, balanced, and aggressive paths first.',
+        text: _isArabic
+            ? '25% ممكن يكون ملائم، لكن القرار يعتمد على استقرار الطلب، أسعار المنافسين، ومدى عدم اليقين في الشحن، الجمارك، المرتجعات، وتوقيت الدفع. لسوق جديد ما بفضل 25% كقيمة ثابتة؛ الأفضل مقارنة الخيارات الكونسرفاتيف، الBalanced، والAggressive.'
+            : '25% can be suitable, but it depends on demand stability, competitor pricing, and how much uncertainty sits in shipping, customs, returns, and payment timing. For a new market I would not treat 25% as automatically right; I would compare conservative, balanced, and aggressive paths first.',
         decisionOptions: _scenarioOptions(),
         suggestedReplies: const [
           'Use balanced scenario',
@@ -742,8 +750,9 @@ class AiConversationOrchestrator {
       _memory = _memory.copyWith(currentCost: amount);
       return AiAdvisorResponse(
         mode: AiAdvisorMode.pricing,
-        text:
-            'Got it. I will treat ${amount.toStringAsFixed(2)} as the current cost for ${_memory.currentProduct}. To turn that into useful pricing advice, I still need shipping, customs or import fees, currency, and whether you want faster entry or stronger margin.',
+        text: _isArabic
+            ? 'فهمت. هأعامل ${amount.toStringAsFixed(2)} كتكلفة حالية للمنتج ${_memory.currentProduct}. عشان أحوله لنصيحة تسعير مفيدة، لازم أعرف تكلفة الشحن، الجمارك، العملة، وإذا كنت تفضل دخول السوق بسرعة ولا تحافظ على هامش.'
+            : 'Got it. I will treat ${amount.toStringAsFixed(2)} as the current cost for ${_memory.currentProduct}. To turn that into useful pricing advice, I still need shipping, customs or import fees, currency, and whether you want faster entry or stronger margin.',
         suggestedReplies: const [
           'Shipping is 1200 dollars',
           'Customs are 300 dollars',
@@ -754,10 +763,10 @@ class AiConversationOrchestrator {
         ),
       );
     }
-    if (plan.requiresTools) {
+if (plan.requiresTools) {
       return AiAdvisorResponse(
         mode: AiAdvisorMode.analysis,
-        text: _reasoningEngine.buildGroundedResponse(
+        text: FinancialReasoningEngine().buildGroundedResponse(
           plan: plan,
           evidence: evidence,
         ),
@@ -773,7 +782,7 @@ class AiConversationOrchestrator {
         plan.intent == AiAccountantIntent.salePreparation) {
       return AiAdvisorResponse(
         mode: AiAdvisorMode.proposalReview,
-        text: _reasoningEngine.buildGroundedResponse(
+        text: FinancialReasoningEngine().buildGroundedResponse(
           plan: plan,
           evidence: evidence,
         ),
@@ -797,7 +806,47 @@ class AiConversationOrchestrator {
         mode: plan.intent == AiAccountantIntent.exportDecision
             ? AiAdvisorMode.export
             : AiAdvisorMode.pricing,
-        text: _reasoningEngine.buildGroundedResponse(
+        text: FinancialReasoningEngine().buildGroundedResponse(
+          plan: plan,
+          evidence: evidence,
+        ),
+        suggestedReplies: const [
+          'Explain the risk',
+          'Compare options',
+          'Prepare a proposal',
+        ],
+        memory: _memory,
+      );
+    }
+    if (plan.intent == AiAccountantIntent.purchasePreparation ||
+        plan.intent == AiAccountantIntent.salePreparation) {
+      return AiAdvisorResponse(
+        mode: AiAdvisorMode.proposalReview,
+        text: FinancialReasoningEngine().buildGroundedResponse(
+          plan: plan,
+          evidence: evidence,
+        ),
+        suggestedReplies: plan.intent == AiAccountantIntent.purchasePreparation
+            ? const [
+                'Product and quantity',
+                'Add unit cost',
+                'Explain purchase impact',
+              ]
+            : const [
+                'Product and quantity',
+                'Add selling price',
+                'Explain sale impact',
+              ],
+        memory: _memory.copyWith(missingData: plan.missingInputs),
+      );
+    }
+    if (plan.intent == AiAccountantIntent.pricingDecision ||
+        plan.intent == AiAccountantIntent.exportDecision) {
+      return AiAdvisorResponse(
+        mode: plan.intent == AiAccountantIntent.exportDecision
+            ? AiAdvisorMode.export
+            : AiAdvisorMode.pricing,
+        text: FinancialReasoningEngine().buildGroundedResponse(
           plan: plan,
           evidence: evidence,
         ),
@@ -814,8 +863,7 @@ class AiConversationOrchestrator {
     }
     return AiAdvisorResponse(
       mode: AiAdvisorMode.advice,
-      text:
-          'I can help, but I need to know the business area first: pricing, export, profitability, inventory, customer balances, cash flow, or preparing a purchase or sale for review. Pick one and I will guide the next step.',
+      text: _profitabilityFallback(normalized),
       suggestedReplies: const [
         'Price a shipment',
         'Review profitability',
@@ -825,11 +873,23 @@ class AiConversationOrchestrator {
     );
   }
 
+  String _profitabilityFallback(String normalized) {
+    if (_containsAny(normalized, ['ربح', 'ربحي', 'ربحية', 'profit', 'profitability', 'today'])) {
+      return _isArabic
+          ? 'فهمت عليك. أقدر أساعدك في تقييم الربح، لكن حاليًا أحتاج بيانات بيع وتكلفة ومصروفات كافية حتى أعطيك رقمًا موثوقًا. أفضل خطوة الآن أن تسجل عملية بيع أو ترفع فاتورة/مصروف مرتبط بها، وبعدها أقدر أراجع الربحية بشكل أدق.'
+          : 'I understand you want to check profitability, but I do not have enough reliable sales, cost, and expense data yet to give you a trustworthy number. Best next step is to record a sale or add an invoice/expense tied to it, then I can review profit more precisely.';
+    }
+    return _isArabic
+        ? 'أقدر أساعدك، لكن أحتاج أولاً أعرف المجال المالي: تسعير، تصدير، ربحية، مخزون، أرصدة عملاء، تدفق نقدي، أو تحضير عملية شراء أو بيع للمراجعة. اختر واحد وأنا أقودك بالخطوة التالية.'
+        : 'I can help, but I need to know the business area first: pricing, export, profitability, inventory, customer balances, cash flow, or preparing a purchase or sale for review. Pick one and I will guide the next step.';
+  }
+
   AiAdvisorResponse _scenarioResponse() {
     return AiAdvisorResponse(
       mode: AiAdvisorMode.pricing,
-      text:
-          'Here are the three paths I would compare. The right choice depends on whether you need market entry, balanced repeat sales, or maximum margin.',
+      text: _isArabic
+          ? 'ها هي الخطوط الثلاث اللي رح أقارن بينها. الاختيار الصح الأنسب يعتمد على إذا كنت تحتاج دخول السوق، مبيعات مستمرة متوسطة، ولا هامش قصوى.'
+          : 'Here are the three paths I would compare. The right choice depends on whether you need market entry, balanced repeat sales, or maximum margin.',
       decisionOptions: _scenarioOptions(),
       suggestedReplies: const [
         'Use balanced scenario',
@@ -870,8 +930,9 @@ class AiConversationOrchestrator {
     if (activeProposal == null) {
       return AiAdvisorResponse(
         mode: AiAdvisorMode.executionGuard,
-        text:
-            'I need a clear proposal before execution. Do you want to prepare a purchase, sale, or pricing simulation?',
+        text: _isArabic
+            ? 'أنا هنا أساعدك تتخذ قرار مالي مدروس، مش أنفّذ عليك عمليات. استخدم أمر "تحضير" عشان أجهّز مقترح، و"وافق" لو أضفيت موافقتك على المقترح الجاهز.'
+            : 'I need a clear proposal before execution. Do you want to prepare a purchase, sale, or pricing simulation?',
         suggestedReplies: const [
           'Prepare a purchase',
           'Prepare a sale',
@@ -882,8 +943,9 @@ class AiConversationOrchestrator {
     }
     return AiAdvisorResponse(
       mode: AiAdvisorMode.proposalReview,
-      text:
-          'There is an active ${activeProposal.actionType} proposal. Review the card first; if it is correct, approve it through the existing confirmation flow.',
+      text: _isArabic
+          ? 'عندك مقترح ${activeProposal.actionType} فعال. راجع الكرت أولاً، وإذا كان صحيح، وافق عليه من خلال تدفق الموافقة الحالي.'
+          : 'There is an active ${activeProposal.actionType} proposal. Review the card first; if it is correct, approve it through the existing confirmation flow.',
       suggestedReplies: const ['Approve', 'Change details', 'Explain impact'],
       memory: _memory,
     );
@@ -1160,5 +1222,9 @@ Return only JSON matching the response contract.
     final match = RegExp(r'(\d+(?:[.,]\d+)?)').firstMatch(text);
     if (match == null) return null;
     return double.tryParse(match.group(1)!.replaceAll(',', '.'));
+  }
+
+  static bool _containsArabic(String text) {
+    return RegExp(r'[\u0600-\u06FF]').hasMatch(text);
   }
 }
