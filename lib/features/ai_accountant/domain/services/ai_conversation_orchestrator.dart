@@ -1321,6 +1321,93 @@ Return only JSON matching the response contract.
       if (expense.amount == null) expense.isArabic ? 'المبلغ' : 'amount',
       if (expense.category == null) expense.isArabic ? 'التصنيف' : 'category',
     ];
+    final text = _expenseCommandCardText(expense, missing);
+
+    return AiAdvisorResponse(
+      mode: AiAdvisorMode.advice,
+      text: text,
+      memory: _memory.copyWith(
+        latestTopic: 'local_expense_analysis',
+        missingData: missing,
+      ),
+      suggestedReplies: const [
+        'Prepare review draft',
+        'Add missing details',
+        'Analyze sale',
+      ],
+      metadata: AiResponseMetadata.low(missingEvidence: missing),
+    );
+  }
+
+  String _expenseCommandCardText(
+    _LocalExpenseAnalysis expense,
+    List<String> missing,
+  ) {
+    final categoryArabic = expense.category?.arabic;
+    final categoryEnglish = expense.category?.english;
+    if (expense.isArabic) {
+      return [
+        'تم تفسير الأمر كمصروف.',
+        '',
+        'ملخص المصروف:',
+        '',
+        if (categoryArabic != null) '* التصنيف: $categoryArabic',
+        if (expense.amount != null)
+          '* المبلغ: ${_formatNumber(expense.amount!)}',
+        if (missing.isNotEmpty) ...[
+          '',
+          'البيانات الناقصة:',
+          '',
+          if (categoryArabic == null) '* التصنيف',
+          if (expense.amount == null) '* المبلغ',
+        ],
+        '',
+        'الحالة:',
+        missing.isEmpty
+            ? 'مسودة بانتظار المراجعة.'
+            : 'تحتاج بيانات قبل تجهيز مسودة دقيقة للمراجعة.',
+        '',
+        'الخطوة التالية:',
+        missing.isEmpty
+            ? 'يمكن تجهيز مسودة مصروف، ولن يتم تسجيلها قبل الاعتماد.'
+            : 'أرسل البيانات الناقصة، ولن يتم تسجيل أي شيء قبل الاعتماد.',
+      ].join('\n');
+    }
+
+    return [
+      'Command interpreted as an expense.',
+      '',
+      'Expense summary:',
+      '',
+      if (categoryEnglish != null)
+        '* Category: ${_capitalize(categoryEnglish)}',
+      if (expense.amount != null) '* Amount: ${_formatNumber(expense.amount!)}',
+      if (missing.isNotEmpty) ...[
+        '',
+        'Missing data:',
+        '',
+        if (categoryEnglish == null) '* Category',
+        if (expense.amount == null) '* Amount',
+      ],
+      '',
+      'Status:',
+      missing.isEmpty
+          ? 'Reviewable draft.'
+          : 'Needs more data before a reliable review draft.',
+      '',
+      'Next action:',
+      missing.isEmpty
+          ? 'Prepare an expense draft. Nothing will be posted before approval.'
+          : 'Send the missing data. Nothing will be posted before approval.',
+    ].join('\n');
+  }
+
+  // ignore: unused_element
+  AiAdvisorResponse _localExpenseResponseLegacy(_LocalExpenseAnalysis expense) {
+    final missing = <String>[
+      if (expense.amount == null) expense.isArabic ? 'المبلغ' : 'amount',
+      if (expense.category == null) expense.isArabic ? 'التصنيف' : 'category',
+    ];
     final categoryArabic = expense.category?.arabic;
     final categoryEnglish = expense.category?.english;
     final text = expense.isArabic
@@ -1376,6 +1463,119 @@ Return only JSON matching the response contract.
     required double? profit,
     required double? margin,
   }) {
+    final missingQuantity = sale.quantity == null;
+    final missingPrice = sale.sellingPrice == null;
+    final missingCost = sale.unitCost == null;
+    return [
+      'تم تفسير الأمر كعملية بيع.',
+      '',
+      'ملخص العملية:',
+      '',
+      if (sale.quantity != null) '* الكمية: ${_formatNumber(sale.quantity!)}',
+      if (sale.sellingPrice != null)
+        '* سعر البيع للوحدة: ${_formatNumber(sale.sellingPrice!)}',
+      if (sale.unitCost != null)
+        '* تكلفة الوحدة: ${_formatNumber(sale.unitCost!)}',
+      if (revenue != null) ...[
+        '',
+        'النتيجة:',
+        '',
+        '* الإيراد: ${_formatNumber(revenue)}',
+        if (totalCost != null) '* التكلفة: ${_formatNumber(totalCost)}',
+        if (profit != null) '* الربح: ${_formatNumber(profit)}',
+        if (margin != null) '* هامش الربح: ${_formatPercent(margin)}',
+      ],
+      if (missingQuantity || missingPrice || missingCost) ...[
+        '',
+        'البيانات الناقصة:',
+        '',
+        if (missingQuantity) '* الكمية',
+        if (missingPrice) '* سعر البيع للوحدة',
+        if (missingCost) '* تكلفة الوحدة أو ربط العملية بمنتج موجود',
+      ],
+      '',
+      'الحالة:',
+      if (!missingQuantity && !missingPrice && !missingCost)
+        'جاهزة كمسودة للمراجعة.'
+      else if (missingCost && !missingQuantity && !missingPrice)
+        'تحتاج بيانات قبل حساب الربح بدقة.'
+      else
+        'تحتاج بيانات قبل تجهيز مسودة دقيقة للمراجعة.',
+      '',
+      'الخطوة التالية:',
+      if (!missingQuantity && !missingPrice && !missingCost)
+        'يمكن تجهيز مسودة بيع قبل أي تنفيذ.'
+      else if (missingCost && !missingQuantity && !missingPrice)
+        'أرسل تكلفة الوحدة أو اختر المنتج من المخزون.'
+      else
+        'أرسل البيانات الناقصة، ولن يتم تسجيل أي شيء قبل المراجعة والاعتماد.',
+    ].join('\n');
+  }
+
+  String _englishSaleText({
+    required _LocalSaleAnalysis sale,
+    required double? revenue,
+    required double? totalCost,
+    required double? profit,
+    required double? margin,
+  }) {
+    final missingQuantity = sale.quantity == null;
+    final missingPrice = sale.sellingPrice == null;
+    final missingCost = sale.unitCost == null;
+    return [
+      'Command interpreted as a sale.',
+      '',
+      'Operation summary:',
+      '',
+      if (sale.quantity != null) '* Quantity: ${_formatNumber(sale.quantity!)}',
+      if (sale.sellingPrice != null)
+        '* Unit selling price: ${_formatNumber(sale.sellingPrice!)}',
+      if (sale.unitCost != null)
+        '* Unit cost: ${_formatNumber(sale.unitCost!)}',
+      if (revenue != null) ...[
+        '',
+        'Result:',
+        '',
+        '* Revenue: ${_formatNumber(revenue)}',
+        if (totalCost != null) '* Cost: ${_formatNumber(totalCost)}',
+        if (profit != null) '* Profit: ${_formatNumber(profit)}',
+        if (margin != null) '* Profit margin: ${_formatPercent(margin)}',
+      ],
+      if (missingQuantity || missingPrice || missingCost) ...[
+        '',
+        'Missing data:',
+        '',
+        if (missingQuantity) '* Quantity',
+        if (missingPrice) '* Unit selling price',
+        if (missingCost) '* Unit cost or an existing linked product',
+      ],
+      '',
+      'Status:',
+      if (!missingQuantity && !missingPrice && !missingCost)
+        'Ready as a reviewable draft.'
+      else if (missingCost && !missingQuantity && !missingPrice)
+        'Needs data before profit can be calculated accurately.'
+      else
+        'Needs more data before a reliable review draft.',
+      '',
+      'Next action:',
+      if (!missingQuantity && !missingPrice && !missingCost)
+        'Prepare a sale draft before execution.'
+      else if (missingCost && !missingQuantity && !missingPrice)
+        'Send the unit cost or choose the product from inventory.'
+      else
+        'Send the missing data. Nothing will be posted before review and approval.',
+    ].join('\n');
+  }
+
+  // ignore: unused_element
+  String _arabicSaleTextLegacy({
+    required _LocalSaleAnalysis sale,
+    required double? revenue,
+    required double? totalCost,
+    required double? profit,
+    required double? margin,
+  }) {
     if (sale.quantity == null || sale.sellingPrice == null) {
       return [
         'فهمت أنها عملية بيع، لكن البيانات غير كاملة.',
@@ -1401,7 +1601,8 @@ Return only JSON matching the response contract.
     ].join('\n');
   }
 
-  String _englishSaleText({
+  // ignore: unused_element
+  String _englishSaleTextLegacy({
     required _LocalSaleAnalysis sale,
     required double? revenue,
     required double? totalCost,

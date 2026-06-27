@@ -59,43 +59,90 @@ void main() {
       expect(response.shouldPrepareProposal, isFalse);
     });
 
-    test('local sale message calculates revenue cost and margin', () async {
+    test('local English sale message returns command card', () async {
       final orchestrator = AiConversationOrchestrator();
 
       final response = await orchestrator.generateResponse(
         userText: 'sold 10 units at 25 cost 15',
       );
 
-      expect(response.text, contains('Sale analyzed:'));
-      expect(response.text, contains('Revenue: 250'));
-      expect(response.text, contains('Cost: 150'));
-      expect(response.text, contains('Profit: 100'));
-      expect(response.text, contains('Profit margin: 40%'));
+      expect(response.text, contains('Command interpreted as a sale'));
+      expect(response.text, contains('Operation summary'));
+      expect(response.text, contains('Revenue'));
+      expect(response.text, contains('Profit margin'));
+      expect(response.text, contains('Ready as a reviewable draft'));
       expect(response.shouldPrepareProposal, isFalse);
     });
 
-    test('local sale message asks for missing unit cost', () async {
+    test('local English sale message shows missing unit cost', () async {
       final orchestrator = AiConversationOrchestrator();
 
       final response = await orchestrator.generateResponse(
         userText: 'I sold 5 boxes for 40 each',
       );
 
-      expect(response.text, contains('total revenue 200'));
-      expect(response.text, contains('unit cost is missing'));
+      expect(response.text, contains('Operation summary'));
+      expect(response.text, contains('Revenue'));
+      expect(response.text, contains('Missing data'));
+      expect(response.text, contains('Unit cost'));
       expect(response.memory.missingData, contains('unit cost'));
       expect(response.shouldPrepareProposal, isFalse);
     });
 
-    test('local expense message prepares review-only response', () async {
+    test('local English expense message returns command card', () async {
       final orchestrator = AiConversationOrchestrator();
 
       final response = await orchestrator.generateResponse(
         userText: 'paid shipping expense 300',
       );
 
-      expect(response.text, contains('Shipping expense understood for 300'));
-      expect(response.text, contains('will not be posted before approval'));
+      expect(response.text, contains('Command interpreted as an expense'));
+      expect(response.text, contains('Expense summary'));
+      expect(response.text, contains('Category'));
+      expect(response.text, contains('Amount'));
+      expect(response.text, contains('Reviewable draft'));
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic sale message returns command card', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'بعت 10 قطع بسعر 25 وتكلفتها 15',
+      );
+
+      expect(response.text, contains('ملخص العملية'));
+      expect(response.text, contains('الإيراد'));
+      expect(response.text, contains('الربح'));
+      expect(response.text, contains('هامش الربح'));
+      expect(response.text, contains('جاهزة كمسودة'));
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic sale message shows missing unit cost', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'بعت 5 كراتين بسعر 40',
+      );
+
+      expect(response.text, contains('ملخص العملية'));
+      expect(response.text, contains('البيانات الناقصة'));
+      expect(response.text, contains('تكلفة الوحدة'));
+      expect(response.shouldPrepareProposal, isFalse);
+    });
+
+    test('local Arabic expense message returns command card', () async {
+      final orchestrator = AiConversationOrchestrator();
+
+      final response = await orchestrator.generateResponse(
+        userText: 'دفعت مصروف شحن 300',
+      );
+
+      expect(response.text, contains('ملخص المصروف'));
+      expect(response.text, contains('التصنيف'));
+      expect(response.text, contains('المبلغ'));
+      expect(response.text, contains('مسودة بانتظار المراجعة'));
       expect(response.shouldPrepareProposal, isFalse);
     });
   });
