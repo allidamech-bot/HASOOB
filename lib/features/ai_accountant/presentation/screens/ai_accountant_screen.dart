@@ -2481,6 +2481,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Widget _buildStarterPromptWrap({required bool compact}) {
     final prompts = [
+      ('جهز تقرير اليوم', Icons.summarize_outlined),
+      ('راجع مسودات اليوم', Icons.fact_check_outlined),
+      ('جهز إغلاق اليوم', Icons.event_available_outlined),
       ('What should I focus on today?', Icons.today_outlined),
       ('How is my business doing?', Icons.query_stats_outlined),
       ('What is the first risk I should check?', Icons.warning_amber_outlined),
@@ -3395,7 +3398,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ),
           ),
           const SizedBox(height: 10),
-          if (visibleDrafts.isEmpty)
+                _buildPendingDraftCategorySummary(_workspaceDrafts),
+                if (visibleDrafts.isEmpty)
             const Padding(
               padding: EdgeInsets.only(top: 4),
               child: Text(
@@ -3684,6 +3688,234 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     });
   }
 
+  String _dailyReportDraftDetails() {
+    final drafts = _reviewableSessionDraftsForDailySummary();
+    final lines = <String>[
+      'النطاق: اليوم',
+      'المصدر: مسودات الجلسة الحالية',
+      'عدد المسودات بانتظار المراجعة: ${drafts.length}',
+    ];
+    if (drafts.isEmpty) {
+      lines.add('لا توجد مسودات مراجعة حالية في الجلسة.');
+    } else {
+      lines.addAll([
+        _dailyDraftCategoryLine(
+          drafts,
+          label: 'مبيعات الجلسة',
+          matcher: _isSaleDraft,
+        ),
+        _dailyDraftCategoryLine(
+          drafts,
+          label: 'مصروفات الجلسة',
+          matcher: _isExpenseDraft,
+        ),
+        _dailyDraftCategoryLine(
+          drafts,
+          label: 'مشتريات الجلسة',
+          matcher: _isPurchaseDraft,
+        ),
+        _dailyDraftCategoryLine(
+          drafts,
+          label: 'إدخال المخزون',
+          matcher: _isInventoryDraft,
+        ),
+        _dailyDraftCategoryLine(
+          drafts,
+          label: 'الذمم المدينة',
+          matcher: _isReceivableDraft,
+        ),
+        _dailyDraftCategoryLine(
+          drafts,
+          label: 'القبض من العملاء',
+          matcher: _isCustomerReceiptDraft,
+        ),
+        _dailyDraftCategoryLine(
+          drafts,
+          label: 'الذمم الدائنة',
+          matcher: _isSupplierPayableDraft,
+        ),
+        _dailyDraftCategoryLine(
+          drafts,
+          label: 'الدفع للموردين',
+          matcher: _isSupplierPaymentDraft,
+        ),
+      ]);
+    }
+    lines.addAll([
+      'الحالة: بانتظار المراجعة',
+      'لن يتم تسجيل أو إغلاق أي عملية قبل الاعتماد',
+    ]);
+    return lines.join('\n');
+  }
+
+  String _dailyClosingDraftDetails() {
+    final drafts = _reviewableSessionDraftsForDailySummary();
+    final lines = <String>[
+      'النطاق: اليوم',
+      'المصدر: مسودات الجلسة الحالية',
+      'عدد المسودات المطلوب مراجعتها: ${drafts.length}',
+    ];
+    if (drafts.isEmpty) {
+      lines.add('لا توجد مسودات مراجعة حالية في الجلسة.');
+      lines.add('لا توجد مسودات حالية، لكن الإغلاق يبقى بحاجة مراجعة البيانات المسجلة.');
+    } else {
+      lines.add('ملخص المسودات حسب النوع');
+      lines.addAll(_dailyDraftCategorySummaryLines(drafts));
+      lines.add('يوجد ${drafts.length} مسودة تحتاج مراجعة قبل الإغلاق.');
+    }
+    lines.addAll(const [
+      'المطلوب: مراجعة المسودات والبيانات قبل الإغلاق',
+      'مراجعة كل مسودات البيع',
+      'مراجعة كل مسودات المصروف',
+      'مراجعة مسودات الشراء والمخزون',
+      'مراجعة الذمم المدينة والتحصيل',
+      'مراجعة الذمم الدائنة ومدفوعات الموردين',
+      'التأكد من عدم وجود بيانات ناقصة',
+      'الاعتماد النهائي قبل أي إغلاق',
+      'لن يتم إغلاق اليوم أو تسجيل قيود قبل الاعتماد',
+    ]);
+    return lines.join('\n');
+  }
+
+  List<_AccountingDraft> _reviewableSessionDraftsForDailySummary() {
+    return _workspaceDrafts
+        .where((draft) => draft.status == _DraftStatus.needsReview)
+        .where((draft) => !_isReportOrClosingDraft(draft))
+        .toList(growable: false);
+  }
+
+  List<String> _dailyDraftCategorySummaryLines(List<_AccountingDraft> drafts) {
+    final labels = <String, bool Function(_AccountingDraft)>{
+      'مبيعات': _isSaleDraft,
+      'مصروفات': _isExpenseDraft,
+      'مشتريات': _isPurchaseDraft,
+      'مخزون': _isInventoryDraft,
+      'ذمم مدينة': _isReceivableDraft,
+      'قبض': _isCustomerReceiptDraft,
+      'ذمم دائنة': _isSupplierPayableDraft,
+      'دفع موردين': _isSupplierPaymentDraft,
+      'تقارير / إغلاق': _isReportOrClosingDraft,
+    };
+    return labels.entries
+        .map((entry) => _dailyDraftCategoryLine(
+              drafts,
+              label: entry.key,
+              matcher: entry.value,
+            ))
+        .where((line) => !line.endsWith(': 0'))
+        .toList(growable: false);
+  }
+
+  String _dailyDraftCategoryLine(
+    List<_AccountingDraft> drafts, {
+    required String label,
+    required bool Function(_AccountingDraft draft) matcher,
+  }) {
+    final matching = drafts.where(matcher).toList(growable: false);
+    final total = matching.fold<double>(
+      0,
+      (sum, draft) => sum + (draft.amount ?? 0),
+    );
+    final totalText = total > 0 ? ' - الإجمالي: ${total.toStringAsFixed(2)}' : '';
+    return '$label: ${matching.length}$totalText';
+  }
+
+  bool _draftTextContains(_AccountingDraft draft, List<String> tokens) {
+    final text = [
+      draft.title,
+      draft.summary,
+      draft.category,
+      draft.sourceSummary,
+    ].whereType<String>().join(' ').toLowerCase();
+    return tokens.any((token) => text.contains(token.toLowerCase()));
+  }
+
+  bool _isSaleDraft(_AccountingDraft draft) =>
+      _draftTextContains(draft, ['بيع', 'مبيعات', 'sale']);
+
+  bool _isExpenseDraft(_AccountingDraft draft) =>
+      _draftTextContains(draft, ['مصروف', 'مصروفات', 'expense']);
+
+  bool _isPurchaseDraft(_AccountingDraft draft) =>
+      _draftTextContains(draft, ['شراء', 'مشتريات', 'purchase']);
+
+  bool _isInventoryDraft(_AccountingDraft draft) =>
+      _draftTextContains(draft, ['مخزون', 'إدخال', 'ادخال', 'inventory']);
+
+  bool _isReceivableDraft(_AccountingDraft draft) =>
+      _draftTextContains(draft, ['ذمم مدينة', 'عميل', 'receivable']);
+
+  bool _isCustomerReceiptDraft(_AccountingDraft draft) =>
+      _draftTextContains(draft, ['قبض', 'تحصيل', 'receipt']);
+
+  bool _isSupplierPayableDraft(_AccountingDraft draft) =>
+      _draftTextContains(draft, ['ذمم دائنة', 'رصيد المورد', 'payable']);
+
+  bool _isSupplierPaymentDraft(_AccountingDraft draft) =>
+      _draftTextContains(draft, ['دفع لمورد', 'دفع مورد', 'supplier payment']);
+
+  bool _isReportOrClosingDraft(_AccountingDraft draft) =>
+      _draftTextContains(draft, ['تقرير يومي', 'إغلاق يومي', 'اغلاق يومي']);
+
+  Widget _buildPendingDraftCategorySummary(List<_AccountingDraft> drafts) {
+    final pending =
+        drafts.where((draft) => draft.status == _DraftStatus.needsReview);
+    final lines = _dailyDraftCategorySummaryLines(
+      pending.toList(growable: false),
+    );
+    if (lines.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: premiumPanelSoft,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'ملخص المسودات',
+            style: TextStyle(
+              color: goldAccent,
+              fontWeight: FontWeight.w700,
+              fontSize: 13,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'عدد المسودات: ${pending.length}',
+            style: TextStyle(
+              color: textSecondary,
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Wrap(
+            spacing: 6,
+            runSpacing: 6,
+            children: lines
+                .map(
+                  (line) => Chip(
+                    label: Text(line),
+                    visualDensity: VisualDensity.compact,
+                    backgroundColor: darkBg,
+                    side: BorderSide(color: premiumStroke),
+                    labelStyle: TextStyle(
+                      color: tealSuccess,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                )
+                .toList(growable: false),
+          ),
+        ],
+      ),
+    );
+  }
+
   _AccountingDraft _draftFromLocalAccountingCommand(
     LocalAccountingCommandDraft command,
   ) {
@@ -3834,10 +4066,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           type: _DraftType.report,
           title: 'مسودة تقرير يومي',
           summary: 'تقرير يومي بانتظار المراجعة',
-          details: 'النطاق: اليوم\n'
-              'المصدر: الجلسة الحالية والمسودات\n'
-              'الحالة: بانتظار المراجعة\n'
-              'لن يتم تسجيل أو إغلاق أي عملية قبل الاعتماد',
+          details: _dailyReportDraftDetails(),
           status: _DraftStatus.needsReview,
           confidence: _DraftConfidence.medium,
           source: _DraftSource.chat,
@@ -3850,10 +4079,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           type: _DraftType.report,
           title: 'مسودة إغلاق يومي',
           summary: 'إغلاق يومي بانتظار المراجعة',
-          details: 'النطاق: اليوم\n'
-              'الحالة: بانتظار المراجعة\n'
-              'المطلوب: مراجعة المسودات والبيانات\n'
-              'لن يتم إغلاق اليوم أو تسجيل قيود قبل الاعتماد',
+          details: _dailyClosingDraftDetails(),
           status: _DraftStatus.needsReview,
           confidence: _DraftConfidence.medium,
           source: _DraftSource.chat,
