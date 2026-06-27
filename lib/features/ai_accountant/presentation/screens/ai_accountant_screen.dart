@@ -1473,27 +1473,27 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ),
             const SizedBox(height: 10),
             Command360ContextModule(
-              title: 'ملخص اليوم / Today Summary',
+              title: 'ملخص اليوم',
               icon: Icons.today_outlined,
               child: _buildTodaySummarySection(),
             ),
             Command360ContextModule(
-              title: 'المؤشرات / Signals',
+              title: 'المؤشرات',
               icon: Icons.signal_cellular_alt,
               child: _buildCommandSignalStrip(isDesktop: true),
             ),
             Command360ContextModule(
-              title: 'الحسابات / Accounts',
+              title: 'الحسابات',
               icon: Icons.account_balance_outlined,
               child: _buildAccountsMonitorSection(),
             ),
             Command360ContextModule(
-              title: 'المخاطر / Risks',
+              title: 'المخاطر',
               icon: Icons.warning_amber_rounded,
               child: _buildRiskMonitorSection(),
             ),
             Command360ContextModule(
-              title: 'البيانات الناقصة / Missing Data',
+              title: 'البيانات الناقصة',
               icon: Icons.rule_folder_outlined,
               child: _buildMissingDataSection(),
             ),
@@ -2030,9 +2030,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                       'Financial Command Center',
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: goldAccent,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
+                        color: textSecondary,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ],
@@ -2064,15 +2064,6 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               fontSize: 11.5,
               height: 1.35,
               fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 2),
-          const Text(
-            'Write what happened in your business, and HASOOB turns it into calculations, drafts, and reports.',
-            style: TextStyle(
-              color: textSecondary,
-              fontSize: 10.5,
-              height: 1.35,
             ),
           ),
         ],
@@ -3446,6 +3437,11 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   Widget _buildDraftCard(_AccountingDraft draft) {
+    final isLocalCommandDraft = _isLocalCommandDraft(draft);
+    final visibleSourceLabel =
+        isLocalCommandDraft ? 'من أمر محاسبي' : draft.sourceLabel;
+    final visibleStatusLabel =
+        isLocalCommandDraft ? 'بانتظار المراجعة' : draft.statusLabel;
     final statusColor = switch (draft.status) {
       _DraftStatus.ready => tealSuccess,
       _DraftStatus.needsReview => goldAccent,
@@ -3494,7 +3490,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                     borderRadius: BorderRadius.circular(4),
                   ),
                   child: Text(
-                    draft.sourceLabel,
+                  visibleSourceLabel,
                     style: const TextStyle(
                         color: textSecondary,
                         fontSize: 8,
@@ -3512,7 +3508,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                         Border.all(color: statusColor.withValues(alpha: 0.3)),
                   ),
                   child: Text(
-                    draft.statusLabel,
+                  visibleStatusLabel,
                     style: TextStyle(
                       color: statusColor,
                       fontSize: 9,
@@ -3595,7 +3591,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                             color: tealSuccess.withValues(alpha: 0.3)),
                       ),
                       child: const Text(
-                        'Mark Ready',
+                      'مراجعة',
                         style: TextStyle(
                           color: tealSuccess,
                           fontSize: 9,
@@ -3617,7 +3613,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                             color: goldAccent.withValues(alpha: 0.3)),
                       ),
                       child: const Text(
-                        'Needs Review',
+                      'بانتظار المراجعة',
                         style: TextStyle(
                           color: goldAccent,
                           fontSize: 9,
@@ -3673,6 +3669,10 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   // ── Intake Callback ───────────────────────────────────────────────────────
+
+  bool _isLocalCommandDraft(_AccountingDraft draft) {
+    return draft.sourceSummary?.startsWith('local accounting command') ?? false;
+  }
 
   void _addLocalCommandDraftIfAvailable(LocalAccountingCommandDraft? command) {
     if (command == null || !command.isReviewable) return;
@@ -4820,36 +4820,36 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             _buildRailHeader(
               icon: Icons.construction_outlined,
               arabicTitle: 'الأدوات والتنفيذ',
-              englishTitle: 'Tools & Execution',
+              englishTitle: 'Tools & execution',
             ),
             const SizedBox(height: 10),
             Command360ContextModule(
-              title: 'الإدخال السريع / Quick Entry',
-              icon: Icons.add_circle_outline,
-              child: _buildQuickEntrySection(),
-            ),
-            Command360ContextModule(
-              title: 'المستندات / Documents',
-              icon: Icons.description_outlined,
-              child: _buildDocumentsSection(),
-            ),
-            Command360ContextModule(
-              title: 'المسودات بانتظار المراجعة / Pending Drafts',
+              title: 'المسودات بانتظار المراجعة',
               icon: Icons.folder_special_outlined,
               child: _buildWorkspaceDraftsPanel(),
             ),
             Command360ContextModule(
-              title: 'التقارير / Reports',
+              title: 'الإدخال السريع',
+              icon: Icons.add_circle_outline,
+              child: _buildQuickEntrySection(),
+            ),
+            Command360ContextModule(
+              title: 'المستندات',
+              icon: Icons.description_outlined,
+              child: _buildDocumentsSection(),
+            ),
+            Command360ContextModule(
+              title: 'التقارير',
               icon: Icons.summarize_outlined,
               child: _buildReportsSection(),
             ),
             Command360ContextModule(
-              title: 'التسوية والمراجعة / Reconciliation & Review',
+              title: 'التسوية والمراجعة',
               icon: Icons.fact_check_outlined,
               child: _buildReconciliationSection(),
             ),
             Command360ContextModule(
-              title: 'المقترح النشط / Active Proposal',
+              title: 'المقترح النشط',
               icon: Icons.fact_check_outlined,
               child: _buildDecisionCockpit(
                 proposal: proposal,
@@ -4857,7 +4857,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ),
             ),
             Command360ContextModule(
-              title: 'تقرير الجلسة / Session Report',
+              title: 'تقرير الجلسة',
               icon: Icons.archive_outlined,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
