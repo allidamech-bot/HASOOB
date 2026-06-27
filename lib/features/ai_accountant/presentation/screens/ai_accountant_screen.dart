@@ -3767,6 +3767,87 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ? 'راجع المسودة قبل أي تنفيذ.'
               : 'Review before execution.',
         ),
+      LocalAccountingCommandDraftType.receivable => _AccountingDraft(
+          id: 'local-receivable-$now',
+          type: _DraftType.account,
+          source: _DraftSource.chat,
+          title: command.isArabic ? 'مسودة ذمم مدينة' : 'Receivable draft',
+          summary: command.isArabic
+              ? 'مسودة ذمم مدينة بانتظار المراجعة. لن يتم تعديل رصيد العميل قبل الاعتماد.'
+              : 'Receivable draft. Pending review. Customer balance will not be updated before approval.',
+          details: _localPartyDraftDetails(command),
+          status: _DraftStatus.needsReview,
+          confidence: _DraftConfidence.high,
+          sourceSummary: command.source,
+          amount: command.amount,
+          customerOrSupplier: command.partyName,
+          category: command.isArabic ? 'ذمم مدينة' : 'Receivable',
+          missingInfo: const [],
+          recommendedNextAction: command.isArabic
+              ? 'راجع المسودة قبل أي تنفيذ.'
+              : 'Review before execution.',
+        ),
+      LocalAccountingCommandDraftType.customerReceipt => _AccountingDraft(
+          id: 'local-customer-receipt-$now',
+          type: _DraftType.account,
+          source: _DraftSource.chat,
+          title:
+              command.isArabic ? 'مسودة قبض من عميل' : 'Customer receipt draft',
+          summary: command.isArabic
+              ? 'مسودة قبض من عميل بانتظار المراجعة. لن يتم تسجيل القبض قبل الاعتماد.'
+              : 'Customer receipt draft. Pending review. Receipt will not be posted before approval.',
+          details: _localPartyDraftDetails(command),
+          status: _DraftStatus.needsReview,
+          confidence: _DraftConfidence.high,
+          sourceSummary: command.source,
+          amount: command.amount,
+          customerOrSupplier: command.partyName,
+          category: command.isArabic ? 'قبض من عميل' : 'Customer receipt',
+          missingInfo: const [],
+          recommendedNextAction: command.isArabic
+              ? 'راجع المسودة قبل أي تنفيذ.'
+              : 'Review before execution.',
+        ),
+      LocalAccountingCommandDraftType.supplierPayable => _AccountingDraft(
+          id: 'local-supplier-payable-$now',
+          type: _DraftType.account,
+          source: _DraftSource.chat,
+          title: command.isArabic ? 'مسودة ذمم دائنة' : 'Supplier payable draft',
+          summary: command.isArabic
+              ? 'مسودة ذمم دائنة بانتظار المراجعة. لن يتم تعديل رصيد المورد قبل الاعتماد.'
+              : 'Supplier payable draft. Pending review. Supplier balance will not be updated before approval.',
+          details: _localPartyDraftDetails(command),
+          status: _DraftStatus.needsReview,
+          confidence: _DraftConfidence.high,
+          sourceSummary: command.source,
+          amount: command.amount,
+          customerOrSupplier: command.partyName,
+          category: command.isArabic ? 'ذمم دائنة' : 'Supplier payable',
+          missingInfo: const [],
+          recommendedNextAction: command.isArabic
+              ? 'راجع المسودة قبل أي تنفيذ.'
+              : 'Review before execution.',
+        ),
+      LocalAccountingCommandDraftType.supplierPayment => _AccountingDraft(
+          id: 'local-supplier-payment-$now',
+          type: _DraftType.account,
+          source: _DraftSource.chat,
+          title: command.isArabic ? 'مسودة دفع لمورد' : 'Supplier payment draft',
+          summary: command.isArabic
+              ? 'مسودة دفع لمورد بانتظار المراجعة. لن يتم تسجيل الدفع قبل الاعتماد.'
+              : 'Supplier payment draft. Pending review. Supplier payment will not be posted before approval.',
+          details: _localPartyDraftDetails(command),
+          status: _DraftStatus.needsReview,
+          confidence: _DraftConfidence.high,
+          sourceSummary: command.source,
+          amount: command.amount,
+          customerOrSupplier: command.partyName,
+          category: command.isArabic ? 'دفع لمورد' : 'Supplier payment',
+          missingInfo: const [],
+          recommendedNextAction: command.isArabic
+              ? 'راجع المسودة قبل أي تنفيذ.'
+              : 'Review before execution.',
+        ),
     };
   }
 
@@ -3833,6 +3914,39 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       inventory
           ? 'Stock will not be updated before approval.'
           : 'Nothing will be posted before approval.',
+    ].join('\n');
+  }
+
+  String _localPartyDraftDetails(LocalAccountingCommandDraft command) {
+    final isCustomer = command.type == LocalAccountingCommandDraftType.receivable ||
+        command.type == LocalAccountingCommandDraftType.customerReceipt;
+    final isBalance = command.type == LocalAccountingCommandDraftType.receivable ||
+        command.type == LocalAccountingCommandDraftType.supplierPayable;
+    if (command.isArabic) {
+      return [
+        '${isCustomer ? 'العميل' : 'المورد'}: ${command.partyName ?? '-'}',
+        'المبلغ: ${_formatDraftNumber(command.amount)}',
+        if (isCustomer && isBalance)
+          'لن يتم تعديل رصيد العميل قبل الاعتماد.'
+        else if (isCustomer)
+          'لن يتم تسجيل القبض قبل الاعتماد.'
+        else if (isBalance)
+          'لن يتم تعديل رصيد المورد قبل الاعتماد.'
+        else
+          'لن يتم تسجيل الدفع قبل الاعتماد.',
+      ].join('\n');
+    }
+    return [
+      '${isCustomer ? 'Customer' : 'Supplier'}: ${command.partyName ?? '-'}',
+      'Amount: ${_formatDraftNumber(command.amount)}',
+      if (isCustomer && isBalance)
+        'Customer balance will not be updated before approval.'
+      else if (isCustomer)
+        'Receipt will not be posted before approval.'
+      else if (isBalance)
+        'Supplier balance will not be updated before approval.'
+      else
+        'Supplier payment will not be posted before approval.',
     ].join('\n');
   }
 

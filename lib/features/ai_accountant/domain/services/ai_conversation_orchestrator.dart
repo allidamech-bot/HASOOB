@@ -79,7 +79,16 @@ class AiDecisionOption {
   }
 }
 
-enum LocalAccountingCommandDraftType { sale, expense, purchase, inventoryIntake }
+enum LocalAccountingCommandDraftType {
+  sale,
+  expense,
+  purchase,
+  inventoryIntake,
+  receivable,
+  customerReceipt,
+  supplierPayable,
+  supplierPayment,
+}
 
 class LocalAccountingCommandDraft {
   final LocalAccountingCommandDraftType type;
@@ -96,6 +105,7 @@ class LocalAccountingCommandDraft {
   final String? categoryEnglish;
   final double? amount;
   final String? productName;
+  final String? partyName;
 
   const LocalAccountingCommandDraft({
     required this.type,
@@ -112,6 +122,7 @@ class LocalAccountingCommandDraft {
     this.categoryEnglish,
     this.amount,
     this.productName,
+    this.partyName,
   });
 
   bool get isCompleteSale {
@@ -139,7 +150,21 @@ class LocalAccountingCommandDraft {
         totalCost != null;
   }
 
-  bool get isReviewable => isCompleteSale || isCompleteExpense || isCompletePurchase;
+  bool get isCompletePartyDraft {
+    return (type == LocalAccountingCommandDraftType.receivable ||
+            type == LocalAccountingCommandDraftType.customerReceipt ||
+            type == LocalAccountingCommandDraftType.supplierPayable ||
+            type == LocalAccountingCommandDraftType.supplierPayment) &&
+        partyName != null &&
+        partyName!.trim().isNotEmpty &&
+        amount != null;
+  }
+
+  bool get isReviewable =>
+      isCompleteSale ||
+      isCompleteExpense ||
+      isCompletePurchase ||
+      isCompletePartyDraft;
 }
 
 class AiConversationMemory {
@@ -295,6 +320,7 @@ class AiConversationOrchestrator {
   AiConversationMemory _memory = const AiConversationMemory();
   _LocalSaleAnalysis? _pendingSaleMissingUnitCost;
   _LocalPurchaseAnalysis? _pendingPurchaseMissingUnitCost;
+  _LocalReceivablePayableAnalysis? _pendingReceivablePayable;
 
   AiConversationMemory get memory => _memory;
   AiBusinessMemory get businessMemory => _businessMemoryManager.memory;
@@ -338,6 +364,12 @@ class AiConversationOrchestrator {
     if (pendingPurchaseCostResponse != null) {
       _rememberAssistant(pendingPurchaseCostResponse);
       return pendingPurchaseCostResponse;
+    }
+    final pendingReceivablePayableResponse =
+        _tryHandlePendingReceivablePayableFollowUp(userText, normalized);
+    if (pendingReceivablePayableResponse != null) {
+      _rememberAssistant(pendingReceivablePayableResponse);
+      return pendingReceivablePayableResponse;
     }
 
     final localAccountingResponse =
@@ -1230,6 +1262,12 @@ Return only JSON matching the response contract.
     final localPurchase = _parseLocalPurchase(input, normalized);
     if (localPurchase != null) return _localPurchaseResponse(localPurchase);
 
+    final localReceivablePayable =
+        _parseLocalReceivablePayable(input, normalized);
+    if (localReceivablePayable != null) {
+      return _localReceivablePayableResponse(localReceivablePayable);
+    }
+
     final localExpense = _parseLocalExpense(input, normalized);
     if (localExpense != null) return _localExpenseResponse(localExpense);
 
@@ -1474,6 +1512,14 @@ Return only JSON matching the response contract.
           'stocked',
           'received inventory',
           'added stock',
+          'customer',
+          'supplier',
+          'receivable',
+          'payable',
+          'received',
+          'collected',
+          'owes',
+          'transferred',
         ]) ||
         _containsAny(normalized, [
           'بعت',
@@ -1495,6 +1541,15 @@ Return only JSON matching the response contract.
           'أضفت للمخزون',
           'اضفت للمخزون',
           'دخلت للمخزون',
+          'العميل',
+          'المورد',
+          'عليه',
+          'استلمت',
+          'قبضت',
+          'وصلني',
+          'سدد',
+          'دفعت',
+          'باقي',
         ]);
   }
 
@@ -1932,6 +1987,363 @@ Return only JSON matching the response contract.
     }
     text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
     if (text.length < 2) return null;
+    return text;
+  }
+
+  _LocalReceivablePayableAnalysis? _parseLocalReceivablePayable(
+    String input,
+    String normalized,
+  ) {
+    final isArabic = _containsArabic(input);
+    final amount = _numberMatches(input).isEmpty
+        ? null
+        : _numberMatches(input).last.value;
+
+    LocalAccountingCommandDraftType? type;
+    if (_containsAny(normalized, [
+          'دفعت للمورد',
+          'دفعت ل',
+          'سددت للمورد',
+          'حولت للمورد',
+        ]) ||
+        (normalized.startsWith('paid ') &&
+            !normalized.contains('customer') &&
+            !_containsAnyLocalAccountingTerm(normalized, [
+              'expense',
+              'shipping',
+              'rent',
+              'electricity',
+              'marketing',
+            ])) ||
+        _containsAnyLocalAccountingTerm(normalized, [
+          'paid supplier',
+          'supplier payment',
+          'transferred',
+        ])) {
+      type = LocalAccountingCommandDraftType.supplierPayment;
+    } else if (_containsAny(normalized, [
+          'للمورد',
+          'المورد',
+          'علينا للمورد',
+          'باقي للمورد',
+          'باقي ل',
+        ]) ||
+        _containsAnyLocalAccountingTerm(normalized, [
+          'supplier',
+          'payable',
+          'we owe',
+          'is owed',
+          'remaining for',
+        ])) {
+      type = LocalAccountingCommandDraftType.supplierPayable;
+    } else if (_containsAny(normalized, [
+          'استلمت',
+          'قبضت',
+          'وصلني',
+          'سدد',
+          'دفع',
+        ]) ||
+        _containsAnyLocalAccountingTerm(normalized, [
+          'received',
+          'collected',
+          'paid',
+        ])) {
+      type = LocalAccountingCommandDraftType.customerReceipt;
+    } else if (_containsAny(normalized, [
+          'العميل',
+          'عليه',
+          'لنا عند',
+          'على العميل',
+          'ذمة العميل',
+        ]) ||
+        _containsAnyLocalAccountingTerm(normalized, [
+          'owes',
+          'receivable',
+          'customer balance',
+        ])) {
+      type = LocalAccountingCommandDraftType.receivable;
+    }
+    if (type == null) return null;
+
+    final party = _extractReceivablePayableParty(input, type);
+    if (party == null && amount == null) return null;
+
+    return _LocalReceivablePayableAnalysis(
+      type: type,
+      isArabic: isArabic,
+      partyName: party,
+      amount: amount,
+    );
+  }
+
+  AiAdvisorResponse? _tryHandlePendingReceivablePayableFollowUp(
+    String input,
+    String normalized,
+  ) {
+    final pending = _pendingReceivablePayable;
+    if (pending == null) return null;
+    if (_isProtectedCfoFlow(normalized)) return null;
+
+    final numbers = _numberMatches(input);
+    final amount = pending.amount ?? (numbers.isEmpty ? null : numbers.last.value);
+    final party = pending.partyName ??
+        _extractReceivablePayableParty(input, pending.type);
+    if ((amount == null && pending.amount == null) ||
+        (party == null && pending.partyName == null)) {
+      return null;
+    }
+    final completed = pending.copyWith(
+      amount: amount,
+      partyName: party,
+    );
+    if (!completed.isComplete) return null;
+    _pendingReceivablePayable = null;
+    return _localReceivablePayableResponse(completed, updatedPrevious: true);
+  }
+
+  AiAdvisorResponse _localReceivablePayableResponse(
+    _LocalReceivablePayableAnalysis analysis, {
+    bool updatedPrevious = false,
+  }) {
+    final missing = <String>[
+      if (analysis.partyName == null)
+        analysis.isArabic ? _partyLabelArabic(analysis.type) : _partyLabelEnglish(analysis.type),
+      if (analysis.amount == null) analysis.isArabic ? 'المبلغ' : 'amount',
+    ];
+    if (!analysis.isComplete) {
+      _pendingReceivablePayable = analysis;
+    } else {
+      _pendingReceivablePayable = null;
+    }
+
+    final cardText = analysis.isArabic
+        ? _arabicReceivablePayableText(analysis)
+        : _englishReceivablePayableText(analysis);
+    final text = updatedPrevious
+        ? analysis.isArabic
+            ? 'تم تحديث العملية السابقة.\n\n$cardText'
+            : 'Previous operation updated.\n\n$cardText'
+        : cardText;
+    final localDraft = analysis.isComplete
+        ? LocalAccountingCommandDraft(
+            type: analysis.type,
+            isArabic: analysis.isArabic,
+            source: updatedPrevious
+                ? 'local accounting command follow-up'
+                : 'local accounting command',
+            partyName: analysis.partyName,
+            amount: analysis.amount,
+          )
+        : null;
+
+    return AiAdvisorResponse(
+      mode: AiAdvisorMode.advice,
+      text: text,
+      memory: _memory.copyWith(
+        latestTopic: 'local_receivable_payable_analysis',
+        missingData: missing,
+      ),
+      suggestedReplies: const [
+        'Add missing details',
+        'Prepare review draft',
+        'Cancel',
+      ],
+      localCommandDraft: localDraft,
+      metadata: AiResponseMetadata.low(missingEvidence: missing),
+    );
+  }
+
+  String _arabicReceivablePayableText(_LocalReceivablePayableAnalysis item) {
+    final missingParty = item.partyName == null;
+    final missingAmount = item.amount == null;
+    return [
+      'تم تفسير الأمر ك${_commandTypeArabic(item.type)}.',
+      '',
+      'ملخص العملية:',
+      '',
+      if (item.partyName != null)
+        '* ${_partyLabelArabic(item.type)}: ${item.partyName}',
+      if (item.amount != null) '* المبلغ: ${_formatNumber(item.amount!)}',
+      if (missingParty || missingAmount) ...[
+        '',
+        'البيانات الناقصة:',
+        '',
+        if (missingParty) '* ${_partyLabelArabic(item.type)}',
+        if (missingAmount) '* المبلغ',
+      ],
+      '',
+      'الحالة:',
+      if (!missingParty && !missingAmount) ...[
+        '* جاهزة كمسودة بانتظار المراجعة',
+        '* ${_safetyArabic(item.type)}',
+      ] else
+        'تحتاج بيانات قبل تجهيز مسودة دقيقة للمراجعة.',
+      '',
+      'الخطوة التالية:',
+      if (!missingParty && !missingAmount)
+        'راجع المسودة قبل أي تنفيذ.'
+      else
+        'أرسل البيانات الناقصة، ولن يتم تسجيل أي شيء قبل الاعتماد.',
+    ].join('\n');
+  }
+
+  String _englishReceivablePayableText(_LocalReceivablePayableAnalysis item) {
+    final missingParty = item.partyName == null;
+    final missingAmount = item.amount == null;
+    return [
+      'Command interpreted as ${_commandTypeEnglish(item.type)}.',
+      '',
+      'Operation summary:',
+      '',
+      if (item.partyName != null)
+        '* ${_partyLabelEnglish(item.type)}: ${item.partyName}',
+      if (item.amount != null) '* Amount: ${_formatNumber(item.amount!)}',
+      if (missingParty || missingAmount) ...[
+        '',
+        'Missing data:',
+        '',
+        if (missingParty) '* ${_partyLabelEnglish(item.type)}',
+        if (missingAmount) '* Amount',
+      ],
+      '',
+      'Status:',
+      if (!missingParty && !missingAmount) ...[
+        '* Ready as a reviewable draft',
+        '* ${_safetyEnglish(item.type)}',
+      ] else
+        'Needs more data before a reliable review draft.',
+      '',
+      'Next action:',
+      if (!missingParty && !missingAmount)
+        'Review the draft before execution.'
+      else
+        'Send the missing data. Nothing will be posted before approval.',
+    ].join('\n');
+  }
+
+  String _commandTypeArabic(LocalAccountingCommandDraftType type) {
+    return switch (type) {
+      LocalAccountingCommandDraftType.receivable => 'ذمم مدينة',
+      LocalAccountingCommandDraftType.customerReceipt => 'قبض من عميل',
+      LocalAccountingCommandDraftType.supplierPayable => 'ذمم دائنة',
+      LocalAccountingCommandDraftType.supplierPayment => 'دفع لمورد',
+      _ => 'أمر محاسبي',
+    };
+  }
+
+  String _commandTypeEnglish(LocalAccountingCommandDraftType type) {
+    return switch (type) {
+      LocalAccountingCommandDraftType.receivable => 'customer receivable',
+      LocalAccountingCommandDraftType.customerReceipt => 'customer receipt',
+      LocalAccountingCommandDraftType.supplierPayable => 'supplier payable',
+      LocalAccountingCommandDraftType.supplierPayment => 'supplier payment',
+      _ => 'accounting command',
+    };
+  }
+
+  String _partyLabelArabic(LocalAccountingCommandDraftType type) {
+    return switch (type) {
+      LocalAccountingCommandDraftType.receivable ||
+      LocalAccountingCommandDraftType.customerReceipt =>
+        'العميل',
+      LocalAccountingCommandDraftType.supplierPayable ||
+      LocalAccountingCommandDraftType.supplierPayment =>
+        'المورد',
+      _ => 'الطرف',
+    };
+  }
+
+  String _partyLabelEnglish(LocalAccountingCommandDraftType type) {
+    return switch (type) {
+      LocalAccountingCommandDraftType.receivable ||
+      LocalAccountingCommandDraftType.customerReceipt =>
+        'Customer',
+      LocalAccountingCommandDraftType.supplierPayable ||
+      LocalAccountingCommandDraftType.supplierPayment =>
+        'Supplier',
+      _ => 'Party',
+    };
+  }
+
+  String _safetyArabic(LocalAccountingCommandDraftType type) {
+    return switch (type) {
+      LocalAccountingCommandDraftType.receivable =>
+        'لن يتم تعديل رصيد العميل قبل الاعتماد',
+      LocalAccountingCommandDraftType.customerReceipt =>
+        'لن يتم تسجيل القبض قبل الاعتماد',
+      LocalAccountingCommandDraftType.supplierPayable =>
+        'لن يتم تعديل رصيد المورد قبل الاعتماد',
+      LocalAccountingCommandDraftType.supplierPayment =>
+        'لن يتم تسجيل الدفع قبل الاعتماد',
+      _ => 'لن يتم التسجيل قبل الاعتماد',
+    };
+  }
+
+  String _safetyEnglish(LocalAccountingCommandDraftType type) {
+    return switch (type) {
+      LocalAccountingCommandDraftType.receivable =>
+        'Customer balance will not be updated before approval',
+      LocalAccountingCommandDraftType.customerReceipt =>
+        'Receipt will not be posted before approval',
+      LocalAccountingCommandDraftType.supplierPayable =>
+        'Supplier balance will not be updated before approval',
+      LocalAccountingCommandDraftType.supplierPayment =>
+        'Supplier payment will not be posted before approval',
+      _ => 'Nothing will be posted before approval',
+    };
+  }
+
+  String? _extractReceivablePayableParty(
+    String input,
+    LocalAccountingCommandDraftType type,
+  ) {
+    final isArabic = _containsArabic(input);
+    var text = input.replaceAll(RegExp(r'\d+(?:[.,]\d+)?'), ' ');
+    for (final token in [
+      'customer balance',
+      'receivable from',
+      'customer',
+      'owes us',
+      'owes',
+      'received',
+      'collected',
+      'paid',
+      'from',
+      'supplier payment',
+      'supplier payable',
+      'supplier',
+      'payable to',
+      'we owe',
+      'is owed',
+      'remaining for',
+      'transferred',
+      'العميل',
+      'ذمة العميل',
+      'على العميل',
+      'لنا عند',
+      'عند',
+      'عليه',
+      'استلمت',
+      'قبضت',
+      'وصلني',
+      'من',
+      'دفع',
+      'سدد',
+      'المورد',
+      'للمورد',
+      'علينا للمورد',
+      'باقي للمورد',
+      'باقي',
+      'له',
+      'دفعت',
+      'سددت',
+      'حولت',
+    ]) {
+      text = text.replaceAll(token, ' ');
+    }
+    text = text.replaceAll(RegExp(r'\s+'), ' ').trim();
+    if (text.length < 2) return null;
+    if (!isArabic && text.split(' ').length > 3) return null;
     return text;
   }
 
@@ -2542,6 +2954,38 @@ class _LocalPurchaseAnalysis {
       quantity: quantity ?? this.quantity,
       unitCost: unitCost ?? this.unitCost,
       productName: productName ?? this.productName,
+    );
+  }
+}
+
+class _LocalReceivablePayableAnalysis {
+  final LocalAccountingCommandDraftType type;
+  final bool isArabic;
+  final String? partyName;
+  final double? amount;
+
+  const _LocalReceivablePayableAnalysis({
+    required this.type,
+    required this.isArabic,
+    required this.partyName,
+    required this.amount,
+  });
+
+  bool get isComplete {
+    return partyName != null && partyName!.trim().isNotEmpty && amount != null;
+  }
+
+  _LocalReceivablePayableAnalysis copyWith({
+    LocalAccountingCommandDraftType? type,
+    bool? isArabic,
+    String? partyName,
+    double? amount,
+  }) {
+    return _LocalReceivablePayableAnalysis(
+      type: type ?? this.type,
+      isArabic: isArabic ?? this.isArabic,
+      partyName: partyName ?? this.partyName,
+      amount: amount ?? this.amount,
     );
   }
 }
