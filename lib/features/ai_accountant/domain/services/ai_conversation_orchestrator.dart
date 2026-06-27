@@ -162,11 +162,17 @@ class LocalAccountingCommandDraft {
         amount != null;
   }
 
-  bool get isReviewable =>
+  bool get isReviewable {
+    if (type == LocalAccountingCommandDraftType.dailyReport ||
+        type == LocalAccountingCommandDraftType.dailyClosing) {
+      return true;
+    }
+    return
       isCompleteSale ||
       isCompleteExpense ||
       isCompletePurchase ||
       isCompletePartyDraft;
+  }
 }
 
 class AiConversationMemory {
