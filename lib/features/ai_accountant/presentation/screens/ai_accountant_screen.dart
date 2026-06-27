@@ -390,6 +390,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   // ── Accounting Workspace ─────────────────────────────────────────────────
   final List<_AccountingDraft> _workspaceDrafts = [];
+  final List<String> _reviewBoardAuditNotes = [];
   bool _isExtracting = false;
   int _workspaceTabIndex = 0;
 
@@ -3243,6 +3244,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   void _markDraftReady(_AccountingDraft draft) {
+    _addReviewBoardAuditNote('تمت مراجعة: ${draft.title}');
     setState(() {
       final index = _workspaceDrafts.indexWhere((d) => d.id == draft.id);
       if (index >= 0) {
@@ -3252,6 +3254,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   }
 
   void _markDraftNeedsReview(_AccountingDraft draft) {
+    _addReviewBoardAuditNote('أُعيدت للمراجعة: ${draft.title}');
     setState(() {
       final index = _workspaceDrafts.indexWhere((d) => d.id == draft.id);
       if (index >= 0) {
@@ -3398,6 +3401,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ),
           ),
           const SizedBox(height: 10),
+                _buildReviewBoardSummary(),
+                _buildReviewBoardAuditNotes(),
                 _buildPendingDraftCategorySummary(_workspaceDrafts),
                 if (visibleDrafts.isEmpty)
             const Padding(
@@ -3524,8 +3529,8 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               ],
             ),
             const SizedBox(height: 6),
-            Text(
-              draft.summary,
+          Text(
+            draft.summary,
               maxLines: 3,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -3596,7 +3601,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                             color: tealSuccess.withValues(alpha: 0.3)),
                       ),
                       child: const Text(
-                      'مراجعة',
+                      'تمت المراجعة',
                         style: TextStyle(
                           color: tealSuccess,
                           fontSize: 9,
@@ -3618,7 +3623,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                             color: goldAccent.withValues(alpha: 0.3)),
                       ),
                       child: const Text(
-                      'بانتظار المراجعة',
+                      'إرجاع للمراجعة',
                         style: TextStyle(
                           color: goldAccent,
                           fontSize: 9,
@@ -3633,7 +3638,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             Row(children: [
               const Expanded(
                 child: Text(
-                  'Session draft only — not posted to accounting records.',
+              'مسودة جلسة فقط — غير مسجلة محاسبياً.',
                   style: TextStyle(
                       color: AppTheme.aiTextMuted, fontSize: 9, height: 1.3),
                 ),
@@ -3910,6 +3915,138 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
                   ),
                 )
                 .toList(growable: false),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildReviewBoardSummary() {
+    if (_workspaceDrafts.isEmpty) return const SizedBox.shrink();
+    final total = _workspaceDrafts.length;
+    final pending = _workspaceDrafts
+        .where((draft) => draft.status == _DraftStatus.needsReview)
+        .length;
+    final ready = _workspaceDrafts
+        .where((draft) => draft.status == _DraftStatus.ready)
+        .length;
+    final needsData = _workspaceDrafts
+        .where((draft) => draft.missingInfo.isNotEmpty)
+        .length;
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: premiumPanelSoft,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          _buildReviewBoardMetric('إجمالي المسودات', total),
+          _buildReviewBoardMetric('بانتظار المراجعة', pending),
+          _buildReviewBoardMetric('جاهزة بعد المراجعة', ready),
+          _buildReviewBoardMetric('تحتاج بيانات', needsData),
+        ],
+      ),
+    );
+  }
+
+  void _addReviewBoardAuditNote(String note) {
+    setState(() {
+      _reviewBoardAuditNotes.insert(0, note);
+      if (_reviewBoardAuditNotes.length > 5) {
+        _reviewBoardAuditNotes.removeRange(5, _reviewBoardAuditNotes.length);
+      }
+    });
+  }
+
+  Widget _buildReviewBoardMetric(String label, int value) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: darkBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Text(
+        '$label: $value',
+        style: const TextStyle(
+          color: textSecondary,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewBoardAuditNotes() {
+    if (_reviewBoardAuditNotes.isEmpty) return const SizedBox.shrink();
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: premiumPanelSoft,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const Text(
+            'نشاط المراجعة',
+            style: TextStyle(
+              color: goldAccent,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          ..._reviewBoardAuditNotes.map(
+            (note) => Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                note,
+                style: const TextStyle(
+                  color: textSecondary,
+                  fontSize: 12,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDraftInfoRow(String label, String? value) {
+    if (value == null || value.trim().isEmpty) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 96,
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
           ),
         ],
       ),
@@ -9312,6 +9449,100 @@ class _DraftDetailSheet extends StatefulWidget {
 }
 
 class _DraftDetailSheetState extends State<_DraftDetailSheet> {
+  Widget _reviewInfoLine(String label, String? value) {
+    if (value == null || value.trim().isEmpty) return const SizedBox.shrink();
+    final c = widget.colors;
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 104,
+            child: Text(
+              label,
+              style: TextStyle(
+                color: c.textSecondary,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+          ),
+          Expanded(
+            child: Text(
+              value,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                height: 1.35,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _reviewSafetyBox() {
+    final c = widget.colors;
+    return Container(
+      margin: const EdgeInsets.only(top: 12),
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: c.darkBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: c.premiumStroke),
+      ),
+      child: Text(
+        'ملاحظة أمان: هذه مسودة جلسة فقط — لن يتم تسجيل أي قيد أو تعديل بيانات قبل الاعتماد والتنفيذ الصريح.',
+        style: TextStyle(
+          color: c.tealSuccess,
+          fontSize: 12,
+          height: 1.35,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
+    );
+  }
+
+  Widget _reviewInformationBlock() {
+    final c = widget.colors;
+    final d = widget.draft;
+    final amount = d.amount == null ? null : d.amount!.toStringAsFixed(2);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: c.premiumPanelSoft,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: c.premiumStroke),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            'لوحة مراجعة المسودة',
+            style: TextStyle(
+              color: c.goldAccent,
+              fontSize: 14,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          _reviewInfoLine('الحالة', d.statusLabel),
+          _reviewInfoLine('المصدر', d.sourceLabel),
+          _reviewInfoLine('الثقة', d.confidenceLabel),
+          _reviewInfoLine('المبلغ', amount),
+          _reviewInfoLine('العميل / المورد', d.customerOrSupplier),
+          _reviewInfoLine('التصنيف', d.category),
+          _reviewInfoLine('التفاصيل', d.details),
+          if (d.missingInfo.isNotEmpty)
+            _reviewInfoLine('البيانات الناقصة', d.missingInfo.join('\n')),
+          _reviewInfoLine('الإجراء المقترح', d.recommendedNextAction),
+          _reviewSafetyBox(),
+        ],
+      ),
+    );
+  }
   late final TextEditingController _titleCtrl;
   late final TextEditingController _summaryCtrl;
   late final TextEditingController _customerCtrl;
@@ -9445,9 +9676,11 @@ class _DraftDetailSheetState extends State<_DraftDetailSheet> {
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
                 child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      _field('Title', _titleCtrl, c),
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        _reviewInformationBlock(),
+                        const SizedBox(height: 12),
+                        _field('Title', _titleCtrl, c),
                       _field('Summary', _summaryCtrl, c, maxLines: 3),
                       _field('Customer / Supplier', _customerCtrl, c,
                           hint: 'e.g. Al-Noor Trading'),
@@ -9540,8 +9773,8 @@ class _DraftDetailSheetState extends State<_DraftDetailSheet> {
                         side: BorderSide(
                             color: c.goldAccent.withValues(alpha: 0.4))),
                     child: Text(d.status == _DraftStatus.ready
-                        ? 'Needs Review'
-                        : 'Mark Ready'),
+                      ? 'إرجاع للمراجعة'
+                      : 'تمت المراجعة'),
                   ),
                 ),
                 const SizedBox(width: 10),
