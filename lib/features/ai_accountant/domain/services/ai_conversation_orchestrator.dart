@@ -1256,6 +1256,11 @@ Return only JSON matching the response contract.
     String input,
     String normalized,
   ) {
+    if (_isProtectedCfoFlow(normalized) &&
+        !_isExplicitLocalAccountingCommand(normalized)) {
+      return null;
+    }
+
     final localSale = _parseLocalSale(input, normalized);
     if (localSale != null) return _localSaleResponse(localSale);
 
@@ -1461,7 +1466,105 @@ Return only JSON matching the response contract.
         (numbers.isEmpty ? null : numbers.last.value);
   }
 
+  bool _isExplicitLocalAccountingCommand(String normalized) {
+    return _containsAnyLocalAccountingTerm(normalized, [
+          'sold',
+          'sale',
+          'sales',
+          'expense',
+          'paid',
+          'purchased',
+          'bought',
+          'added inventory',
+          'added stock',
+          'stocked',
+          'received inventory',
+          'customer balance',
+          'receivable',
+          'owes',
+          'received',
+          'collected',
+          'supplier payable',
+          'supplier payment',
+          'payable',
+          'we owe',
+          'is owed',
+        ]) ||
+        _containsAny(normalized, [
+          'بعت',
+          'بيع',
+          'مبيعات',
+          'مصروف',
+          'دفعت',
+          'اشتريت',
+          'اشترينا',
+          'شراء',
+          'دخلت',
+          'ادخلت',
+          'أدخلت',
+          'اضفت للمخزون',
+          'أضفت للمخزون',
+          'دخلت للمخزون',
+          'العميل',
+          'عليه',
+          'لنا عند',
+          'على العميل',
+          'ذمة العميل',
+          'استلمت',
+          'قبضت',
+          'وصلني',
+          'سدد',
+          'المورد',
+          'للمورد',
+          'علينا للمورد',
+          'ذمة المورد',
+        ]);
+  }
+
   bool _isProtectedCfoFlow(String normalized) {
+    if (_containsAnyLocalAccountingTerm(normalized, [
+          'business health',
+          'current business',
+          'cashflow',
+          'cash flow',
+          'inventory status',
+          'stock status',
+          'report',
+          'dashboard',
+          'analysis',
+          'profitability',
+          'margin',
+          'proposal',
+          'execute',
+          'export',
+          'shipping',
+          'advisory',
+          'advice',
+          'what can you do',
+        ]) ||
+        _containsAny(normalized, [
+          'وضع',
+          'صحة',
+          'الشركة',
+          'الكاش',
+          'النقد',
+          'التدفق',
+          'المخزون',
+          'تقرير',
+          'تحليل',
+          'ربحية',
+          'هامش',
+          'مقترح',
+          'نفذ',
+          'تنفيذ',
+          'تصدير',
+          'شحنة',
+          'السعودية',
+          'نصيحة',
+        ])) {
+      return true;
+    }
+
     return _containsAnyLocalAccountingTerm(normalized, [
           'business health',
           'cashflow',
