@@ -420,9 +420,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
           'مرحبًا. أنا محاسبك الذكي ومستشارك المالي في HASOOB.\n\nاسألني عن الربح، التدفق النقدي، المخزون، المستحقات، أو ارفع مستندًا ليتم تحليله كمراجعة مالية.\n\nAdd invoices, customers, products, expenses, and sales to unlock evidence-backed analysis.',
       timestamp: DateTime(2026, 6, 11),
       suggestedReplies: [
-        'Is my cash situation safe?',
-        'This customer is late — what should I do?',
-        'Prepare a purchase',
+      'هل وضعي النقدي آمن؟',
+      'هذا العميل متأخر — ماذا أفعل؟',
+      'جهز عملية شراء',
       ],
     ),
   ];
@@ -3879,7 +3879,17 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         .replaceAll('ط¥ط±ط¬ط§ط¹ ظ„ظ„ظ…ط±ط§ط¬ط¹ط©', 'إرجاع للمراجعة')
         .replaceAll('ظ…ط³ظˆط¯ط© ط¬ظ„ط³ط© ظپظ‚ط·', 'مسودة جلسة فقط')
         .replaceAll('ط؛ظٹط± ظ…ط³ط¬ظ„ط© ظ…ط­ط§ط³ط¨ظٹط§ظ‹', 'غير مسجلة محاسبياً')
-        .replaceAll('طھط¹ط¯ظٹظ„', 'تعديل');
+        .replaceAll('طھط¹ط¯ظٹظ„', 'تعديل')
+        .replaceAll('Inventory / Assessment Draft', 'مسودة مخزون / تقييم')
+        .replaceAll('Account Entry Draft', 'مسودة قيد محاسبي')
+        .replaceAll('Financial Report Draft', 'مسودة تقرير مالي')
+        .replaceAll('No active proposal or workflow', 'لا يوجد مقترح أو سير عمل نشط')
+        .replaceAll('Generate Report', 'إنشاء تقرير')
+        .replaceAll('Needs analysis', 'تحتاج تحليل')
+        .replaceAll('Needs data', 'تحتاج بيانات')
+        .replaceAll('Ready', 'جاهزة')
+        .replaceAll('Review', 'مراجعة')
+        .replaceAll('Draft', 'مسودة');
   }
 
   Widget _buildPendingDraftCategorySummary(List<_AccountingDraft> drafts) {
@@ -3893,9 +3903,23 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: premiumPanelSoft,
+        gradient: LinearGradient(
+          colors: [
+            premiumPanelSoft,
+            darkBg,
+          ],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: premiumStroke),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -3957,9 +3981,23 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: premiumPanelSoft,
+        gradient: LinearGradient(
+          colors: [
+            premiumPanelSoft,
+            darkBg,
+          ],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(color: premiumStroke),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Wrap(
         spacing: 8,
@@ -3987,14 +4025,14 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: darkBg,
+        color: darkBg.withOpacity(0.72),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: premiumStroke),
+        border: Border.all(color: goldAccent.withOpacity(0.26)),
       ),
       child: Text(
         '$label: $value',
-        style: const TextStyle(
-          color: textSecondary,
+        style: TextStyle(
+          color: value > 0 ? Colors.white : textSecondary,
           fontSize: 12,
           fontWeight: FontWeight.w600,
         ),
@@ -8510,7 +8548,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               decoration: const InputDecoration(
                 contentPadding: EdgeInsets.symmetric(horizontal: 14),
                 hintText:
-                    'Ask about invoices, cash, expenses, or any financial topic...',
+      'اسأل عن الفواتير، النقد، المصروفات، العملاء، أو أي موضوع مالي...',
                 hintStyle: TextStyle(color: AppTheme.aiTextMuted, fontSize: 12),
                 border: InputBorder.none,
               ),
@@ -9486,7 +9524,17 @@ class _DraftDetailSheetState extends State<_DraftDetailSheet> {
         .replaceAll('ط¥ط±ط¬ط§ط¹ ظ„ظ„ظ…ط±ط§ط¬ط¹ط©', 'إرجاع للمراجعة')
         .replaceAll('ظ…ط³ظˆط¯ط© ط¬ظ„ط³ط© ظپظ‚ط·', 'مسودة جلسة فقط')
         .replaceAll('ط؛ظٹط± ظ…ط³ط¬ظ„ط© ظ…ط­ط§ط³ط¨ظٹط§ظ‹', 'غير مسجلة محاسبياً')
-        .replaceAll('طھط¹ط¯ظٹظ„', 'تعديل');
+        .replaceAll('طھط¹ط¯ظٹظ„', 'تعديل')
+        .replaceAll('Inventory / Assessment Draft', 'مسودة مخزون / تقييم')
+        .replaceAll('Account Entry Draft', 'مسودة قيد محاسبي')
+        .replaceAll('Financial Report Draft', 'مسودة تقرير مالي')
+        .replaceAll('No active proposal or workflow', 'لا يوجد مقترح أو سير عمل نشط')
+        .replaceAll('Generate Report', 'إنشاء تقرير')
+        .replaceAll('Needs analysis', 'تحتاج تحليل')
+        .replaceAll('Needs data', 'تحتاج بيانات')
+        .replaceAll('Ready', 'جاهزة')
+        .replaceAll('Review', 'مراجعة')
+        .replaceAll('Draft', 'مسودة');
   }
 
   Widget _reviewInfoLine(String label, String? value) {
@@ -9529,9 +9577,9 @@ class _DraftDetailSheetState extends State<_DraftDetailSheet> {
       margin: const EdgeInsets.only(top: 12),
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: c.darkBg,
+        color: c.darkBg.withOpacity(0.82),
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: c.premiumStroke),
+        border: Border.all(color: c.tealSuccess.withOpacity(0.32)),
       ),
       child: Text(
         'ملاحظة أمان: هذه مسودة جلسة فقط — لن يتم تسجيل أي قيد أو تعديل بيانات قبل الاعتماد والتنفيذ الصريح.',
@@ -9553,9 +9601,23 @@ class _DraftDetailSheetState extends State<_DraftDetailSheet> {
       margin: const EdgeInsets.only(bottom: 14),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: c.premiumPanelSoft,
+        gradient: LinearGradient(
+          colors: [
+            c.premiumPanelSoft,
+            c.darkBg,
+          ],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
         borderRadius: BorderRadius.circular(10),
         border: Border.all(color: c.premiumStroke),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.18),
+            blurRadius: 18,
+            offset: const Offset(0, 10),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
