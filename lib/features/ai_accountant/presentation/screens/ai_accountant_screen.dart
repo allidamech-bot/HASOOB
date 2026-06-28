@@ -1459,12 +1459,27 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
   Widget _buildLeftContextRail() {
     return Container(
       decoration: BoxDecoration(
-        color: premiumPanelSoft,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: premiumStroke),
+        gradient: LinearGradient(
+          colors: [
+            goldAccent.withValues(alpha: 0.08),
+            premiumPanelSoft,
+            darkBg.withValues(alpha: 0.92),
+          ],
+          begin: Alignment.topRight,
+          end: Alignment.bottomLeft,
+        ),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: goldAccent.withValues(alpha: 0.22)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.24),
+            blurRadius: 28,
+            offset: const Offset(0, 16),
+          ),
+        ],
       ),
       child: SingleChildScrollView(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
@@ -1473,7 +1488,7 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
               arabicTitle: 'الوضع المالي',
               englishTitle: 'Financial Status',
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 14),
             Command360ContextModule(
               title: 'ملخص اليوم',
               icon: Icons.today_outlined,
@@ -3864,34 +3879,33 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   String _cleanArabicUxText(String text) {
     return text
-        .replaceAll('â€”', '—')
-        .replaceAll('â€؛', '›')
-        .replaceAll('ًں“„', '')
-        .replaceAll('ظ…ط³ظˆط¯ط©', 'مسودة')
-        .replaceAll('ظ…ط³ظˆط¯ط§طھ', 'مسودات')
-        .replaceAll('ط¨ط§ظ†طھط¸ط§ط± ط§ظ„ظ…ط±ط§ط¬ط¹ط©', 'بانتظار المراجعة')
-        .replaceAll('ط؛ظٹط± ظ…ط³ط¬ظ„ط©', 'غير مسجلة')
-        .replaceAll('ظ…ظ† ط£ظ…ط± ظ…ط­ط§ط³ط¨ظٹ', 'من أمر محاسبي')
-        .replaceAll('ظ†ط´ط§ط· ط§ظ„ظ…ط±ط§ط¬ط¹ط©', 'نشاط المراجعة')
-        .replaceAll('ط¨ظٹط§ظ†ط§طھ ظ†ط§ظ‚طµط©', 'بيانات ناقصة')
-        .replaceAll('ط§ظ„طھط§ظ„ظٹ', 'التالي')
-        .replaceAll('طھظ…طھ ط§ظ„ظ…ط±ط§ط¬ط¹ط©', 'تمت المراجعة')
-        .replaceAll('ط¥ط±ط¬ط§ط¹ ظ„ظ„ظ…ط±ط§ط¬ط¹ط©', 'إرجاع للمراجعة')
-        .replaceAll('ظ…ط³ظˆط¯ط© ط¬ظ„ط³ط© ظپظ‚ط·', 'مسودة جلسة فقط')
-        .replaceAll('ط؛ظٹط± ظ…ط³ط¬ظ„ط© ظ…ط­ط§ط³ط¨ظٹط§ظ‹', 'غير مسجلة محاسبياً')
-        .replaceAll('طھط¹ط¯ظٹظ„', 'تعديل')
-        .replaceAll('Inventory / Assessment Draft', 'مسودة مخزون / تقييم')
-        .replaceAll('Account Entry Draft', 'مسودة قيد محاسبي')
-        .replaceAll('Financial Report Draft', 'مسودة تقرير مالي')
-        .replaceAll('No active proposal or workflow', 'لا يوجد مقترح أو سير عمل نشط')
-        .replaceAll('Generate Report', 'إنشاء تقرير')
-        .replaceAll('Needs analysis', 'تحتاج تحليل')
+        .replaceAll('Sales', 'المبيعات')
+        .replaceAll('Expenses', 'المصروفات')
+        .replaceAll('Profit', 'الربح')
+        .replaceAll('Cashbox', 'الصندوق')
+        .replaceAll('Cash', 'النقدية')
+        .replaceAll('Customers', 'العملاء')
+        .replaceAll('Suppliers', 'الموردون')
+        .replaceAll('Inventory', 'المخزون')
         .replaceAll('Needs data', 'تحتاج بيانات')
-        .replaceAll('Ready', 'جاهزة')
-        .replaceAll('Review', 'مراجعة')
-        .replaceAll('Draft', 'مسودة');
+        .replaceAll('Needs analysis', 'تحتاج تحليل')
+        .replaceAll('No active risk signal', 'لا توجد مؤشرات خطر نشطة')
+        .replaceAll(
+          'Ask or add a document to detect missing data',
+          'اسأل أو أضف مستنداً لاكتشاف البيانات الناقصة',
+        )
+        .replaceAll('ط§ظ„ظ…ط¨ظٹط¹ط§طھ', 'المبيعات')
+        .replaceAll('ط§ظ„ظ…طµط§ط±ظٹظپ', 'المصروفات')
+        .replaceAll('ط§ظ„ظ…طµط±ظˆظپط§طھ', 'المصروفات')
+        .replaceAll('ط§ظ„ط±ط¨ط­', 'الربح')
+        .replaceAll('ط§ظ„ظ†ظ‚ط¯ظٹط©', 'النقدية')
+        .replaceAll('ط§ظ„طµظ†ط¯ظˆظ‚', 'الصندوق')
+        .replaceAll('ط§ظ„ط¹ظ…ظ„ط§ط،', 'العملاء')
+        .replaceAll('ط§ظ„ظ…ظˆط±ط¯ظˆظ†', 'الموردون')
+        .replaceAll('ط§ظ„ظ…ط®ط²ظˆظ†', 'المخزون')
+        .replaceAll('طھط­طھط§ط¬ ط¨ظٹط§ظ†ط§طھ', 'تحتاج بيانات')
+        .replaceAll('طھط­طھط§ط¬ طھط­ظ„ظٹظ„', 'تحتاج تحليل');
   }
-
   Widget _buildPendingDraftCategorySummary(List<_AccountingDraft> drafts) {
     final pending =
         drafts.where((draft) => draft.status == _DraftStatus.needsReview);
@@ -5091,43 +5105,44 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
 
   Widget _buildTodaySummarySection() {
     final items = [
-      (
-        Icons.point_of_sale_outlined,
-        'المبيعات',
-        'Sales',
-        _firstInsightSignal(['sales', 'revenue']) ??
-            'تحتاج بيانات / Needs data',
+      _PremiumMetricData(
+        icon: Icons.point_of_sale_outlined,
+        arabicTitle: 'المبيعات',
+        englishSubtitle: '',
+        value: _firstInsightSignal(['sales', 'revenue']) ?? 'تحتاج بيانات',
+        accentColor: goldAccent,
       ),
-      (
-        Icons.trending_down_rounded,
-        'المصاريف',
-        'Expenses',
-        _firstInsightSignal(['expense', 'cost']) ?? 'تحتاج بيانات / Needs data',
+      _PremiumMetricData(
+        icon: Icons.trending_down_rounded,
+        arabicTitle: 'المصاريف',
+        englishSubtitle: '',
+        value: _firstInsightSignal(['expense', 'cost']) ?? 'تحتاج بيانات',
+        accentColor: const Color(0xFFEF4444),
       ),
-      (
-        Icons.show_chart_rounded,
-        'الربح',
-        'Profit',
-        _firstInsightSignal(['profit', 'margin']) ??
-            'تحتاج تحليل / Needs analysis',
+      _PremiumMetricData(
+        icon: Icons.show_chart_rounded,
+        arabicTitle: 'الربح',
+        englishSubtitle: '',
+        value: _firstInsightSignal(['profit', 'margin']) ?? 'تحتاج تحليل',
+        accentColor: tealSuccess,
       ),
-      (
-        Icons.payments_outlined,
-        'النقدية',
-        'Cash',
-        _firstInsightSignal(['cash', 'payment', 'liquidity']) ??
-            'تحتاج بيانات / Needs data',
+      _PremiumMetricData(
+        icon: Icons.payments_outlined,
+        arabicTitle: 'النقدية',
+        englishSubtitle: '',
+        value: _firstInsightSignal(['cash', 'payment', 'liquidity']) ?? 'تحتاج بيانات',
+        accentColor: const Color(0xFF3B82F6),
       ),
     ];
 
-    return Column(
-      children: items.map((item) {
-        return _railStatusTile(
-          icon: item.$1,
-          title: '${item.$2} / ${item.$3}',
-          value: item.$4,
-        );
-      }).toList(),
+    return GridView.count(
+      crossAxisCount: 2,
+      mainAxisSpacing: 10,
+      crossAxisSpacing: 10,
+      childAspectRatio: 1.1,
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
+      children: items.map((item) => _buildPremiumMetricTile(item)).toList(),
     );
   }
 
@@ -5145,9 +5160,9 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
       spacing: 7,
       runSpacing: 7,
       children: accounts.map((account) {
-        return _railActionButton(
+        return _railAccountChip(
           icon: account.$1,
-          label: '${account.$2} / ${account.$3}',
+          label: account.$2,
           onTap: _isAnalyzing || _isCommitting
               ? null
               : () =>
@@ -5163,6 +5178,13 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
         .take(4)
         .map((risk) => '${risk.levelLabel}: ${risk.title}')
         .toList();
+    if (risks.isEmpty) {
+      return _buildTealStatusPanel(
+        icon: Icons.shield_rounded,
+        arabicTitle: 'الوضع الأمن',
+        value: 'لا توجد مخاطر مؤكدة',
+      );
+    }
     return _contextRows(
       risks,
       empty:
@@ -5170,65 +5192,17 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
     );
   }
 
-  Widget _buildMissingDataSection() {
+Widget _buildMissingDataSection() {
     final metadata = _latestMetadata();
     final missing = metadata?.missingEvidence.take(5).toList() ?? const [];
-    final empty = metadata == null
-        ? 'ابدأ بسؤال أو أدخل مستندًا ليحدد حاسوب البيانات الناقصة / Ask or add a document to detect missing data'
-        : 'لا توجد بيانات ناقصة محددة في آخر تحليل / No specific missing data in the latest analysis';
-    return _contextRows(missing, empty: empty);
-  }
-
-  Widget _railStatusTile({
-    required IconData icon,
-    required String title,
-    required String value,
-  }) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 7),
-      padding: const EdgeInsets.all(9),
-      decoration: BoxDecoration(
-        color: darkBg.withValues(alpha: 0.34),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: premiumStroke),
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Icon(icon, color: goldAccent, size: 14),
-          const SizedBox(width: 7),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 10.5,
-                    fontWeight: FontWeight.w900,
-                  ),
-                ),
-                const SizedBox(height: 3),
-                Text(
-                  value,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(
-                    color: textSecondary,
-                    fontSize: 10,
-                    height: 1.3,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
+    if (missing.isEmpty) {
+      return _buildAmberInfoPanel(
+        icon: Icons.info_rounded,
+        arabicTitle: 'البيانات الناقصة',
+        value: 'ابدأ بسؤال لتحديد البيانات الناقصة',
+      );
+    }
+    return _contextRows(missing, empty: 'لا توجد بيانات ناقصة محددة في آخر تحليل');
   }
 
   Widget _railActionButton({
@@ -5267,6 +5241,225 @@ class _AiAccountantScreenState extends State<AiAccountantScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildPremiumMetricTile(_PremiumMetricData data) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            premiumPanelSoft,
+            darkBg.withValues(alpha: 0.85),
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: data.accentColor.withValues(alpha: 0.24),
+          width: 1,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisAlignment: MainAxisAlignment.center,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 28,
+            height: 28,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: data.accentColor.withValues(alpha: 0.12),
+              border: Border.all(
+                color: data.accentColor.withValues(alpha: 0.32),
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              data.icon,
+              color: data.accentColor,
+              size: 15,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            data.arabicTitle,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          if (data.englishSubtitle.isNotEmpty) ...[
+            const SizedBox(height: 2),
+            Text(
+              data.englishSubtitle,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                color: textSecondary.withValues(alpha: 0.7),
+                fontSize: 9,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+          const SizedBox(height: 4),
+          Text(
+            data.value,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: data.accentColor,
+              fontSize: 10,
+              fontWeight: FontWeight.w700,
+              height: 1.2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _railAccountChip({
+    required IconData icon,
+    required String label,
+    required VoidCallback? onTap,
+  }) {
+    return Tooltip(
+      message: 'Review $label account',
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
+          decoration: BoxDecoration(
+            color: darkBg.withValues(alpha: 0.36),
+            borderRadius: BorderRadius.circular(7),
+            border: Border.all(color: premiumStroke),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, color: goldAccent, size: 13),
+              const SizedBox(width: 5),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTealStatusPanel({
+    required IconData icon,
+    required String arabicTitle,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            tealSuccess.withValues(alpha: 0.08),
+            premiumPanelSoft,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: tealSuccess.withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: tealSuccess, size: 16),
+              const SizedBox(width: 7),
+              Text(
+                arabicTitle,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              color: tealSuccess,
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAmberInfoPanel({
+    required IconData icon,
+    required String arabicTitle,
+    required String value,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [
+            const Color(0xFFF59E0B).withValues(alpha: 0.08),
+            premiumPanelSoft,
+          ],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFFF59E0B).withValues(alpha: 0.24)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(icon, color: const Color(0xFFF59E0B), size: 16),
+              const SizedBox(width: 7),
+              Text(
+                arabicTitle,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              color: const Color(0xFFF59E0B),
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -8942,6 +9135,22 @@ class _CommandSignalData {
   });
 }
 
+class _PremiumMetricData {
+  final IconData icon;
+  final String arabicTitle;
+  final String englishSubtitle;
+  final String value;
+  final Color accentColor;
+
+  const _PremiumMetricData({
+    required this.icon,
+    required this.arabicTitle,
+    required this.englishSubtitle,
+    required this.value,
+    required this.accentColor,
+  });
+}
+
 class _CommandSignalCard extends StatelessWidget {
   final _CommandSignalData signal;
 
@@ -9507,36 +9716,6 @@ class _DraftDetailSheet extends StatefulWidget {
 }
 
 class _DraftDetailSheetState extends State<_DraftDetailSheet> {
-  String _cleanArabicUxText(String text) {
-    return text
-        .replaceAll('â€”', '—')
-        .replaceAll('â€؛', '›')
-        .replaceAll('ًں“„', '')
-        .replaceAll('ظ…ط³ظˆط¯ط©', 'مسودة')
-        .replaceAll('ظ…ط³ظˆط¯ط§طھ', 'مسودات')
-        .replaceAll('ط¨ط§ظ†طھط¸ط§ط± ط§ظ„ظ…ط±ط§ط¬ط¹ط©', 'بانتظار المراجعة')
-        .replaceAll('ط؛ظٹط± ظ…ط³ط¬ظ„ط©', 'غير مسجلة')
-        .replaceAll('ظ…ظ† ط£ظ…ط± ظ…ط­ط§ط³ط¨ظٹ', 'من أمر محاسبي')
-        .replaceAll('ظ†ط´ط§ط· ط§ظ„ظ…ط±ط§ط¬ط¹ط©', 'نشاط المراجعة')
-        .replaceAll('ط¨ظٹط§ظ†ط§طھ ظ†ط§ظ‚طµط©', 'بيانات ناقصة')
-        .replaceAll('ط§ظ„طھط§ظ„ظٹ', 'التالي')
-        .replaceAll('طھظ…طھ ط§ظ„ظ…ط±ط§ط¬ط¹ط©', 'تمت المراجعة')
-        .replaceAll('ط¥ط±ط¬ط§ط¹ ظ„ظ„ظ…ط±ط§ط¬ط¹ط©', 'إرجاع للمراجعة')
-        .replaceAll('ظ…ط³ظˆط¯ط© ط¬ظ„ط³ط© ظپظ‚ط·', 'مسودة جلسة فقط')
-        .replaceAll('ط؛ظٹط± ظ…ط³ط¬ظ„ط© ظ…ط­ط§ط³ط¨ظٹط§ظ‹', 'غير مسجلة محاسبياً')
-        .replaceAll('طھط¹ط¯ظٹظ„', 'تعديل')
-        .replaceAll('Inventory / Assessment Draft', 'مسودة مخزون / تقييم')
-        .replaceAll('Account Entry Draft', 'مسودة قيد محاسبي')
-        .replaceAll('Financial Report Draft', 'مسودة تقرير مالي')
-        .replaceAll('No active proposal or workflow', 'لا يوجد مقترح أو سير عمل نشط')
-        .replaceAll('Generate Report', 'إنشاء تقرير')
-        .replaceAll('Needs analysis', 'تحتاج تحليل')
-        .replaceAll('Needs data', 'تحتاج بيانات')
-        .replaceAll('Ready', 'جاهزة')
-        .replaceAll('Review', 'مراجعة')
-        .replaceAll('Draft', 'مسودة');
-  }
-
   Widget _reviewInfoLine(String label, String? value) {
     if (value == null || value.trim().isEmpty) return const SizedBox.shrink();
     final c = widget.colors;
