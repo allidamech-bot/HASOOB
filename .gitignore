@@ -49,3 +49,4 @@ devtools_options.yaml
 
 # Firebase CLI deploy cache (local only, never commit)
 .firebase/
+.vercel
